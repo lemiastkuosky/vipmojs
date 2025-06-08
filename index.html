@@ -121,7 +121,7 @@
       color: white;
       transition: background-color 0.3s, transform 0.1s;
       min-width: 120px;
-      max-width: 240px;
+      max-width: 500px;
       -webkit-appearance: none;
       appearance: none;
       touch-action: manipulation;
@@ -970,21 +970,162 @@
     let showCheckEmoji = false; 
 
     // --- Inicialização ---
-    document.addEventListener('DOMContentLoaded', initApp);
+    // A função initApp será sobrescrita, então o listener será para a nova versão
+    document.addEventListener('DOMContentLoaded', () => {
+        // Chamar a função original (ou a que será sobrescrita)
+        initApp(); 
+    });
+    
 
-    function initApp() {
-      console.log("Inicializando Vip Emojs v7.3...");
-      checkStorageAvailability(); // Verifica qual método usar
-      setupEventListeners();
-      populateQuantidadeSelect(); // Popula o select de quantidade principal
-      loadPersistedData();
-      setupPWA();
-      hideSplashScreen();
-      // Chamar convertToEmojisRealTime() apenas uma vez para inicializar a saída
-      convertToEmojisRealTime(); 
+    // --- Início das Funções de Ponte para MIT App Inventor ---
+
+    // Flag para indicar se estamos rodando dentro do MIT App Inventor WebView
+    let isInAppInventor = false;
+    let _appInventorCallbacks = {}; // Para gerenciar callbacks de getData assíncrono
+
+    // Verificar se estamos no ambiente MIT App Inventor
+    function checkAppInventorEnvironment() {
+        if (window.AppInventor && window.AppInventor.WebViewer) {
+            isInAppInventor = true;
+            console.log("Executando dentro do MIT App Inventor WebView.");
+            // Opcional: Notificar o App Inventor que o HTML está pronto para receber dados
+            window.AppInventor.WebViewer.postMessage(JSON.stringify({ action: "webviewReady" }));
+        } else {
+            console.log("Não executando dentro do MIT App Inventor WebView. Usando armazenamento padrão do navegador.");
+        }
     }
 
-    // Função para popular APENAS o select de quantidade da página principal
+    // Guardar as funções originais antes de sobrescrevê-las
+    const originalSaveData = saveData;
+    const originalGetData = getData;
+    const originalRemoveData = removeData;
+
+    // Nova função saveData que prioriza o App Inventor
+    async function saveDataAppInventor(key, value) {
+        if (isInAppInventor) {
+            console.log(`[AppInventor Bridge] Enviando dados para salvar: ${key}`);
+            try {
+                // Enviar o objeto de dados como JSON string
+                // É crucial que 'value' seja serializável em JSON
+                const message = { action: "save", key: key, value: value };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
+                // Não há um retorno imediato do App Inventor, assumimos sucesso otimista
+                return true; 
+            } catch (e) {
+                console.error("[AppInventor Bridge] Erro ao enviar dados para App Inventor:", e);
+                showToast("Erro ao enviar dados para o aplicativo.", "error");
+                return false;
+            }
+        } else {
+            // Se não estiver no App Inventor, usa a função original (IndexedDB/LocalStorage/Cookies)
+            return await originalSaveData(key, value);
+        }
+    }
+
+    // Nova função getData que prioriza o App Inventor
+    async function getDataAppInventor(key) {
+        if (isInAppInventor) {
+            return new Promise((resolve) => {
+                // Criar um ID de requisição único para cada chamada
+                const requestId = Date.now() + Math.random().toString(36).substring(2, 9);
+                _appInventorCallbacks[requestId] = resolve; // Armazenar a função de resolução
+                
+                console.log(`[AppInventor Bridge] Solicitando dados para: ${key} (reqId: ${requestId})`);
+                const message = { action: "load", key: key, requestId: requestId };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
+                
+                // Opcional: Timeout para evitar que a promessa fique pendurada
+                setTimeout(() => {
+                    if (_appInventorCallbacks[requestId]) {
+                        console.warn(`[AppInventor Bridge] Timeout para getData de ${key} (reqId: ${requestId}).`);
+                        _appInventorCallbacks[requestId](null); // Resolve com null em caso de timeout
+                        delete _appInventorCallbacks[requestId];
+                    }
+                }, 5000); // 5 segundos de timeout
+            });
+        } else {
+            return await originalGetData(key);
+        }
+    }
+
+    // Nova função removeData que prioriza o App Inventor
+    async function removeDataAppInventor(key) {
+        if (isInAppInventor) {
+            console.log(`[AppInventor Bridge] Enviando requisição para remover dados: ${key}`);
+            try {
+                const message = { action: "remove", key: key };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
+                return true; // Retorna true otimista
+            } catch (e) {
+                console.error("[AppInventor Bridge] Erro ao enviar requisição de remoção para App Inventor:", e);
+                showToast("Erro ao remover dados do aplicativo.", "error");
+                return false;
+            }
+        } else {
+            return await originalRemoveData(key);
+        }
+    }
+
+    // Função global que o App Inventor chamará para enviar dados de volta
+    window.dataFromAppInventor = (data) => {
+        if (data && data.action === "loaded" && data.requestId) {
+            const resolve = _appInventorCallbacks[data.requestId];
+            if (resolve) {
+                console.log(`[AppInventor Bridge] Resolvendo callback para reqId: ${data.requestId}, key: ${data.key}`);
+                resolve(data.value);
+                delete _appInventorCallbacks[data.requestId]; // Limpar o callback
+            } else {
+                console.warn(`[AppInventor Bridge] Callback não encontrado para reqId: ${data.requestId}`);
+            }
+        } else {
+            console.warn("[AppInventor Bridge] Mensagem recebida do App Inventor em formato inesperado:", data);
+        }
+    };
+
+    // --- Fim das Funções de Ponte para MIT App Inventor ---
+
+    // A função initApp ORIGINAL. Ela será chamada DEPOIS de configurar as funções de ponte.
+    async function _initAppOriginalLogic() {
+        console.log("Inicializando Vip Emojs v7.3 (Lógica Original)...");
+        // checkStorageAvailability(); // Esta função não é mais necessária com a ponte ativa
+        setupEventListeners();
+        populateQuantidadeSelect();
+        await loadPersistedData(); // Garante que os dados sejam carregados APÓS a sobrescrita das funções
+        setupPWA();
+        hideSplashScreen();
+        convertToEmojisRealTime();
+    }
+
+
+    // Sobrescrita da função initApp globalmente para incluir a lógica de detecção do App Inventor
+    initApp = async () => {
+        checkAppInventorEnvironment(); // Verifica o ambiente primeiro
+
+        // Sobrescreve as funções globais se estiver no App Inventor
+        if (isInAppInventor) {
+            window.saveData = saveDataAppInventor;
+            window.getData = getDataAppInventor;
+            window.removeData = removeDataAppInventor;
+            console.log("Funções de armazenamento sobrescritas para App Inventor.");
+            // No modo App Inventor, initIndexedDB, localStorage, cookies não são usados para persistência principal
+            // Mas as funções saveData e getData originais ainda podem ser chamadas pelo fallback.
+            // Para garantir que o IndexedDB seja inicializado (para caso o fallback seja usado por algum motivo),
+            // podemos chamar initIndexedDB aqui se quisermos manter essa camada.
+            // await checkStorageAvailability(); // Chama initIndexedDB e verifica disponibilidade do navegador
+        } else {
+            // Se não estiver no App Inventor, mantém as originais
+            window.saveData = originalSaveData;
+            window.getData = originalGetData;
+            window.removeData = originalRemoveData;
+            console.log("Usando funções de armazenamento padrão do navegador.");
+            await checkStorageAvailability(); // Inicia IndexedDB e verifica outras opções no navegador
+        }
+        
+        // Agora, chame a lógica original de inicialização
+        await _initAppOriginalLogic();
+    };
+
+
     function populateQuantidadeSelect() {
         const selectMain = document.getElementById('quantidadeSelect');
         
@@ -1012,14 +1153,12 @@
     }
 
     async function loadPersistedData() {
-        await loadThemePreference();
-        // Não carregamos mais a preferência do botão PAGO do armazenamento
-        // Ele SEMPRE começará como "FOI PAGO?"
+        await loadThemePreference(); // Agora usa o window.getData() sobrescrito
         showCheckEmoji = false; // Garante que o estado seja false ao carregar
-        updateCheckEmojiButtonAppearance(); // Atualiza a aparência do botão PAGO no carregamento
+        updateCheckEmojiButtonAppearance(); 
 
-        await carregarNomesSalvos();
-        await carregarListasSalvas();
+        await carregarNomesSalvos(); // Agora usa o window.getData() sobrescrito
+        await carregarListasSalvas(); // Agora usa o window.getData() sobrescrito
     }
 
     // Carregar preferência de exibição do emoji de verificação
@@ -1039,43 +1178,34 @@
     // Função para atualizar a aparência do botão "FOI PAGO?"
     function updateCheckEmojiButtonAppearance() {
         const checkEmojiToggle = document.getElementById('checkEmojiToggle');
-        if (!checkEmojiToggle) return; // Se o botão não existe, não faz nada
+        if (!checkEmojiToggle) return; 
         
-        // Remove as classes de cor e texto antes de aplicar a nova
         checkEmojiToggle.classList.remove('paid');
-        checkEmojiToggle.style.backgroundColor = ''; // Remove estilo inline para que o CSS de classe funcione
-        checkEmojiToggle.style.color = ''; // Remove estilo inline
+        checkEmojiToggle.style.backgroundColor = ''; 
+        checkEmojiToggle.style.color = ''; 
         
         if (showCheckEmoji) {
-            checkEmojiToggle.classList.add('paid'); // Adiciona classe para verde
-            checkEmojiToggle.innerHTML = 'PAGO ✅'; // Adiciona o emoji
+            checkEmojiToggle.classList.add('paid'); 
+            checkEmojiToggle.innerHTML = 'PAGO ✅'; 
             checkEmojiToggle.setAttribute('aria-pressed', 'true');
         } else {
-            // Se showCheckEmoji for false, usa os estilos padrão (vermelho) do CSS e o texto original
             checkEmojiToggle.innerHTML = 'FOI PAGO? SE SIM CLIQUE AQUI'; 
             checkEmojiToggle.setAttribute('aria-pressed', 'false');
-            // As cores serão aplicadas via CSS diretamente, não via style.backgroundColor aqui
-            // As cores estão nas regras CSS: #checkEmojiToggle e #checkEmojiToggle.paid
         }
 
-        // Forçar um reflow para garantir que as cores sejam aplicadas imediatamente
         void checkEmojiToggle.offsetWidth;
     }
 
 
     function setupEventListeners() {
-        // Debounce na entrada de texto
         const inputElement = document.getElementById('input');
 
-        // Listener para o botão toggle de emoji de verificação
         const checkEmojiToggle = document.getElementById('checkEmojiToggle');
         if (checkEmojiToggle) {
-            // O estado inicial já é definido em loadCheckEmojiPreference()
             checkEmojiToggle.addEventListener('click', function() {
-                showCheckEmoji = !showCheckEmoji; // Alternar estado
-                // REMOVIDO: saveData(STORAGE_KEYS.SHOW_CHECK_EMOJI, showCheckEmoji);
-                updateCheckEmojiButtonAppearance(); // Atualizar aparência
-                convertToEmojisRealTime(); // Atualizar a exibição
+                showCheckEmoji = !showCheckEmoji; 
+                updateCheckEmojiButtonAppearance(); 
+                convertToEmojisRealTime(); 
                 showToast(showCheckEmoji ? 'PAGO ativado!' : 'PAGO desativado!', 'info');
             });
         }
@@ -1084,18 +1214,15 @@
             convertTimeout = setTimeout(convertToEmojisRealTime, DEBOUNCE_DELAY);
         });
 
-        // Listener para o select de quantidade na página principal
         const quantidadeSelectMain = document.getElementById('quantidadeSelect');
         if (quantidadeSelectMain) {
             quantidadeSelectMain.addEventListener('change', showMilharesCentenasDezenas);
         }
 
-        // Listener para o select de nome na página principal
         const nomeSelect = document.getElementById('nomePessoaSelect');
         if (nomeSelect) {
             nomeSelect.addEventListener('change', onNomeSelectChange);
         }
-        // Listener para o select de nome no modal (para exclusão)
         const nomeSelectModal = document.getElementById('nomePessoaSelectModal');
         if (nomeSelectModal) {
              nomeSelectModal.addEventListener('change', () => { });
@@ -1124,39 +1251,31 @@
         radioButtons.forEach(radio => {
             radio.addEventListener('change', showMilharesCentenasDezenas);
         });
-        // Garantir que um radio esteja selecionado
         if (!Array.from(radioButtons).some(r => r.checked)) {
             radioButtons[0].checked = true;
         }
     }
     function saveAllData() {
         console.log("Salvando todos os dados...");
-        salvarNomes();
-        salvarListasSalvas();
-        saveData(STORAGE_KEYS.THEME, document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-        // REMOVIDO: Salvamento do estado do botão SHOW_CHECK_EMOJI aqui também,
-        // pois ele não deve persistir.
+        salvarNomes(); // Usará window.saveData()
+        salvarListasSalvas(); // Usará window.saveData()
+        window.saveData(STORAGE_KEYS.THEME, document.body.classList.contains('dark-mode') ? 'dark' : 'light');
     }
 
-    // --- Função para fechar o aplicativo (ocultar body) ---
     function closeApp() {
         console.log("Fechando o aplicativo...");
         document.body.style.display = 'none';
-        // Opcional: Adicionar mensagem de despedida ou redirecionamento
-        // alert("Aplicativo fechado."); 
-        // window.location.href = 'about:blank'; // Redireciona para página em branco
     }
 
     // --- Sistema de Armazenamento Persistente Robusto (IndexedDB, localStorage e Cookies) ---
+    // Essas funções agora são 'originais' e serão chamadas se !isInAppInventor
     
-    // Variáveis para IndexedDB
     let db;
     const DB_NAME = 'vipEmojsDB';
     const DB_VERSION = 1;
     const STORE_NAME = 'dataStore';
     let indexedDBAvailable = false;
     
-    // Inicializar IndexedDB
     function initIndexedDB() {
         return new Promise((resolve, reject) => {
             if (!window.indexedDB) {
@@ -1176,7 +1295,6 @@
                 db = event.target.result;
                 console.log("IndexedDB inicializado com sucesso");
                 
-                // Configurar tratamento de erro
                 db.onerror = (event) => {
                     console.error("Erro no IndexedDB:", event.target.error);
                     showToast("Erro no armazenamento de dados", "error");
@@ -1196,7 +1314,6 @@
         });
     }
     
-    // Funções auxiliares para Cookies com melhor compatibilidade mobile
     function setCookie(name, value, days = 365) {
         try {
             let expires = "";
@@ -1206,19 +1323,15 @@
                 expires = "; expires=" + date.toUTCString();
             }
             
-            // Usar encodeURIComponent para garantir que caracteres especiais sejam salvos corretamente
-            // Configurações otimizadas para mobile
             const cookieValue = encodeURIComponent(value || "");
             document.cookie = `${name}=${cookieValue}${expires}; path=/; SameSite=Lax; max-age=${days*24*60*60}`;
             
-            // Verificar se o cookie foi realmente definido
             setTimeout(() => {
                 const testCookie = getCookie(name);
                 if (testCookie) {
                     console.log(`Cookie definido e verificado: ${name}`);
                 } else {
                     console.warn(`Cookie não foi definido corretamente: ${name}`);
-                    // Tentar novamente com configurações mais básicas
                     document.cookie = `${name}=${cookieValue}; path=/;`;
                 }
             }, 100);
@@ -1238,7 +1351,6 @@
                 let c = ca[i];
                 while (c.charAt(0) == ' ') c = c.substring(1, c.length);
                 if (c.indexOf(nameEQ) == 0) {
-                    // Usar decodeURIComponent para ler o valor corretamente
                     const value = decodeURIComponent(c.substring(nameEQ.length, c.length));
                     return value;
                 }
@@ -1260,12 +1372,9 @@
         }
     }
 
-    // Função para verificar disponibilidade e definir método
     async function checkStorageAvailability() {
-        // Verificar IndexedDB primeiro
         const indexedDBResult = await initIndexedDB();
         
-        // Verificar localStorage
         let localStorageAvailable = false;
         try {
             if (typeof localStorage !== 'undefined') {
@@ -1281,23 +1390,21 @@
             localStorageAvailable = false;
         }
         
-        // Definir método de armazenamento
+        // A variável global `storageMethod` não é mais usada para decidir
+        // qual `saveData` ou `getData` chamar, pois a lógica de `isInAppInventor`
+        // faz isso agora. Mantendo a mensagem para depuração.
+        let detectedMethod = 'nenhum';
         if (indexedDBResult) {
-            storageMethod = 'indexedDB';
-            console.log("Usando IndexedDB para armazenamento principal");
+            detectedMethod = 'indexedDB';
         } else if (localStorageAvailable) {
-            storageMethod = 'localStorage';
-            console.log("Usando localStorage para armazenamento principal");
+            detectedMethod = 'localStorage';
         } else {
-            storageMethod = 'cookies';
-            console.log("Usando cookies para armazenamento principal");
+            detectedMethod = 'cookies';
         }
         
-        // Mostrar mensagem ao usuário
-        showToast(`Sistema de armazenamento inicializado: ${storageMethod}`, 'info');
+        showToast(`Sistema de armazenamento padrão do navegador: ${detectedMethod}`, 'info');
     }
 
-    // Salvar dados em IndexedDB
     function saveToIndexedDB(key, value) {
         return new Promise((resolve, reject) => {
             if (!indexedDBAvailable || !db) {
@@ -1321,7 +1428,6 @@
                     resolve(false);
                 };
                 
-                // Garantir que a transação seja concluída
                 transaction.oncomplete = () => {
                     console.log(`Transação IndexedDB concluída para: ${key}`);
                 };
@@ -1336,7 +1442,6 @@
         });
     }
 
-    // Obter dados de IndexedDB
     function getFromIndexedDB(key) {
         return new Promise((resolve, reject) => {
             if (!indexedDBAvailable || !db) {
@@ -1372,7 +1477,6 @@
         });
     }
 
-    // Remover dados de IndexedDB
     function removeFromIndexedDB(key) {
         return new Promise((resolve, reject) => {
             if (!indexedDBAvailable || !db) {
@@ -1402,12 +1506,11 @@
         });
     }
 
-    // Função principal para salvar dados em todas as camadas
+    // Função principal para salvar dados em todas as camadas (agora 'originalSaveData')
     async function saveData(key, value) {
         const stringValue = JSON.stringify(value);
         let success = false;
         
-        // Mostrar indicador de salvamento
         const saveIndicator = document.createElement('div');
         saveIndicator.textContent = "Salvando...";
         saveIndicator.style.position = "fixed";
@@ -1422,7 +1525,6 @@
         document.body.appendChild(saveIndicator);
 
         try {
-            // 1. Tentar salvar em IndexedDB (mais confiável para grandes volumes)
             if (indexedDBAvailable) {
                 const idbSuccess = await saveToIndexedDB(key, value);
                 if (idbSuccess) {
@@ -1430,7 +1532,6 @@
                 }
             }
             
-            // 2. Tentar salvar em localStorage
             try {
                 localStorage.setItem(key, stringValue);
                 const testValue = localStorage.getItem(key);
@@ -1441,21 +1542,18 @@
                 console.warn(`Erro ao salvar em localStorage (${key}):`, e);
             }
             
-            // 3. Sempre salvar em cookies também (mais confiável em alguns mobiles)
             const cookieSuccess = setCookie(key, stringValue);
             if (cookieSuccess) {
                 success = true;
             }
             
-            // 4. Verificação final e feedback
             if (success) {
                 console.log(`Dados salvos com sucesso para ${key}`);
                 saveIndicator.textContent = "Salvo ✓";
                 saveIndicator.style.backgroundColor = "rgba(40,167,69,0.9)";
                 
-                // Verificação adicional após um tempo
                 setTimeout(async () => {
-                    const verifyData = await getData(key);
+                    const verifyData = await getData(key); // Chama o getData ORIGINAL aqui
                     if (!verifyData || JSON.stringify(verifyData) !== JSON.stringify(value)) {
                         console.warn(`Verificação posterior falhou para ${key}`);
                         showToast("Aviso: Verificação de dados falhou. Tente salvar novamente.", "warning");
@@ -1468,7 +1566,6 @@
                 showToast(`Erro ao salvar dados. Tente novamente.`, 'error');
             }
         } finally {
-            // Remover indicador após um tempo
             setTimeout(() => {
                 if (document.body.contains(saveIndicator)) {
                     document.body.removeChild(saveIndicator);
@@ -1479,20 +1576,17 @@
         return success;
     }
 
-    // Função principal para obter dados de todas as camadas
+    // Função principal para obter dados de todas as camadas (agora 'originalGetData')
     async function getData(key) {
         let value = null;
         let stringValue = null;
         
-        console.log(`Tentando obter dados para: ${key}`);
+        console.log(`Tentando obter dados para: ${key} (origem: navegador)`);
         
-        // 1. Tentar obter de IndexedDB primeiro
         if (indexedDBAvailable) {
             value = await getFromIndexedDB(key);
             if (value !== null) {
                 console.log(`Dados obtidos de IndexedDB: ${key}`);
-                
-                // Sincronizar com outras camadas
                 try {
                     const stringValue = JSON.stringify(value);
                     localStorage.setItem(key, stringValue);
@@ -1500,52 +1594,39 @@
                 } catch (e) {
                     console.warn(`Erro ao sincronizar de IndexedDB: ${key}`, e);
                 }
-                
                 return value;
             }
         }
         
-        // 2. Tentar obter dos cookies (mais confiável em mobile)
         stringValue = getCookie(key);
         if (stringValue) {
             console.log(`Dados obtidos de cookies: ${key}`);
-            
             try {
                 value = JSON.parse(stringValue);
-                
-                // Sincronizar com outras camadas
                 if (indexedDBAvailable) {
                     saveToIndexedDB(key, value);
                 }
-                
                 try {
                     localStorage.setItem(key, stringValue);
                 } catch (e) {
                     console.warn(`Erro ao sincronizar de cookies para localStorage: ${key}`, e);
                 }
-                
                 return value;
             } catch (parseError) {
                 console.error(`Erro ao parsear dados de cookies (${key}):`, parseError);
             }
         }
         
-        // 3. Tentar obter de localStorage
         try {
             stringValue = localStorage.getItem(key);
             if (stringValue) {
                 console.log(`Dados obtidos de localStorage: ${key}`);
-                
                 try {
                     value = JSON.parse(stringValue);
-                    
-                    // Sincronizar com outras camadas
                     if (indexedDBAvailable) {
                         saveToIndexedDB(key, value);
                     }
-                    
                     setCookie(key, stringValue);
-                    
                     return value;
                 } catch (parseError) {
                     console.error(`Erro ao parsear dados de localStorage (${key}):`, parseError);
@@ -1555,15 +1636,14 @@
             console.warn(`Erro ao obter de localStorage (${key}):`, e);
         }
         
-        console.log(`Nenhum dado encontrado para: ${key} em nenhuma camada de armazenamento`);
+        console.log(`Nenhum dado encontrado para: ${key} em nenhuma camada de armazenamento do navegador`);
         return null;
     }
 
-    // Função principal para remover dados de todas as camadas
+    // Função principal para remover dados de todas as camadas (agora 'originalRemoveData')
     async function removeData(key) {
         let success = false;
         
-        // 1. Remover de IndexedDB
         if (indexedDBAvailable) {
             const idbSuccess = await removeFromIndexedDB(key);
             if (idbSuccess) {
@@ -1571,7 +1651,6 @@
             }
         }
         
-        // 2. Remover de localStorage
         try {
             localStorage.removeItem(key);
             success = true;
@@ -1579,14 +1658,13 @@
             console.warn(`Erro ao remover de localStorage (${key}):`, e);
         }
         
-        // 3. Remover de cookies
         const cookieSuccess = deleteCookie(key);
         if (cookieSuccess) {
             success = true;
         }
         
         if (!success) {
-            console.error(`Falha ao remover dados (${key}) de todas as camadas.`);
+            console.error(`Falha ao remover dados (${key}) de todas as camadas do navegador.`);
         }
         
         return success;
@@ -1594,7 +1672,7 @@
 
     // --- Gerenciar Tema --- 
     async function loadThemePreference() {
-        const savedTheme = await getData(STORAGE_KEYS.THEME);
+        const savedTheme = await window.getData(STORAGE_KEYS.THEME); // Chama window.getData()
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = savedTheme || (prefersDark ? 'dark' : 'light');
         setTheme(theme);
@@ -1603,7 +1681,7 @@
     function toggleTheme() {
         const newTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
         setTheme(newTheme);
-        saveData(STORAGE_KEYS.THEME, newTheme);
+        window.saveData(STORAGE_KEYS.THEME, newTheme); // Chama window.saveData()
     }
 
     function setTheme(theme) {
@@ -1618,16 +1696,15 @@
             themeToggleBtn.textContent = '🌙 Modo Escuro';
             themeToggleBtn.setAttribute('aria-label', 'Mudar para modo escuro');
         }
-        // Atualizar meta theme-color
         document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#121212' : '#f0f8ff');
     }
 
     // --- Gerenciar Nomes Salvos (com ordenação) ---
     async function carregarNomesSalvos() {
-        const savedNames = await getData(STORAGE_KEYS.NAMES);
+        const savedNames = await window.getData(STORAGE_KEYS.NAMES); // Chama window.getData()
         if (Array.isArray(savedNames)) {
             nomesSalvos = savedNames;
-            nomesSalvos.sort((a, b) => a.localeCompare(b)); // Ordenar ao carregar
+            nomesSalvos.sort((a, b) => a.localeCompare(b)); 
             console.log("Nomes carregados e ordenados (via getData):", nomesSalvos.length);
         } else {
             nomesSalvos = [];
@@ -1637,12 +1714,11 @@
     }
 
     async function salvarNomes() {
-        // A ordenação acontece ao adicionar/carregar
-        return await saveData(STORAGE_KEYS.NAMES, nomesSalvos);
+        return await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos); // Chama window.saveData()
     }
 
     async function addNome() {
-        const input = document.getElementById('nomePessoaInputModal'); // Pega o input do modal
+        const input = document.getElementById('nomePessoaInputModal'); 
         const nome = input.value.trim();
 
         if (!nome) {
@@ -1656,27 +1732,25 @@
         }
 
         nomesSalvos.push(nome);
-        nomesSalvos.sort((a, b) => a.localeCompare(b)); // Ordenar após adicionar
+        nomesSalvos.sort((a, b) => a.localeCompare(b)); 
         console.log("Nome adicionado. Lista ordenada:", nomesSalvos);
 
-        if (await salvarNomes()) {
+        if (await salvarNomes()) { // Chama salvarNomes que usa window.saveData()
             atualizarSelectNomes();
-            input.value = ''; // Limpa o input do modal
-            // Selecionar o nome recém-adicionado no select principal
+            input.value = ''; 
             setTimeout(() => {
                 const selectMain = document.getElementById('nomePessoaSelect');
                 selectMain.value = nome;
-                convertToEmojisRealTime(); // Atualizar preview com o nome
+                convertToEmojisRealTime(); 
             }, 100);
             showToast('Nome salvo com sucesso!', 'success');
         } else {
-            // Reverter adição se o salvamento falhar (opcional)
             nomesSalvos.splice(nomesSalvos.indexOf(nome), 1);
         }
     }
 
     async function removeNome() {
-        const selectModal = document.getElementById('nomePessoaSelectModal'); // Pega o select do modal para exclusão
+        const selectModal = document.getElementById('nomePessoaSelectModal'); 
         const nomeSelecionado = selectModal.value;
 
         if (!nomeSelecionado) {
@@ -1695,14 +1769,12 @@
         nomesSalvos.splice(index, 1);
         console.log("Nome removido. Lista atual:", nomesSalvos);
 
-        if (await salvarNomes()) {
-            // Limpar input de adição (se for o caso) e atualizar selects
+        if (await salvarNomes()) { // Chama salvarNomes que usa window.saveData()
             document.getElementById('nomePessoaInputModal').value = '';
             atualizarSelectNomes();
-            convertToEmojisRealTime(); // Atualizar preview sem o nome
+            convertToEmojisRealTime(); 
             showToast('Nome excluído com sucesso!', 'success');
         } else {
-            // Reverter remoção se o salvamento falhar (opcional)
             nomesSalvos.splice(index, 0, nomeSelecionado);
             nomesSalvos.sort((a, b) => a.localeCompare(b));
         }
@@ -1710,17 +1782,14 @@
 
     function atualizarSelectNomes() {
         const selectMain = document.getElementById('nomePessoaSelect');
-        const selectModal = document.getElementById('nomePessoaSelectModal'); // Novo select no modal para exclusão
+        const selectModal = document.getElementById('nomePessoaSelectModal'); 
         
         const currentSelectedValueMain = selectMain.value;
-        const currentSelectedValueModal = selectModal.value; // Manter valor selecionado no modal
+        const currentSelectedValueModal = selectModal.value; 
 
-        // Limpar select principal
         selectMain.innerHTML = '<option value="">-- Nenhum selecionado --</option>';
-        // Limpar select do modal
         selectModal.innerHTML = '<option value="">-- Selecione para excluir --</option>';
 
-        // Adicionar nomes ordenados a AMBOS os selects
         nomesSalvos.forEach(nome => {
             const optionMain = document.createElement('option');
             optionMain.value = nome;
@@ -1733,13 +1802,11 @@
             selectModal.appendChild(optionModal);
         });
 
-        // Restaurar seleção no select principal se possível
         if (nomesSalvos.includes(currentSelectedValueMain)) {
             selectMain.value = currentSelectedValueMain;
         } else {
-            selectMain.value = ''; // Resetar se o nome selecionado foi excluído
+            selectMain.value = ''; 
         }
-        // Restaurar seleção no select do modal se possível
         if (nomesSalvos.includes(currentSelectedValueModal)) {
             selectModal.value = currentSelectedValueModal;
         } else {
@@ -1749,43 +1816,35 @@
 
     function onNomeSelectChange() {
         const selectMain = document.getElementById('nomePessoaSelect');
-        // Não há input direto na página principal, o nome é usado para o preview
-        // const input = document.getElementById('nomePessoaInput'); // REMOVIDO
-        // input.value = select.value; // REMOVIDO
-        convertToEmojisRealTime(); // Atualizar preview
+        convertToEmojisRealTime(); 
     }
 
-    // Funções para o modal de gerenciamento de nomes
     function showNomeModal() {
         const nomeModal = document.getElementById('nomeModal');
         nomeModal.classList.add('active');
-        // Focar no input de adicionar nome no modal
         document.getElementById('nomePessoaInputModal').focus();
-        // Atualizar o select de exclusão no modal
         atualizarSelectNomes();
     }
 
     function closeNomeModal() {
         document.getElementById('nomeModal').classList.remove('active');
-        // Garantir que a conversão seja atualizada após fechar o modal
         convertToEmojisRealTime();
     }
 
 
     // --- Gerenciar Listas Salvas ---
     async function carregarListasSalvas() {
-        const savedData = await getData(STORAGE_KEYS.LISTS);
+        const savedData = await window.getData(STORAGE_KEYS.LISTS); // Chama window.getData()
         if (Array.isArray(savedData)) {
             savedLists = savedData;
             console.log("Listas carregadas:", savedLists.length);
         } else {
             savedLists = [];
         }
-        // Não precisa atualizar container aqui, só ao abrir o modal
     }
 
     async function salvarListasSalvas() {
-        return await saveData(STORAGE_KEYS.LISTS, savedLists);
+        return await window.saveData(STORAGE_KEYS.LISTS, savedLists); // Chama window.saveData()
     }
 
     function showSaveDialog() {
@@ -1794,9 +1853,9 @@
             showToast('Digite alguns números antes de salvar a lista.', 'info');
             return;
         }
-        document.getElementById('listNameInput').value = ''; // Limpar input do nome
+        document.getElementById('listNameInput').value = ''; 
         document.getElementById('saveListModal').classList.add('active');
-        document.getElementById('listNameInput').focus(); // Foco no input
+        document.getElementById('listNameInput').focus(); 
     }
 
     function closeSaveDialog() {
@@ -1813,21 +1872,19 @@
         }
 
         const listItem = {
-            id: Date.now().toString(), // ID único
+            id: Date.now().toString(), 
             name: listName,
-            date: new Date().toISOString(), // Formato ISO para consistência
+            date: new Date().toISOString(), 
             input: inputText
-            // Não salvamos mais o 'output' aqui, pois era o mesmo que input
         };
 
-        savedLists.unshift(listItem); // Adicionar no início
+        savedLists.unshift(listItem); 
 
-        if (await salvarListasSalvas()) {
+        if (await salvarListasSalvas()) { // Chama salvarListasSalvas que usa window.saveData()
             closeSaveDialog();
             showToast(`Lista "${listName}" salva com sucesso!`, 'success');
-            showPreviewModal(); // Abrir preview após salvar
+            showPreviewModal(); 
         } else {
-            // Reverter adição se falhar
             savedLists.shift();
         }
     }
@@ -1843,14 +1900,13 @@
 
     function updateSavedItemsContainer() {
         const container = document.getElementById('savedItemsContainer');
-        container.innerHTML = ''; // Limpar container
+        container.innerHTML = ''; 
 
         if (savedLists.length === 0) {
             container.innerHTML = '<div class="no-saved-items">Nenhuma lista salva ainda.</div>';
             return;
         }
 
-        // Ordenar por data (mais recente primeiro) para exibição
         const sortedLists = [...savedLists].sort((a, b) => new Date(b.date) - new Date(a.date));
 
         sortedLists.forEach((item) => {
@@ -1867,7 +1923,6 @@
 
             const titleElement = document.createElement('div');
             titleElement.className = 'saved-item-title';
-            // Usar Intl.DateTimeFormat para data mais legível
             const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.date));
             titleElement.textContent = `${item.name} (${formattedDate})`;
 
@@ -1876,7 +1931,7 @@
 
             const headerCopyButton = document.createElement('button');
             headerCopyButton.className = 'header-btn copy-btn';
-            headerCopyButton.innerHTML = '📋 <span class="sr-only">Copiar</span>'; // Ícone + texto acessível
+            headerCopyButton.innerHTML = '📋 <span class="sr-only">Copiar</span>'; 
             headerCopyButton.title = 'Copiar conteúdo';
             headerCopyButton.onclick = (e) => {
                 e.stopPropagation();
@@ -1885,11 +1940,11 @@
 
             const headerDeleteButton = document.createElement('button');
             headerDeleteButton.className = 'header-btn delete-btn';
-            headerDeleteButton.innerHTML = '🗑️ <span class="sr-only">Excluir</span>'; // Ícone + texto acessível
+            headerDeleteButton.innerHTML = '🗑️ <span class="sr-only">Excluir</span>'; 
             headerDeleteButton.title = 'Excluir lista';
             headerDeleteButton.onclick = (e) => {
                 e.stopPropagation();
-                deleteSavedItem(item.id);
+                deleteSavedItem(item.id); // Esta função usará window.removeData()
             };
 
             headerActionsElement.appendChild(headerCopyButton);
@@ -1899,7 +1954,7 @@
             toggleElement.className = 'saved-item-toggle';
             toggleElement.textContent = '▼';
             toggleElement.style.transform = 'rotate(-90deg)';
-            toggleElement.setAttribute('aria-hidden', 'true'); // Decorativo
+            toggleElement.setAttribute('aria-hidden', 'true'); 
 
             headerElement.appendChild(titleElement);
             headerElement.appendChild(headerActionsElement);
@@ -1923,12 +1978,10 @@
             };
 
             headerElement.addEventListener('click', (e) => {
-                // Não expandir se clicar nos botões
                 if (!e.target.closest('button')) {
                     toggleItem();
                 }
             });
-            // Permitir expandir/recolher com Enter/Space
             headerElement.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -1943,10 +1996,8 @@
         });
     }
 
-    // Função para copiar texto (com feedback visual)
     async function copyToClipboard(text, buttonElement = null) {
         if (!navigator.clipboard) {
-            // Fallback para navegadores antigos (menos seguro)
             try {
                 const textArea = document.createElement('textarea');
                 textArea.value = text;
@@ -1975,7 +2026,6 @@
         }
     }
 
-    // Feedback visual temporário em um botão
     function provideFeedback(button, tempContent) {
         const originalContent = button.innerHTML;
         button.innerHTML = tempContent;
@@ -1983,7 +2033,7 @@
         setTimeout(() => {
             button.innerHTML = originalContent;
             button.disabled = false;
-        }, 1500); // Duração do feedback
+        }, 1500); 
     }
 
     async function deleteSavedItem(id) {
@@ -1998,20 +2048,18 @@
         const deletedItemName = savedLists[index].name;
         savedLists.splice(index, 1);
 
-        if (await salvarListasSalvas()) {
+        if (await salvarListasSalvas()) { // Chama salvarListasSalvas que usa window.saveData()
             showToast(`Lista "${deletedItemName}" excluída.`, 'info');
-            // Atualizar a visualização no modal se estiver aberto
             if (document.getElementById('previewModal').classList.contains('active')) {
                 updateSavedItemsContainer();
             }
         } else {
             // Reverter exclusão se falhar (opcional)
-            // savedLists.splice(index, 0, deletedItem);
         }
     }
 
     // --- Lógica de Conversão de Números ---
-    const emojiToNumber = { // Adicionado mapa reverso
+    const emojiToNumber = { 
       '0️⃣': '0', '1️⃣': '1', '2️⃣': '2', '3️⃣': '3', '4️⃣': '4',
       '5️⃣': '5', '6️⃣': '6', '7️⃣': '7', '8️⃣': '8', '9️⃣': '9'
     };
@@ -2019,28 +2067,21 @@
     function parseNumbers() {
         let inputText = document.getElementById('input').value;
 
-        // Normalizar emojis numéricos para dígitos antes de processar
         for (const [emoji, digit] of Object.entries(emojiToNumber)) {
-            // Usar replaceAll para substituir todas as ocorrências
             inputText = inputText.replaceAll(emoji, digit);
         }
 
-        // Regex agora só precisa encontrar dígitos, pois emojis foram convertidos
-        // Separadores podem ser qualquer coisa que não seja dígito
         const parts = inputText.split(/[^\d]+/).filter(Boolean);
         const numbers = [];
         const invalid = [];
 
         for (const p of parts) {
-            // Validar se a parte contém APENAS dígitos e tem o tamanho correto
             if (/^\d{1,4}$/.test(p)) {
                 numbers.push(p);
-            } else if (p.length > 0) { // Ignorar strings vazias resultantes do split e partes inválidas
-                // Verificar se a parte inválida contém algum dígito (para não reportar texto puro como inválido)
+            } else if (p.length > 0) { 
                 if (/[\d]/.test(p)) {
-                   invalid.push(p); // Reportar apenas se contiver dígitos mas for inválido (ex: 12a34, 12345)
+                   invalid.push(p); 
                 }
-                // Se não contiver dígitos, é apenas texto separador, ignorar silenciosamente.
             }
         }
 
@@ -2065,7 +2106,6 @@
 
     function getDezenaPart(numStr) {
         if (numStr.length >= 2) return numStr.slice(-2);
-        // if (numStr.length === 1) return numStr; // Dezenas são sempre 2 dígitos
         return '';
     }
 
@@ -2074,10 +2114,8 @@
         const outputElement = document.getElementById('emojiOutput');
         const copyButtonsDiv = document.getElementById('copyButtons');
         
-        // Se há números ou erros para exibir algo, prossegue
-        showMilharesCentenasDezenas(); // Atualiza o output
+        showMilharesCentenasDezenas(); 
 
-        // Só mostra o botão de copiar se houver algo significativo na saída
         const outputContent = outputElement.textContent.trim();
         if (outputContent && !outputContent.includes('Aguardando') && !outputContent.includes('inválidos') && numbers.length > 0) {
             copyButtonsDiv.style.display = 'block'; 
@@ -2088,16 +2126,14 @@
 
     function showMilharesCentenasDezenas() {
         const selectValue = document.getElementById('nomePessoaSelect').value;
-        const nome = selectValue || ''; // Se nada selecionado, nome vazio.
+        const nome = selectValue || ''; 
         
-        const numbers = parseNumbers(); // Re-parseia os números
+        const numbers = parseNumbers(); 
         const outputElement = document.getElementById('emojiOutput');
         
         if (numbers.length === 0) {
-            // Se não há números válidos, mas há um erro, mostra o erro.
-            // Se não há números válidos e nem erro, mostra 'Aguardando'.
             if (document.getElementById('errorMessage').textContent) {
-                outputElement.textContent = document.getElementById('errorMessage').textContent; // Mostra a mensagem de erro de parseNumbers
+                outputElement.textContent = document.getElementById('errorMessage').textContent; 
             } else {
                 outputElement.textContent = 'Aguardando números...';
             }
@@ -2251,18 +2287,15 @@
         document.querySelector('input[name="viewOption"][value="both"]').checked = true;
         showToast('Campos limpos!', 'info');
         
-        // Força o showCheckEmoji para false e atualiza o botão
         showCheckEmoji = false;
         updateCheckEmojiButtonAppearance(); 
         
-        // Garante que o output seja limpo e "Aguardando números..." seja exibido
         document.getElementById('emojiOutput').textContent = 'Aguardando números...';
         document.getElementById('copyButtons').style.display = 'none';
     }
     
     // --- Utilitários --- 
     
-    // Função para exibir notificações Toast
     function showToast(message, type = 'info', duration = 3000) {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
@@ -2272,16 +2305,14 @@
         
         container.appendChild(toast);
         
-        // Forçar reflow para aplicar estado inicial da transição
         toast.offsetHeight; 
         
         toast.classList.add('show');
         
         setTimeout(() => {
             toast.classList.remove('show');
-            // Remover o elemento após a transição de saída
             toast.addEventListener('transitionend', () => {
-                if (toast.parentNode === container) { // Verificar se ainda está no DOM
+                if (toast.parentNode === container) { 
                     container.removeChild(toast);
                 }
             }, { once: true });
@@ -2316,14 +2347,11 @@
         window.addEventListener('appinstalled', () => {
             console.log('PWA instalado com sucesso!');
             installButton.style.display = 'none';
-            // Opcional: mostrar mensagem de sucesso
-            // showToast('Aplicativo instalado!', 'success');
         });
         
-        // Registrar Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js') // Certifique-se que este arquivo existe
+                navigator.serviceWorker.register('service-worker.js') 
                     .then(reg => console.log('Service worker registrado:', reg.scope))
                     .catch(err => console.error('Erro ao registrar service worker:', err));
             });
