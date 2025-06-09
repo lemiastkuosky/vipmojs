@@ -377,6 +377,17 @@
     .load-button:active {
       background-color: #5a6268;
     }
+    
+    /* Estilo para o botão "Gerenciar Dados" (novo) */
+    .manage-data-button {
+        background-color: #6f42c1; /* Roxo */
+    }
+    body.dark-mode .manage-data-button {
+        background-color: #8c60d8; /* Roxo mais claro para dark mode */
+    }
+    .manage-data-button:active {
+        background-color: #5a359b;
+    }
 
     /* Estilo para o botão de visualizar listas */
     .view-button {
@@ -611,6 +622,40 @@
       flex: 0 1 auto; /* Não crescer, encolher se necessário */
       min-width: 100px;
     }
+
+    /* Estilos para os botões dentro do modal de Gerenciar Dados */
+    .data-management-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 20px;
+    }
+    .data-management-buttons button {
+        width: 100%; /* Ocupa largura total no modal */
+        max-width: none;
+    }
+    .data-management-buttons .import-btn {
+        background-color: #dc3545; /* Vermelho para importar */
+    }
+    .data-management-buttons .import-btn:active {
+        background-color: #a71d2a;
+    }
+    .data-management-buttons .export-btn {
+        background-color: #28a745; /* Verde para exportar */
+    }
+    .data-management-buttons .export-btn:active {
+        background-color: #218838;
+    }
+    .data-management-explanation {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    body.dark-mode .data-management-explanation {
+        color: #aaa;
+    }
+
 
     /* --- Toast Notifications --- */
     #toast-container {
@@ -851,10 +896,14 @@
         <div id="errorMessage" class="error" role="alert" aria-live="polite"></div>
     </section>
 
-    <div class="button-group main-buttons"> <button onclick="clearAll()">🛑 Limpar Lista</button>
+    <div class="button-group main-buttons">
+      <button onclick="clearAll()">🛑 Limpar Lista</button>
       <button onclick="showSaveDialog()" class="save-button">💾 Salvar Lista</button>
       <button onclick="showPreviewModal()" class="view-button">👁️ Listas Salvas</button>
-      <button onclick="showNomeModal()" class="manage-names-button">👥 Editar Nomes</button> </div>
+      <button onclick="showNomeModal()" class="manage-names-button">👥 Editar Nomes</button>
+      <button onclick="showDataManagementModal()" class="manage-data-button">⚙️ Gerenciar Dados</button>
+      <input type="file" id="importFileInput" accept=".txt" style="display: none;" onchange="importDataFromTxt(event)">
+    </div>
 
     <section id="mainNomeContainer" aria-labelledby="main-nome-section-title">
       <h2 id="main-nome-section-title" class="sr-only">Seleção de Nome e Status de Pagamento</h2>
@@ -939,6 +988,21 @@
           </div>
         </div>
       </section>
+    </div>
+  </div>
+
+  <div id="dataManagementModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dataManagementModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeDataManagementModal()" aria-label="Fechar">×</span>
+      <h3 id="dataManagementModalTitle" class="modal-title">🗄️ Gerenciar Dados</h3>
+      <p class="data-management-explanation">
+        Use o botão VERDE para EXPORTAR um backup de todos os seus nomes e listas salvas em um arquivo TXT.
+        Use o botão VERMELHO para IMPORTAR um arquivo TXT de backup, SOBRESCREVENDO os dados atuais.
+      </p>
+      <div class="data-management-buttons">
+        <button onclick="document.getElementById('importFileInput').click()" class="import-btn">⬆️ Importar Dados</button>
+        <button onclick="exportDataToTxt()" class="export-btn">⬇️ Exportar Dados</button>
+      </div>
     </div>
   </div>
 
@@ -1241,9 +1305,11 @@
             const previewModal = document.getElementById('previewModal');
             const saveListModal = document.getElementById('saveListModal');
             const nomeModal = document.getElementById('nomeModal');
+            const dataManagementModal = document.getElementById('dataManagementModal'); // NOVO
             if (event.target === previewModal) closePreviewModal();
             if (event.target === saveListModal) closeSaveDialog();
             if (event.target === nomeModal) closeNomeModal();
+            if (event.target === dataManagementModal) closeDataManagementModal(); // NOVO
         });
 
         // Botões de rádio
@@ -2358,6 +2424,124 @@
         }
     }
 
+    // --- Funções de Importar/Exportar Dados em TXT ---
+
+    // NOVO: Abre o modal de gerenciamento de dados
+    function showDataManagementModal() {
+        document.getElementById('dataManagementModal').classList.add('active');
+    }
+
+    // NOVO: Fecha o modal de gerenciamento de dados
+    function closeDataManagementModal() {
+        document.getElementById('dataManagementModal').classList.remove('active');
+    }
+
+    async function exportDataToTxt() {
+        showToast('Preparando dados para exportação...', 'info');
+
+        try {
+            const allData = {
+                nomesSalvos: await window.getData(STORAGE_KEYS.NAMES),
+                savedLists: await window.getData(STORAGE_KEYS.LISTS),
+                themePreference: await window.getData(STORAGE_KEYS.THEME),
+                showCheckEmoji: showCheckEmoji // showCheckEmoji é uma variável global
+            };
+
+            const dataString = JSON.stringify(allData, null, 2); // Formata com 2 espaços para legibilidade
+            const blob = new Blob([dataString], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VipEmojs_backup_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a); // Necessário para Firefox
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Dados exportados com sucesso!', 'success');
+            closeDataManagementModal(); // Fecha o modal após a exportação
+        } catch (error) {
+            console.error('Erro ao exportar dados:', error);
+            showToast('Erro ao exportar dados.', 'error');
+        }
+    }
+
+    async function importDataFromTxt(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            showToast('Nenhum arquivo selecionado.', 'info');
+            return;
+        }
+
+        if (!confirm('Importar dados sobrescreverá TODOS os seus dados salvos atuais (nomes, listas e tema). Deseja continuar?')) {
+            // Limpa o input file para que o mesmo arquivo possa ser selecionado novamente
+            event.target.value = ''; 
+            return;
+        }
+
+        showToast('Importando dados...', 'info');
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                
+                // Salvar nomes
+                if (importedData.nomesSalvos && Array.isArray(importedData.nomesSalvos)) {
+                    await window.saveData(STORAGE_KEYS.NAMES, importedData.nomesSalvos);
+                    nomesSalvos = importedData.nomesSalvos; // Atualiza a variável global
+                    atualizarSelectNomes();
+                } else {
+                    console.warn("Dados importados não contêm nomesSalvos válidos.");
+                }
+
+                // Salvar listas
+                if (importedData.savedLists && Array.isArray(importedData.savedLists)) {
+                    await window.saveData(STORAGE_KEYS.LISTS, importedData.savedLists);
+                    savedLists = importedData.savedLists; // Atualiza a variável global
+                } else {
+                    console.warn("Dados importados não contêm savedLists válidos.");
+                }
+
+                // Salvar preferência de tema
+                if (importedData.themePreference) {
+                    await window.saveData(STORAGE_KEYS.THEME, importedData.themePreference);
+                    setTheme(importedData.themePreference);
+                } else {
+                    console.warn("Dados importados não contêm themePreference válido.");
+                }
+
+                // Atualizar estado de showCheckEmoji
+                if (typeof importedData.showCheckEmoji === 'boolean') {
+                    showCheckEmoji = importedData.showCheckEmoji;
+                    updateCheckEmojiButtonAppearance();
+                } else {
+                    console.warn("Dados importados não contêm showCheckEmoji válido.");
+                }
+                
+                showToast('Dados importados com sucesso! Recarregando a página...', 'success', 4000);
+                closeDataManagementModal(); // Fecha o modal após a importação
+
+                // Força um pequeno atraso para o toast ser visível e depois recarrega
+                setTimeout(() => {
+                    window.location.reload(); 
+                }, 3500);
+
+            } catch (parseError) {
+                console.error('Erro ao parsear arquivo TXT:', parseError);
+                showToast('Erro: Arquivo TXT inválido ou corrompido.', 'error');
+            } finally {
+                // Limpa o input file para que o mesmo arquivo possa ser selecionado novamente
+                event.target.value = ''; 
+            }
+        };
+        reader.onerror = (error) => {
+            console.error('Erro ao ler arquivo:', error);
+            showToast('Erro ao ler o arquivo.', 'error');
+        };
+        reader.readAsText(file);
+    }
   </script>
 </body>
 </html>
