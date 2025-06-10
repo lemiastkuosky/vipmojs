@@ -1,14 +1,15 @@
 // firebase-config.js
 
-// ATENÇÃO: Cole aqui o objeto de configuração que você pegou do site do Firebase.
-// As chaves abaixo são apenas um exemplo. Use as SUAS chaves.
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSy...xxxxxxxxxxxxxxxxxxx",
-  authDomain: "seu-projeto.firebaseapp.com",
-  projectId: "seu-projeto",
-  storageBucket: "seu-projeto.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:xxxxxxxxxxxx"
+  apiKey: "AIzaSyAuqQMm02zxOlSZXUi5gB0IslDFB2m09Mk",
+  authDomain: "roleta-a71d3.firebaseapp.com",
+  projectId: "roleta-a71d3",
+  storageBucket: "roleta-a71d3.firebasestorage.app",
+  messagingSenderId: "235181323757",
+  appId: "1:235181323757:web:e1ea6de39fff7f4ac4a3e4",
+  measurementId: "G-ELHXPLD7W6"
 };
 
 // Inicializa o Firebase com a configuração acima.
