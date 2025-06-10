@@ -54,22 +54,39 @@
 
         auth.onAuthStateChanged(user => {
             if (user) {
+                // ---- INÍCIO DO DIAGNÓSTICO ----
+                console.log("--- INICIANDO DIAGNÓSTICO DE ACESSO ---");
+                console.log("1. Usuário está logado. E-mail:", user.email);
+                console.log("2. UID deste usuário:", user.uid); // **MUITO IMPORTANTE**
+                // ---- FIM DO DIAGNÓSTICO ----
+
                 userEmailSpan.textContent = `Logado como: ${user.email}`;
                 adicionarBotaoLogout(userHeader);
 
                 const userDocRef = db.collection('users').doc(user.uid);
+                
+                console.log("3. Buscando documento no Firestore em 'users/' com o ID acima...");
+
                 userDocRef.get().then((doc) => {
-                    if (doc.exists && doc.data().role === 'admin') {
-                        console.log("Acesso de Administrador concedido. Mostrando painel.");
-                        painelDeControles.style.display = 'block'; // Mostra o painel para admins
+                    if (doc.exists) {
+                        console.log("4. Documento encontrado no Firestore!");
+                        const userData = doc.data();
+                        console.log("5. Conteúdo do documento:", userData); // Mostra tudo o que tem no documento
+                        console.log("6. Verificando o campo 'role'. Valor encontrado:", userData.role);
+
+                        if (userData.role === 'admin') {
+                            console.log("7. SUCESSO! O campo 'role' é 'admin'. Mostrando painel.");
+                            painelDeControles.style.display = 'block';
+                        } else {
+                            console.log("7. FALHA! O campo 'role' NÃO é 'admin'. Painel continua escondido.");
+                        }
                     } else {
-                        console.log("Acesso de Usuário Padrão. Painel permanece escondido.");
-                        // MUDANÇA IMPORTANTE: Garantimos que o painel fica escondido.
-                        painelDeControles.style.display = 'none'; 
+                        console.log("4. FALHA! Nenhum documento encontrado para este UID na coleção 'users'.");
+                        console.log("5. Painel não será mostrado.");
                     }
+                    console.log("--- FIM DO DIAGNÓSTICO ---");
                 }).catch((error) => {
-                    console.error("Erro ao buscar cargo do usuário:", error);
-                    painelDeControles.style.display = 'none'; // Esconde por segurança
+                    console.error("ERRO CRÍTICO ao buscar no Firestore:", error);
                 });
 
             } else {
@@ -82,11 +99,7 @@
             const logoutButton = document.createElement('button');
             logoutButton.id = 'btn-logout';
             logoutButton.textContent = 'Sair';
-            logoutButton.onclick = () => {
-                auth.signOut().then(() => {
-                    window.location.href = 'login.html';
-                });
-            };
+            logoutButton.onclick = () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); };
             container.appendChild(logoutButton);
         }
     </script>
