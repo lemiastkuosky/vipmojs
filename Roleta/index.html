@@ -10,10 +10,10 @@
 
     <header class="user-header">
         <span id="user-email"></span>
-        </header>
+    </header>
 
     <div class="main-container">
-        <div class="controles">
+        <div class="controles" style="display: none;">
             <h3>Painel de Controle da Roleta</h3>
             <div class="modo-controle">
                 <label>
@@ -54,34 +54,31 @@
 
         auth.onAuthStateChanged(user => {
             if (user) {
-                // --- 1. Exibe informações do usuário e botão de logout para TODOS os logados ---
                 userEmailSpan.textContent = `Logado como: ${user.email}`;
                 adicionarBotaoLogout(userHeader);
 
-                // --- 2. Verifica no Firestore se o usuário é admin ---
                 const userDocRef = db.collection('users').doc(user.uid);
                 userDocRef.get().then((doc) => {
-                    // Se o documento existir E o cargo for 'admin', MOSTRA o painel.
                     if (doc.exists && doc.data().role === 'admin') {
-                        console.log("Acesso de Administrador concedido.");
-                        painelDeControles.style.display = 'block';
+                        console.log("Acesso de Administrador concedido. Mostrando painel.");
+                        painelDeControles.style.display = 'block'; // Mostra o painel para admins
                     } else {
-                        // Para qualquer outro caso (usuário comum), o painel continua escondido.
-                        console.log("Acesso de Usuário Padrão.");
+                        console.log("Acesso de Usuário Padrão. Painel permanece escondido.");
+                        // MUDANÇA IMPORTANTE: Garantimos que o painel fica escondido.
+                        painelDeControles.style.display = 'none'; 
                     }
                 }).catch((error) => {
                     console.error("Erro ao buscar cargo do usuário:", error);
+                    painelDeControles.style.display = 'none'; // Esconde por segurança
                 });
 
             } else {
-                // Usuário não está logado, redireciona para a página de login.
                 window.location.href = 'login.html';
             }
         });
 
         function adicionarBotaoLogout(container) {
             if (document.getElementById('btn-logout')) return;
-
             const logoutButton = document.createElement('button');
             logoutButton.id = 'btn-logout';
             logoutButton.textContent = 'Sair';
@@ -95,6 +92,5 @@
     </script>
     
     <script src="script.js"></script>
-
 </body>
 </html>
