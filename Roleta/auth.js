@@ -1,5 +1,9 @@
+// auth.js (Versão Corrigida e Refatorada)
+
 document.addEventListener('DOMContentLoaded', () => {
-    const handleAuth = (authFunction, email, senha) => {
+
+    // A função agora recebe um 'tipo' ('login' ou 'cadastro')
+    const handleAuth = (type, email, senha) => {
         if (!email || !senha) {
             Swal.fire({
                 icon: 'warning',
@@ -9,9 +13,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        authFunction(email, senha)
+        let authPromise;
+
+        // Decidimos qual função chamar com base no tipo
+        if (type === 'login') {
+            authPromise = auth.signInWithEmailAndPassword(email, senha);
+        } else { // type === 'cadastro'
+            authPromise = auth.createUserWithEmailAndPassword(email, senha);
+        }
+
+        // O resto da lógica continua a mesma
+        authPromise
             .then((userCredential) => {
-                if (authFunction === auth.createUserWithEmailAndPassword) {
+                if (type === 'cadastro') {
                     Swal.fire({
                         icon: 'success',
                         title: 'Sucesso!',
@@ -19,8 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }).then(() => {
                         window.location.href = 'login.html';
                     });
-                } else {
-                    // O redirecionamento no login é tratado pelo onAuthStateChanged no index.html
+                } else { // type === 'login'
+                    // No login, o redirecionamento já acontece automaticamente na página principal
                     window.location.href = 'index.html';
                 }
             })
@@ -28,17 +42,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     icon: 'error',
                     title: 'Erro!',
-                    text: error.message
+                    text: `Ocorreu um erro: ${error.message}` // Mensagem de erro mais clara
                 });
             });
     };
+
+    // --- Event Listeners Atualizados ---
 
     const btnCadastrar = document.getElementById('btn-cadastrar');
     if (btnCadastrar) {
         btnCadastrar.addEventListener('click', () => {
             const email = document.getElementById('email').value;
             const senha = document.getElementById('senha').value;
-            handleAuth(auth.createUserWithEmailAndPassword, email, senha);
+            // Chamamos handleAuth com o tipo 'cadastro'
+            handleAuth('cadastro', email, senha);
         });
     }
 
@@ -47,7 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnLogin.addEventListener('click', () => {
             const email = document.getElementById('email').value;
             const senha = document.getElementById('senha').value;
-            handleAuth(auth.signInWithEmailAndPassword, email, senha);
+            // Chamamos handleAuth com o tipo 'login'
+            handleAuth('login', email, senha);
         });
     }
 });
