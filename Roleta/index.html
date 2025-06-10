@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roleta de Prêmios - Painel Principal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="controles">
+            <h3>Painel de Controle da Roleta</h3>
+            <div class="modo-controle">
+                <label>
+                    <input type="radio" name="modo" value="direto" checked> Controle Direto
+                </label>
+                <label>
+                    <input type="radio" name="modo" value="probabilidade"> Controle por %
+                </label>
+            </div>
+            <div class="selecao-container">
+                <label for="premio-select">Escolha o Prêmio:</label>
+                <select id="premio-select"></select>
+            </div>
+            <div id="probabilidade-container" class="hidden">
+                <label for="porcentagem-input">Chance de Sair (%):</label>
+                <input type="number" id="porcentagem-input" min="0" max="100" placeholder="Ex: 50">
+            </div>
+            </div>
+
+        <div class="container">
+            <div class="roleta-container">
+                <div class="seta"></div>
+                <div class="roleta" id="roleta"></div>
+            </div>
+            <button id="girar-btn">Girar a Roleta!</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+    <script src="firebase-config.js"></script>
+    
+    <script>
+        // Este código verifica o estado de autenticação do usuário
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Se o usuário ESTIVER logado, exibe uma mensagem no console e permite que ele veja a página.
+                console.log("Usuário autenticado:", user.email);
+            } else {
+                // Se o usuário NÃO ESTIVER logado, exibe um alerta e o redireciona para a página de login.
+                alert("Você precisa estar logado para acessar a roleta.");
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Adiciona dinamicamente o botão de "Sair" ao painel de controle
+        const logoutButton = document.createElement('button');
+        logoutButton.textContent = 'Sair (Logout)';
+        logoutButton.style.marginTop = '20px'; // Adiciona um espaço acima do botão
+        logoutButton.style.width = '100%'; // Faz o botão ocupar a largura toda
+        logoutButton.style.padding = '10px';
+        logoutButton.style.backgroundColor = '#e74c3c';
+        logoutButton.style.color = 'white';
+        logoutButton.style.border = 'none';
+        logoutButton.style.borderRadius = '5px';
+        logoutButton.style.cursor = 'pointer';
+
+        // Função que será executada quando o botão for clicado
+        logoutButton.onclick = () => {
+            auth.signOut().then(() => {
+                // Após sair, redireciona para a página de login
+                alert("Você saiu da sua conta.");
+                window.location.href = 'login.html';
+            });
+        };
+
+        // Adiciona o botão criado ao final do painel de controles
+        const painelDeControles = document.querySelector('.controles');
+        if(painelDeControles) {
+            painelDeControles.appendChild(logoutButton);
+        }
+    </script>
+    
+    <script src="script.js"></script>
+
+</body>
+</html>
