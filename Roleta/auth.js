@@ -1,3 +1,5 @@
+// auth.js
+
 document.addEventListener('DOMContentLoaded', () => {
     const btnCadastrar = document.getElementById('btn-cadastrar');
     const btnLogin = document.getElementById('btn-login');
@@ -13,14 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Agora a variável 'auth' vai existir e esta função será chamada corretamente
             auth.createUserWithEmailAndPassword(email, senha)
                 .then((userCredential) => {
-                    // Cadastro bem-sucedido
                     alert("Conta criada com sucesso! Você será redirecionado para o login.");
                     window.location.href = 'login.html';
                 })
                 .catch((error) => {
-                    // Trata erros (ex: senha fraca, e-mail já em uso)
                     alert(`Erro ao criar conta: ${error.message}`);
                 });
         });
@@ -36,15 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Por favor, preencha todos os campos.");
                 return;
             }
-
+            
+            // Agora a variável 'auth' vai existir e esta função será chamada corretamente
             auth.signInWithEmailAndPassword(email, senha)
                 .then((userCredential) => {
-                    // Login bem-sucedido
                     alert("Login efetuado com sucesso!");
-                    window.location.href = 'index.html'; // Redireciona para a roleta
+                    window.location.href = 'index.html';
                 })
                 .catch((error) => {
-                    // Trata erros (ex: senha incorreta, usuário não encontrado)
                     alert(`Erro ao fazer login: ${error.message}`);
                 });
         });
