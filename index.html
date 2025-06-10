@@ -899,7 +899,7 @@
   <main>
     <section aria-labelledby="input-label">
         <label id="input-label" for="input">Entrada de números:</label>
-        <textarea id="input" placeholder="Ex: Dezenas (00 a 99), Centenas (000 a 999) e Milhares (0000 a 9999)" aria-describedby="errorMessage"></textarea><br/>
+        <textarea id="input" placeholder="Ex: Dezenas (00 a 99), Centenas (000 a 999), Milhares (0000 a 9999), Terno de Dezena (00/10/99) ou Nomes dos Bichos, Número do Grupo ou Dezenas dos Bichos (Urso, Grupo 23, Dezena 89,90,91,92)" aria-describedby="errorMessage"></textarea><br/>
         <div id="errorMessage" class="error" role="alert" aria-live="polite"></div>
     </section>
 
@@ -939,6 +939,7 @@
         <label><input type="radio" name="viewOption" value="centena" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Centenas</label>
         <label><input type="radio" name="viewOption" value="dezena" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Dezenas</label>
         <label><input type="radio" name="viewOption" value="terno" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Ternos</label>
+        <label><input type="radio" name="viewOption" value="bicho" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Bichos</label>
     </fieldset>
 
     <section aria-live="polite">
@@ -1015,7 +1016,7 @@
 
 
   <footer>
-    <div>📌 Versão 7.5 (Exportar e Importar dados)</div>
+    <div>📌 Versão 7.7 (Adicionado botão dos bichos)</div>
     <div>👨‍💻 Criado por: Le Miastkuosky</div>
   </footer>
 
@@ -1025,6 +1026,67 @@
       '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
       '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
     };
+    // Mapeamento de nome de bicho para seu emoji.
+    const bichoNameToEmoji = {
+        'avestruz': '🦩', // Flamingo for Avestruz
+        'aguia': '🦅',
+        'burro': '🐎', // Horse for Burro
+        'borboleta': '🦋',
+        'cachorro': '🐕',
+        'cabra': '🐐',
+        'carneiro': '🐏', // Ram for Carneiro
+        'camelo': '🐪',
+        'cobra': '🐍',
+        'coelho': '🐰',
+        'cavalo': '🐴',
+        'elefante': '🐘',
+        'galo': '🐓',
+        'gato': '🐈', // Cat for Gato
+        'jacare': '🐊',
+        'leao': '🦁',
+        'macaco': '🐒',
+        'porco': '🐖',
+        'pavao': '🦚',
+        'peru': '🦃',
+        'touro': '🐂',
+        'tigre': '🐅',
+        'urso': '🐻',
+        'veado': '🦌',
+        'vaca': '🐄',
+    };
+
+    // Mapeamento de nome de bicho para sua dezena correspondente no Jogo do Bicho.
+    // Usado para converter nomes no input para números processáveis.
+    const bichoNameToDezena = {
+        'avestruz': '01', 'avestruzes': '01',
+        'aguia': '05', 'aguias': '05',
+        'burro': '09', 'burros': '09',
+        'borboleta': '13', 'borboletas': '13',
+        'cachorro': '17', 'cachorros': '17',
+        'cabra': '21', 'cabras': '21',
+        'carneiro': '25', 'carneiros': '25',
+        'camelo': '29', 'camelos': '29',
+        'cobra': '33', 'cobras': '33',
+        'coelho': '37', 'coelhos': '37',
+        'cavalo': '41', 'cavalos': '41',
+        'elefante': '45', 'elefantes': '45',
+        'galo': '49', 'galos': '49',
+        'gato': '53', 'gatos': '53',
+        'jacare': '57', 'jacares': '57',
+        'leao': '61', 'leoes': '61',
+        'macaco': '65', 'macacos': '65',
+        'porco': '69', 'porcos': '69',
+        'pavao': '73', 'pavoes': '73',
+        'peru': '77', 'perus': '77',
+        'touro': '81', 'touros': '81',
+        'tigre': '85', 'tigres': '85',
+        'urso': '89', 'ursos': '89',
+        'veado': '93', 'veados': '93',
+        'vaca': '97', 'vacas': '97',
+        // Adicione outras variações se necessário, ex: "zebrado": "93" para Veado
+    };
+
+
     const STORAGE_KEYS = {
         NAMES: 'nomesSalvos',
         LISTS: 'savedLists',
@@ -2070,32 +2132,51 @@
     }
 
     async function copyToClipboard(text, buttonElement = null) {
-        if (!navigator.clipboard) {
-            try {
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                textArea.style.position = 'fixed';
-                textArea.style.opacity = '0';
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showToast('Texto copiado!', 'success');
-                if (buttonElement) provideFeedback(buttonElement, '✅');
-            } catch (err) {
-                console.error('Fallback de cópia falhou:', err);
-                showToast('Erro ao copiar.', 'error');
+        let copyAttempted = false;
+        let copySuccessful = false;
+
+        // Tenta document.execCommand('copy') primeiro, pois pode ser mais confiável em alguns ambientes de webview
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed'; // Mantém fora da tela
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            copySuccessful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (copySuccessful) {
+                console.log('Texto copiado via document.execCommand().');
+                copyAttempted = true;
+            } else {
+                console.warn('document.execCommand(\'copy\') retornou false. Tentando Clipboard API...');
             }
-            return;
+        } catch (err) {
+            console.error('Erro ao copiar via document.execCommand():', err);
+            copyAttempted = true; // Marca como tentado, mesmo que tenha falhado
+            // Continua para a Clipboard API se execCommand falhar com um erro
         }
 
-        try {
-            await navigator.clipboard.writeText(text);
+        // Se execCommand falhou ou não foi totalmente bem-sucedido, tenta a Clipboard API
+        if (!copySuccessful && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(text);
+                copySuccessful = true;
+                console.log('Texto copiado via Clipboard API.');
+            } catch (err) {
+                console.error('Erro ao copiar com Clipboard API:', err);
+                copySuccessful = false; // Garante que seja falso em caso de erro
+            }
+            copyAttempted = true;
+        }
+
+        if (copySuccessful) {
             showToast('Texto copiado!', 'success');
             if (buttonElement) provideFeedback(buttonElement, '✅');
-        } catch (err) {
-            console.error('Erro ao copiar com Clipboard API:', err);
+        } else if (copyAttempted) { // Se uma tentativa foi feita mas falhou
             showToast('Erro ao copiar.', 'error');
+        } else { // Nenhum mecanismo de cópia pôde ser tentado
+            showToast('Nenhum mecanismo de cópia disponível no navegador.', 'error');
         }
     }
 
@@ -2131,6 +2212,22 @@
         }
     }
 
+    // NOVO: Função para copiar apenas o texto da saída formatada
+    function copyOnlyEmojisToClipboard() {
+        const outputElement = document.getElementById('emojiOutput');
+        const contentElements = outputElement.querySelectorAll('.emoji-content');
+        let textToCopy = '';
+
+        contentElements.forEach(element => {
+            textToCopy += element.innerText + '\n'; // Adiciona o conteúdo de cada seção e uma quebra de linha
+        });
+
+        // Remove quebras de linha extras no final
+        textToCopy = textToCopy.trim(); 
+        
+        copyToClipboard(textToCopy, document.querySelector('#copyButtons button'));
+    }
+
     // --- Lógica de Conversão de Números ---
     const emojiToNumber = { 
       '0️⃣': '0', '1️⃣': '1', '2️⃣': '2', '3️⃣': '3', '4️⃣': '4',
@@ -2139,20 +2236,51 @@
 
     function parseNumbers() {
         let inputText = document.getElementById('input').value;
+        inputText = inputText.toLowerCase(); // Converte para minúsculas para facilitar a comparação
 
+        // 1. Substituir "grupo XX" por sua dezena equivalente
+        const grupoRegex = /grupo\s*(\d{1,2})/g; // Captura "grupo" seguido por 1 ou 2 dígitos
+        inputText = inputText.replace(grupoRegex, (match, p1) => {
+            let dezena = parseInt(p1, 10);
+            if (dezena >= 1 && dezena <= 25) { // Groups are 1 to 25
+                // Get the animal name from the group number
+                const bichoName = getBichoNameByGrupo(dezena);
+                if (bichoName) {
+                    // Get the dezena corresponding to that animal
+                    const dezenaBicho = bichoNameToDezena[bichoName.toLowerCase()];
+                    return dezenaBicho || p1.padStart(2, '0'); // Return the dezena or original formatted number
+                }
+            }
+            return p1.padStart(2, '0'); // If not a valid animal group, just keep the number formatted
+        });
+
+        // 2. Substituir nomes de bichos por suas dezenas
+        // Ordena os nomes dos bichos por tamanho, do maior para o menor,
+        // para evitar que substrings sejam substituídas incorretamente (ex: "gato" antes de "lagarto").
+        const sortedBichoNames = Object.keys(bichoNameToDezena).sort((a, b) => b.length - a.length);
+
+        for (const bichoName of sortedBichoNames) {
+            const dezena = bichoNameToDezena[bichoName];
+            // Usa uma regex para substituir o nome do bicho, garantindo que não pegue partes de outras palavras
+            // \b garante que é uma palavra completa (word boundary)
+            const regex = new RegExp(`\\b${bichoName}\\b`, 'g'); 
+            inputText = inputText.replace(regex, dezena);
+        }
+
+        // 3. Substituir emojis de números por dígitos
         for (const [emoji, digit] of Object.entries(emojiToNumber)) {
             inputText = inputText.replaceAll(emoji, digit);
         }
 
-        const parts = inputText.split(/[^\d]+/).filter(Boolean);
+        const parts = inputText.split(/[^\d]+/).filter(Boolean); // Divide por qualquer coisa que não seja dígito
         const numbers = [];
         const invalid = [];
 
         for (const p of parts) {
-            if (/^\d{1,4}$/.test(p)) {
+            if (/^\d{1,4}$/.test(p)) { // Aceita de 1 a 4 dígitos
                 numbers.push(p);
             } else if (p.length > 0) { 
-                if (/[\d]/.test(p)) {
+                if (/\d/.test(p)) { // Se contém algum dígito but is too long or has mixed characters
                    invalid.push(p); 
                 }
             }
@@ -2190,7 +2318,10 @@
         showMilharesCentenasDezenas(); 
 
         const outputContent = outputElement.textContent.trim();
-        if (outputContent && !outputContent.includes('Aguardando') && !outputContent.includes('inválidos') && numbers.length > 0) {
+        // A lógica para exibir/ocultar o botão 'copyButtons' deve ser baseada
+        // na presença de conteúdo *copiável*, não apenas no textContent do output.
+        // Se `numbers.length > 0` e não há erro, presumimos que há conteúdo copível.
+        if (numbers.length > 0 && document.getElementById('errorMessage').textContent === '') {
             copyButtonsDiv.style.display = 'block'; 
         } else {
             copyButtonsDiv.style.display = 'none';
@@ -2198,9 +2329,12 @@
     }
 
     function showMilharesCentenasDezenas() {
-        const selectValue = document.getElementById('nomePessoaSelect').value;
-        const nome = selectValue || ''; 
-        
+        const selectedName = document.getElementById('nomePessoaSelect').value;
+        const nome = selectedName || ''; 
+        const quantidadeSelect = document.getElementById('quantidadeSelect');
+        const quantidade = quantidadeSelect ? quantidadeSelect.value : '';
+        const paidEmoji = showCheckEmoji ? ' ✅' : ''; // Adicionado emoji de pago
+
         const numbers = parseNumbers(); 
         const outputElement = document.getElementById('emojiOutput');
         
@@ -2210,11 +2344,14 @@
             } else {
                 outputElement.textContent = 'Aguardando números...';
             }
+            document.getElementById('copyButtons').style.display = 'none'; // Hide copy button if no numbers
             return;
         }
 
         const milhares = [], centenas = [], dezenas = [];
         const milharesSet = new Set(), centenasSet = new Set(), dezenasSet = new Set();
+        const bichos = []; // Array para os bichos
+        const bichoSet = new Set(); // Set para controlar bichos únicos
 
         numbers.forEach(n => {
             const len = n.length;
@@ -2245,26 +2382,40 @@
                     dezenasSet.add(dEmoji);
                 }
             }
+            
+            // Processamento para a seção de Bichos
+            const bichoName = getBichoNameByDezena(parseInt(n.slice(-2))); // Pega a dezena final
+            if (bichoName) {
+                const emoji = bichoNameToEmoji[bichoName.toLowerCase()];
+                if (emoji) {
+                    const bichoWithEmoji = `${emoji}${emoji}`; // Repeat the emoji twice
+                    if (!bichoSet.has(bichoWithEmoji)) {
+                        bichos.push(bichoWithEmoji);
+                        bichoSet.add(bichoWithEmoji);
+                    }
+                }
+            }
         });
 
         const formatWithName = (arr) => {
-            const quantidadeSelect = document.getElementById('quantidadeSelect');
-            const quantidade = quantidadeSelect ? quantidadeSelect.value : '';
-            
             let nomeFormatado = nome;
-            if (nome && showCheckEmoji) {
-                nomeFormatado = `${nome} ✅`;
+            if (nomeFormatado) { // Adiciona o emoji de pago apenas se um nome estiver selecionado
+                nomeFormatado = `${nomeFormatado}${paidEmoji}`;
             }
             
             const nomeCompleto = quantidade && nomeFormatado ? `${quantidade} ${nomeFormatado}` : nomeFormatado;
             
             if (!nomeCompleto || arr.length === 0) return arr;
             
-            return arr.length === 1 ? [`${arr[0]} ${nomeCompleto}`] : [
-                `${arr[0]} ${nomeCompleto}`,
-                ...arr.slice(1, arr.length -1),
-                `${arr[arr.length - 1]} ${nomeCompleto}`
-            ];
+            // Aplicar nome apenas no primeiro e no último elemento
+            if (arr.length === 1) {
+                return [`${arr[0]} ${nomeCompleto}`];
+            } else {
+                const newArr = [...arr];
+                newArr[0] = `${newArr[0]} ${nomeCompleto}`;
+                newArr[newArr.length - 1] = `${newArr[newArr.length - 1]} ${nomeCompleto}`;
+                return newArr;
+            }
         };
 
         const selectedOption = document.querySelector('input[name="viewOption"]:checked')?.value || 'both';
@@ -2329,24 +2480,82 @@
             const ternos = gerarTernos();
             outputHTML += buildSection('📊 Ternos', ternos, 'ternos');
         }
+        // Seção para Bichos
+        if (selectedOption === 'bicho') {
+            outputHTML += buildSection('🐾 Bichos', bichos, 'bichos');
+        }
+
 
         if (outputHTML.trim() === '') {
             outputElement.textContent = 'Nenhum resultado para a opção selecionada.';
+            document.getElementById('copyButtons').style.display = 'none'; // Hide copy button if no output
         } else {
             outputElement.innerHTML = outputHTML;
+            document.getElementById('copyButtons').style.display = 'block'; // Show copy button if there's output
         }
+    }
+    
+    // Função para obter o nome do bicho com base na dezena
+    // Esta função é usada para a exibição dos bichos, não para a conversão de entrada.
+    function getBichoNameByDezena(dezena) {
+        if (dezena >= 1 && dezena <= 4) return 'Avestruz';
+        if (dezena >= 5 && dezena <= 8) return 'Águia';
+        if (dezena >= 9 && dezena <= 12) return 'Burro';
+        if (dezena >= 13 && dezena <= 16) return 'Borboleta';
+        if (dezena >= 17 && dezena <= 20) return 'Cachorro';
+        if (dezena >= 21 && dezena <= 24) return 'Cabra';
+        if (dezena >= 25 && dezena <= 28) return 'Carneiro';
+        if (dezena >= 29 && dezena <= 32) return 'Camelo';
+        if (dezena >= 33 && dezena <= 36) return 'Cobra';
+        if (dezena >= 37 && dezena <= 40) return 'Coelho';
+        if (dezena >= 41 && dezena <= 44) return 'Cavalo';
+        if (dezena >= 45 && dezena <= 48) return 'Elefante';
+        if (dezena >= 49 && dezena <= 52) return 'Galo';
+        if (dezena >= 53 && dezena <= 56) return 'Gato';
+        if (dezena >= 57 && dezena <= 60) return 'Jacaré';
+        if (dezena >= 61 && dezena <= 64) return 'Leão';
+        if (dezena >= 65 && dezena <= 68) return 'Macaco';
+        if (dezena >= 69 && dezena <= 72) return 'Porco';
+        if (dezena >= 73 && dezena <= 76) return 'Pavão';
+        if (dezena >= 77 && dezena <= 80) return 'Peru';
+        if (dezena >= 81 && dezena <= 84) return 'Touro';
+        if (dezena >= 85 && dezena <= 88) return 'Tigre';
+        if (dezena >= 89 && dezena <= 92) return 'Urso';
+        if (dezena >= 93 && dezena <= 96) return 'Veado';
+        if (dezena >= 97 || dezena === 0) return 'Vaca'; // Dezenas 97, 98, 99, 00
+        return null;
     }
 
-    function copyOnlyEmojisToClipboard() {
-        const emojiContents = document.querySelectorAll('#emojiOutput .emoji-content');
-        if (emojiContents.length === 0) {
-            showToast('Nada para copiar.', 'info');
-            return;
-        }
-        
-        let textToCopy = Array.from(emojiContents).map(content => content.innerText.trim()).join('\n\n');
-        copyToClipboard(textToCopy.trim());
+    // New: Function to get bicho name by group number
+    function getBichoNameByGrupo(grupo) {
+        if (grupo === 1) return 'Avestruz';
+        if (grupo === 2) return 'Águia';
+        if (grupo === 3) return 'Burro';
+        if (grupo === 4) return 'Borboleta';
+        if (grupo === 5) return 'Cachorro';
+        if (grupo === 6) return 'Cabra';
+        if (grupo === 7) return 'Carneiro';
+        if (grupo === 8) return 'Camelo';
+        if (grupo === 9) return 'Cobra';
+        if (grupo === 10) return 'Coelho';
+        if (grupo === 11) return 'Cavalo';
+        if (grupo === 12) return 'Elefante';
+        if (grupo === 13) return 'Galo';
+        if (grupo === 14) return 'Gato';
+        if (grupo === 15) return 'Jacaré';
+        if (grupo === 16) return 'Leão';
+        if (grupo === 17) return 'Macaco';
+        if (grupo === 18) return 'Porco';
+        if (grupo === 19) return 'Pavão';
+        if (grupo === 20) return 'Peru';
+        if (grupo === 21) return 'Touro';
+        if (grupo === 22) return 'Tigre';
+        if (grupo === 23) return 'Urso';
+        if (grupo === 24) return 'Veado';
+        if (grupo === 25) return 'Vaca';
+        return null;
     }
+
 
     function clearAll() {
         if (!confirm('Deseja limpar todos os números e resultados?')) return;
