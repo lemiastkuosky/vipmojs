@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roleta de Prêmios - Painel Principal</title>
+    <title>Roleta de Prêmios</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <header class="user-header">
+        <span id="user-email"></span>
+        </header>
 
     <div class="main-container">
         <div class="controles">
@@ -27,7 +31,7 @@
                 <label for="porcentagem-input">Chance de Sair (%):</label>
                 <input type="number" id="porcentagem-input" min="0" max="100" placeholder="Ex: 50">
             </div>
-            </div>
+        </div>
 
         <div class="container">
             <div class="roleta-container">
@@ -41,66 +45,52 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <script src="firebase-config.js"></script>
     
     <script>
-        // Pega a referência do painel de controle
         const painelDeControles = document.querySelector('.controles');
+        const userHeader = document.querySelector('.user-header');
+        const userEmailSpan = document.getElementById('user-email');
 
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Usuário está logado. Agora, vamos verificar seu cargo no Firestore.
-                const userDocRef = db.collection('users').doc(user.uid);
+                // --- 1. Exibe informações do usuário e botão de logout para TODOS os logados ---
+                userEmailSpan.textContent = `Logado como: ${user.email}`;
+                adicionarBotaoLogout(userHeader);
 
+                // --- 2. Verifica no Firestore se o usuário é admin ---
+                const userDocRef = db.collection('users').doc(user.uid);
                 userDocRef.get().then((doc) => {
-                    // Verifica se o documento do usuário existe e se o cargo é 'admin'
+                    // Se o documento existir E o cargo for 'admin', MOSTRA o painel.
                     if (doc.exists && doc.data().role === 'admin') {
                         console.log("Acesso de Administrador concedido.");
-                        painelDeControles.style.display = 'block'; // Garante que o painel está visível
+                        painelDeControles.style.display = 'block';
                     } else {
-                        // Se não for admin ou não tiver registro, é um usuário comum.
+                        // Para qualquer outro caso (usuário comum), o painel continua escondido.
                         console.log("Acesso de Usuário Padrão.");
-                        painelDeControles.style.display = 'none'; // ESCONDE O PAINEL DE CONTROLE
                     }
                 }).catch((error) => {
                     console.error("Erro ao buscar cargo do usuário:", error);
-                    painelDeControles.style.display = 'none'; // Esconde por segurança em caso de erro
                 });
-                
-                // Adiciona o botão de Logout (para todos os usuários logados)
-                adicionarBotaoLogout();
 
             } else {
                 // Usuário não está logado, redireciona para a página de login.
-                alert("Você precisa estar logado para acessar a roleta.");
                 window.location.href = 'login.html';
             }
         });
 
-        function adicionarBotaoLogout() {
-            // Verifica se o botão já não existe para não adicionar múltiplos
+        function adicionarBotaoLogout(container) {
             if (document.getElementById('btn-logout')) return;
 
             const logoutButton = document.createElement('button');
-            logoutButton.id = 'btn-logout'; // Adiciona um ID para a verificação acima
-            logoutButton.textContent = 'Sair (Logout)';
-            logoutButton.style.marginTop = '20px';
-            logoutButton.style.width = '100%';
-            logoutButton.style.padding = '10px';
-            logoutButton.style.backgroundColor = '#e74c3c';
-            logoutButton.style.color = 'white';
-            logoutButton.style.border = 'none';
-            logoutButton.style.borderRadius = '5px';
-            logoutButton.style.cursor = 'pointer';
-
+            logoutButton.id = 'btn-logout';
+            logoutButton.textContent = 'Sair';
             logoutButton.onclick = () => {
                 auth.signOut().then(() => {
                     window.location.href = 'login.html';
                 });
             };
-            
-            painelDeControles.appendChild(logoutButton);
+            container.appendChild(logoutButton);
         }
     </script>
     
