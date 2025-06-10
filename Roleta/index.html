@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roleta de Prêmios</title>
     <link rel="stylesheet" href="style.css">
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
     <header class="user-header">
         <span id="user-email"></span>
-    </header>
+        </header>
 
     <div class="main-container">
         <div class="controles" style="display: none;">
@@ -42,6 +43,10 @@
         </div>
     </div>
 
+    <audio id="som-giro" src="spinning.mp3" loop></audio>
+    <audio id="som-vitoria"src="win.mp3"></audio>
+
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -51,48 +56,70 @@
         const painelDeControles = document.querySelector('.controles');
         const userHeader = document.querySelector('.user-header');
         const userEmailSpan = document.getElementById('user-email');
+        const girarBtn = document.getElementById('girar-btn');
+        const roleta = document.getElementById('roleta');
+        
+        // Pegando os elementos de áudio
+        const somGiro = document.getElementById('som-giro');
+        const somVitoria = document.getElementById('som-vitoria');
+        
+        let isGirando = false;
 
         auth.onAuthStateChanged(user => {
             if (user) {
-                // ---- INÍCIO DO DIAGNÓSTICO ----
-                console.log("--- INICIANDO DIAGNÓSTICO DE ACESSO ---");
-                console.log("1. Usuário está logado. E-mail:", user.email);
-                console.log("2. UID deste usuário:", user.uid); // **MUITO IMPORTANTE**
-                // ---- FIM DO DIAGNÓSTICO ----
-
                 userEmailSpan.textContent = `Logado como: ${user.email}`;
                 adicionarBotaoLogout(userHeader);
 
                 const userDocRef = db.collection('users').doc(user.uid);
-                
-                console.log("3. Buscando documento no Firestore em 'users/' com o ID acima...");
-
                 userDocRef.get().then((doc) => {
-                    if (doc.exists) {
-                        console.log("4. Documento encontrado no Firestore!");
-                        const userData = doc.data();
-                        console.log("5. Conteúdo do documento:", userData); // Mostra tudo o que tem no documento
-                        console.log("6. Verificando o campo 'role'. Valor encontrado:", userData.role);
-
-                        if (userData.role === 'admin') {
-                            console.log("7. SUCESSO! O campo 'role' é 'admin'. Mostrando painel.");
-                            painelDeControles.style.display = 'block';
-                        } else {
-                            console.log("7. FALHA! O campo 'role' NÃO é 'admin'. Painel continua escondido.");
-                        }
-                    } else {
-                        console.log("4. FALHA! Nenhum documento encontrado para este UID na coleção 'users'.");
-                        console.log("5. Painel não será mostrado.");
+                    if (doc.exists && doc.data().role === 'admin') {
+                        painelDeControles.style.display = 'block';
                     }
-                    console.log("--- FIM DO DIAGNÓSTICO ---");
-                }).catch((error) => {
-                    console.error("ERRO CRÍTICO ao buscar no Firestore:", error);
                 });
-
             } else {
                 window.location.href = 'login.html';
             }
         });
+        
+        // --- Lógica do Giro da Roleta ---
+        girarBtn.addEventListener('click', () => {
+            if (isGirando) return;
+            
+            isGirando = true;
+            girarBtn.disabled = true;
+            girarBtn.textContent = 'Girando...';
+            somGiro.play(); // Toca o som de giro
+
+            // Simula a escolha de um prêmio (por enquanto, aleatório)
+            // TODO: Substituir pela lógica de prêmio controlado na Parte 2
+            const premios = ['Prêmio 1', 'Prêmio 2', 'Prêmio 3', 'Prêmio 4', 'Prêmio 5', 'Prêmio 6', 'Prêmio 7', 'Prêmio 8', 'Prêmio 9', 'Prêmio 10', 'Prêmio 11', 'Prêmio 12', 'Prêmio 13', 'Prêmio 14', 'Prêmio 15', 'Prêmio 16', 'Prêmio 17', 'Prêmio 18', 'Prêmio 19', 'Tente Novamente'];
+            const premioVencedor = premios[Math.floor(Math.random() * premios.length)];
+
+            // --- Animação e Resultado ---
+            // Esta lógica de ângulo será aprimorada na Parte 2
+            const anguloFinal = Math.floor(Math.random() * 360) + 3600; // Gera voltas aleatórias
+            roleta.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            roleta.style.transform = `rotate(${anguloFinal}deg)`;
+
+            // Aguarda a animação terminar
+            setTimeout(() => {
+                somGiro.pause(); // Para o som de giro
+                somGiro.currentTime = 0; // Reinicia o áudio para o próximo giro
+                somVitoria.play(); // Toca o som de vitória
+
+                // Exibe o modal elegante com o resultado
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Parabéns!',
+                    html: `Você ganhou: <b>${premioVencedor}</b>`
+                });
+
+                isGirando = false;
+                girarBtn.disabled = false;
+                girarBtn.textContent = 'Girar a Roleta!';
+            }, 5500); // Tempo um pouco maior que a animação da roleta
+        });
+
 
         function adicionarBotaoLogout(container) {
             if (document.getElementById('btn-logout')) return;
