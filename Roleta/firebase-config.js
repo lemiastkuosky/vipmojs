@@ -12,9 +12,9 @@ const firebaseConfig = {
   measurementId: "G-ELHXPLD7W6"
 };
 
-// Inicializa o Firebase com a configuração acima.
+// Inicializa os serviços do Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Cria a variável 'auth' que será usada em outros scripts.
-// Esta linha é muito importante!
+// Cria as variáveis que serão usadas em outros scripts
 const auth = firebase.auth();
+const db = firebase.firestore(); // Adicionamos a inicialização do Firestore

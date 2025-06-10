@@ -40,46 +40,66 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script src="firebase-config.js"></script>
     
     <script>
-        // Este código verifica o estado de autenticação do usuário
+        // Pega a referência do painel de controle
+        const painelDeControles = document.querySelector('.controles');
+
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Se o usuário ESTIVER logado, exibe uma mensagem no console e permite que ele veja a página.
-                console.log("Usuário autenticado:", user.email);
+                // Usuário está logado. Agora, vamos verificar seu cargo no Firestore.
+                const userDocRef = db.collection('users').doc(user.uid);
+
+                userDocRef.get().then((doc) => {
+                    // Verifica se o documento do usuário existe e se o cargo é 'admin'
+                    if (doc.exists && doc.data().role === 'admin') {
+                        console.log("Acesso de Administrador concedido.");
+                        painelDeControles.style.display = 'block'; // Garante que o painel está visível
+                    } else {
+                        // Se não for admin ou não tiver registro, é um usuário comum.
+                        console.log("Acesso de Usuário Padrão.");
+                        painelDeControles.style.display = 'none'; // ESCONDE O PAINEL DE CONTROLE
+                    }
+                }).catch((error) => {
+                    console.error("Erro ao buscar cargo do usuário:", error);
+                    painelDeControles.style.display = 'none'; // Esconde por segurança em caso de erro
+                });
+                
+                // Adiciona o botão de Logout (para todos os usuários logados)
+                adicionarBotaoLogout();
+
             } else {
-                // Se o usuário NÃO ESTIVER logado, exibe um alerta e o redireciona para a página de login.
+                // Usuário não está logado, redireciona para a página de login.
                 alert("Você precisa estar logado para acessar a roleta.");
                 window.location.href = 'login.html';
             }
         });
 
-        // Adiciona dinamicamente o botão de "Sair" ao painel de controle
-        const logoutButton = document.createElement('button');
-        logoutButton.textContent = 'Sair (Logout)';
-        logoutButton.style.marginTop = '20px'; // Adiciona um espaço acima do botão
-        logoutButton.style.width = '100%'; // Faz o botão ocupar a largura toda
-        logoutButton.style.padding = '10px';
-        logoutButton.style.backgroundColor = '#e74c3c';
-        logoutButton.style.color = 'white';
-        logoutButton.style.border = 'none';
-        logoutButton.style.borderRadius = '5px';
-        logoutButton.style.cursor = 'pointer';
+        function adicionarBotaoLogout() {
+            // Verifica se o botão já não existe para não adicionar múltiplos
+            if (document.getElementById('btn-logout')) return;
 
-        // Função que será executada quando o botão for clicado
-        logoutButton.onclick = () => {
-            auth.signOut().then(() => {
-                // Após sair, redireciona para a página de login
-                alert("Você saiu da sua conta.");
-                window.location.href = 'login.html';
-            });
-        };
+            const logoutButton = document.createElement('button');
+            logoutButton.id = 'btn-logout'; // Adiciona um ID para a verificação acima
+            logoutButton.textContent = 'Sair (Logout)';
+            logoutButton.style.marginTop = '20px';
+            logoutButton.style.width = '100%';
+            logoutButton.style.padding = '10px';
+            logoutButton.style.backgroundColor = '#e74c3c';
+            logoutButton.style.color = 'white';
+            logoutButton.style.border = 'none';
+            logoutButton.style.borderRadius = '5px';
+            logoutButton.style.cursor = 'pointer';
 
-        // Adiciona o botão criado ao final do painel de controles
-        const painelDeControles = document.querySelector('.controles');
-        if(painelDeControles) {
+            logoutButton.onclick = () => {
+                auth.signOut().then(() => {
+                    window.location.href = 'login.html';
+                });
+            };
+            
             painelDeControles.appendChild(logoutButton);
         }
     </script>
