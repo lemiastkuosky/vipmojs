@@ -1,252 +1,2763 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roleta de Prêmios</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#f0f8ff">
+  <meta name="description" content="Conversor de números para emojis">
+  <title>Vip Emojs</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* Reset e Estilos Base */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      text-align: center;
+      padding: 16px;
+      background-color: #f0f8ff;
+      color: #000;
+      transition: background-color 0.3s, color 0.3s;
+      margin: 0;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body.dark-mode {
+      background-color: #121212;
+      color: #f0f0f0;
+    }
+
+    h1 { font-size: 1.5rem; margin-bottom: 20px; }
+
+    label { display: block; font-weight: bold; margin-bottom: 5px; text-align: left; max-width: 500px; margin-left: auto; margin-right: auto; }
+
+    textarea {
+      padding: 10px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 500px;
+      height: 140px;
+      margin-top: 5px; /* Reduzido */
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      color: #000;
+      -webkit-appearance: none;
+      appearance: none;
+      resize: vertical; /* Permitir redimensionamento vertical */
+    }
+
+    body.dark-mode textarea {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .output {
+      font-size: 1.2rem;
+      margin-top: 20px;
+      color: #333;
+      white-space: pre-wrap;
+      text-align: left;
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 500px;
+      word-wrap: break-word;
+      padding: 10px;
+      border-radius: 8px;
+      background-color: rgba(255, 255, 255, 0.1);
+      min-height: 50px; /* Altura mínima para feedback */
+    }
+
+    body.dark-mode .output {
+      color: #ddd;
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .error {
+      color: #dc3545; /* Vermelho bootstrap */
+      font-weight: bold;
+      margin-top: 10px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+      min-height: 1.2em; /* Espaço reservado */
+    }
+
+    body.dark-mode .error {
+      color: #f8d7da; /* Vermelho claro para dark mode */
+    }
+
+    .button-group {
+      margin-top: 15px; /* Aumentado */
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      flex: 1 1 20px;
+      margin: 0;
+      padding: 12px 10px; /* Padding horizontal adicionado */
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      transition: background-color 0.3s, transform 0.1s;
+      min-width: 120px;
+      max-width: 500px;
+      -webkit-appearance: none;
+      appearance: none;
+      touch-action: manipulation;
+      display: inline-flex; /* Para alinhar ícone e texto */
+      align-items: center;
+      justify-content: center;
+      gap: 5px; /* Espaço entre ícone e texto */
+    }
+
+    button:active {
+      background-color: #0056b3;
+      transform: scale(0.98);
+    }
+
+    body.dark-mode button {
+      background-color: #333;
+      color: #fff;
+    }
+
+    body.dark-mode button:active {
+      background-color: #555;
+    }
+
+    .radio-buttons {
+      margin: 20px 0; /* Aumentado */
+      text-align: left;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    body.dark-mode .radio-buttons {
+        border-color: #444;
+    }
+
+    .radio-buttons legend {
+        font-weight: bold;
+        padding: 0 5px;
+        margin-left: 10px;
+    }
+
+    .radio-buttons label {
+      margin-right: 15px;
+      display: block;
+      margin-bottom: 5px;
+      padding: 8px;
+      font-weight: normal; /* Labels normais */
+      cursor: pointer;
+    }
+
+    .radio-buttons input[type="radio"] {
+      margin-right: 8px;
+      transform: scale(1.2);
+      accent-color: #007bff; /* Cor do radio selecionado */
+    }
+
+    body.dark-mode .radio-buttons input[type="radio"] {
+        accent-color: #4da3ff; /* Cor mais clara para dark mode */
+    }
+
+    body.dark-mode .radio-buttons label {
+      color: #f0f0f0;
+    }
+
+    #themeToggleContainer {
+      display: flex;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      background-color: inherit;
+      z-index: 10;
+      padding: 10px;
+    }
+
+    .count-red {
+      color: #dc3545;
+      font-weight: normal;
+      font-size: 0.9rem;
+    }
+
+    body.dark-mode .count-red {
+        color: #f8d7da;
+    }
+
+    /* CONTAINER DE NOMES NA PÁGINA PRINCIPAL */
+    #mainNomeContainer {
+      max-width: 500px;
+      margin: 20px auto 15px auto;
+      text-align: left;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    body.dark-mode #mainNomeContainer {
+        border-color: #444;
+    }
+
+    #mainNomeContainer .nome-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 180px;
+    }
+    #mainNomeContainer select,
+    #mainNomeContainer button {
+        width: 100%;
+        max-width: none;
+        min-width: unset;
+        box-sizing: border-box;
+    }
+    #mainNomeContainer select {
+        padding: 12px 8px;
+        font-size: 1rem;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        color: #000;
+        margin-bottom: 10px;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    body.dark-mode #mainNomeContainer select {
+        background-color: #1e1e1e;
+        color: #fff;
+        border: 1px solid #444;
+    }
+
+    /* Estilo para o botão "FOI PAGO?" (estado inicial) */
+    #checkEmojiToggle {
+      background-color: #dc3545; /* Vermelho padrão (perguntar) */
+      color: white;
+    }
+
+    body.dark-mode #checkEmojiToggle {
+      background-color: #ff0000; /* Vermelho claro para dark mode */
+      color: #ffffff;
+    }
+
+    /* Estilo para o botão "FOI PAGO?" (estado paid) */
+    #checkEmojiToggle.paid {
+      background-color: #28a745; /* Verde (pago) */
+      color: white;
+    }
+
+    body.dark-mode #checkEmojiToggle.paid {
+      background-color: #218838; /* Verde escuro para dark mode */
+    }
+
+
+    /* ESTILOS PARA O MODAL DE GERENCIAR NOMES */
+    /* Este container não está mais no HTML principal, mas o modal o usará */
+    #nomeContainerInModal { /* O conteúdo do modal vai usar #nomeContainerInModal */
+      max-width: none; /* Remover limite de largura no modal */
+      margin: 0; /* Remover margens que centralizavam */
+      text-align: left;
+      border: none; /* Remover borda, pois o modal já tem */
+      padding: 0; /* Remover padding, o modal já tem */
+    }
+
+    #nomeContainerInModal label {
+      max-width: none;
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    /* Reajuste para as colunas no modal de nomes */
+    #nomeContainerInModal .nomes-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 15px;
+      width: 100%;
+    }
+    #nomeContainerInModal .nome-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
+    }
+
+    #nomeContainerInModal input,
+    #nomeContainerInModal select,
+    #nomeContainerInModal button {
+      padding: 12px 8px;
+      font-size: 1rem;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      color: #000;
+      margin-bottom: 10px;
+      -webkit-appearance: none;
+      appearance: none;
+      box-sizing: border-box;
+    }
+
+    body.dark-mode #nomeContainerInModal input,
+    body.dark-mode #nomeContainerInModal select {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    #nomeContainerInModal button {
+      background-color: #dc3545;
+      color: white;
+      transition: background-color 0.3s, transform 0.1s;
+    }
+
+    #nomeContainerInModal button.save-name-btn {
+        background-color: #28a745; /* Verde para salvar */
+    }
+
+    #nomeContainerInModal button.save-name-btn:active {
+        background-color: #218838;
+    }
+
+    #nomeContainerInModal button:active {
+      background-color: #a71d2a;
+      transform: scale(0.98);
+    }
+
+    .section-title {
+      display: block;
+      font-weight: bold;
+      margin-top: 10px;
+      margin-bottom: 5px;
+    }
+
+    .emoji-content {
+      display: block;
+      padding-left: 10px; /* Indentação */
+    }
+
+    /* Estilo para o botão de salvar lista */
+    .save-button {
+      background-color: #28a745;
+    }
+
+    .save-button:active {
+      background-color: #218838;
+    }
+
+    /* Estilo para o botão de cancelar/carregar */
+    .load-button {
+      background-color: #6c757d; /* Cinza */
+    }
+
+    .load-button:active {
+      background-color: #5a6268;
+    }
+    
+    /* Estilo para o botão "Gerenciar Dados" (novo) */
+    .manage-data-button {
+        background-color: #6f42c1; /* Roxo */
+    }
+    body.dark-mode .manage-data-button {
+        background-color: #5a00f5; /* Roxo mais claro para dark mode */
+    }
+    .manage-data-button:active {
+        background-color: #5a359b;
+    }
+
+    /* Estilo para o botão de visualizar listas */
+    .view-button {
+      background-color: #17a2b8;
+    }
+
+    .view-button:active {
+      background-color: #138496;
+    }
+
+    /* Estilo para o botão "Gerenciar Nomes" (para abrir o modal) */
+    .manage-names-button {
+        background-color: #ffc107; /* Amarelo */
+        color: #343a40; /* Texto escuro */
+    }
+
+    .manage-names-button:active {
+        background-color: #e0a800;
+        color: #212529;
+    }
+    body.dark-mode .manage-names-button {
+        background-color: #926d01;
+        color: #f8f9fa;
+    }
+    body.dark-mode .manage-names-button:active {
+        background-color: #7a5a00;
+    }
+
+
+    /* --- Estilos para Modais --- */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6); /* Mais escuro */
+      z-index: 1000;
+      overflow-y: auto;
+      align-items: center; /* Centralizar verticalmente */
+      justify-content: center; /* Centralizar horizontalmente */
+      padding: 20px;
+    }
+
+    .modal.active {
+        display: flex; /* Usar flex para centralizar */
+    }
+
+    .modal-content {
+      background-color: #f0f8ff;
+      padding: 25px; /* Aumentado */
+      border-radius: 10px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh; /* Aumentado */
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    body.dark-mode .modal-content {
+      background-color: #2a2a2a; /* Tom mais escuro */
+      color: #fff;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 18px; /* Reduzido para X pequeno */
+      font-weight: bold;
+      cursor: pointer;
+      color: #aaa;
+      line-height: 1;
+      background: none; /* Remover fundo */
+      border: none; /* Remover borda */
+      padding: 0; /* Remover padding */
+      width: auto; /* Largura automática */
+      height: auto; /* Altura automática */
+      display: inline; /* Display normal */
+      border-radius: 0; /* Remover arredondamento */
+    }
+
+    body.dark-mode .close-modal {
+        color: #ccc;
+    }
+
+    .close-modal:hover {
+        color: #333;
+    }
+    body.dark-mode .close-modal:hover {
+        color: #fff;
+    }
+
+    .saved-item {
+      background-color: rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    body.dark-mode .saved-item {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .saved-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding-bottom: 5px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .saved-item-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .saved-item-title {
+      font-size: 0.9rem;
+      font-weight: bold;
+      flex: 1;
+      margin-right: 10px; /* Espaço antes dos botões */
+    }
+
+    .saved-item-toggle {
+      font-size: 1.2rem;
+      transition: transform 0.3s;
+      margin-left: 10px;
+    }
+
+    .saved-item-content {
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .saved-item-content {
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .saved-item-text {
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Estilos para os botões no topo do item salvo */
+    .header-actions {
+      display: flex;
+      gap: 8px; /* Aumentado */
+      margin-left: 10px;
+    }
+
+    .header-btn {
+      padding: 5px 8px; /* Ajustado */
+      font-size: 0.9rem; /* Aumentado */
+      border-radius: 5px; /* Mais arredondado */
+      min-width: auto;
+      max-width: none;
+      background-color: rgba(0,0,0,0.1);
+      color: #333;
+      border: none;
+    }
+
+    body.dark-mode .header-btn {
+        background-color: rgba(255,255,255,0.2);
+        color: #eee;
+    }
+
+    .copy-btn:active {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .delete-btn:active {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .modal-title {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.3rem;
+    }
+
+    .no-saved-items {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      color: #6c757d;
+    }
+
+    body.dark-mode .no-saved-items {
+        color: #aaa;
+    }
+
+    /* Estilo para o diálogo de nome da lista */
+    .save-dialog-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: left;
+    }
+
+    .save-dialog-input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px; /* Aumentado */
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+
+    body.dark-mode .save-dialog-input {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .save-dialog-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end; /* Alinhar botões à direita */
+    }
+
+    .save-dialog-buttons button {
+      flex: 0 1 auto; /* Não crescer, encolher se necessário */
+      min-width: 100px;
+    }
+
+    /* Estilos para os botões dentro do modal de Gerenciar Dados */
+    .data-management-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 20px;
+    }
+    .data-management-buttons button {
+        width: 100%; /* Ocupa largura total no modal */
+        max-width: none;
+    }
+    .data-management-buttons .import-btn {
+        background-color: #dc3545; /* Vermelho para importar */
+    }
+    .data-management-buttons .import-btn:active {
+        background-color: #a71d2a;
+    }
+    .data-management-buttons .export-btn {
+        background-color: #28a745; /* Verde para exportar */
+    }
+    .data-management-buttons .export-btn:active {
+        background-color: #218838;
+    }
+    .data-management-explanation {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    body.dark-mode .data-management-explanation {
+        color: #aaa;
+    }
+
+
+    /* --- Toast Notifications --- */
+    #toast-container {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .toast {
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px; /* Mais arredondado */
+        font-size: 0.9rem;
+        opacity: 0;
+        transition: opacity 0.5s, transform 0.5s;
+        transform: translateY(20px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        max-width: 80vw;
+        text-align: center;
+    }
+
+    .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .toast.success {
+        background-color: rgba(40, 167, 69, 0.9); /* Verde bootstrap */
+    }
+
+    .toast.error {
+        background-color: rgba(220, 53, 69, 0.9); /* Vermelho bootstrap */
+    }
+
+    .toast.info {
+        background-color: rgba(23, 162, 184, 0.9); /* Azul info bootstrap */
+    }
+
+    /* --- Responsividade --- */
+    @media (max-width: 768px) {
+      h1 { font-size: 1.3rem; }
+      .output { font-size: 1rem; }
+
+      .button-group {
+        flex-wrap: wrap; /* Permitir quebra para não espremer */
+        justify-content: space-around; /* Distribuir espaço entre os botões */
+        gap: 8px; /* Aumentar um pouco o gap */
+      }
+
+      .button-group button {
+        flex: 1 1 45%; /* 2 botões por linha, com um pouco de espaço entre eles */
+        max-width: 100%; /* Para garantir que caibam 2 por linha com gap */
+        font-size: 0.9rem;
+        padding: 10px 8px;
+        white-space: normal; /* Permitir quebra de texto em botões longos */
+      }
+      
+      .radio-buttons { flex-wrap: wrap; justify-content: center; }
+      .radio-buttons label { margin: 5px; padding: 5px; }
+      textarea { font-size: 1rem; height: 125px; }
+
+      /* Ajustes para as colunas de nome no modal e na página principal */
+      /* O layout do modal de nomes já está como column, o que ajuda */
+      #nomeContainerInModal .nomes-container {
+        flex-direction: column; /* Garante que as colunas estejam empilhadas no modal */
+        gap: 10px;
+      }
+      #nomeContainerInModal .nome-column {
+        flex: 0 0 100%; /* Ocupa a largura total */
+        width: 100%;
+        min-width: unset;
+      }
+
+      #nomeContainerInModal button, #mainNomeContainer button {
+        padding: 12px 5px;
+        font-size: 0.9rem;
+      }
+
+      .modal-content {
+        width: 95%;
+        padding: 20px;
+        max-height: 85vh;
+      }
+
+      .header-actions {
+        gap: 5px;
+      }
+
+      .header-btn {
+        padding: 4px 7px;
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .button-group {
+        flex-direction: column; /* Força empilhamento em telas muito pequenas */
+        align-items: center;
+      }
+
+      .button-group button {
+        width: 90% !important; /* Quase largura total */
+        max-width: 300px !important;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        white-space: normal;
+      }
+      
+      .nome-column {
+        flex: 0 0 100%;
+        width: 100%;
+      }
+
+      /* NOVO: Regra para o botão de gerenciar dados em telas muito pequenas */
+      .button-group .manage-data-button {
+          width: 90% !important; /* Ocupa quase a largura total */
+          max-width: 300px !important; /* Limita a largura máxima */
+          margin-bottom: 10px; /* Adiciona espaçamento inferior */
+      }
+    }
+
+    /* --- Footer --- */
+    footer {
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #ccc;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    body.dark-mode footer {
+        border-top-color: #444;
+        color: #aaa;
+    }
+
+    /* --- Splash Screen --- */
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease-out;
+    }
+
+    body.dark-mode #splash-screen {
+      background-color: #121212;
+    }
+
+    #splash-logo {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* --- Botão de Instalação PWA --- */
+    #install-button {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 56px;
+      height: 56px;
+      font-size: 24px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 100;
+      cursor: pointer;
+    }
+
+    body.dark-mode #install-button {
+      background-color: #333;
+    }
+
+      body.dark-mode #close-app-button {
+      background-color: transparent; /* Fundo removido */
+      color: #f8d7da; /* Cor vermelha clara para o X no modo escuro */
+    }
+
+    body.dark-mode #close-app-button:active {
+      color: #f5c6cb; /* Vermelho claro mais escuro no clique */
+    }
+
+    /* --- Acessibilidade --- */
+    .sr-only { /* Screen Reader Only */
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+    }
+
+  </style>
 </head>
 <body>
 
-    <header class="user-header">
-        <span id="user-email"></span>
-    </header>
+  <div id="splash-screen" aria-hidden="true">
+    <div id="splash-logo">🔢</div>
+    <h2>Vip Emojs</h2>
+    <p>Carregando...</p>
+  </div>
 
-    <div class="main-container">
-        <div class="controles" style="display: none;">
-            <h3>Gerenciar Prêmios</h3>
-            <div class="form-premio">
-                <input type="text" id="nome-premio-input" placeholder="Nome do Prêmio">
-                <input type="color" id="cor-premio-input" value="#3498db">
-                <button id="add-premio-btn">Adicionar</button>
-            </div>
-            <h4>Lista de Prêmios</h4>
-            <ul id="lista-premios">
-                </ul>
-        </div>
+  <button id="install-button" title="Instalar Aplicativo">📱</button>
 
-        <div class="container">
-            <div class="roleta-container">
-                <div class="seta"></div>
-                <div class="roleta" id="roleta"></div>
-            </div>
-            <button id="girar-btn">Girar a Roleta!</button>
-        </div>
+  <div id="toast-container"></div>
+
+  <header>
+    <div id="themeToggleContainer">
+      <button id="themeToggle" onclick="toggleTheme()" aria-label="Alternar tema claro/escuro">🌙 Modo Escuro</button>
+    </div>
+    <h1>🔢 Conversor de Emojs Vip 🔢</h1>
+  </header>
+
+
+
+  <main>
+    <section aria-labelledby="input-label">
+        <label id="input-label" for="input">Entrada de números:</label>
+        <textarea id="input" placeholder="Ex: Dezenas (00 a 99), Centenas (000 a 999), Milhares (0000 a 9999), Terno de Dezena (00/10/99), Número do Grupo ou Dezenas dos Bichos (Urso, Grupo ou Dezena)" aria-describedby="errorMessage"></textarea><br/>
+        <div id="errorMessage" class="error" role="alert" aria-live="polite"></div>
+    </section>
+
+    <div class="button-group main-buttons">
+      <button onclick="clearAll()">🛑 Limpar Lista</button>
+      <button onclick="showSaveDialog()" class="save-button">💾 Salvar Lista</button>
+      <button onclick="showPreviewModal()" class="view-button">👁️ Listas Salvas</button>
+      <button onclick="showNomeModal()" class="manage-names-button">👥 Editar Nomes</button>
+      <button onclick="showDataManagementModal()" class="manage-data-button">⚙️ Gerenciar Dados</button>
+      <input type="file" id="importFileInput" accept=".txt" style="display: none;" onchange="importDataFromTxt(event)">
     </div>
 
-    <audio id="som-giro" src="spinning.mp3" loop></audio>
-    <audio id="som-vitoria" src="win.mp3"></audio>
+    <section id="mainNomeContainer" aria-labelledby="main-nome-section-title">
+      <h2 id="main-nome-section-title" class="sr-only">Seleção de Nome e Status de Pagamento</h2>
+      <div class="nomes-container" style="display: block; flex-wrap: nowrap; margin-bottom: 0;"> <div class="nome-column" style="margin-bottom: 10px;"> <label for="quantidadeSelect"><strong>Quantidade:</strong></label>
+          <select id="quantidadeSelect" aria-label="Quantidade de 1x a 200x">
+            </select>
+          <label for="nomePessoaSelect"><strong>Selecionar nome salvo:</strong></label>
+          <select id="nomePessoaSelect" onchange="onNomeSelectChange()" aria-label="Lista de nomes salvos">
+            <option value="">-- Nenhum selecionado --</option>
+          </select>
+        </div>
+        <div style="margin-top: 10px; text-align: center;"> <button id="checkEmojiToggle"
+                    style="width: 100%; padding: 10px; border-radius: 5px; border: none;
+                           /* As cores iniciais serão definidas pelo JS agora */
+                           cursor: pointer; transition: background-color 0.3s;
+                           font-size: 0.85rem; font-weight: bold;"
+                    aria-pressed="false"> FOI PAGO? SE SIM CLIQUE AQUI </button>
+          </div>
+      </div>
+    </section>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="firebase-config.js"></script>
+    <fieldset class="radio-buttons" id="radioButtons">
+        <legend>Opções de Visualização:</legend>
+        <label><input type="radio" name="viewOption" value="both" checked onchange="showMilharesCentenasDezenas()"> Mostrar Todos</label>
+        <label><input type="radio" name="viewOption" value="milhar" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Milhares</label>
+        <label><input type="radio" name="viewOption" value="centena" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Centenas</label>
+        <label><input type="radio" name="viewOption" value="dezena" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Dezenas</label>
+        <label><input type="radio" name="viewOption" value="terno" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Ternos</label>
+        <label><input type="radio" name="viewOption" value="bicho" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Bichos</label>
+    </fieldset>
+
+    <section aria-live="polite">
+        <h2 class="sr-only">Resultado da Conversão</h2>
+        <div class="output" id="emojiOutput"></div>
+        <div id="copyButtons" style="display: none;">
+            <button onclick="copyOnlyEmojisToClipboard()" class="load-button">📋 Copiar Texto</button>
+        </div>
+    </section>
+
+  </main>
+
+  <div id="previewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closePreviewModal()" aria-label="Fechar">×</span>
+      <h3 id="previewModalTitle" class="modal-title">📋 Listas Salvas</h3>
+      <div id="savedItemsContainer"></div>
+    </div>
+  </div>
+
+  <div id="saveListModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="saveListModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeSaveDialog()" aria-label="Fechar">×</span>
+      <div class="save-dialog">
+        <label id="saveListModalTitle" for="listNameInput" class="save-dialog-title">Nome para esta lista:</label>
+        <input type="text" id="listNameInput" class="save-dialog-input" placeholder="Digite um nome para identificar esta lista">
+        <div class="save-dialog-buttons">
+          <button onclick="closeSaveDialog()" class="load-button">Cancelar</button>
+          <button onclick="saveNumbersListWithName()" class="save-button">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="nomeModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="nomeModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeNomeModal()" aria-label="Fechar">×</span>
+      <h3 id="nomeModalTitle" class="modal-title">👥 Gerenciar Nomes</h3>
+      <section id="nomeContainerInModal" aria-labelledby="nome-modal-section-title">
+        <h2 id="nome-modal-section-title" class="sr-only">Adicionar ou Excluir Nomes</h2>
+        <div class="nomes-container">
+          <div class="nome-column">
+            <label for="nomePessoaInputModal"><strong>Nome da Pessoa:</strong></label>
+            <input type="text" id="nomePessoaInputModal" placeholder="Digite o nome aqui" aria-label="Digite o nome da pessoa para adicionar" />
+            <button onclick="addNome()" class="save-name-btn">💾 Salvar Nome</button>
+          </div>
+
+          <div class="nome-column">
+            <label for="nomePessoaSelectModal"><strong>Excluir nome:</strong></label>
+            <select id="nomePessoaSelectModal" aria-label="Lista de nomes salvos para exclusão">
+              <option value="">-- Selecione para excluir --</option>
+            </select>
+            <button onclick="removeNome()">🗑️ Excluir Nome</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="dataManagementModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dataManagementModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeDataManagementModal()" aria-label="Fechar">×</span>
+      <h3 id="dataManagementModalTitle" class="modal-title">🗄️ Gerenciar Dados</h3>
+      <p class="data-management-explanation">
+        Use o botão VERDE para EXPORTAR um backup de todos os seus nomes e listas salvas em um arquivo TXT.
+        Use o botão VERMELHO para IMPORTAR um arquivo TXT de backup, SOBRESCREVENDO os dados atuais.
+      </p>
+      <div class="data-management-buttons">
+        <button onclick="document.getElementById('importFileInput').click()" class="import-btn">⬆️ Importar Dados</button>
+        <button onclick="exportDataToTxt()" class="export-btn">⬇️ Exportar Dados</button>
+      </div>
+    </div>
+  </div>
+
+
+  <footer>
+    <div>📌 Versão 7.8 (Retirada dos acentos)</div>
+    <div>👨‍💻 Criado por: Le Miastkuosky</div>
+  </footer>
+
+  <script>
+    // --- Variáveis Globais e Constantes ---
+    const numberToEmoji = {
+      '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
+      '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
+    };
+    // Mapeamento de nome de bicho para seu emoji.
+    const bichoNameToEmoji = {
+        'avestruz': '🦩', // Flamingo for Avestruz
+        'aguia': '🦅',
+        'burro': '🐎', // Horse for Burro
+        'borboleta': '🦋',
+        'cachorro': '🐕',
+        'cabra': '🐐',
+        'carneiro': '🐏', // Ram for Carneiro
+        'camelo': '🐪',
+        'cobra': '🐍',
+        'coelho': '🐰',
+        'cavalo': '🐴',
+        'elefante': '🐘',
+        'galo': '🐓',
+        'gato': '🐈', // Cat for Gato
+        'jacare': '🐊',
+        'leao': '🦁',
+        'macaco': '🐒',
+        'porco': '🐖',
+        'pavao': '🦚',
+        'peru': '🦃',
+        'touro': '🐂',
+        'tigre': '🐅',
+        'urso': '🐻',
+        'veado': '🦌',
+        'vaca': '🐄',
+    };
+
+    // Mapeamento de nome de bicho para sua dezena correspondente no Jogo do Bicho.
+    // Usado para converter nomes no input para números processáveis.
+    const bichoNameToDezena = {
+        'avestruz': '01', 'avestruzes': '01',
+        'aguia': '05', 'aguias': '05',
+        'burro': '09', 'burros': '09',
+        'borboleta': '13', 'borboletas': '13',
+        'cachorro': '17', 'cachorros': '17',
+        'cabra': '21', 'cabras': '21',
+        'carneiro': '25', 'carneiros': '25',
+        'camelo': '29', 'camelos': '29',
+        'cobra': '33', 'cobras': '33',
+        'coelho': '37', 'coelhos': '37',
+        'cavalo': '41', 'cavalos': '41',
+        'elefante': '45', 'elefantes': '45',
+        'galo': '49', 'galos': '49',
+        'gato': '53', 'gatos': '53',
+        'jacare': '57', 'jacares': '57',
+        'leao': '61', 'leoes': '61',
+        'macaco': '65', 'macacos': '65',
+        'porco': '69', 'porcos': '69',
+        'pavao': '73', 'pavoes': '73',
+        'peru': '77', 'perus': '77',
+        'touro': '81', 'touros': '81',
+        'tigre': '85', 'tigres': '85',
+        'urso': '89', 'ursos': '89',
+        'veado': '93', 'veados': '93',
+        'vaca': '97', 'vacas': '97',
+        // Adicione outras variações se necessário, ex: "zebrado": "93" para Veado
+    };
+
+
+    const STORAGE_KEYS = {
+        NAMES: 'nomesSalvos',
+        LISTS: 'savedLists',
+        THEME: 'themePreference',
+        SHOW_CHECK_EMOJI: 'showCheckEmoji'
+    };
+    let nomesSalvos = [];
+    let savedLists = [];
+    let isAndroid = /Android/i.test(navigator.userAgent);
+    let deferredPrompt; // Para PWA
+    let convertTimeout; // Para debounce
+    const DEBOUNCE_DELAY = 300; // ms
+    // showCheckEmoji será false por padrão, então o botão iniciará como "FOI PAGO?"
+    let showCheckEmoji = false; 
+
+    // --- Inicialização ---
+    // A função initApp será sobrescrita, então o listener será para a nova versão
+    document.addEventListener('DOMContentLoaded', () => {
+        // Chamar a função original (ou a que será sobrescrita)
+        initApp(); 
+    });
     
-    <script>
-        // --- Elementos do DOM ---
-        const painelDeControles = document.querySelector('.controles');
-        const userHeader = document.querySelector('.user-header');
-        const userEmailSpan = document.getElementById('user-email');
-        const girarBtn = document.getElementById('girar-btn');
-        const roleta = document.getElementById('roleta');
-        const somGiro = document.getElementById('som-giro');
-        const somVitoria = document.getElementById('som-vitoria');
-        const addPremioBtn = document.getElementById('add-premio-btn');
-        const nomePremioInput = document.getElementById('nome-premio-input');
-        const corPremioInput = document.getElementById('cor-premio-input');
-        const listaPremiosUl = document.getElementById('lista-premios');
 
-        // --- Variáveis de Estado ---
-        let isGirando = false;
-        let premios = [];
+    // --- Início das Funções de Ponte para MIT App Inventor ---
 
-        // --- Funções Principais ---
-        async function carregarPremiosERenderizarTudo() {
+    // Flag para indicar se estamos rodando dentro do MIT App Inventor WebView
+    let isInAppInventor = false;
+    let _appInventorCallbacks = {}; // Para gerenciar callbacks de getData assíncrono
+
+    // Verificar se estamos no ambiente MIT App Inventor
+    function checkAppInventorEnvironment() {
+        if (window.AppInventor && window.AppInventor.WebViewer) {
+            isInAppInventor = true;
+            console.log("Executando dentro do MIT App Inventor WebView.");
+            // Opcional: Notificar o App Inventor que o HTML está pronto para receber dados
+            window.AppInventor.WebViewer.postMessage(JSON.stringify({ action: "webviewReady" }));
+        } else {
+            console.log("Não executando dentro do MIT App Inventor WebView. Usando armazenamento padrão do navegador.");
+        }
+    }
+
+    // Guardar as funções originais antes de sobrescrevê-las
+    const originalSaveData = saveData;
+    const originalGetData = getData;
+    const originalRemoveData = removeData;
+
+    // Nova função saveData que prioriza o App Inventor
+    async function saveDataAppInventor(key, value) {
+        if (isInAppInventor) {
+            console.log(`[AppInventor Bridge] Enviando dados para salvar: ${key}`);
             try {
-                const snapshot = await db.collection('premios').get();
-                premios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // --- DIAGNÓSTICO ADICIONADO AQUI ---
-                console.log("Prêmios carregados do Firestore:", premios);
-                
-                renderizarRoleta();
-                if (painelDeControles.style.display === 'block') {
-                    renderizarListaAdmin();
-                }
-            } catch (error) {
-                console.error("Erro ao carregar prêmios: ", error);
-                Swal.fire('Erro!', 'Não foi possível carregar os prêmios do banco de dados.', 'error');
+                // Enviar o objeto de dados como JSON string
+                // É crucial que 'value' seja serializável em JSON
+                const message = { action: "save", key: key, value: value };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
+                // Não há um retorno imediato do App Inventor, assumimos sucesso otimista
+                return true; 
+            } catch (e) {
+                console.error("[AppInventor Bridge] Erro ao enviar dados para App Inventor:", e);
+                showToast("Erro ao enviar dados para o aplicativo.", "error");
+                return false;
             }
+        } else {
+            // Se não estiver no App Inventor, usa a função original (IndexedDB/LocalStorage/Cookies)
+            return await originalSaveData(key, value);
         }
+    }
 
-        function renderizarRoleta() {
-            roleta.innerHTML = '';
-            if (premios.length === 0) return;
-
-            const anguloPorFatia = 360 / premios.length;
-            premios.forEach((premio, i) => {
-                const fatia = document.createElement('div');
-                fatia.style.cssText = `
-                    position: absolute;
-                    width: 50%;
-                    height: 50%;
-                    background-color: ${premio.color || '#cccccc'};
-                    transform-origin: 100% 100%;
-                    transform: rotate(${i * anguloPorFatia}deg) skewX(${90 - anguloPorFatia}deg);
-                `;
+    // Nova função getData que prioriza o App Inventor
+    async function getDataAppInventor(key) {
+        if (isInAppInventor) {
+            return new Promise((resolve) => {
+                // Criar um ID de requisição único para cada chamada
+                const requestId = Date.now() + Math.random().toString(36).substring(2, 9);
+                _appInventorCallbacks[requestId] = resolve; // Armazenar a função de resolução
                 
-                const texto = document.createElement('span');
-                texto.textContent = premio.name; 
+                console.log(`[AppInventor Bridge] Solicitando dados para: ${key} (reqId: ${requestId})`);
+                const message = { action: "load", key: key, requestId: requestId };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
                 
-                // --- CSS DO TEXTO MELHORADO ---
-                texto.style.cssText = `
-                    position: absolute;
-                    color: #FFFFFF;
-                    left: 10%;
-                    top: 20%;
-                    transform: skewX(${-(90 - anguloPorFatia)}deg) rotate(${anguloPorFatia / 2}deg);
-                    font-size: 13px;
-                    font-weight: bold;
-                    text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
-                    display: block;
-                    max-width: 80%;
-                    word-wrap: break-word;
-                `;
-                fatia.appendChild(texto);
-                roleta.appendChild(fatia);
+                // Opcional: Timeout para evitar que a promessa fique pendurada
+                setTimeout(() => {
+                    if (_appInventorCallbacks[requestId]) {
+                        console.warn(`[AppInventor Bridge] Timeout para getData de ${key} (reqId: ${requestId}).`);
+                        _appInventorCallbacks[requestId](null); // Resolve com null em caso de timeout
+                        delete _appInventorCallbacks[requestId];
+                    }
+                }, 5000); // 5 segundos de timeout
             });
+        } else {
+            return await originalGetData(key);
         }
+    }
 
-        function renderizarListaAdmin() {
-            listaPremiosUl.innerHTML = '';
-            premios.forEach(premio => {
-                const li = document.createElement('li');
-                li.textContent = premio.name;
-                li.style.borderLeft = `5px solid ${premio.color}`;
-
-                const removeBtn = document.createElement('button');
-                removeBtn.textContent = 'Remover';
-                removeBtn.dataset.id = premio.id;
-                
-                li.appendChild(removeBtn);
-                listaPremiosUl.appendChild(li);
-            });
+    // Nova função removeData que prioriza o App Inventor
+    async function removeDataAppInventor(key) {
+        if (isInAppInventor) {
+            console.log(`[AppInventor Bridge] Enviando requisição para remover dados: ${key}`);
+            try {
+                const message = { action: "remove", key: key };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
+                return true; // Retorna true otimista
+            } catch (e) {
+                console.error("[AppInventor Bridge] Erro ao enviar requisição de remoção para App Inventor:", e);
+                showToast("Erro ao remover dados do aplicativo.", "error");
+                return false;
+            }
+        } else {
+            return await originalRemoveData(key);
         }
+    }
 
-        // --- Lógica de Autenticação ---
-        auth.onAuthStateChanged(async user => {
-            if (user) {
-                userEmailSpan.textContent = `Logado como: ${user.email}`;
-                adicionarBotaoLogout(userHeader);
-
-                const userDocRef = db.collection('users').doc(user.uid);
-                const doc = await userDocRef.get();
-                
-                if (doc.exists && doc.data().role === 'admin') {
-                    painelDeControles.style.display = 'block';
-                }
-                
-                await carregarPremiosERenderizarTudo();
+    // Função global que o App Inventor chamará para enviar dados de volta
+    window.dataFromAppInventor = (data) => {
+        if (data && data.action === "loaded" && data.requestId) {
+            const resolve = _appInventorCallbacks[data.requestId];
+            if (resolve) {
+                console.log(`[AppInventor Bridge] Resolvendo callback para reqId: ${data.requestId}, key: ${data.key}`);
+                resolve(data.value);
+                delete _appInventorCallbacks[data.requestId]; // Limpar o callback
             } else {
-                window.location.href = 'login.html';
+                console.warn(`[AppInventor Bridge] Callback não encontrado para reqId: ${data.requestId}`);
+            }
+        } else {
+            console.warn("[AppInventor Bridge] Mensagem recebida do App Inventor em formato inesperado:", data);
+        }
+    };
+
+    // --- Fim das Funções de Ponte para MIT App Inventor ---
+
+    // A função initApp ORIGINAL. Ela será chamada DEPOIS de configurar as funções de ponte.
+    async function _initAppOriginalLogic() {
+        console.log("Inicializando Vip Emojs v7.3 (Lógica Original)...");
+        // checkStorageAvailability(); // Esta função não é mais necessária com a ponte ativa
+        setupEventListeners();
+        populateQuantidadeSelect();
+        await loadPersistedData(); // Garante que os dados sejam carregados APÓS a sobrescrita das funções
+        setupPWA();
+        hideSplashScreen();
+        convertToEmojisRealTime();
+    }
+
+
+    // Sobrescrita da função initApp globalmente para incluir a lógica de detecção do App Inventor
+    initApp = async () => {
+        checkAppInventorEnvironment(); // Verifica o ambiente primeiro
+
+        // Sobrescreve as funções globais se estiver no App Inventor
+        if (isInAppInventor) {
+            window.saveData = saveDataAppInventor;
+            window.getData = getDataAppInventor;
+            window.removeData = removeDataAppInventor;
+            console.log("Funções de armazenamento sobrescritas para App Inventor.");
+            // No modo App Inventor, initIndexedDB, localStorage, cookies não são usados para persistência principal
+            // Mas as funções saveData e getData originais ainda podem ser chamadas pelo fallback.
+            // Para garantir que o IndexedDB seja inicializado (para caso o fallback seja usado por algum motivo),
+            // podemos chamar initIndexedDB aqui se quisermos manter essa camada.
+            // await checkStorageAvailability(); // Chama initIndexedDB e verifica disponibilidade do navegador
+        } else {
+            // Se não estiver no App Inventor, mantém as originais
+            window.saveData = originalSaveData;
+            window.getData = originalGetData;
+            window.removeData = originalRemoveData;
+            console.log("Usando funções de armazenamento padrão do navegador.");
+            await checkStorageAvailability(); // Inicia IndexedDB e verifica outras opções no navegador
+        }
+        
+        // Agora, chame a lógica original de inicialização
+        await _initAppOriginalLogic();
+    };
+
+
+    function populateQuantidadeSelect() {
+        const selectMain = document.getElementById('quantidadeSelect');
+        
+        if (selectMain) {
+            for (let i = 1; i <= 200; i++) {
+                const option = document.createElement('option');
+                option.value = i + 'x';
+                option.textContent = i + 'x';
+                selectMain.appendChild(option);
+            }
+        }
+        console.log("Select de quantidade populado.");
+    }
+
+
+    function hideSplashScreen() {
+        const splashScreen = document.getElementById('splash-screen');
+        if (!splashScreen) return;
+        setTimeout(() => {
+            splashScreen.style.opacity = '0';
+            setTimeout(() => {
+                splashScreen.style.display = 'none';
+            }, 500); // Tempo da transição CSS
+        }, 1000); // Tempo mínimo de exibição do splash
+    }
+
+    async function loadPersistedData() {
+        await loadThemePreference(); // Agora usa o window.getData() sobrescrito
+        showCheckEmoji = false; // Garante que o estado seja false ao carregar
+        updateCheckEmojiButtonAppearance(); 
+
+        await carregarNomesSalvos(); // Agora usa o window.getData() sobrescrito
+        await carregarListasSalvas(); // Agora usa o window.getData() sobrescrito
+    }
+
+    // Carregar preferência de exibição do emoji de verificação
+    // Esta função foi modificada para sempre forçar o estado inicial de 'false'
+    // e apenas chamar a atualização visual.
+    async function loadCheckEmojiPreference() {
+        // showCheckEmoji é definido como false por padrão globalmente
+        // e também é forçado a false em loadPersistedData().
+        // Não há necessidade de ler do armazenamento para esta funcionalidade.
+        console.log("Forçando preferência de emoji para 'FOI PAGO?'.");
+        showCheckEmoji = false; // Garante que é false ao carregar
+        
+        // Ajustar a aparência do botão logo após carregar a preferência
+        updateCheckEmojiButtonAppearance();
+    }
+
+    // Função para atualizar a aparência do botão "FOI PAGO?"
+    function updateCheckEmojiButtonAppearance() {
+        const checkEmojiToggle = document.getElementById('checkEmojiToggle');
+        if (!checkEmojiToggle) return; 
+        
+        checkEmojiToggle.classList.remove('paid');
+        checkEmojiToggle.style.backgroundColor = ''; 
+        checkEmojiToggle.style.color = ''; 
+        
+        if (showCheckEmoji) {
+            checkEmojiToggle.classList.add('paid'); 
+            checkEmojiToggle.innerHTML = 'PAGO ✅'; 
+            checkEmojiToggle.setAttribute('aria-pressed', 'true');
+        } else {
+            checkEmojiToggle.innerHTML = 'FOI PAGO? SE SIM CLIQUE AQUI'; 
+            checkEmojiToggle.setAttribute('aria-pressed', 'false');
+        }
+
+        void checkEmojiToggle.offsetWidth;
+    }
+
+
+    function setupEventListeners() {
+        const inputElement = document.getElementById('input');
+
+        const checkEmojiToggle = document.getElementById('checkEmojiToggle');
+        if (checkEmojiToggle) {
+            checkEmojiToggle.addEventListener('click', function() {
+                showCheckEmoji = !showCheckEmoji; 
+                updateCheckEmojiButtonAppearance(); 
+                convertToEmojisRealTime(); 
+                showToast(showCheckEmoji ? 'PAGO ativado!' : 'PAGO desativado!', 'info');
+            });
+        }
+        inputElement.addEventListener('input', () => {
+            clearTimeout(convertTimeout);
+            convertTimeout = setTimeout(convertToEmojisRealTime, DEBOUNCE_DELAY);
+        });
+
+        const quantidadeSelectMain = document.getElementById('quantidadeSelect');
+        if (quantidadeSelectMain) {
+            quantidadeSelectMain.addEventListener('change', showMilharesCentenasDezenas);
+        }
+
+        const nomeSelect = document.getElementById('nomePessoaSelect');
+        if (nomeSelect) {
+            nomeSelect.addEventListener('change', onNomeSelectChange);
+        }
+        const nomeSelectModal = document.getElementById('nomePessoaSelectModal');
+        if (nomeSelectModal) {
+             nomeSelectModal.addEventListener('change', () => { });
+        }
+        
+        // Salvamento antes de fechar / ir para background
+        window.addEventListener('beforeunload', saveAllData);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                saveAllData();
             }
         });
 
-        // --- Event Listeners (Girar, Adicionar, Remover) ---
-        girarBtn.addEventListener('click', () => {
-            if (isGirando || premios.length < 2) return;
-            
-            isGirando = true;
-            girarBtn.disabled = true;
-            girarBtn.textContent = 'Girando...';
-            somGiro.play();
-
-            const indiceVencedor = Math.floor(Math.random() * premios.length);
-            const premioVencedor = premios[indiceVencedor];
-            const anguloPorFatia = 360 / premios.length;
-            
-            const voltasExtras = 5 * 360;
-            const anguloBase = 360 - (indiceVencedor * anguloPorFatia);
-            const anguloCentralizado = anguloBase - (anguloPorFatia / 2);
-            const variacao = (Math.random() - 0.5) * (anguloPorFatia * 0.8);
-            
-            const anguloFinal = voltasExtras + anguloCentralizado + variacao;
-            
-            roleta.style.transition = 'transform 6s cubic-bezier(0.1, 0.7, 0.3, 1)';
-            roleta.style.transform = `rotate(${anguloFinal}deg)`;
-
-            setTimeout(() => {
-                somGiro.pause();
-                somGiro.currentTime = 0;
-                somVitoria.play();
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Parabéns!',
-                    html: `Você ganhou: <b>${premioVencedor.name}</b>`
-                });
-
-                isGirando = false;
-                girarBtn.disabled = false;
-                girarBtn.textContent = 'Girar a Roleta!';
-            }, 6500);
+        // Fechar modais ao clicar fora
+        window.addEventListener('click', (event) => {
+            const previewModal = document.getElementById('previewModal');
+            const saveListModal = document.getElementById('saveListModal');
+            const nomeModal = document.getElementById('nomeModal');
+            const dataManagementModal = document.getElementById('dataManagementModal'); // NOVO
+            if (event.target === previewModal) closePreviewModal();
+            if (event.target === saveListModal) closeSaveDialog();
+            if (event.target === nomeModal) closeNomeModal();
+            if (event.target === dataManagementModal) closeDataManagementModal(); // NOVO
         });
 
-        addPremioBtn.addEventListener('click', async () => {
-            const name = nomePremioInput.value;
-            const color = corPremioInput.value;
-            if (!name) {
-                Swal.fire('Atenção!', 'O nome do prêmio não pode estar vazio.', 'warning');
+        // Botões de rádio
+        const radioButtons = document.querySelectorAll('input[name="viewOption"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', showMilharesCentenasDezenas);
+        });
+        if (!Array.from(radioButtons).some(r => r.checked)) {
+            radioButtons[0].checked = true;
+        }
+    }
+    function saveAllData() {
+        console.log("Salvando todos os dados...");
+        salvarNomes(); // Usará window.saveData()
+        salvarListasSalvas(); // Usará window.saveData()
+        window.saveData(STORAGE_KEYS.THEME, document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    }
+
+    function closeApp() {
+        console.log("Fechando o aplicativo...");
+        document.body.style.display = 'none';
+    }
+
+    // --- Sistema de Armazenamento Persistente Robusto (IndexedDB, localStorage e Cookies) ---
+    // Essas funções agora são 'originais' e serão chamadas se !isInAppInventor
+    
+    let db;
+    const DB_NAME = 'vipEmojsDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'dataStore';
+    let indexedDBAvailable = false;
+    
+    function initIndexedDB() {
+        return new Promise((resolve, reject) => {
+            if (!window.indexedDB) {
+                console.warn("IndexedDB não é suportado neste navegador");
+                resolve(false);
                 return;
             }
+            
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            
+            request.onerror = (event) => {
+                console.error("Erro ao abrir IndexedDB:", event.target.error);
+                resolve(false);
+            };
+            
+            request.onsuccess = (event) => {
+                db = event.target.result;
+                console.log("IndexedDB inicializado com sucesso");
+                
+                db.onerror = (event) => {
+                    console.error("Erro no IndexedDB:", event.target.error);
+                    showToast("Erro no armazenamento de dados", "error");
+                };
+                
+                indexedDBAvailable = true;
+                resolve(true);
+            };
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: "key" });
+                    console.log("Object store criado no IndexedDB");
+                }
+            };
+        });
+    }
+    
+    function setCookie(name, value, days = 365) {
+        try {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            
+            const cookieValue = encodeURIComponent(value || "");
+            document.cookie = `${name}=${cookieValue}${expires}; path=/; SameSite=Lax; max-age=${days*24*60*60}`;
+            
+            setTimeout(() => {
+                const testCookie = getCookie(name);
+                if (testCookie) {
+                    console.log(`Cookie definido e verificado: ${name}`);
+                } else {
+                    console.warn(`Cookie não foi definido corretamente: ${name}`);
+                    document.cookie = `${name}=${cookieValue}; path=/;`;
+                }
+            }, 100);
+            
+            return true;
+        } catch (e) {
+            console.error("Erro ao definir cookie:", e);
+            return false;
+        }
+    }
+
+    function getCookie(name) {
+        try {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) {
+                    const value = decodeURIComponent(c.substring(nameEQ.length, c.length));
+                    return value;
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error("Erro ao obter cookie:", e);
+            return null;
+        }
+    }
+
+    function deleteCookie(name) {
+        try {
+            document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0;';
+            return true;
+        } catch (e) {
+            console.error("Erro ao deletar cookie:", e);
+            return false;
+        }
+    }
+
+    async function checkStorageAvailability() {
+        const indexedDBResult = await initIndexedDB();
+        
+        let localStorageAvailable = false;
+        try {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('__storage_test__', '__storage_test__');
+                const testValue = localStorage.getItem('__storage_test__');
+                localStorage.removeItem('__storage_test__');
+                
+                if (testValue === '__storage_test__') {
+                    localStorageAvailable = true;
+                }
+            }
+        } catch (e) {
+            localStorageAvailable = false;
+        }
+        
+        // A variável global `storageMethod` não é mais usada para decidir
+        // qual `saveData` ou `getData` chamar, pois a lógica de `isInAppInventor`
+        // faz isso agora. Mantendo a mensagem para depuração.
+        let detectedMethod = 'nenhum';
+        if (indexedDBResult) {
+            detectedMethod = 'indexedDB';
+        } else if (localStorageAvailable) {
+            detectedMethod = 'localStorage';
+        } else {
+            detectedMethod = 'cookies';
+        }
+        
+        showToast(`Sistema de armazenamento padrão do navegador: ${detectedMethod}`, 'info');
+    }
+
+    function saveToIndexedDB(key, value) {
+        return new Promise((resolve, reject) => {
+            if (!indexedDBAvailable || !db) {
+                resolve(false);
+                return;
+            }
+            
             try {
-                await db.collection('premios').add({ name, color });
-                Swal.fire('Sucesso!', 'Prêmio adicionado.', 'success');
-                nomePremioInput.value = '';
-                await carregarPremiosERenderizarTudo();
-            } catch (error) {
-                console.error("Erro ao adicionar prêmio: ", error);
-                Swal.fire('Erro!', 'Não foi possível adicionar o prêmio.', 'error');
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                
+                const request = store.put({ key: key, value: value });
+                
+                request.onsuccess = () => {
+                    console.log(`Dados salvos em IndexedDB: ${key}`);
+                    resolve(true);
+                };
+                
+                request.onerror = (event) => {
+                    console.error(`Erro ao salvar em IndexedDB (${key}):`, event.target.error);
+                    resolve(false);
+                };
+                
+                transaction.oncomplete = () => {
+                    console.log(`Transação IndexedDB concluída para: ${key}`);
+                };
+                
+                transaction.onerror = (event) => {
+                    console.error(`Erro na transação IndexedDB (${key}):`, event.target.error);
+                };
+            } catch (e) {
+                console.error(`Exceção ao salvar em IndexedDB (${key}):`, e);
+                resolve(false);
             }
         });
-    
-        listaPremiosUl.addEventListener('click', async (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                const id = e.target.dataset.id;
-                
-                const result = await Swal.fire({
-                    title: 'Você tem certeza?',
-                    text: "Você não poderá reverter isso!",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Sim, remova!',
-                    cancelButtonText: 'Cancelar'
-                });
+    }
 
-                if (result.isConfirmed) {
-                    try {
-                        await db.collection('premios').doc(id).delete();
-                        Swal.fire('Removido!', 'O prêmio foi removido.', 'success');
-                        await carregarPremiosERenderizarTudo();
-                    } catch (error) {
-                        console.error("Erro ao remover prêmio: ", error);
-                        Swal.fire('Erro!', 'Não foi possível remover o prêmio.', 'error');
+    function getFromIndexedDB(key) {
+        return new Promise((resolve, reject) => {
+            if (!indexedDBAvailable || !db) {
+                resolve(null);
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                
+                const request = store.get(key);
+                
+                request.onsuccess = (event) => {
+                    const result = event.target.result;
+                    if (result) {
+                        console.log(`Dados obtidos de IndexedDB: ${key}`);
+                        resolve(result.value);
+                    } else {
+                        console.log(`Nenhum dado encontrado em IndexedDB para: ${key}`);
+                        resolve(null);
+                    }
+                };
+                
+                request.onerror = (event) => {
+                    console.error(`Erro ao obter de IndexedDB (${key}):`, event.target.error);
+                    resolve(null);
+                };
+            } catch (e) {
+                console.error(`Exceção ao obter de IndexedDB (${key}):`, e);
+                resolve(null);
+            }
+        });
+    }
+
+    function removeFromIndexedDB(key) {
+        return new Promise((resolve, reject) => {
+            if (!indexedDBAvailable || !db) {
+                resolve(false);
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                
+                const request = store.delete(key);
+                
+                request.onsuccess = () => {
+                    console.log(`Dados removidos de IndexedDB: ${key}`);
+                    resolve(true);
+                };
+                
+                request.onerror = (event) => {
+                    console.error(`Erro ao remover de IndexedDB (${key}):`, event.target.error);
+                    resolve(false);
+                };
+            } catch (e) {
+                console.error(`Exceção ao remover de IndexedDB (${key}):`, e);
+                resolve(false);
+            }
+        });
+    }
+
+    // Função principal para salvar dados em todas as camadas (agora 'originalSaveData')
+    async function saveData(key, value) {
+        const stringValue = JSON.stringify(value);
+        let success = false;
+        
+        const saveIndicator = document.createElement('div');
+        saveIndicator.textContent = "Salvando...";
+        saveIndicator.style.position = "fixed";
+        saveIndicator.style.bottom = "60px";
+        saveIndicator.style.left = "50%";
+        saveIndicator.style.transform = "translateX(-50%)";
+        saveIndicator.style.backgroundColor = "rgba(0,0,0,0.7)";
+        saveIndicator.style.color = "white";
+        saveIndicator.style.padding = "8px 16px";
+        saveIndicator.style.borderRadius = "20px";
+        saveIndicator.style.zIndex = "9999";
+        document.body.appendChild(saveIndicator);
+
+        try {
+            if (indexedDBAvailable) {
+                const idbSuccess = await saveToIndexedDB(key, value);
+                if (idbSuccess) {
+                    success = true;
+                }
+            }
+            
+            try {
+                localStorage.setItem(key, stringValue);
+                const testValue = localStorage.getItem(key);
+                if (testValue === stringValue) {
+                    success = true;
+                }
+            } catch (e) {
+                console.warn(`Erro ao salvar em localStorage (${key}):`, e);
+            }
+            
+            const cookieSuccess = setCookie(key, stringValue);
+            if (cookieSuccess) {
+                success = true;
+            }
+            
+            if (success) {
+                console.log(`Dados salvos com sucesso para ${key}`);
+                saveIndicator.textContent = "Salvo ✓";
+                saveIndicator.style.backgroundColor = "rgba(40,167,69,0.9)";
+                
+                setTimeout(async () => {
+                    const verifyData = await getData(key); // Chama o getData ORIGINAL aqui
+                    if (!verifyData || JSON.stringify(verifyData) !== JSON.stringify(value)) {
+                        console.warn(`Verificação posterior falhou para ${key}`);
+                        showToast("Aviso: Verificação de dados falhou. Tente salvar novamente.", "warning");
+                    }
+                }, 1000);
+            } else {
+                console.error(`Falha ao salvar dados para ${key}`);
+                saveIndicator.textContent = "Erro ao salvar!";
+                saveIndicator.style.backgroundColor = "rgba(220,53,69,0.9)";
+                showToast(`Erro ao salvar dados. Tente novamente.`, 'error');
+            }
+        } finally {
+            setTimeout(() => {
+                if (document.body.contains(saveIndicator)) {
+                    document.body.removeChild(saveIndicator);
+                }
+            }, 2000);
+        }
+        
+        return success;
+    }
+
+    // Função principal para obter dados de todas as camadas (agora 'originalGetData')
+    async function getData(key) {
+        let value = null;
+        let stringValue = null;
+        
+        console.log(`Tentando obter dados para: ${key} (origem: navegador)`);
+        
+        if (indexedDBAvailable) {
+            value = await getFromIndexedDB(key);
+            if (value !== null) {
+                console.log(`Dados obtidos de IndexedDB: ${key}`);
+                try {
+                    const stringValue = JSON.stringify(value);
+                    localStorage.setItem(key, stringValue);
+                    setCookie(key, stringValue);
+                } catch (e) {
+                    console.warn(`Erro ao sincronizar de IndexedDB: ${key}`, e);
+                }
+                return value;
+            }
+        }
+        
+        stringValue = getCookie(key);
+        if (stringValue) {
+            console.log(`Dados obtidos de cookies: ${key}`);
+            try {
+                value = JSON.parse(stringValue);
+                if (indexedDBAvailable) {
+                    saveToIndexedDB(key, value);
+                }
+                try {
+                    localStorage.setItem(key, stringValue);
+                } catch (e) {
+                    console.warn(`Erro ao sincronizar de cookies para localStorage: ${key}`, e);
+                }
+                return value;
+            } catch (parseError) {
+                console.error(`Erro ao parsear dados de cookies (${key}):`, parseError);
+            }
+        }
+        
+        try {
+            stringValue = localStorage.getItem(key);
+            if (stringValue) {
+                console.log(`Dados obtidos de localStorage: ${key}`);
+                try {
+                    value = JSON.parse(stringValue);
+                    if (indexedDBAvailable) {
+                        saveToIndexedDB(key, value);
+                    }
+                    setCookie(key, stringValue);
+                    return value;
+                } catch (parseError) {
+                    console.error(`Erro ao parsear dados de localStorage (${key}):`, parseError);
+                }
+            }
+        } catch (e) {
+            console.warn(`Erro ao obter de localStorage (${key}):`, e);
+        }
+        
+        console.log(`Nenhum dado encontrado para: ${key} em nenhuma camada de armazenamento do navegador`);
+        return null;
+    }
+
+    // Função principal para remover dados de todas as camadas (agora 'originalRemoveData')
+    async function removeData(key) {
+        let success = false;
+        
+        if (indexedDBAvailable) {
+            const idbSuccess = await removeFromIndexedDB(key);
+            if (idbSuccess) {
+                success = true;
+            }
+        }
+        
+        try {
+            localStorage.removeItem(key);
+            success = true;
+        } catch (e) {
+            console.warn(`Erro ao remover de localStorage (${key}):`, e);
+        }
+        
+        const cookieSuccess = deleteCookie(key);
+        if (cookieSuccess) {
+            success = true;
+        }
+        
+        if (!success) {
+            console.error(`Falha ao remover dados (${key}) de todas as camadas do navegador.`);
+        }
+        
+        return success;
+    }
+
+    // --- Gerenciar Tema --- 
+    async function loadThemePreference() {
+        const savedTheme = await window.getData(STORAGE_KEYS.THEME); // Chama window.getData()
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+        setTheme(theme);
+    }
+
+    function toggleTheme() {
+        const newTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+        setTheme(newTheme);
+        window.saveData(STORAGE_KEYS.THEME, newTheme); // Chama window.saveData()
+    }
+
+    function setTheme(theme) {
+        const body = document.body;
+        const themeToggleBtn = document.getElementById('themeToggle');
+        if (theme === 'dark') {
+            body.classList.add('dark-mode');
+            themeToggleBtn.textContent = '☀️ Modo Claro';
+            themeToggleBtn.setAttribute('aria-label', 'Mudar para modo claro');
+        } else {
+            body.classList.remove('dark-mode');
+            themeToggleBtn.textContent = '🌙 Modo Escuro';
+            themeToggleBtn.setAttribute('aria-label', 'Mudar para modo escuro');
+        }
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#121212' : '#f0f8ff');
+    }
+
+    // --- Gerenciar Nomes Salvos (com ordenação) ---
+    async function carregarNomesSalvos() {
+        const savedNames = await window.getData(STORAGE_KEYS.NAMES); // Chama window.getData()
+        if (Array.isArray(savedNames)) {
+            nomesSalvos = savedNames;
+            nomesSalvos.sort((a, b) => a.localeCompare(b)); 
+            console.log("Nomes carregados e ordenados (via getData):", nomesSalvos.length);
+        } else {
+            nomesSalvos = [];
+            console.log("Nenhum nome encontrado ou dados inválidos (via getData).");
+        }
+        atualizarSelectNomes();
+    }
+
+    async function salvarNomes() {
+        return await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos); // Chama window.saveData()
+    }
+
+    async function addNome() {
+        const input = document.getElementById('nomePessoaInputModal'); 
+        const nome = input.value.trim();
+
+        if (!nome) {
+            showToast('Digite um nome válido para salvar.', 'error');
+            return;
+        }
+
+        if (nomesSalvos.some(n => n.toLowerCase() === nome.toLowerCase())) {
+            showToast('Este nome já está salvo.', 'info');
+            return;
+        }
+
+        nomesSalvos.push(nome);
+        nomesSalvos.sort((a, b) => a.localeCompare(b)); 
+        console.log("Nome adicionado. Lista ordenada:", nomesSalvos);
+
+        if (await salvarNomes()) { // Chama salvarNomes que usa window.saveData()
+            atualizarSelectNomes();
+            input.value = ''; 
+            setTimeout(() => {
+                const selectMain = document.getElementById('nomePessoaSelect');
+                selectMain.value = nome;
+                convertToEmojisRealTime(); 
+            }, 100);
+            showToast('Nome salvo com sucesso!', 'success');
+        } else {
+            nomesSalvos.splice(nomesSalvos.indexOf(nome), 1);
+        }
+    }
+
+    async function removeNome() {
+        const selectModal = document.getElementById('nomePessoaSelectModal'); 
+        const nomeSelecionado = selectModal.value;
+
+        if (!nomeSelecionado) {
+            showToast('Selecione um nome para excluir.', 'info');
+            return;
+        }
+
+        if (!confirm(`Deseja realmente excluir o nome "${nomeSelecionado}"?`)) return;
+
+        const index = nomesSalvos.indexOf(nomeSelecionado);
+        if (index === -1) {
+            showToast('Erro: Nome não encontrado.', 'error');
+            return;
+        }
+
+        nomesSalvos.splice(index, 1);
+        console.log("Nome removido. Lista atual:", nomesSalvos);
+
+        if (await salvarNomes()) { // Chama salvarNomes que usa window.saveData()
+            document.getElementById('nomePessoaInputModal').value = '';
+            atualizarSelectNomes();
+            convertToEmojisRealTime(); 
+            showToast('Nome excluído com sucesso!', 'success');
+        } else {
+            nomesSalvos.splice(index, 0, nomeSelecionado);
+            nomesSalvos.sort((a, b) => a.localeCompare(b));
+        }
+    }
+
+    function atualizarSelectNomes() {
+        const selectMain = document.getElementById('nomePessoaSelect');
+        const selectModal = document.getElementById('nomePessoaSelectModal'); 
+        
+        const currentSelectedValueMain = selectMain.value;
+        const currentSelectedValueModal = selectModal.value; 
+
+        selectMain.innerHTML = '<option value="">-- Nenhum selecionado --</option>';
+        selectModal.innerHTML = '<option value="">-- Selecione para excluir --</option>';
+
+        nomesSalvos.forEach(nome => {
+            const optionMain = document.createElement('option');
+            optionMain.value = nome;
+            optionMain.textContent = nome;
+            selectMain.appendChild(optionMain);
+
+            const optionModal = document.createElement('option');
+            optionModal.value = nome;
+            optionModal.textContent = nome;
+            selectModal.appendChild(optionModal);
+        });
+
+        if (nomesSalvos.includes(currentSelectedValueMain)) {
+            selectMain.value = currentSelectedValueMain;
+        } else {
+            selectMain.value = ''; 
+        }
+        if (nomesSalvos.includes(currentSelectedValueModal)) {
+            selectModal.value = currentSelectedValueModal;
+        } else {
+            selectModal.value = '';
+        }
+    }
+
+    function onNomeSelectChange() {
+        const selectMain = document.getElementById('nomePessoaSelect');
+        convertToEmojisRealTime(); 
+    }
+
+    function showNomeModal() {
+        const nomeModal = document.getElementById('nomeModal');
+        nomeModal.classList.add('active');
+        document.getElementById('nomePessoaInputModal').focus();
+        atualizarSelectNomes();
+    }
+
+    function closeNomeModal() {
+        document.getElementById('nomeModal').classList.remove('active');
+        convertToEmojisRealTime();
+    }
+
+
+    // --- Gerenciar Listas Salvas ---
+    async function carregarListasSalvas() {
+        const savedData = await window.getData(STORAGE_KEYS.LISTS); // Chama window.getData()
+        if (Array.isArray(savedData)) {
+            savedLists = savedData;
+            console.log("Listas carregadas:", savedLists.length);
+        } else {
+            savedLists = [];
+        }
+    }
+
+    async function salvarListasSalvas() {
+        return await window.saveData(STORAGE_KEYS.LISTS, savedLists); // Chama window.saveData()
+    }
+
+    function showSaveDialog() {
+        const inputText = document.getElementById('input').value.trim();
+        if (!inputText) {
+            showToast('Digite alguns números antes de salvar a lista.', 'info');
+            return;
+        }
+        document.getElementById('listNameInput').value = ''; 
+        document.getElementById('saveListModal').classList.add('active');
+        document.getElementById('listNameInput').focus(); 
+    }
+
+    function closeSaveDialog() {
+        document.getElementById('saveListModal').classList.remove('active');
+    }
+
+    async function saveNumbersListWithName() {
+        const inputText = document.getElementById('input').value.trim();
+        const listName = document.getElementById('listNameInput').value.trim();
+
+        if (!listName) {
+            showToast('Por favor, digite um nome para identificar esta lista.', 'error');
+            return;
+        }
+
+        const listItem = {
+            id: Date.now().toString(), 
+            name: listName,
+            date: new Date().toISOString(), 
+            input: inputText
+        };
+
+        savedLists.unshift(listItem); 
+
+        if (await salvarListasSalvas()) { // Chama salvarListasSalvas que usa window.saveData()
+            closeSaveDialog();
+            showToast(`Lista "${listName}" salva com sucesso!`, 'success');
+            showPreviewModal(); 
+        } else {
+            savedLists.shift();
+        }
+    }
+
+    function showPreviewModal() {
+        updateSavedItemsContainer();
+        document.getElementById('previewModal').classList.add('active');
+    }
+
+    function closePreviewModal() {
+        document.getElementById('previewModal').classList.remove('active');
+    }
+
+    function updateSavedItemsContainer() {
+        const container = document.getElementById('savedItemsContainer');
+        container.innerHTML = ''; 
+
+        if (savedLists.length === 0) {
+            container.innerHTML = '<div class="no-saved-items">Nenhuma lista salva ainda.</div>';
+            return;
+        }
+
+        const sortedLists = [...savedLists].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        sortedLists.forEach((item) => {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'saved-item';
+            itemElement.dataset.id = item.id;
+
+            const headerElement = document.createElement('div');
+            headerElement.className = 'saved-item-header';
+            headerElement.setAttribute('role', 'button');
+            headerElement.setAttribute('tabindex', '0');
+            headerElement.setAttribute('aria-expanded', 'false');
+            headerElement.setAttribute('aria-controls', `content-${item.id}`);
+
+            const titleElement = document.createElement('div');
+            titleElement.className = 'saved-item-title';
+            const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.date));
+            titleElement.textContent = `${item.name} (${formattedDate})`;
+
+            const headerActionsElement = document.createElement('div');
+            headerActionsElement.className = 'header-actions';
+
+            const headerCopyButton = document.createElement('button');
+            headerCopyButton.className = 'header-btn copy-btn';
+            headerCopyButton.innerHTML = '📋 <span class="sr-only">Copiar</span>'; 
+            headerCopyButton.title = 'Copiar conteúdo';
+            headerCopyButton.onclick = (e) => {
+                e.stopPropagation();
+                copyToClipboard(item.input, headerCopyButton);
+            };
+
+            const headerDeleteButton = document.createElement('button');
+            headerDeleteButton.className = 'header-btn delete-btn';
+            headerDeleteButton.innerHTML = '🗑️ <span class="sr-only">Excluir</span>'; 
+            headerDeleteButton.title = 'Excluir lista';
+            headerDeleteButton.onclick = (e) => {
+                e.stopPropagation();
+                deleteSavedItem(item.id); // Esta função usará window.removeData()
+            };
+
+            headerActionsElement.appendChild(headerCopyButton);
+            headerActionsElement.appendChild(headerDeleteButton);
+
+            const toggleElement = document.createElement('div');
+            toggleElement.className = 'saved-item-toggle';
+            toggleElement.textContent = '▼';
+            toggleElement.style.transform = 'rotate(-90deg)';
+            toggleElement.setAttribute('aria-hidden', 'true'); 
+
+            headerElement.appendChild(titleElement);
+            headerElement.appendChild(headerActionsElement);
+            headerElement.appendChild(toggleElement);
+
+            const contentElement = document.createElement('div');
+            contentElement.className = 'saved-item-content';
+            contentElement.id = `content-${item.id}`;
+
+            const textElement = document.createElement('div');
+            textElement.className = 'saved-item-text';
+            textElement.textContent = item.input;
+
+            contentElement.appendChild(textElement);
+
+            const toggleItem = () => {
+                const isExpanded = contentElement.style.display === 'block';
+                contentElement.style.display = isExpanded ? 'none' : 'block';
+                toggleElement.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
+                headerElement.setAttribute('aria-expanded', !isExpanded);
+            };
+
+            headerElement.addEventListener('click', (e) => {
+                if (!e.target.closest('button')) {
+                    toggleItem();
+                }
+            });
+            headerElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleItem();
+                }
+            });
+
+            itemElement.appendChild(headerElement);
+            itemElement.appendChild(contentElement);
+
+            container.appendChild(itemElement);
+        });
+    }
+
+    async function copyToClipboard(text, buttonElement = null) {
+        let copyAttempted = false;
+        let copySuccessful = false;
+
+        // Tenta document.execCommand('copy') primeiro, pois pode ser mais confiável em alguns ambientes de webview
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed'; // Mantém fora da tela
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            copySuccessful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (copySuccessful) {
+                console.log('Texto copiado via document.execCommand().');
+                copyAttempted = true;
+            } else {
+                console.warn('document.execCommand(\'copy\') retornou false. Tentando Clipboard API...');
+            }
+        } catch (err) {
+            console.error('Erro ao copiar via document.execCommand():', err);
+            copyAttempted = true; // Marca como tentado, mesmo que tenha falhado
+            // Continua para a Clipboard API se execCommand falhar com um erro
+        }
+
+        // Se execCommand falhou ou não foi totalmente bem-sucedido, tenta a Clipboard API
+        if (!copySuccessful && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(text);
+                copySuccessful = true;
+                console.log('Texto copiado via Clipboard API.');
+            } catch (err) {
+                console.error('Erro ao copiar com Clipboard API:', err);
+                copySuccessful = false; // Garante que seja falso em caso de erro
+            }
+            copyAttempted = true;
+        }
+
+        if (copySuccessful) {
+            showToast('Texto copiado!', 'success');
+            if (buttonElement) provideFeedback(buttonElement, '✅');
+        } else if (copyAttempted) { // Se uma tentativa foi feita mas falhou
+            showToast('Erro ao copiar.', 'error');
+        } else { // Nenhum mecanismo de cópia pôde ser tentado
+            showToast('Nenhum mecanismo de cópia disponível no navegador.', 'error');
+        }
+    }
+
+    function provideFeedback(button, tempContent) {
+        const originalContent = button.innerHTML;
+        button.innerHTML = tempContent;
+        button.disabled = true;
+        setTimeout(() => {
+            button.innerHTML = originalContent;
+            button.disabled = false;
+        }, 1500); 
+    }
+
+    async function deleteSavedItem(id) {
+        if (!confirm('Deseja realmente excluir esta lista salva?')) return;
+
+        const index = savedLists.findIndex(item => item.id === id);
+        if (index === -1) {
+            showToast('Erro: Item não encontrado.', 'error');
+            return;
+        }
+
+        const deletedItemName = savedLists[index].name;
+        savedLists.splice(index, 1);
+
+        if (await salvarListasSalvas()) { // Chama salvarListasSalvas que usa window.saveData()
+            showToast(`Lista "${deletedItemName}" excluída.`, 'info');
+            if (document.getElementById('previewModal').classList.contains('active')) {
+                updateSavedItemsContainer();
+            }
+        } else {
+            // Reverter exclusão se falhar (opcional)
+        }
+    }
+
+    // NOVO: Função para copiar apenas o texto da saída formatada
+    function copyOnlyEmojisToClipboard() {
+        const outputElement = document.getElementById('emojiOutput');
+        const contentElements = outputElement.querySelectorAll('.emoji-content');
+        let textToCopy = '';
+
+        contentElements.forEach(element => {
+            textToCopy += element.innerText + '\n'; // Adiciona o conteúdo de cada seção e uma quebra de linha
+        });
+
+        // Remove quebras de linha extras no final
+        textToCopy = textToCopy.trim(); 
+        
+        copyToClipboard(textToCopy, document.querySelector('#copyButtons button'));
+    }
+
+    // --- Lógica de Conversão de Números ---
+    const emojiToNumber = { 
+      '0️⃣': '0', '1️⃣': '1', '2️⃣': '2', '3️⃣': '3', '4️⃣': '4',
+      '5️⃣': '5', '6️⃣': '6', '7️⃣': '7', '8️⃣': '8', '9️⃣': '9'
+    };
+
+    function parseNumbers() {
+        let inputText = document.getElementById('input').value;
+        inputText = inputText.toLowerCase(); // Converte para minúsculas para facilitar a comparação
+
+        // 1. Substituir "grupo XX" por sua dezena equivalente
+        const grupoRegex = /grupo\s*(\d{1,2})/g; // Captura "grupo" seguido por 1 ou 2 dígitos
+        inputText = inputText.replace(grupoRegex, (match, p1) => {
+            let dezena = parseInt(p1, 10);
+            if (dezena >= 1 && dezena <= 25) { // Groups are 1 to 25
+                // Get the animal name from the group number
+                const bichoName = getBichoNameByGrupo(dezena);
+                if (bichoName) {
+                    // Get the dezena corresponding to that animal
+                    const dezenaBicho = bichoNameToDezena[bichoName.toLowerCase()];
+                    return dezenaBicho || p1.padStart(2, '0'); // Return the dezena or original formatted number
+                }
+            }
+            return p1.padStart(2, '0'); // If not a valid animal group, just keep the number formatted
+        });
+
+        // 2. Substituir nomes de bichos por suas dezenas
+        // Ordena os nomes dos bichos por tamanho, do maior para o menor,
+        // para evitar que substrings sejam substituídas incorretamente (ex: "gato" antes de "lagarto").
+        const sortedBichoNames = Object.keys(bichoNameToDezena).sort((a, b) => b.length - a.length);
+
+        for (const bichoName of sortedBichoNames) {
+            const dezena = bichoNameToDezena[bichoName];
+            // Usa uma regex para substituir o nome do bicho, garantindo que não pegue partes de outras palavras
+            // \b garante que é uma palavra completa (word boundary)
+            const regex = new RegExp(`\\b${bichoName}\\b`, 'g'); 
+            inputText = inputText.replace(regex, dezena);
+        }
+
+        // 3. Substituir emojis de números por dígitos
+        for (const [emoji, digit] of Object.entries(emojiToNumber)) {
+            inputText = inputText.replaceAll(emoji, digit);
+        }
+
+        const parts = inputText.split(/[^\d]+/).filter(Boolean); // Divide por qualquer coisa que não seja dígito
+        const numbers = [];
+        const invalid = [];
+
+        for (const p of parts) {
+            if (/^\d{1,4}$/.test(p)) { // Aceita de 1 a 4 dígitos
+                numbers.push(p);
+            } else if (p.length > 0) { 
+                if (/\d/.test(p)) { // Se contém algum dígito but is too long or has mixed characters
+                   invalid.push(p); 
+                }
+            }
+        }
+
+        const errorMessageElement = document.getElementById('errorMessage');
+        if (invalid.length) {
+            errorMessageElement.textContent = `Entradas inválidas ou longas demais ignoradas: ${invalid.join(', ')}`;
+        } else {
+            errorMessageElement.textContent = '';
+        }
+        return numbers;
+    }
+
+    function convertToEmojiStr(numStr) {
+        return numStr.split('').map(d => numberToEmoji[d] || d).join('');
+    }
+
+    function getCentenaPart(numStr) {
+        if (numStr.length === 4) return numStr.slice(1, 4);
+        if (numStr.length === 3) return numStr;
+        return '';
+    }
+
+    function getDezenaPart(numStr) {
+        if (numStr.length >= 2) return numStr.slice(-2);
+        return '';
+    }
+
+    function convertToEmojisRealTime() {
+        const numbers = parseNumbers();
+        const outputElement = document.getElementById('emojiOutput');
+        const copyButtonsDiv = document.getElementById('copyButtons');
+        
+        showMilharesCentenasDezenas(); 
+
+        const outputContent = outputElement.textContent.trim();
+        // A lógica para exibir/ocultar o botão 'copyButtons' deve ser baseada
+        // na presença de conteúdo *copiável*, não apenas no textContent do output.
+        // Se `numbers.length > 0` e não há erro, presumimos que há conteúdo copível.
+        if (numbers.length > 0 && document.getElementById('errorMessage').textContent === '') {
+            copyButtonsDiv.style.display = 'block'; 
+        } else {
+            copyButtonsDiv.style.display = 'none';
+        }
+    }
+
+    function showMilharesCentenasDezenas() {
+        const selectedName = document.getElementById('nomePessoaSelect').value;
+        const nome = selectedName || ''; 
+        const quantidadeSelect = document.getElementById('quantidadeSelect');
+        const quantidade = quantidadeSelect ? quantidadeSelect.value : '';
+        const paidEmoji = showCheckEmoji ? ' ✅' : ''; // Adicionado emoji de pago
+
+        const numbers = parseNumbers(); 
+        const outputElement = document.getElementById('emojiOutput');
+        
+        if (numbers.length === 0) {
+            if (document.getElementById('errorMessage').textContent) {
+                outputElement.textContent = document.getElementById('errorMessage').textContent; 
+            } else {
+                outputElement.textContent = 'Aguardando números...';
+            }
+            document.getElementById('copyButtons').style.display = 'none'; // Hide copy button if no numbers
+            return;
+        }
+
+        const milhares = [], centenas = [], dezenas = [];
+        const milharesSet = new Set(), centenasSet = new Set(), dezenasSet = new Set();
+        const bichos = []; // Array para os bichos
+        const bichoSet = new Set(); // Set para controlar bichos únicos
+
+        numbers.forEach(n => {
+            const len = n.length;
+            let mEmoji, cEmoji, dEmoji;
+            
+            if (len === 4) {
+                mEmoji = convertToEmojiStr(n);
+                if (!milharesSet.has(mEmoji)) {
+                    milhares.push(mEmoji);
+                    milharesSet.add(mEmoji);
+                }
+            }
+            
+            const cPart = getCentenaPart(n);
+            if (cPart) {
+                cEmoji = convertToEmojiStr(cPart);
+                if (!centenasSet.has(cEmoji)) {
+                    centenas.push(cEmoji);
+                    centenasSet.add(cEmoji);
+                }
+            }
+            
+            const dPart = getDezenaPart(n);
+            if (dPart) {
+                dEmoji = convertToEmojiStr(dPart);
+                if (!dezenasSet.has(dEmoji)) {
+                    dezenas.push(dEmoji);
+                    dezenasSet.add(dEmoji);
+                }
+            }
+            
+            // Processamento para a seção de Bichos
+            const bichoName = getBichoNameByDezena(parseInt(n.slice(-2))); // Pega a dezena final
+            if (bichoName) {
+                const emoji = bichoNameToEmoji[bichoName.toLowerCase()];
+                if (emoji) {
+                    const bichoWithEmoji = `${emoji}${emoji}`; // Repeat the emoji twice
+                    if (!bichoSet.has(bichoWithEmoji)) {
+                        bichos.push(bichoWithEmoji);
+                        bichoSet.add(bichoWithEmoji);
                     }
                 }
             }
         });
 
-        function adicionarBotaoLogout(container) {
-            if (document.getElementById('btn-logout')) return;
-            const logoutButton = document.createElement('button');
-            logoutButton.id = 'btn-logout';
-            logoutButton.textContent = 'Sair';
-            logoutButton.onclick = () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); };
-            container.appendChild(logoutButton);
+        const formatWithName = (arr) => {
+            let nomeFormatado = nome;
+            if (nomeFormatado) { // Adiciona o emoji de pago apenas se um nome estiver selecionado
+                nomeFormatado = `${nomeFormatado}${paidEmoji}`;
+            }
+            
+            const nomeCompleto = quantidade && nomeFormatado ? `${quantidade} ${nomeFormatado}` : nomeFormatado;
+            
+            if (!nomeCompleto || arr.length === 0) return arr;
+            
+            // Aplicar nome apenas no primeiro e no último elemento
+            if (arr.length === 1) {
+                return [`${arr[0]} ${nomeCompleto}`];
+            } else {
+                const newArr = [...arr];
+                newArr[0] = `${newArr[0]} ${nomeCompleto}`;
+                newArr[newArr.length - 1] = `${newArr[newArr.length - 1]} ${nomeCompleto}`;
+                return newArr;
+            }
+        };
+
+        const selectedOption = document.querySelector('input[name="viewOption"]:checked')?.value || 'both';
+        
+        let outputHTML = '';
+        const buildSection = (title, data, type) => {
+            if (data.length === 0) return '';
+            const formattedData = formatWithName(data);
+            const content = formattedData.join('\n');
+            return `<section aria-labelledby="title-${type}">
+                        <h3 id="title-${type}" class="section-title">${title} <span class="count-red">(${data.length})</span>:</h3>
+                        <div class="emoji-content" data-content-type="${type}">${content}</div>
+                    </section>`;
+        };
+
+        const gerarTernos = () => {
+            const dezenasFiltradas = [];
+            for (const n of numbers) {
+                if (n.length === 2) {
+                    dezenasFiltradas.push(n);
+                } 
+                else if (n.length > 2) {
+                    const dezena = getDezenaPart(n);
+                    if (dezena.length === 2) {
+                        dezenasFiltradas.push(dezena);
+                    }
+                }
+            }
+            
+            if (dezenasFiltradas.length < 3) {
+                return [`⚠️ São necessárias pelo menos 3 dezenas para formar ternos.`];
+            }
+            
+            const ternos = [];
+            for (let i = 0; i < dezenasFiltradas.length; i += 3) {
+                if (i + 2 < dezenasFiltradas.length) {
+                    const dezena1Emoji = convertToEmojiStr(dezenasFiltradas[i]);
+                    const dezena2Emoji = convertToEmojiStr(dezenasFiltradas[i+1]);
+                    const dezena3Emoji = convertToEmojiStr(dezenasFiltradas[i+2]);
+                    const terno = `${dezena1Emoji}/${dezena2Emoji}/${dezena3Emoji}`;
+                    ternos.push(terno);
+                }
+            }
+            
+            if (ternos.length === 0) {
+                return [`⚠️ Não foi possível formar ternos completos. Adicione mais dezenas.`];
+            }
+            
+            return ternos;
+        };
+
+        if (selectedOption === 'both' || selectedOption === 'milhar') {
+            outputHTML += buildSection('📊 Milhares', milhares, 'milhares');
         }
-    </script>
+        if (selectedOption === 'both' || selectedOption === 'centena') {
+            outputHTML += buildSection('📊 Centenas', centenas, 'centenas');
+        }
+        if (selectedOption === 'both' || selectedOption === 'dezena') {
+            outputHTML += buildSection('📊 Dezenas', dezenas, 'dezenas');
+        }
+        if (selectedOption === 'terno') {
+            const ternos = gerarTernos();
+            outputHTML += buildSection('📊 Ternos', ternos, 'ternos');
+        }
+        // Seção para Bichos
+        if (selectedOption === 'bicho') {
+            outputHTML += buildSection('🐾 Bichos', bichos, 'bichos');
+        }
+
+
+        if (outputHTML.trim() === '') {
+            outputElement.textContent = 'Nenhum resultado para a opção selecionada.';
+            document.getElementById('copyButtons').style.display = 'none'; // Hide copy button if no output
+        } else {
+            outputElement.innerHTML = outputHTML;
+            document.getElementById('copyButtons').style.display = 'block'; // Show copy button if there's output
+        }
+    }
+    
+    // Função para obter o nome do bicho com base na dezena
+    // Esta função é usada para a exibição dos bichos, não para a conversão de entrada.
+    function getBichoNameByDezena(dezena) {
+        if (dezena >= 1 && dezena <= 4) return 'Avestruz';
+        if (dezena >= 5 && dezena <= 8) return 'Aguia';
+        if (dezena >= 9 && dezena <= 12) return 'Burro';
+        if (dezena >= 13 && dezena <= 16) return 'Borboleta';
+        if (dezena >= 17 && dezena <= 20) return 'Cachorro';
+        if (dezena >= 21 && dezena <= 24) return 'Cabra';
+        if (dezena >= 25 && dezena <= 28) return 'Carneiro';
+        if (dezena >= 29 && dezena <= 32) return 'Camelo';
+        if (dezena >= 33 && dezena <= 36) return 'Cobra';
+        if (dezena >= 37 && dezena <= 40) return 'Coelho';
+        if (dezena >= 41 && dezena <= 44) return 'Cavalo';
+        if (dezena >= 45 && dezena <= 48) return 'Elefante';
+        if (dezena >= 49 && dezena <= 52) return 'Galo';
+        if (dezena >= 53 && dezena <= 56) return 'Gato';
+        if (dezena >= 57 && dezena <= 60) return 'Jacare';
+        if (dezena >= 61 && dezena <= 64) return 'Leao';
+        if (dezena >= 65 && dezena <= 68) return 'Macaco';
+        if (dezena >= 69 && dezena <= 72) return 'Porco';
+        if (dezena >= 73 && dezena <= 76) return 'Pavao';
+        if (dezena >= 77 && dezena <= 80) return 'Peru';
+        if (dezena >= 81 && dezena <= 84) return 'Touro';
+        if (dezena >= 85 && dezena <= 88) return 'Tigre';
+        if (dezena >= 89 && dezena <= 92) return 'Urso';
+        if (dezena >= 93 && dezena <= 96) return 'Veado';
+        if (dezena >= 97 || dezena === 0) return 'Vaca'; // Dezenas 97, 98, 99, 00
+        return null;
+    }
+
+    // New: Function to get bicho name by group number
+    function getBichoNameByGrupo(grupo) {
+        if (grupo === 1) return 'Avestruz';
+        if (grupo === 2) return 'Aguia';
+        if (grupo === 3) return 'Burro';
+        if (grupo === 4) return 'Borboleta';
+        if (grupo === 5) return 'Cachorro';
+        if (grupo === 6) return 'Cabra';
+        if (grupo === 7) return 'Carneiro';
+        if (grupo === 8) return 'Camelo';
+        if (grupo === 9) return 'Cobra';
+        if (grupo === 10) return 'Coelho';
+        if (grupo === 11) return 'Cavalo';
+        if (grupo === 12) return 'Elefante';
+        if (grupo === 13) return 'Galo';
+        if (grupo === 14) return 'Gato';
+        if (grupo === 15) return 'Jacare';
+        if (grupo === 16) return 'Leao';
+        if (grupo === 17) return 'Macaco';
+        if (grupo === 18) return 'Porco';
+        if (grupo === 19) return 'Pavao';
+        if (grupo === 20) return 'Peru';
+        if (grupo === 21) return 'Touro';
+        if (grupo === 22) return 'Tigre';
+        if (grupo === 23) return 'Urso';
+        if (grupo === 24) return 'Veado';
+        if (grupo === 25) return 'Vaca';
+        return null;
+    }
+
+
+    function clearAll() {
+        if (!confirm('Deseja limpar todos os números e resultados?')) return;
+        document.getElementById('input').value = '';
+        document.getElementById('errorMessage').textContent = '';
+        document.getElementById('nomePessoaInputModal').value = ''; 
+        document.getElementById('nomePessoaSelect').value = ''; 
+        document.getElementById('nomePessoaSelectModal').value = ''; 
+        document.getElementById('quantidadeSelect').value = '1x'; 
+
+        document.querySelector('input[name="viewOption"][value="both"]').checked = true;
+        showToast('Campos limpos!', 'info');
+        
+        showCheckEmoji = false;
+        updateCheckEmojiButtonAppearance(); 
+        
+        document.getElementById('emojiOutput').textContent = 'Aguardando números...';
+        document.getElementById('copyButtons').style.display = 'none';
+    }
+    
+    // --- Utilitários --- 
+    
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        toast.setAttribute('role', 'alert');
+        
+        container.appendChild(toast);
+        
+        toast.offsetHeight; 
+        
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => {
+                if (toast.parentNode === container) { 
+                    container.removeChild(toast);
+                }
+            }, { once: true });
+        }, duration);
+    }
+
+    // --- PWA (Progressive Web App) --- 
+    function setupPWA() {
+        const installButton = document.getElementById('install-button');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installButton.style.display = 'block';
+            console.log("\'beforeinstallprompt\' disparado");
+        });
+        
+        installButton.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            try {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`Resultado da instalação: ${outcome}`);
+                deferredPrompt = null;
+                installButton.style.display = 'none';
+            } catch (error) {
+                console.error('Erro ao solicitar instalação:', error);
+                showToast('Não foi possível iniciar a instalação.', 'error');
+            }
+        });
+        
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA instalado com sucesso!');
+            installButton.style.display = 'none';
+        });
+        
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js') 
+                    .then(reg => console.log('Service worker registrado:', reg.scope))
+                    .catch(err => console.error('Erro ao registrar service worker:', err));
+            });
+        }
+    }
+
+    // --- Funções de Importar/Exportar Dados em TXT ---
+
+    // NOVO: Abre o modal de gerenciamento de dados
+    function showDataManagementModal() {
+        document.getElementById('dataManagementModal').classList.add('active');
+    }
+
+    // NOVO: Fecha o modal de gerenciamento de dados
+    function closeDataManagementModal() {
+        document.getElementById('dataManagementModal').classList.remove('active');
+    }
+
+    async function exportDataToTxt() {
+        showToast('Preparando dados para exportação...', 'info');
+
+        try {
+            const allData = {
+                nomesSalvos: await window.getData(STORAGE_KEYS.NAMES),
+                savedLists: await window.getData(STORAGE_KEYS.LISTS),
+                themePreference: await window.getData(STORAGE_KEYS.THEME),
+                showCheckEmoji: showCheckEmoji // showCheckEmoji é uma variável global
+            };
+
+            const dataString = JSON.stringify(allData, null, 2); // Formata com 2 espaços para legibilidade
+            const blob = new Blob([dataString], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VipEmojs_backup_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a); // Necessário para Firefox
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Dados exportados com sucesso!', 'success');
+            closeDataManagementModal(); // Fecha o modal após a exportação
+        } catch (error) {
+            console.error('Erro ao exportar dados:', error);
+            showToast('Erro ao exportar dados.', 'error');
+        }
+    }
+
+    async function importDataFromTxt(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            showToast('Nenhum arquivo selecionado.', 'info');
+            return;
+        }
+
+        if (!confirm('Importar dados sobrescreverá TODOS os seus dados salvos atuais (nomes, listas e tema). Deseja continuar?')) {
+            // Limpa o input file para que o mesmo arquivo possa ser selecionado novamente
+            event.target.value = ''; 
+            return;
+        }
+
+        showToast('Importando dados...', 'info');
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                
+                // Salvar nomes
+                if (importedData.nomesSalvos && Array.isArray(importedData.nomesSalvos)) {
+                    await window.saveData(STORAGE_KEYS.NAMES, importedData.nomesSalvos);
+                    nomesSalvos = importedData.nomesSalvos; // Atualiza a variável global
+                    atualizarSelectNomes();
+                } else {
+                    console.warn("Dados importados não contêm nomesSalvos válidos.");
+                }
+
+                // Salvar listas
+                if (importedData.savedLists && Array.isArray(importedData.savedLists)) {
+                    await window.saveData(STORAGE_KEYS.LISTS, importedData.savedLists);
+                    savedLists = importedData.savedLists; // Atualiza a variável global
+                } else {
+                    console.warn("Dados importados não contêm savedLists válidos.");
+                }
+
+                // Salvar preferência de tema
+                if (importedData.themePreference) {
+                    await window.saveData(STORAGE_KEYS.THEME, importedData.themePreference);
+                    setTheme(importedData.themePreference);
+                } else {
+                    console.warn("Dados importados não contêm themePreference válido.");
+                }
+
+                // Atualizar estado de showCheckEmoji
+                if (typeof importedData.showCheckEmoji === 'boolean') {
+                    showCheckEmoji = importedData.showCheckEmoji;
+                    updateCheckEmojiButtonAppearance();
+                } else {
+                    console.warn("Dados importados não contêm showCheckEmoji válido.");
+                }
+                
+                showToast('Dados importados com sucesso! Recarregando a página...', 'success', 4000);
+                closeDataManagementModal(); // Fecha o modal após a importação
+
+                // Força um pequeno atraso para o toast ser visível e depois recarrega
+                setTimeout(() => {
+                    window.location.reload(); 
+                }, 3500);
+
+            } catch (parseError) {
+                console.error('Erro ao parsear arquivo TXT:', parseError);
+                showToast('Erro: Arquivo TXT inválido ou corrompido.', 'error');
+            } finally {
+                // Limpa o input file para que o mesmo arquivo possa ser selecionado novamente
+                event.target.value = ''; 
+            }
+        };
+        reader.onerror = (error) => {
+            console.error('Erro ao ler arquivo:', error);
+            showToast('Erro ao ler o arquivo.', 'error');
+        };
+        reader.readAsText(file);
+    }
+  </script>
 </body>
 </html>
