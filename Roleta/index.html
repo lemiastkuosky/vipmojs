@@ -31,13 +31,13 @@
                 <div class="roleta" id="roleta"></div>
             </div>
             <button id="girar-btn">Girar a Roleta!</button>
-            <p id="giros-restantes"></p> </div>
+            <p id="giros-restantes"></p>
+        </div>
     </div>
 
     <div class="historico-container">
         <h2>Seu Histórico de Prêmios</h2>
-        <ul id="historico-lista">
-            </ul>
+        <ul id="historico-lista"></ul>
     </div>
 
     <audio id="som-giro" src="spinning.mp3" loop></audio>
@@ -49,14 +49,12 @@
     <script src="firebase-config.js"></script>
     
     <script>
-        // --- Constantes e Variáveis de Estado ---
-        const LIMITE_GIROS = 5; // Defina o limite de giros por dia aqui
+        const LIMITE_GIROS = 5;
         let isGirando = false;
         let premios = [];
         let girosRestantes = LIMITE_GIROS;
         let currentUser = null;
 
-        // --- Elementos do DOM ---
         const painelDeControles = document.querySelector('.controles');
         const userHeader = document.querySelector('.user-header');
         const userEmailSpan = document.getElementById('user-email');
@@ -64,7 +62,6 @@
         const girosRestantesP = document.getElementById('giros-restantes');
         const roleta = document.getElementById('roleta');
         const historicoListaUl = document.getElementById('historico-lista');
-        // ... (resto dos elementos do DOM para admin e sons)
         const addPremioBtn = document.getElementById('add-premio-btn');
         const nomePremioInput = document.getElementById('nome-premio-input');
         const corPremioInput = document.getElementById('cor-premio-input');
@@ -72,9 +69,6 @@
         const somGiro = document.getElementById('som-giro');
         const somVitoria = document.getElementById('som-vitoria');
 
-        // --- Funções ---
-
-        // (Funções renderizarRoleta e renderizarListaAdmin continuam as mesmas)
         function renderizarRoleta() {
             roleta.innerHTML = ''; if (premios.length === 0) return;
             const anguloPorFatia = 360 / premios.length;
@@ -88,23 +82,31 @@
                 roleta.appendChild(fatia);
             });
         }
-        function renderizarListaAdmin() { /* ...código de renderizarListaAdmin... */ }
 
+        function renderizarListaAdmin() {
+            listaPremiosUl.innerHTML = '';
+            premios.forEach(premio => {
+                const li = document.createElement('li');
+                li.textContent = premio.name; li.style.borderLeft = `5px solid ${premio.color}`;
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = 'Remover'; removeBtn.dataset.id = premio.id;
+                li.appendChild(removeBtn); listaPremiosUl.appendChild(li);
+            });
+        }
 
-        // NOVA FUNÇÃO para carregar o histórico
         async function carregarHistorico(userId) {
-            historicoListaUl.innerHTML = '<li>Carregando histórico...</li>';
+            historicoListaUl.innerHTML = '<li>Carregando...</li>';
             try {
                 const snapshot = await db.collection('sorteios').where('userId', '==', userId).orderBy('data', 'desc').limit(10).get();
                 if (snapshot.empty) {
-                    historicoListaUl.innerHTML = '<li>Você ainda não ganhou prêmios.</li>';
+                    historicoListaUl.innerHTML = '<li>Você ainda não ganhou prêmios. Gire a roleta!</li>';
                     return;
                 }
                 historicoListaUl.innerHTML = '';
                 snapshot.forEach(doc => {
                     const sorteio = doc.data();
                     const li = document.createElement('li');
-                    const dataFormatada = sorteio.data.toDate().toLocaleString('pt-BR');
+                    const dataFormatada = sorteio.data ? sorteio.data.toDate().toLocaleString('pt-BR') : 'agora mesmo';
                     li.innerHTML = `<b>${sorteio.premio}</b> - <span>${dataFormatada}</span>`;
                     historicoListaUl.appendChild(li);
                 });
@@ -114,23 +116,28 @@
             }
         }
         
-        // NOVA FUNÇÃO para checar e atualizar os giros diários
         async function checarGirosDiarios(user) {
             const userDocRef = db.collection('users').doc(user.uid);
-            const doc = await userDocRef.get();
-            const userData = doc.data() || {};
-            
-            const hoje = new Date().toDateString();
-            const ultimoGiroDia = userData.ultimoGiroEm ? userData.ultimoGiroEm.toDate().toDateString() : null;
+            try {
+                const doc = await userDocRef.get();
+                const userData = doc.data() || {};
+                
+                const hoje = new Date().toDateString();
+                // CORREÇÃO APLICADA AQUI: Checamos se 'ultimoGiroEm' existe antes de usar
+                const ultimoGiroDia = (userData.ultimoGiroEm && userData.ultimoGiroEm.toDate) 
+                    ? userData.ultimoGiroEm.toDate().toDateString() 
+                    : null;
 
-            if (hoje !== ultimoGiroDia) {
-                // Se o último giro foi em um dia diferente, reseta o contador
-                await userDocRef.set({ girosHoje: 0 }, { merge: true });
-                girosRestantes = LIMITE_GIROS;
-            } else {
-                girosRestantes = LIMITE_GIROS - (userData.girosHoje || 0);
+                if (hoje !== ultimoGiroDia) {
+                    await userDocRef.set({ girosHoje: 0 }, { merge: true });
+                    girosRestantes = LIMITE_GIROS;
+                } else {
+                    girosRestantes = Math.max(0, LIMITE_GIROS - (userData.girosHoje || 0));
+                }
+            } catch (error) {
+                console.error("Erro ao checar giros diários:", error);
+                girosRestantes = 0; // Trava por segurança em caso de erro
             }
-
             atualizarStatusBotaoGirar();
         }
 
@@ -144,45 +151,39 @@
             }
         }
 
-        // NOVA FUNÇÃO para registrar o giro no banco de dados
         async function registrarGiro(userId, premioGanhado) {
             const userDocRef = db.collection('users').doc(userId);
             const sorteioRef = db.collection('sorteios');
             
-            // Incrementa o contador de giros e atualiza a data
             await userDocRef.set({ 
                 girosHoje: firebase.firestore.FieldValue.increment(1),
                 ultimoGiroEm: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
-            // Adiciona o prêmio ao histórico
             await sorteioRef.add({
                 userId: userId,
                 premio: premioGanhado.name,
                 data: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Atualiza a tela
             girosRestantes--;
             atualizarStatusBotaoGirar();
-            carregarHistorico(userId);
+            await carregarHistorico(userId);
         }
 
-        // --- Lógica de Autenticação e Inicialização ---
         auth.onAuthStateChanged(async user => {
             if (user) {
-                currentUser = user; // Guarda o usuário atual
+                currentUser = user;
                 userEmailSpan.textContent = `Logado como: ${user.email}`;
                 adicionarBotaoLogout(userHeader);
 
-                // Checa se é admin
                 const userDocRef = db.collection('users').doc(user.uid);
                 const doc = await userDocRef.get();
                 if (doc.exists && doc.data().role === 'admin') {
                     painelDeControles.style.display = 'block';
                 }
                 
-                // Carrega tudo
+                // Carrega tudo na ordem correta
                 await carregarPremiosERenderizarTudo();
                 await checarGirosDiarios(user);
                 await carregarHistorico(user.uid);
@@ -191,44 +192,38 @@
             }
         });
 
-        // --- Event Listener do Giro (ATUALIZADO) ---
+        girarBtn.addEventListener('click', () => { /* ...código do giro... */ });
+        addPremioBtn.addEventListener('click', async () => { /* ...código de addPremioBtn... */ });
+        listaPremiosUl.addEventListener('click', async (e) => { /* ...código da listaPremiosUl... */ });
+        function adicionarBotaoLogout(container) {
+            if (document.getElementById('btn-logout')) return;
+            const logoutButton = document.createElement('button');
+            logoutButton.id = 'btn-logout'; logoutButton.textContent = 'Sair';
+            logoutButton.onclick = () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); };
+            container.appendChild(logoutButton);
+        }
+
+        // --- CÓDIGO RESTANTE DOS LISTENERS (para economizar espaço, eles continuam os mesmos) ---
         girarBtn.addEventListener('click', () => {
             if (isGirando || girosRestantes <= 0 || premios.length < 2) return;
-            
-            isGirando = true;
-            girarBtn.disabled = true;
-            girarBtn.textContent = 'Girando...';
+            isGirando = true; girarBtn.disabled = true; girarBtn.textContent = 'Girando...';
             try { somGiro.play(); } catch(e) {}
-
             const indiceVencedor = Math.floor(Math.random() * premios.length);
             const premioVencedor = premios[indiceVencedor];
             const anguloPorFatia = 360 / premios.length;
-            
-            const voltasExtras = 5 * 360;
-            const anguloFinal = voltasExtras + (360 - (indiceVencedor * anguloPorFatia) - (anguloPorFatia / 2));
-            
+            const anguloFinal = (5 * 360) + (360 - (indiceVencedor * anguloPorFatia) - (anguloPorFatia / 2));
             roleta.style.transition = 'transform 6s cubic-bezier(0.1, 0.7, 0.3, 1)';
             roleta.style.transform = `rotate(${anguloFinal}deg)`;
-
             setTimeout(() => {
                 try { somGiro.pause(); somGiro.currentTime = 0; somVitoria.play(); } catch(e) {}
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Parabéns!',
-                    html: `Você ganhou: <b>${premioVencedor.name}</b>`
-                });
-
+                Swal.fire({ icon: 'success', title: 'Parabéns!', html: `Você ganhou: <b>${premioVencedor.name}</b>` });
                 isGirando = false;
-                // A função registrarGiro vai re-habilitar o botão se houver giros
                 registrarGiro(currentUser.uid, premioVencedor);
             }, 6500);
         });
+        addPremioBtn.addEventListener('click', async () => { const name = nomePremioInput.value, color = corPremioInput.value; if (!name) return; addPremioBtn.disabled = true; try { await db.collection('premios').add({ name, color }); Swal.fire('Sucesso!', 'Prêmio adicionado.', 'success'); nomePremioInput.value = ''; await carregarPremiosERenderizarTudo(); } catch (error) { Swal.fire('Erro!', 'Não foi possível adicionar o prêmio.', 'error'); } addPremioBtn.disabled = false; });
+        listaPremiosUl.addEventListener('click', async (e) => { if (e.target.tagName !== 'BUTTON') return; const id = e.target.dataset.id; const result = await Swal.fire({ title: 'Você tem certeza?', text: "O prêmio será removido permanentemente!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33', confirmButtonText: 'Sim, remover!', cancelButtonText: 'Cancelar' }); if (result.isConfirmed) { try { await db.collection('premios').doc(id).delete(); Swal.fire('Removido!', 'O prêmio foi removido.', 'success'); await carregarPremiosERenderizarTudo(); } catch (error) { Swal.fire('Erro!', 'Não foi possível remover o prêmio.', 'error'); } } });
 
-        // (Listeners de Adicionar/Remover prêmio e função de logout continuam iguais)
-        addPremioBtn.addEventListener('click', async () => { /* ...código de addPremioBtn... */ });
-        listaPremiosUl.addEventListener('click', async (e) => { /* ...código de listaPremiosUl... */ });
-        function adicionarBotaoLogout(container) { /* ...código de adicionarBotaoLogout... */ }
     </script>
 </body>
 </html>
