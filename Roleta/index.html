@@ -11,7 +11,7 @@
 
     <header class="user-header">
         <span id="user-email"></span>
-    </header>
+        </header>
 
     <div class="main-container">
         <div id="painel-admin" class="controles" style="display: none;">
@@ -49,45 +49,56 @@
     <script src="firebase-config.js"></script>
     
     <script>
-        // --- ELEMENTOS DO DOM ---
-        const painelAdmin = document.getElementById('painel-admin');
-        const userHeader = document.querySelector('.user-header');
-        const userEmailSpan = document.getElementById('user-email');
-        const girarBtn = document.getElementById('girar-btn');
-        const girosRestantesP = document.getElementById('giros-restantes');
-        const roleta = document.getElementById('roleta');
-        const historicoListaUl = document.getElementById('historico-lista');
-        const addPremioBtn = document.getElementById('add-premio-btn');
-        const nomePremioInput = document.getElementById('nome-premio-input');
-        const corPremioInput = document.getElementById('cor-premio-input');
-        const listaPremiosUl = document.getElementById('lista-premios');
-        const somGiro = document.getElementById('som-giro');
-        const somVitoria = document.getElementById('som-vitoria');
-
-        // --- VARIÁVEIS DE ESTADO ---
-        let currentUser = null;
-        let premios = [];
-
-        // --- FUNÇÕES ---
-        // (As funções como renderizarRoleta, carregarHistorico, etc. vão aqui)
-        function renderizarRoleta() {
-            // Implementação da função para desenhar a roleta
-        }
-        
-        // --- INICIALIZAÇÃO E AUTENTICAÇÃO ---
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                currentUser = user;
-                userEmailSpan.textContent = `Logado como: ${user.email}`;
+                // --- USUÁRIO ESTÁ LOGADO, AGORA PODEMOS TRABALHAR ---
 
-                // Lógica para verificar se é admin e mostrar o painel
-                const userDocRef = db.collection('users').doc(user.uid);
-                const doc = await userDocRef.get();
-                if (doc.exists && doc.data().role === 'admin') {
-                    painelAdmin.style.display = 'block';
-                }
+                // 1. Seleciona os elementos do DOM
+                const painelAdmin = document.getElementById('painel-admin');
+                const userHeader = document.querySelector('.user-header');
+                const userEmailSpan = document.getElementById('user-email');
+                const girarBtn = document.getElementById('girar-btn');
+                const girosRestantesP = document.getElementById('giros-restantes');
+                const roleta = document.getElementById('roleta');
+                const historicoListaUl = document.getElementById('historico-lista');
+                const somGiro = document.getElementById('som-giro');
+                const somVitoria = document.getElementById('som-vitoria');
+
+                // 2. Define as variáveis de estado
+                let currentUser = user;
+                let premios = [];
+                let isGirando = false;
+                const LIMITE_GIROS = 5;
+                let girosRestantes = LIMITE_GIROS;
+
+                // 3. Define as funções que vamos usar
+                const carregarPremios = async () => {
+                    const snapshot = await db.collection('premios').get();
+                    premios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderizarRoleta();
+                };
+
+                const renderizarRoleta = () => {
+                    roleta.innerHTML = '';
+                    if (premios.length === 0) return;
+                    const anguloPorFatia = 360 / premios.length;
+                    premios.forEach((premio, i) => {
+                        const fatia = document.createElement('div');
+                        fatia.style.cssText = `position: absolute; width: 50%; height: 50%; background-color: ${premio.color || '#cccccc'}; transform-origin: 100% 100%; transform: rotate(${i * anguloPorFatia}deg) skewX(${90 - anguloPorFatia}deg);`;
+                        const textoSpan = document.createElement('span');
+                        textoSpan.textContent = premio.name;
+                        textoSpan.style.cssText = `position: absolute; left: 5%; top: 20%; width: 90%; color: white; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 3px rgba(0,0,0,0.9); word-wrap: break-word; transform-origin: center; transform: skewX(${-(90 - anguloPorFatia)}deg) rotate(${anguloPorFatia / 2}deg); text-align: center;`;
+                        fatia.appendChild(textoSpan);
+                        roleta.appendChild(fatia);
+                    });
+                };
+
+                // ... (outras funções poderiam ser definidas aqui)
+
+                // 4. Lógica de Inicialização da Página
+                userEmailSpan.textContent = `Logado como: ${user.email}`;
                 
-                // Adiciona o botão de logout
+                // Adiciona botão de logout
                 if (!document.getElementById('btn-logout')) {
                     const logoutButton = document.createElement('button');
                     logoutButton.id = 'btn-logout';
@@ -96,30 +107,32 @@
                     userHeader.appendChild(logoutButton);
                 }
 
+                // Carrega os prêmios para todos
+                await carregarPremios();
+                
+                // 5. Verifica se é Admin e ATIVA O PAINEL E SEUS BOTÕES
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists && userDoc.data().role === 'admin') {
+                    painelAdmin.style.display = 'block';
+
+                    // Seleciona e ativa os elementos do admin SÓ AGORA
+                    const addPremioBtn = document.getElementById('add-premio-btn');
+                    const nomePremioInput = document.getElementById('nome-premio-input');
+                    const corPremioInput = document.getElementById('cor-premio-input');
+                    const listaPremiosUl = document.getElementById('lista-premios');
+                    
+                    addPremioBtn.addEventListener('click', async () => { /* Lógica para adicionar prêmio */ });
+                    listaPremiosUl.addEventListener('click', async (e) => { /* Lógica para remover prêmio */ });
+                }
+
+                // Ativa o botão de giro para todos os usuários
+                girarBtn.addEventListener('click', () => { /* Lógica do giro */ });
+
             } else {
+                // Se não há usuário logado, redireciona
                 window.location.href = 'login.html';
             }
         });
-
-        // --- EVENT LISTENERS ---
-        // A linha do erro original estava aqui, agora corrigida
-        if (addPremioBtn) {
-            addPremioBtn.addEventListener('click', async () => {
-                // Lógica para adicionar prêmio
-            });
-        }
-        
-        if (girarBtn) {
-            girarBtn.addEventListener('click', () => {
-                // Lógica do giro da roleta
-            });
-        }
-        
-        if (listaPremiosUl) {
-            listaPremiosUl.addEventListener('click', async (e) => {
-               // Lógica para remover prêmio
-            });
-        }
     </script>
 </body>
 </html>
