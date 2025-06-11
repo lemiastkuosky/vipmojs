@@ -12,9 +12,24 @@ const firebaseConfig = {
   measurementId: "G-ELHXPLD7W6"
 };
 
-// Inicializa os serviços do Firebase
-firebase.initializeApp(firebaseConfig);
+// --- Bloco de Inicialização Robusto ---
+// Usamos 'var' para garantir que as variáveis sejam globais entre os scripts.
+var auth;
+var db;
 
-// Cria as variáveis que serão usadas em outros scripts
-const auth = firebase.auth();
-const db = firebase.firestore(); // Adicionamos a inicialização do Firestore
+try {
+  // Inicializa o app do Firebase
+  firebase.initializeApp(firebaseConfig);
+  
+  // Atribui os serviços às nossas variáveis
+  auth = firebase.auth();
+  db = firebase.firestore();
+
+  // Mensagem de sucesso no console para sabermos que tudo correu bem
+  console.log("Firebase foi configurado e inicializado com sucesso!");
+
+} catch (e) {
+  // Se qualquer coisa der errado aqui (ex: chaves incorretas), veremos um erro claro.
+  console.error("ERRO CRÍTICO NA CONFIGURAÇÃO DO FIREBASE:", e);
+  alert("Erro fatal na configuração do Firebase. Verifique o console (F12) para mais detalhes. O app não irá funcionar.");
+}
