@@ -49,12 +49,14 @@
     <script src="firebase-config.js"></script>
     
     <script>
+        // --- CONSTANTES E VARIÁVEIS ---
         const LIMITE_GIROS = 5;
         let isGirando = false;
         let premios = [];
         let girosRestantes = LIMITE_GIROS;
         let currentUser = null;
 
+        // --- ELEMENTOS DO DOM ---
         const painelDeControles = document.querySelector('.controles');
         const userHeader = document.querySelector('.user-header');
         const userEmailSpan = document.getElementById('user-email');
@@ -69,8 +71,24 @@
         const somGiro = document.getElementById('som-giro');
         const somVitoria = document.getElementById('som-vitoria');
 
+        // --- FUNÇÕES DE RENDERIZAÇÃO E LÓGICA ---
+
+        async function carregarPremiosERenderizarTudo() {
+            try {
+                const snapshot = await db.collection('premios').get();
+                premios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderizarRoleta();
+                if (painelDeControles.style.display === 'block') {
+                    renderizarListaAdmin();
+                }
+            } catch (error) {
+                console.error("Erro ao carregar prêmios: ", error);
+            }
+        }
+
         function renderizarRoleta() {
-            roleta.innerHTML = ''; if (premios.length === 0) return;
+            roleta.innerHTML = '';
+            if (premios.length === 0) return;
             const anguloPorFatia = 360 / premios.length;
             premios.forEach((premio, i) => {
                 const fatia = document.createElement('div');
@@ -87,10 +105,13 @@
             listaPremiosUl.innerHTML = '';
             premios.forEach(premio => {
                 const li = document.createElement('li');
-                li.textContent = premio.name; li.style.borderLeft = `5px solid ${premio.color}`;
+                li.textContent = premio.name;
+                li.style.borderLeft = `5px solid ${premio.color}`;
                 const removeBtn = document.createElement('button');
-                removeBtn.textContent = 'Remover'; removeBtn.dataset.id = premio.id;
-                li.appendChild(removeBtn); listaPremiosUl.appendChild(li);
+                removeBtn.textContent = 'Remover';
+                removeBtn.dataset.id = premio.id;
+                li.appendChild(removeBtn);
+                listaPremiosUl.appendChild(li);
             });
         }
 
@@ -115,19 +136,14 @@
                 historicoListaUl.innerHTML = '<li>Não foi possível carregar o histórico.</li>';
             }
         }
-        
+
         async function checarGirosDiarios(user) {
             const userDocRef = db.collection('users').doc(user.uid);
             try {
                 const doc = await userDocRef.get();
                 const userData = doc.data() || {};
-                
                 const hoje = new Date().toDateString();
-                // CORREÇÃO APLICADA AQUI: Checamos se 'ultimoGiroEm' existe antes de usar
-                const ultimoGiroDia = (userData.ultimoGiroEm && userData.ultimoGiroEm.toDate) 
-                    ? userData.ultimoGiroEm.toDate().toDateString() 
-                    : null;
-
+                const ultimoGiroDia = (userData.ultimoGiroEm && userData.ultimoGiroEm.toDate) ? userData.ultimoGiroEm.toDate().toDateString() : null;
                 if (hoje !== ultimoGiroDia) {
                     await userDocRef.set({ girosHoje: 0 }, { merge: true });
                     girosRestantes = LIMITE_GIROS;
@@ -136,7 +152,7 @@
                 }
             } catch (error) {
                 console.error("Erro ao checar giros diários:", error);
-                girosRestantes = 0; // Trava por segurança em caso de erro
+                girosRestantes = 0;
             }
             atualizarStatusBotaoGirar();
         }
@@ -154,36 +170,40 @@
         async function registrarGiro(userId, premioGanhado) {
             const userDocRef = db.collection('users').doc(userId);
             const sorteioRef = db.collection('sorteios');
-            
-            await userDocRef.set({ 
+            await userDocRef.set({
                 girosHoje: firebase.firestore.FieldValue.increment(1),
                 ultimoGiroEm: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-
             await sorteioRef.add({
                 userId: userId,
                 premio: premioGanhado.name,
                 data: firebase.firestore.FieldValue.serverTimestamp()
             });
-
             girosRestantes--;
             atualizarStatusBotaoGirar();
             await carregarHistorico(userId);
         }
+        
+        function adicionarBotaoLogout(container) {
+            if (document.getElementById('btn-logout')) return;
+            const logoutButton = document.createElement('button');
+            logoutButton.id = 'btn-logout';
+            logoutButton.textContent = 'Sair';
+            logoutButton.onclick = () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); };
+            container.appendChild(logoutButton);
+        }
 
+        // --- LÓGICA DE INICIALIZAÇÃO ---
         auth.onAuthStateChanged(async user => {
             if (user) {
                 currentUser = user;
                 userEmailSpan.textContent = `Logado como: ${user.email}`;
                 adicionarBotaoLogout(userHeader);
-
                 const userDocRef = db.collection('users').doc(user.uid);
                 const doc = await userDocRef.get();
                 if (doc.exists && doc.data().role === 'admin') {
                     painelDeControles.style.display = 'block';
                 }
-                
-                // Carrega tudo na ordem correta
                 await carregarPremiosERenderizarTudo();
                 await checarGirosDiarios(user);
                 await carregarHistorico(user.uid);
@@ -192,21 +212,12 @@
             }
         });
 
-        girarBtn.addEventListener('click', () => { /* ...código do giro... */ });
-        addPremioBtn.addEventListener('click', async () => { /* ...código de addPremioBtn... */ });
-        listaPremiosUl.addEventListener('click', async (e) => { /* ...código da listaPremiosUl... */ });
-        function adicionarBotaoLogout(container) {
-            if (document.getElementById('btn-logout')) return;
-            const logoutButton = document.createElement('button');
-            logoutButton.id = 'btn-logout'; logoutButton.textContent = 'Sair';
-            logoutButton.onclick = () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); };
-            container.appendChild(logoutButton);
-        }
-
-        // --- CÓDIGO RESTANTE DOS LISTENERS (para economizar espaço, eles continuam os mesmos) ---
+        // --- EVENT LISTENERS ---
         girarBtn.addEventListener('click', () => {
             if (isGirando || girosRestantes <= 0 || premios.length < 2) return;
-            isGirando = true; girarBtn.disabled = true; girarBtn.textContent = 'Girando...';
+            isGirando = true;
+            girarBtn.disabled = true;
+            girarBtn.textContent = 'Girando...';
             try { somGiro.play(); } catch(e) {}
             const indiceVencedor = Math.floor(Math.random() * premios.length);
             const premioVencedor = premios[indiceVencedor];
@@ -221,9 +232,33 @@
                 registrarGiro(currentUser.uid, premioVencedor);
             }, 6500);
         });
-        addPremioBtn.addEventListener('click', async () => { const name = nomePremioInput.value, color = corPremioInput.value; if (!name) return; addPremioBtn.disabled = true; try { await db.collection('premios').add({ name, color }); Swal.fire('Sucesso!', 'Prêmio adicionado.', 'success'); nomePremioInput.value = ''; await carregarPremiosERenderizarTudo(); } catch (error) { Swal.fire('Erro!', 'Não foi possível adicionar o prêmio.', 'error'); } addPremioBtn.disabled = false; });
-        listaPremiosUl.addEventListener('click', async (e) => { if (e.target.tagName !== 'BUTTON') return; const id = e.target.dataset.id; const result = await Swal.fire({ title: 'Você tem certeza?', text: "O prêmio será removido permanentemente!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33', confirmButtonText: 'Sim, remover!', cancelButtonText: 'Cancelar' }); if (result.isConfirmed) { try { await db.collection('premios').doc(id).delete(); Swal.fire('Removido!', 'O prêmio foi removido.', 'success'); await carregarPremiosERenderizarTudo(); } catch (error) { Swal.fire('Erro!', 'Não foi possível remover o prêmio.', 'error'); } } });
 
+        addPremioBtn.addEventListener('click', async () => {
+            const name = nomePremioInput.value;
+            const color = corPremioInput.value;
+            if (!name) { Swal.fire('Atenção!', 'O nome do prêmio não pode estar vazio.', 'warning'); return; }
+            addPremioBtn.disabled = true;
+            try {
+                await db.collection('premios').add({ name, color });
+                Swal.fire('Sucesso!', 'Prêmio adicionado.', 'success');
+                nomePremioInput.value = '';
+                await carregarPremiosERenderizarTudo();
+            } catch (error) { Swal.fire('Erro!', 'Não foi possível adicionar o prêmio.', 'error'); }
+            addPremioBtn.disabled = false;
+        });
+    
+        listaPremiosUl.addEventListener('click', async (e) => {
+            if (e.target.tagName !== 'BUTTON') return;
+            const id = e.target.dataset.id;
+            const result = await Swal.fire({ title: 'Você tem certeza?', text: "O prêmio será removido permanentemente!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33', confirmButtonText: 'Sim, remover!', cancelButtonText: 'Cancelar' });
+            if (result.isConfirmed) {
+                try {
+                    await db.collection('premios').doc(id).delete();
+                    Swal.fire('Removido!', 'O prêmio foi removido.', 'success');
+                    await carregarPremiosERenderizarTudo();
+                } catch (error) { Swal.fire('Erro!', 'Não foi possível remover o prêmio.', 'error'); }
+            }
+        });
     </script>
 </body>
 </html>
