@@ -60,28 +60,18 @@
                 const somGiro = document.getElementById('som-giro');
                 const somVitoria = document.getElementById('som-vitoria');
 
-                // 2. Variáveis de Estado
+                // 2. Variáveis de Estado (COM A CORREÇÃO)
                 let currentUser = user;
                 let premios = [];
                 let isGirando = false;
-                let limiteGirosUsuario = 5; // Valor padrão
-                let girosRestantes = 0;
+                let limiteGirosUsuario = 5;
+                let girosRestantes = 0; // <-- Corrigido para 'let'
 
-                // 3. Funções
-                const carregarPremios = async () => { /* ... (código completo abaixo) ... */ };
-                const renderizarRoleta = () => { /* ... (código completo abaixo) ... */ };
-                const carregarHistorico = async (userId) => { /* ... (código completo abaixo) ... */ };
-                const checarGirosDiarios = async (user) => { /* ... (código completo abaixo) ... */ };
-                const atualizarStatusBotaoGirar = () => { /* ... (código completo abaixo) ... */ };
-                const registrarGiro = async (userId, premioGanhado) => { /* ... (código completo abaixo) ... */ };
-                const selecionarPremioPonderado = () => { /* ... (código completo abaixo) ... */ };
-                const adicionarBotaoLogout = () => { /* ... (código completo abaixo) ... */ };
-
-                // --- Definição Completa das Funções ---
-
-                adicionarBotaoLogout = () => {
+                // 3. Definição das Funções
+                
+                const adicionarBotaoLogout = () => {
                     if (document.getElementById('btn-logout')) return;
-                    const logoutButton = document.createElement('a'); // Usando 'a' para link
+                    const logoutButton = document.createElement('a');
                     logoutButton.id = 'btn-logout';
                     logoutButton.textContent = 'Sair';
                     logoutButton.href = '#';
@@ -92,14 +82,16 @@
                     };
                     userHeader.appendChild(logoutButton);
                 };
-                
-                carregarPremios = async () => {
-                    const snapshot = await db.collection('premios').get();
-                    premios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderizarRoleta();
+
+                const carregarPremios = async () => {
+                    try {
+                        const snapshot = await db.collection('premios').get();
+                        premios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        renderizarRoleta();
+                    } catch (error) { console.error("Erro ao carregar prêmios:", error); }
                 };
 
-                renderizarRoleta = () => {
+                const renderizarRoleta = () => {
                     roleta.innerHTML = '';
                     if (premios.length === 0) return;
                     const anguloPorFatia = 360 / premios.length;
@@ -114,38 +106,45 @@
                     });
                 };
                 
-                carregarHistorico = async (userId) => {
+                const carregarHistorico = async (userId) => {
                     historicoListaUl.innerHTML = '<li>Carregando...</li>';
-                    const snapshot = await db.collection('sorteios').where('userId', '==', userId).orderBy('data', 'desc').limit(10).get();
-                    if (snapshot.empty) {
-                        historicoListaUl.innerHTML = '<li>Você ainda não ganhou prêmios.</li>';
-                    } else {
-                        historicoListaUl.innerHTML = '';
-                        snapshot.forEach(doc => {
-                            const sorteio = doc.data();
-                            const li = document.createElement('li');
-                            li.innerHTML = `<b>${sorteio.premio}</b> - <span>${sorteio.data.toDate().toLocaleString('pt-BR')}</span>`;
-                            historicoListaUl.appendChild(li);
-                        });
-                    }
+                    try {
+                        const snapshot = await db.collection('sorteios').where('userId', '==', userId).orderBy('data', 'desc').limit(10).get();
+                        if (snapshot.empty) {
+                            historicoListaUl.innerHTML = '<li>Você ainda não ganhou prêmios.</li>';
+                        } else {
+                            historicoListaUl.innerHTML = '';
+                            snapshot.forEach(doc => {
+                                const sorteio = doc.data();
+                                const li = document.createElement('li');
+                                li.innerHTML = `<b>${sorteio.premio}</b> - <span>${sorteio.data.toDate().toLocaleString('pt-BR')}</span>`;
+                                historicoListaUl.appendChild(li);
+                            });
+                        }
+                    } catch (error) { console.error("Erro ao carregar histórico:", error); }
                 };
                 
-                checarGirosDiarios = async (user) => {
-                    const doc = await db.collection('users').doc(user.uid).get();
-                    const userData = doc.data() || {};
-                    limiteGirosUsuario = userData.limiteGiros ?? 5;
-                    const hoje = new Date().toDateString();
-                    const ultimoGiroDia = userData.ultimoGiroEm ? userData.ultimoGiroEm.toDate().toDateString() : null;
-                    if (hoje !== ultimoGiroDia) {
-                        await db.collection('users').doc(user.uid).update({ girosHoje: 0 });
-                        girosRestantes = limiteGirosUsuario;
-                    } else {
-                        girosRestantes = Math.max(0, limiteGirosUsuario - (userData.girosHoje || 0));
+                const checarGirosDiarios = async (user) => {
+                    try {
+                        const doc = await db.collection('users').doc(user.uid).get();
+                        const userData = doc.data() || {};
+                        limiteGirosUsuario = userData.limiteGiros ?? 5;
+                        const hoje = new Date().toDateString();
+                        const ultimoGiroDia = userData.ultimoGiroEm ? userData.ultimoGiroEm.toDate().toDateString() : null;
+                        if (hoje !== ultimoGiroDia) {
+                            await db.collection('users').doc(user.uid).update({ girosHoje: 0 });
+                            girosRestantes = limiteGirosUsuario;
+                        } else {
+                            girosRestantes = Math.max(0, limiteGirosUsuario - (userData.girosHoje || 0));
+                        }
+                    } catch (error) {
+                        console.error("Erro ao checar giros:", error);
+                        girosRestantes = 0;
                     }
                     atualizarStatusBotaoGirar();
                 };
 
-                atualizarStatusBotaoGirar = () => {
+                const atualizarStatusBotaoGirar = () => {
                     if (girosRestantes <= 0) {
                         girarBtn.disabled = true;
                         girosRestantesP.textContent = "Você não tem mais giros hoje.";
@@ -155,9 +154,8 @@
                     }
                 };
                 
-                registrarGiro = async (userId, premioGanhado) => {
-                    const userDocRef = db.collection('users').doc(userId);
-                    await userDocRef.update({ 
+                const registrarGiro = async (userId, premioGanhado) => {
+                    await db.collection('users').doc(userId).update({ 
                         girosHoje: firebase.firestore.FieldValue.increment(1),
                         ultimoGiroEm: firebase.firestore.FieldValue.serverTimestamp()
                     });
@@ -171,7 +169,7 @@
                     await carregarHistorico(userId);
                 };
 
-                selecionarPremioPonderado = () => {
+                const selecionarPremioPonderado = () => {
                     const totalPeso = premios.reduce((sum, p) => sum + (p.peso || 1), 0);
                     let random = Math.random() * totalPeso;
                     for (const premio of premios) {
@@ -181,7 +179,7 @@
                     return premios[premios.length - 1];
                 };
 
-                // 4. Lógica de Inicialização
+                // 4. Lógica de Inicialização da Página
                 userEmailSpan.textContent = `Logado como: ${user.email}`;
                 adicionarBotaoLogout();
                 await carregarPremios();
@@ -191,7 +189,8 @@
                 // 5. Verifica se é Admin
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 if (userDoc.exists && userDoc.data().role === 'admin') {
-                    if(document.querySelector('.admin-link') == null) {
+                    painelAdmin.style.display = 'block';
+                    if (!document.querySelector('.admin-link')) {
                          const adminLink = document.createElement('a');
                          adminLink.href = 'admin.html';
                          adminLink.textContent = 'Painel do Admin';
@@ -200,8 +199,7 @@
                     }
                 }
 
-                // 6. Ativa os Event Listeners FINAIS
-
+                // 6. Ativa os Event Listeners
                 girarBtn.addEventListener('click', () => {
                     if (isGirando || girosRestantes <= 0 || premios.length < 1) return;
                     
@@ -211,6 +209,12 @@
                     try { somGiro.play(); } catch(e) {}
                     
                     const premioVencedor = selecionarPremioPonderado();
+                    if (!premioVencedor) { // Verificação de segurança
+                        isGirando = false;
+                        atualizarStatusBotaoGirar();
+                        return;
+                    }
+
                     const indiceVencedor = premios.findIndex(p => p.id === premioVencedor.id);
                     const anguloPorFatia = 360 / premios.length;
                     const anguloFinal = (7 * 360) + (360 - (indiceVencedor * anguloPorFatia) - (anguloPorFatia / 2));
