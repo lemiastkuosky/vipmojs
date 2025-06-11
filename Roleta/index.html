@@ -71,7 +71,7 @@
         const somGiro = document.getElementById('som-giro');
         const somVitoria = document.getElementById('som-vitoria');
 
-        // --- FUNÇÕES DE RENDERIZAÇÃO E LÓGICA ---
+        // --- FUNÇÕES ---
 
         async function carregarPremiosERenderizarTudo() {
             try {
@@ -86,11 +86,14 @@
             }
         }
 
+        // ==========================================================
+        // FUNÇÃO 'renderizarRoleta' COM A CORREÇÃO FINAL PARA O TEXTO
+        // ==========================================================
         function renderizarRoleta() {
             roleta.innerHTML = '';
             if (premios.length === 0) return;
-            const anguloPorFatia = 360 / premios.length;
 
+            const anguloPorFatia = 360 / premios.length;
             premios.forEach((premio, i) => {
                 const fatia = document.createElement('div');
                 fatia.style.cssText = `
@@ -102,47 +105,31 @@
                     transform: rotate(${i * anguloPorFatia}deg) skewX(${90 - anguloPorFatia}deg);
                 `;
                 
-                // ===============================================
-                // CSS CORRIGIDO E ROBUSTO PARA O TEXTO
-                // ===============================================
-                const texto = document.createElement('div'); // Usar DIV para melhor controle
-                texto.style.cssText = `
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    transform-origin: 100% 100%;
-                    transform: rotate(${i * anguloPorFatia}deg) skewX(${90 - anguloPorFatia}deg);
-                    
-                    /* Desfaz o skew para o conteúdo interno */
-                    transform: rotate(${i * anguloPorFatia}deg) translateX(-50%) rotate(-${anguloPorFatia/2 + 90}deg);
-                    left: 50%;
-                    top: 0;
-
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding-right: 25%; /* Empurra para o centro da fatia */
-                `;
+                const textoSpan = document.createElement('span');
+                textoSpan.textContent = premio.name;
                 
-                const p = document.createElement('p');
-                p.textContent = premio.name;
-                p.style.cssText = `
+                // Estilo robusto para garantir a visibilidade do texto
+                textoSpan.style.cssText = `
+                    position: absolute;
+                    left: 5%; /* Distância da borda interna da roleta */
+                    top: 20%; /* Distância do topo */
+                    width: 90%; /* Largura máxima para o texto */
                     color: white;
-                    font-size: 13px;
+                    font-size: 14px;
                     font-weight: bold;
-                    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-                    max-width: 80%;
-                    word-wrap: break-word;
-                    text-align: center;
-                `;
-                texto.appendChild(p);
+                    text-shadow: 1px 1px 3px rgba(0,0,0,0.9); /* Sombra forte para contraste */
+                    word-wrap: break-word; /* Quebra palavras longas */
 
-                // Adiciona o container do texto à roleta (não à fatia)
+                    /* Desfaz a inclinação da fatia e rotaciona o texto para ficar alinhado */
+                    transform-origin: center;
+                    transform: skewX(${-(90 - anguloPorFatia)}deg) rotate(${anguloPorFatia / 2}deg);
+                `;
+
+                // Adiciona o texto DENTRO da fatia
+                fatia.appendChild(textoSpan);
                 roleta.appendChild(fatia);
-                roleta.appendChild(texto);
             });
         }
-
 
         function renderizarListaAdmin() {
             listaPremiosUl.innerHTML = '';
@@ -175,7 +162,6 @@
                     });
                 }
             } catch (error) {
-                console.error("Erro ao carregar histórico: ", error);
                 historicoListaUl.innerHTML = '<li>Não foi possível carregar o histórico.</li>';
             }
         }
@@ -194,7 +180,6 @@
                     girosRestantes = Math.max(0, LIMITE_GIROS - (userData.girosHoje || 0));
                 }
             } catch (error) {
-                console.error("Erro ao checar giros diários:", error);
                 girosRestantes = 0;
             }
             atualizarStatusBotaoGirar();
