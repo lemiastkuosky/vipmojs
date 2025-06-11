@@ -15,14 +15,10 @@
 
     <div class="main-container">
         <div id="painel-admin" class="controles" style="display: none;">
-            <h3>Gerenciar Prêmios</h3>
-            <div class="form-premio">
-                <input type="text" id="nome-premio-input" placeholder="Nome do Prêmio">
-                <input type="color" id="cor-premio-input" value="#3498db">
-                <button id="add-premio-btn">Adicionar</button>
-            </div>
-            <h4>Lista de Prêmios Atuais</h4>
-            <ul id="lista-premios"></ul>
+            <h3>Gerenciar Prêmios e Pesos</h3>
+            <p>O prêmio com maior peso tem mais chance de sair.</p>
+            <ul id="admin-prize-list"></ul>
+            <button id="update-weights-btn">Atualizar Pesos</button>
         </div>
 
         <div class="container">
@@ -51,9 +47,9 @@
     <script>
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // --- USUÁRIO ESTÁ LOGADO, AGORA PODEMOS TRABALHAR ---
+                // --- USUÁRIO LOGADO ---
 
-                // 1. Seleciona os elementos do DOM
+                // 1. Elementos do DOM
                 const painelAdmin = document.getElementById('painel-admin');
                 const userHeader = document.querySelector('.user-header');
                 const userEmailSpan = document.getElementById('user-email');
@@ -64,21 +60,46 @@
                 const somGiro = document.getElementById('som-giro');
                 const somVitoria = document.getElementById('som-vitoria');
 
-                // 2. Define as variáveis de estado
+                // 2. Variáveis de Estado
                 let currentUser = user;
                 let premios = [];
                 let isGirando = false;
-                const LIMITE_GIROS = 5;
-                let girosRestantes = LIMITE_GIROS;
+                let limiteGirosUsuario = 5; // Valor padrão
+                let girosRestantes = 0;
 
-                // 3. Define as funções que vamos usar
-                const carregarPremios = async () => {
+                // 3. Funções
+                const carregarPremios = async () => { /* ... (código completo abaixo) ... */ };
+                const renderizarRoleta = () => { /* ... (código completo abaixo) ... */ };
+                const carregarHistorico = async (userId) => { /* ... (código completo abaixo) ... */ };
+                const checarGirosDiarios = async (user) => { /* ... (código completo abaixo) ... */ };
+                const atualizarStatusBotaoGirar = () => { /* ... (código completo abaixo) ... */ };
+                const registrarGiro = async (userId, premioGanhado) => { /* ... (código completo abaixo) ... */ };
+                const selecionarPremioPonderado = () => { /* ... (código completo abaixo) ... */ };
+                const adicionarBotaoLogout = () => { /* ... (código completo abaixo) ... */ };
+
+                // --- Definição Completa das Funções ---
+
+                adicionarBotaoLogout = () => {
+                    if (document.getElementById('btn-logout')) return;
+                    const logoutButton = document.createElement('a'); // Usando 'a' para link
+                    logoutButton.id = 'btn-logout';
+                    logoutButton.textContent = 'Sair';
+                    logoutButton.href = '#';
+                    logoutButton.style.marginLeft = '20px';
+                    logoutButton.onclick = (e) => {
+                        e.preventDefault();
+                        auth.signOut().then(() => { window.location.href = 'login.html'; });
+                    };
+                    userHeader.appendChild(logoutButton);
+                };
+                
+                carregarPremios = async () => {
                     const snapshot = await db.collection('premios').get();
                     premios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     renderizarRoleta();
                 };
 
-                const renderizarRoleta = () => {
+                renderizarRoleta = () => {
                     roleta.innerHTML = '';
                     if (premios.length === 0) return;
                     const anguloPorFatia = 360 / premios.length;
@@ -92,44 +113,126 @@
                         roleta.appendChild(fatia);
                     });
                 };
+                
+                carregarHistorico = async (userId) => {
+                    historicoListaUl.innerHTML = '<li>Carregando...</li>';
+                    const snapshot = await db.collection('sorteios').where('userId', '==', userId).orderBy('data', 'desc').limit(10).get();
+                    if (snapshot.empty) {
+                        historicoListaUl.innerHTML = '<li>Você ainda não ganhou prêmios.</li>';
+                    } else {
+                        historicoListaUl.innerHTML = '';
+                        snapshot.forEach(doc => {
+                            const sorteio = doc.data();
+                            const li = document.createElement('li');
+                            li.innerHTML = `<b>${sorteio.premio}</b> - <span>${sorteio.data.toDate().toLocaleString('pt-BR')}</span>`;
+                            historicoListaUl.appendChild(li);
+                        });
+                    }
+                };
+                
+                checarGirosDiarios = async (user) => {
+                    const doc = await db.collection('users').doc(user.uid).get();
+                    const userData = doc.data() || {};
+                    limiteGirosUsuario = userData.limiteGiros ?? 5;
+                    const hoje = new Date().toDateString();
+                    const ultimoGiroDia = userData.ultimoGiroEm ? userData.ultimoGiroEm.toDate().toDateString() : null;
+                    if (hoje !== ultimoGiroDia) {
+                        await db.collection('users').doc(user.uid).update({ girosHoje: 0 });
+                        girosRestantes = limiteGirosUsuario;
+                    } else {
+                        girosRestantes = Math.max(0, limiteGirosUsuario - (userData.girosHoje || 0));
+                    }
+                    atualizarStatusBotaoGirar();
+                };
 
-                // ... (outras funções poderiam ser definidas aqui)
+                atualizarStatusBotaoGirar = () => {
+                    if (girosRestantes <= 0) {
+                        girarBtn.disabled = true;
+                        girosRestantesP.textContent = "Você não tem mais giros hoje.";
+                    } else {
+                        girarBtn.disabled = isGirando;
+                        girosRestantesP.textContent = `Você tem ${girosRestantes} de ${limiteGirosUsuario} giros.`;
+                    }
+                };
+                
+                registrarGiro = async (userId, premioGanhado) => {
+                    const userDocRef = db.collection('users').doc(userId);
+                    await userDocRef.update({ 
+                        girosHoje: firebase.firestore.FieldValue.increment(1),
+                        ultimoGiroEm: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    await db.collection('sorteios').add({
+                        userId: userId,
+                        premio: premioGanhado.name,
+                        data: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    girosRestantes--;
+                    atualizarStatusBotaoGirar();
+                    await carregarHistorico(userId);
+                };
 
-                // 4. Lógica de Inicialização da Página
+                selecionarPremioPonderado = () => {
+                    const totalPeso = premios.reduce((sum, p) => sum + (p.peso || 1), 0);
+                    let random = Math.random() * totalPeso;
+                    for (const premio of premios) {
+                        random -= (premio.peso || 1);
+                        if (random <= 0) return premio;
+                    }
+                    return premios[premios.length - 1];
+                };
+
+                // 4. Lógica de Inicialização
                 userEmailSpan.textContent = `Logado como: ${user.email}`;
-                
-                // Adiciona botão de logout
-                if (!document.getElementById('btn-logout')) {
-                    const logoutButton = document.createElement('button');
-                    logoutButton.id = 'btn-logout';
-                    logoutButton.textContent = 'Sair';
-                    logoutButton.onclick = () => auth.signOut().then(() => { window.location.href = 'login.html'; });
-                    userHeader.appendChild(logoutButton);
-                }
-
-                // Carrega os prêmios para todos
+                adicionarBotaoLogout();
                 await carregarPremios();
-                
-                // 5. Verifica se é Admin e ATIVA O PAINEL E SEUS BOTÕES
+                await checarGirosDiarios(user);
+                await carregarHistorico(user.uid);
+
+                // 5. Verifica se é Admin
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 if (userDoc.exists && userDoc.data().role === 'admin') {
-                    painelAdmin.style.display = 'block';
-
-                    // Seleciona e ativa os elementos do admin SÓ AGORA
-                    const addPremioBtn = document.getElementById('add-premio-btn');
-                    const nomePremioInput = document.getElementById('nome-premio-input');
-                    const corPremioInput = document.getElementById('cor-premio-input');
-                    const listaPremiosUl = document.getElementById('lista-premios');
-                    
-                    addPremioBtn.addEventListener('click', async () => { /* Lógica para adicionar prêmio */ });
-                    listaPremiosUl.addEventListener('click', async (e) => { /* Lógica para remover prêmio */ });
+                    if(document.querySelector('.admin-link') == null) {
+                         const adminLink = document.createElement('a');
+                         adminLink.href = 'admin.html';
+                         adminLink.textContent = 'Painel do Admin';
+                         adminLink.className = 'admin-link';
+                         userHeader.appendChild(adminLink);
+                    }
                 }
 
-                // Ativa o botão de giro para todos os usuários
-                girarBtn.addEventListener('click', () => { /* Lógica do giro */ });
+                // 6. Ativa os Event Listeners FINAIS
+
+                girarBtn.addEventListener('click', () => {
+                    if (isGirando || girosRestantes <= 0 || premios.length < 1) return;
+                    
+                    isGirando = true;
+                    girarBtn.disabled = true;
+                    girarBtn.textContent = 'Girando...';
+                    try { somGiro.play(); } catch(e) {}
+                    
+                    const premioVencedor = selecionarPremioPonderado();
+                    const indiceVencedor = premios.findIndex(p => p.id === premioVencedor.id);
+                    const anguloPorFatia = 360 / premios.length;
+                    const anguloFinal = (7 * 360) + (360 - (indiceVencedor * anguloPorFatia) - (anguloPorFatia / 2));
+                    
+                    roleta.style.transition = 'transform 6s cubic-bezier(0.25, 1, 0.5, 1)';
+                    roleta.style.transform = `rotate(${anguloFinal}deg)`;
+
+                    setTimeout(() => {
+                        try { somGiro.pause(); somGiro.currentTime = 0; somVitoria.play(); } catch(e) {}
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Parabéns!',
+                            html: `Você ganhou: <b>${premioVencedor.name}</b>`
+                        });
+                        
+                        isGirando = false;
+                        registrarGiro(currentUser.uid, premioVencedor);
+                    }, 6500);
+                });
 
             } else {
-                // Se não há usuário logado, redireciona
                 window.location.href = 'login.html';
             }
         });
