@@ -1,237 +1,206 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roleta de Prêmios</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
-<body>
+<script>
+    // --- Elementos do DOM ---
+    const painelDeControles = document.querySelector('.controles');
+    const userHeader = document.querySelector('.user-header');
+    const userEmailSpan = document.getElementById('user-email');
+    const girarBtn = document.getElementById('girar-btn');
+    const roleta = document.getElementById('roleta');
+    const somGiro = document.getElementById('som-giro');
+    const somVitoria = document.getElementById('som-vitoria');
+    const addPremioBtn = document.getElementById('add-premio-btn');
+    const nomePremioInput = document.getElementById('nome-premio-input');
+    const corPremioInput = document.getElementById('cor-premio-input');
+    const listaPremiosUl = document.getElementById('lista-premios');
 
-    <header class="user-header">
-        <span id="user-email"></span>
-    </header>
+    // --- Variáveis de Estado ---
+    let isGirando = false;
+    let premios = [];
 
-    <div class="main-container">
-        <div class="controles" style="display: none;">
-            <h3>Gerenciar Prêmios</h3>
-            <div class="form-premio">
-                <input type="text" id="nome-premio-input" placeholder="Nome do Prêmio">
-                <input type="color" id="cor-premio-input" value="#3498db">
-                <button id="add-premio-btn">Adicionar</button>
-            </div>
-            <h4>Lista de Prêmios</h4>
-            <ul id="lista-premios">
-                </ul>
-        </div>
-
-        <div class="container">
-            <div class="roleta-container">
-                <div class="seta"></div>
-                <div class="roleta" id="roleta"></div>
-            </div>
-            <button id="girar-btn">Girar a Roleta!</button>
-        </div>
-    </div>
-
-    <audio id="som-giro" src="spinning.mp3" loop></audio>
-    <audio id="som-vitoria" src="win.mp3"></audio>
-
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="firebase-config.js"></script>
-    
-    <script>
-        // --- Elementos do DOM ---
-        const painelDeControles = document.querySelector('.controles');
-        const userHeader = document.querySelector('.user-header');
-        const userEmailSpan = document.getElementById('user-email');
-        const girarBtn = document.getElementById('girar-btn');
-        const roleta = document.getElementById('roleta');
-        const somGiro = document.getElementById('som-giro');
-        const somVitoria = document.getElementById('som-vitoria');
-        const addPremioBtn = document.getElementById('add-premio-btn');
-        const nomePremioInput = document.getElementById('nome-premio-input');
-        const corPremioInput = document.getElementById('cor-premio-input');
-        const listaPremiosUl = document.getElementById('lista-premios');
-
-        // --- Variáveis de Estado ---
-        let isGirando = false;
-        let premios = []; // Nosso array de prêmios agora começa vazio
-
-        // --- Funções Principais ---
-
-        // 1. Carrega os prêmios do Firestore e renderiza tudo na tela
-        async function carregarPremiosERenderizarTudo() {
-            try {
-                const snapshot = await db.collection('premios').get();
-                premios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                renderizarRoleta();
-                // A lista de gerenciamento só é renderizada se o painel estiver visível (para admins)
-                if (painelDeControles.style.display === 'block') {
-                    renderizarListaAdmin();
-                }
-            } catch (error) {
-                console.error("Erro ao carregar prêmios: ", error);
-                Swal.fire('Erro!', 'Não foi possível carregar os prêmios do banco de dados.', 'error');
-            }
-        }
-
-        // 2. Desenha as fatias da roleta com base no array 'premios'
-        function renderizarRoleta() {
-            roleta.innerHTML = ''; // Limpa a roleta antiga
-            if (premios.length === 0) return;
-
-            const anguloPorFatia = 360 / premios.length;
-            premios.forEach((premio, i) => {
-                const fatia = document.createElement('div');
-                fatia.style.cssText = `
-                    position: absolute;
-                    width: 50%;
-                    height: 50%;
-                    background-color: ${premio.color};
-                    transform-origin: 100% 100%;
-                    transform: rotate(${i * anguloPorFatia}deg) skewX(${90 - anguloPorFatia}deg);
-                `;
-                
-                const texto = document.createElement('span');
-                texto.textContent = premio.name;
-                texto.style.cssText = `
-                    position: absolute;
-                    color: #fff;
-                    left: 5%;
-                    top: 20%;
-                    transform: skewX(${-(90 - anguloPorFatia)}deg) rotate(${anguloPorFatia / 2}deg);
-                    font-size: 12px;
-                    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-                `;
-                fatia.appendChild(texto);
-                roleta.appendChild(fatia);
-            });
-        }
-
-        // 3. Renderiza a lista de prêmios no painel do admin
-        function renderizarListaAdmin() {
-            listaPremiosUl.innerHTML = '';
-            premios.forEach(premio => {
-                const li = document.createElement('li');
-                li.textContent = premio.name;
-                li.style.borderLeft = `5px solid ${premio.color}`;
-
-                const removeBtn = document.createElement('button');
-                removeBtn.textContent = 'Remover';
-                removeBtn.dataset.id = premio.id; // Guarda o ID do documento para sabermos qual remover
-                
-                li.appendChild(removeBtn);
-                listaPremiosUl.appendChild(li);
-            });
-        }
-
-        // --- Lógica de Autenticação ---
-        auth.onAuthStateChanged(async user => {
-            if (user) {
-                userEmailSpan.textContent = `Logado como: ${user.email}`;
-                adicionarBotaoLogout(userHeader);
-
-                const userDocRef = db.collection('users').doc(user.uid);
-                const doc = await userDocRef.get();
-                
-                if (doc.exists && doc.data().role === 'admin') {
-                    painelDeControles.style.display = 'block';
-                }
-                
-                // Carrega os prêmios e a roleta para TODOS os usuários
-                await carregarPremiosERenderizarTudo();
-
-            } else {
-                window.location.href = 'login.html';
-            }
-        });
-
-        // --- Event Listeners ---
-
-        // Girar a roleta
-        girarBtn.addEventListener('click', () => {
-            if (isGirando || premios.length === 0) return;
+    // --- Funções Principais ---
+    async function carregarPremiosERenderizarTudo() {
+        try {
+            const snapshot = await db.collection('premios').get();
+            premios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            isGirando = true;
-            girarBtn.disabled = true;
-            girarBtn.textContent = 'Girando...';
-            somGiro.play();
-
-            const indiceVencedor = Math.floor(Math.random() * premios.length);
-            const premioVencedor = premios[indiceVencedor];
-            const anguloPorFatia = 360 / premios.length;
+            // --- DIAGNÓSTICO ADICIONADO AQUI ---
+            console.log("Prêmios carregados do Firestore:", premios);
             
-            // Calcula o ângulo para parar no meio da fatia vencedora
-            const anguloFinal = (5 * 360) + (360 - (indiceVencedor * anguloPorFatia) - (anguloPorFatia / 2));
+            renderizarRoleta();
+            if (painelDeControles.style.display === 'block') {
+                renderizarListaAdmin();
+            }
+        } catch (error) {
+            console.error("Erro ao carregar prêmios: ", error);
+            Swal.fire('Erro!', 'Não foi possível carregar os prêmios do banco de dados.', 'error');
+        }
+    }
+
+    function renderizarRoleta() {
+        roleta.innerHTML = '';
+        if (premios.length === 0) return;
+
+        const anguloPorFatia = 360 / premios.length;
+        premios.forEach((premio, i) => {
+            const fatia = document.createElement('div');
+            fatia.style.cssText = `
+                position: absolute;
+                width: 50%;
+                height: 50%;
+                background-color: ${premio.color || '#cccccc'};
+                transform-origin: 100% 100%;
+                transform: rotate(${i * anguloPorFatia}deg) skewX(${90 - anguloPorFatia}deg);
+            `;
             
-            roleta.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
-            roleta.style.transform = `rotate(${anguloFinal}deg)`;
-
-            setTimeout(() => {
-                somGiro.pause();
-                somGiro.currentTime = 0;
-                somVitoria.play();
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Parabéns!',
-                    html: `Você ganhou: <b>${premioVencedor.name}</b>`
-                });
-
-                isGirando = false;
-                girarBtn.disabled = false;
-                girarBtn.textContent = 'Girar a Roleta!';
-            }, 5500);
+            const texto = document.createElement('span');
+            // Usamos 'premio.name' para pegar o nome. Se estiver errado, o texto ficará em branco.
+            texto.textContent = premio.name; 
+            
+            // --- CSS DO TEXTO MELHORADO ---
+            texto.style.cssText = `
+                position: absolute;
+                color: #FFFFFF;
+                left: 10%;
+                top: 20%;
+                transform: skewX(${-(90 - anguloPorFatia)}deg) rotate(${anguloPorFatia / 2}deg);
+                font-size: 13px;
+                font-weight: bold;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+                display: block;
+                max-width: 80%;
+                word-wrap: break-word;
+            `;
+            fatia.appendChild(texto);
+            roleta.appendChild(fatia);
         });
+    }
 
-        // Adicionar um novo prêmio (só para admins)
-        addPremioBtn.addEventListener('click', async () => {
-            const name = nomePremioInput.value;
-            const color = corPremioInput.value;
-            if (!name) {
-                Swal.fire('Atenção!', 'O nome do prêmio não pode estar vazio.', 'warning');
-                return;
-            }
-            try {
-                await db.collection('premios').add({ name, color });
-                Swal.fire('Sucesso!', 'Prêmio adicionado.', 'success');
-                nomePremioInput.value = '';
-                await carregarPremiosERenderizarTudo(); // Atualiza a tela
-            } catch (error) {
-                console.error("Erro ao adicionar prêmio: ", error);
-                Swal.fire('Erro!', 'Não foi possível adicionar o prêmio.', 'error');
-            }
+    function renderizarListaAdmin() {
+        listaPremiosUl.innerHTML = '';
+        premios.forEach(premio => {
+            const li = document.createElement('li');
+            li.textContent = premio.name;
+            li.style.borderLeft = `5px solid ${premio.color}`;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = 'Remover';
+            removeBtn.dataset.id = premio.id;
+            
+            li.appendChild(removeBtn);
+            listaPremiosUl.appendChild(li);
         });
+    }
+
+    // --- Lógica de Autenticação ---
+    auth.onAuthStateChanged(async user => {
+        if (user) {
+            userEmailSpan.textContent = `Logado como: ${user.email}`;
+            adicionarBotaoLogout(userHeader);
+
+            const userDocRef = db.collection('users').doc(user.uid);
+            const doc = await userDocRef.get();
+            
+            if (doc.exists && doc.data().role === 'admin') {
+                painelDeControles.style.display = 'block';
+            }
+            
+            await carregarPremiosERenderizarTudo();
+        } else {
+            window.location.href = 'login.html';
+        }
+    });
+
+    // --- Event Listeners (Girar, Adicionar, Remover) ---
+    girarBtn.addEventListener('click', () => {
+        if (isGirando || premios.length < 2) return;
         
-        // Remover um prêmio (usando delegação de eventos)
-        listaPremiosUl.addEventListener('click', async (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                const id = e.target.dataset.id;
+        isGirando = true;
+        girarBtn.disabled = true;
+        girarBtn.textContent = 'Girando...';
+        somGiro.play();
+
+        const indiceVencedor = Math.floor(Math.random() * premios.length);
+        const premioVencedor = premios[indiceVencedor];
+        const anguloPorFatia = 360 / premios.length;
+        
+        const voltasExtras = 5 * 360;
+        const anguloBase = 360 - (indiceVencedor * anguloPorFatia);
+        const anguloCentralizado = anguloBase - (anguloPorFatia / 2);
+        const variacao = (Math.random() - 0.5) * (anguloPorFatia * 0.8);
+        
+        const anguloFinal = voltasExtras + anguloCentralizado + variacao;
+        
+        roleta.style.transition = 'transform 6s cubic-bezier(0.1, 0.7, 0.3, 1)';
+        roleta.style.transform = `rotate(${anguloFinal}deg)`;
+
+        setTimeout(() => {
+            somGiro.pause();
+            somGiro.currentTime = 0;
+            somVitoria.play();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Parabéns!',
+                html: `Você ganhou: <b>${premioVencedor.name}</b>`
+            });
+
+            isGirando = false;
+            girarBtn.disabled = false;
+            girarBtn.textContent = 'Girar a Roleta!';
+        }, 6500);
+    });
+
+    addPremioBtn.addEventListener('click', async () => {
+        const name = nomePremioInput.value;
+        const color = corPremioInput.value;
+        if (!name) {
+            Swal.fire('Atenção!', 'O nome do prêmio não pode estar vazio.', 'warning');
+            return;
+        }
+        try {
+            await db.collection('premios').add({ name, color });
+            Swal.fire('Sucesso!', 'Prêmio adicionado.', 'success');
+            nomePremioInput.value = '';
+            await carregarPremiosERenderizarTudo();
+        } catch (error) {
+            console.error("Erro ao adicionar prêmio: ", error);
+            Swal.fire('Erro!', 'Não foi possível adicionar o prêmio.', 'error');
+        }
+    });
+    
+    listaPremiosUl.addEventListener('click', async (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            const id = e.target.dataset.id;
+            
+            const result = await Swal.fire({
+                title: 'Você tem certeza?',
+                text: "Você não poderá reverter isso!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sim, remova!',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
                 try {
                     await db.collection('premios').doc(id).delete();
-                    Swal.fire('Sucesso!', 'Prêmio removido.', 'success');
-                    await carregarPremiosERenderizarTudo(); // Atualiza a tela
+                    Swal.fire('Removido!', 'O prêmio foi removido.', 'success');
+                    await carregarPremiosERenderizarTudo();
                 } catch (error) {
                     console.error("Erro ao remover prêmio: ", error);
                     Swal.fire('Erro!', 'Não foi possível remover o prêmio.', 'error');
                 }
             }
-        });
-
-        // Função auxiliar para o botão de logout
-        function adicionarBotaoLogout(container) {
-            if (document.getElementById('btn-logout')) return;
-            const logoutButton = document.createElement('button');
-            logoutButton.id = 'btn-logout';
-            logoutButton.textContent = 'Sair';
-            logoutButton.onclick = () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); };
-            container.appendChild(logoutButton);
         }
-    </script>
-</body>
-</html>
+    });
+
+    function adicionarBotaoLogout(container) {
+        if (document.getElementById('btn-logout')) return;
+        const logoutButton = document.createElement('button');
+        logoutButton.id = 'btn-logout';
+        logoutButton.textContent = 'Sair';
+        logoutButton.onclick = () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); };
+        container.appendChild(logoutButton);
+    }
+</script>
