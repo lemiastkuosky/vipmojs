@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roleta VIP - Sorteio de Cartas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #212121;
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #f1c40f;
+            text-align: center;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            width: 100%;
+            flex-grow: 1;
+        }
+
+        .ganhadores-container {
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+            margin-top: 20px;
+            padding: 15px 0;
+            border-top: 1px solid #34495e;
+            border-bottom: 1px solid #34495e;
+        }
+        .ganhadores-container h2 {
+            margin: 0 0 15px 0;
+            text-align: center;
+            font-size: 1em;
+            font-weight: 400;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        #lista-ganhadores {
+            display: flex;
+            overflow-x: auto;
+            gap: 30px;
+            list-style: none;
+            padding-bottom: 10px;
+            margin: 0;
+            justify-content: flex-start;
+            scrollbar-width: none;
+        }
+        #lista-ganhadores::-webkit-scrollbar {
+            display: none;
+        }
+        #lista-ganhadores li {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #ecf0f1;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .cartas-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            padding: 20px;
+            width: 100%;
+            max-width: 800px;
+            perspective: 1200px;
+        }
+
+        .carta {
+            width: 140px;
+            height: 190px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s, box-shadow 0.3s;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        
+        .carta:not(.virada):hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 30px rgba(0,0,0,0.4);
+        }
+
+        .carta.virada {
+            transform: rotateY(180deg);
+            cursor: default;
+        }
+
+        .carta-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .verso {
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 60%), linear-gradient(135deg, #480ca8 0%, #2a5298 100%);
+            box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.2);
+        }
+        
+        .verso::before {
+            content: 'VIP';
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Arial Black', Gadget, sans-serif;
+            font-weight: bold;
+            font-size: 3em;
+            color: rgba(0, 0, 0, 0.15);
+            letter-spacing: -4px;
+            z-index: 1;
+        }
+        
+        .verso::after {
+            content: '★';
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3.5em;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 15px rgba(255,255,255,0.7);
+            z-index: 2;
+        }
+
+        .frente {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #412c01;
+            font-size: 1.3em;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+            transform: rotateY(180deg);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+        
+        .carta.perdedora .frente {
+            background: linear-gradient(135deg, #888, #555);
+            color: #ccc;
+            font-size: 1.1em;
+        }
+        
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 8px rgba(46, 204, 113, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(46, 204, 113, 0.8); }
+            100% { box-shadow: 0 0 8px rgba(46, 204, 113, 0.5); }
+        }
+
+        #reset-btn {
+            padding: 15px 40px;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(45deg, #2ecc71, #28b485);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s ease-out;
+            display: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            animation: pulse-glow 2.5s infinite ease-in-out;
+        }
+
+        #reset-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .popup-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px;
+        }
+        .popup-box { 
+            background: #fff; color: #333; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 5px 25px rgba(0,0,0,0.4); width: 100%; max-width: 400px;
+        }
+
+        @keyframes confete-fall {
+            0% { transform: translateY(0) rotateZ(0); opacity: 1; }
+            100% { transform: translateY(100vh) rotateZ(720deg); opacity: 0; }
+        }
+
+        .confete {
+            position: fixed; top: -20px; width: 10px; height: 10px; pointer-events: none; z-index: 2000; animation: confete-fall 4s linear forwards;
+        }
+        
+        footer {
+            width: 100%;
+            max-width: 800px;
+            margin: 40px auto 0 auto;
+            padding: 20px;
+            border-top: 1px solid #34495e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            color: #7f8c8d;
+        }
+        .instrucoes {
+            font-size: 0.9em;
+            text-align: center;
+            line-height: 1.5;
+            margin: 0;
+        }
+        .instrucoes strong {
+            color: #bdc3c7;
+            font-weight: 600;
+        }
+        .creditos {
+            display: flex;
+            gap: 25px;
+            font-size: 0.85em;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .creditos-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        @media (max-width: 800px) {
+             .ganhadores-container, footer {
+                max-width: 90vw;
+             }
+        }
+        
+        /* --- MEDIA QUERY PARA CELULAR --- */
+        @media (max-width: 480px) {
+            h1 { font-size: 2em; }
+            #reset-btn { font-size: 1.2em; padding: 12px 30px; }
+            
+            /* MODIFICAÇÃO PARA AS CARTAS CABEREM NA TELA */
+            .cartas-container {
+                display: grid;
+                /* A variável --card-count é definida via JS para criar o número certo de colunas */
+                grid-template-columns: repeat(var(--card-count, 5), 1fr);
+                gap: 5px; /* Espaço menor entre as cartas */
+                padding: 0;
+            }
+
+            .carta { 
+                width: 100%; /* Ocupa a célula do grid */
+                height: auto;
+                aspect-ratio: 140 / 190; /* Mantém a proporção da carta */
+            }
+            
+            /* Ajusta o tamanho da fonte e ícones dentro das cartas menores */
+            .verso::before { font-size: 2em; bottom: 10%; }
+            .verso::after { font-size: 2.5em; top: 15%; }
+            .frente { font-size: 0.7em; }
+            
+            footer { gap: 15px; }
+        }
+
+    </style>
+</head>
+<body>
+    
+    <div class="main-content">
+        <h1>SORTEIO DE PRÊMIOS</h1>
+        <div id="cartas-container" class="cartas-container">
+            </div>
+        <button id="reset-btn">Jogar Novamente</button>
+        
+        <div class="ganhadores-container">
+            <h2>Últimos Ganhadores</h2>
+            <ul id="lista-ganhadores">
+            </ul>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="popup-overlay"></div>
+    <audio id="som-revelar" src="som-premio.mp3" preload="auto"></audio>
+
+    <footer>
+        <p class="instrucoes">
+            <strong>Como Jogar:</strong> Clique em uma carta para sortear seu prêmio. Após ganhar, contate o administrador com a captura de tela. Boa sorte!
+        </p>
+        <div class="creditos">
+            <span class="creditos-item">
+                👤 Criado por Le Miastkuosky
+            </span>
+            <span class="creditos-item">
+                ⚙️ Versão 1.0 (ideia inicial)
+            </span>
+        </div>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+      // Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB1t-A3oZ09sUqHFjWSGUAgD3BNwNfibSc",
+  authDomain: "roleta-vip-sorteio.firebaseapp.com",
+  projectId: "roleta-vip-sorteio",
+  storageBucket: "roleta-vip-sorteio.firebasestorage.app",
+  messagingSenderId: "486644585290",
+  appId: "1:486644585290:web:e1916aba17c9dd864fa7b3"
+};
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+
+            const cartasContainer = document.getElementById('cartas-container');
+            const btnReset = document.getElementById('reset-btn');
+            const popupOverlay = document.getElementById('popup-overlay');
+            const somRevelar = document.getElementById('som-revelar');
+
+            let revelando = false;
+            let premios = [];
+
+            const carregarPremios = async () => {
+                const q = query(collection(db, "premios"), orderBy("nome", "asc"));
+                const querySnapshot = await getDocs(q);
+                premios = [];
+                querySnapshot.forEach((doc) => premios.push(doc.data()));
+                if (premios.length === 0) throw new Error("Nenhum prêmio encontrado no Firestore.");
+            };
+
+            const sortearPremioPonderado = () => {
+                const v = premios.filter(p => p.peso > 0);
+                if (v.length === 0) return Math.floor(Math.random() * premios.length);
+                const t = v.reduce((a, p) => a + p.peso, 0);
+                let s = Math.random() * t;
+                for (const p of v) {
+                    s -= p.peso;
+                    if (s <= 0) return premios.findIndex(i => i === p);
+                }
+                return 0;
+            };
+
+            const handleCardClick = (cartaClicada) => {
+                if (revelando) return;
+                revelando = true;
+
+                const premioSorteadoIndex = sortearPremioPonderado();
+                const premioGanhado = premios[premioSorteadoIndex];
+                
+                cartaClicada.querySelector('.frente').textContent = premioGanhado.nome;
+                cartaClicada.classList.add('virada');
+                
+                const todasAsCartas = document.querySelectorAll('.carta');
+                todasAsCartas.forEach(carta => {
+                    if (carta !== cartaClicada) {
+                        carta.querySelector('.frente').textContent = 'Tente Novamente';
+                        carta.classList.add('perdedora');
+                        setTimeout(() => carta.classList.add('virada'), 400);
+                    }
+                });
+
+                somRevelar.play();
+                
+                setTimeout(() => {
+                    mostrarPopup(premioGanhado.nome);
+                    
+                    const listaGanhadores = document.getElementById('lista-ganhadores');
+                    if (listaGanhadores) {
+                        const novoGanhador = document.createElement('li');
+                        novoGanhador.textContent = premioGanhado.nome;
+                        listaGanhadores.prepend(novoGanhador);
+                    }
+                    
+                    btnReset.style.display = 'block';
+                }, 1500);
+            };
+
+            const montarCartas = () => {
+                cartasContainer.innerHTML = '';
+                btnReset.style.display = 'none';
+                revelando = false;
+                
+                // MODIFICAÇÃO: Define a variável CSS com o número de cartas
+                cartasContainer.style.setProperty('--card-count', premios.length);
+                
+                premios.forEach(() => {
+                    const carta = document.createElement('div');
+                    carta.classList.add('carta');
+                    carta.innerHTML = `
+                        <div class="carta-face verso"></div>
+                        <div class="carta-face frente"></div>
+                    `;
+                    carta.addEventListener('click', () => handleCardClick(carta));
+                    cartasContainer.appendChild(carta);
+                });
+            };
+
+            const esconderPopup = () => { popupOverlay.style.display = 'none'; };
+            
+            const criarConfete = () => {
+                const confeteContainer = document.body;
+                const coresConfete = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#ecf0f1"];
+                for (let i = 0; i < 150; i++) {
+                    const confete = document.createElement('div');
+                    confete.classList.add('confete');
+                    confete.style.left = `${Math.random() * 100}vw`;
+                    confete.style.animationDuration = `${2 + Math.random() * 3}s`;
+                    confete.style.animationDelay = `${Math.random() * 2}s`;
+                    confete.style.backgroundColor = coresConfete[Math.floor(Math.random() * coresConfete.length)];
+                    const size = `${5 + Math.random() * 10}px`;
+                    confete.style.width = size; confete.style.height = size;
+                    confeteContainer.appendChild(confete);
+                    setTimeout(() => confete.remove(), 5000);
+                }
+            };
+
+            const mostrarPopup = (premio) => {
+                criarConfete();
+                popupOverlay.innerHTML = `<div class="popup-box"><h2>Parabéns!</h2><p>Você ganhou:</p><p style="font-size:1.5em; font-weight:bold;">${premio}</p><button id="fechar-popup">Fechar</button></div>`;
+                popupOverlay.style.display = 'flex';
+                document.getElementById('fechar-popup').addEventListener('click', esconderPopup);
+            };
+
+            async function init() {
+                try {
+                    await carregarPremios();
+                    montarCartas();
+                    btnReset.addEventListener('click', montarCartas);
+                } catch (e) {
+                    console.error("Falha na inicialização:", e);
+                    cartasContainer.innerHTML = `<p style="color:red;">ERRO AO CARREGAR PRÊMIOS</p>`;
+                    alert("Não foi possível carregar os prêmios do servidor.");
+                }
+            }
+            init();
+
+        } catch (error) {
+            console.error("Erro geral na inicialização do script:", error);
+            document.body.innerHTML = `<h1 style='color:red; padding: 20px;'>ERRO CRÍTICO: ${error.message}</h1>`;
+        }
+    </script>
+</body>
+</html>
