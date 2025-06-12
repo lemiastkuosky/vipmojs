@@ -359,6 +359,25 @@
       display: block;
       padding-left: 10px; /* Indentação */
     }
+    
+    /* MODIFICADO: Estilo do nome do bicho transformado em uma "tag" */
+    .bicho-name {
+        display: inline-block;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background-color: #e9ecef;
+        color: #495057;
+        vertical-align: middle;
+    }
+
+    body.dark-mode .bicho-name {
+        background-color: #3a3f44;
+        color: #e9ecef;
+    }
+
 
     /* Estilo para o botão de salvar lista */
     .save-button {
@@ -655,6 +674,45 @@
     body.dark-mode .data-management-explanation {
         color: #aaa;
     }
+    
+    /* --- NOVO: Estilos para a Tabela de Bichos --- */
+    .bichos-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    .bichos-table th, .bichos-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    .bichos-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    .bichos-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .bichos-table td:first-child {
+      font-weight: bold;
+      text-align: center;
+    }
+
+    body.dark-mode .bichos-table {
+      color: #e0e0e0;
+    }
+    body.dark-mode .bichos-table th, 
+    body.dark-mode .bichos-table td {
+      border-color: #444;
+    }
+    body.dark-mode .bichos-table th {
+      background-color: #333;
+    }
+    body.dark-mode .bichos-table tr:nth-child(even) {
+      background-color: #2c2c2c;
+    }
 
 
     /* --- Toast Notifications --- */
@@ -908,6 +966,7 @@
       <button onclick="showSaveDialog()" class="save-button">💾 Salvar Lista</button>
       <button onclick="showPreviewModal()" class="view-button">👁️ Listas Salvas</button>
       <button onclick="showNomeModal()" class="manage-names-button">👥 Editar Nomes</button>
+      <button onclick="showTabelaBichosModal()" class="view-button">📊 Mostrar Tabela</button>
       <button onclick="showDataManagementModal()" class="manage-data-button">⚙️ Gerenciar Dados</button>
       <input type="file" id="importFileInput" accept=".txt" style="display: none;" onchange="importDataFromTxt(event)">
     </div>
@@ -1014,9 +1073,18 @@
     </div>
   </div>
 
+  <div id="tabelaBichosModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="tabelaBichosModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeTabelaBichosModal()" aria-label="Fechar">×</span>
+      <h3 id="tabelaBichosModalTitle" class="modal-title">📊 Tabela de Grupos do Bicho</h3>
+      <div id="tabelaBichosContainer">
+        </div>
+    </div>
+  </div>
+
 
   <footer>
-    <div>📌 Versão 7.8 (Retirada dos acentos)</div>
+    <div>📌 Versão 8.1 (Estilo de Nomes)</div>
     <div>👨‍💻 Criado por: Le Miastkuosky</div>
   </footer>
 
@@ -1083,8 +1151,36 @@
         'urso': '89', 'ursos': '89',
         'veado': '93', 'veados': '93',
         'vaca': '97', 'vacas': '97',
-        // Adicione outras variações se necessário, ex: "zebrado": "93" para Veado
     };
+
+    // NOVO: Estrutura de dados completa para a tabela de grupos
+    const tabelaDeGrupos = [
+        { grupo: '01', animal: 'Avestruz', dezenas: ['01', '02', '03', '04'], emoji: bichoNameToEmoji['avestruz'] },
+        { grupo: '02', animal: 'Águia', dezenas: ['05', '06', '07', '08'], emoji: bichoNameToEmoji['aguia'] },
+        { grupo: '03', animal: 'Burro', dezenas: ['09', '10', '11', '12'], emoji: bichoNameToEmoji['burro'] },
+        { grupo: '04', animal: 'Borboleta', dezenas: ['13', '14', '15', '16'], emoji: bichoNameToEmoji['borboleta'] },
+        { grupo: '05', animal: 'Cachorro', dezenas: ['17', '18', '19', '20'], emoji: bichoNameToEmoji['cachorro'] },
+        { grupo: '06', animal: 'Cabra', dezenas: ['21', '22', '23', '24'], emoji: bichoNameToEmoji['cabra'] },
+        { grupo: '07', animal: 'Carneiro', dezenas: ['25', '26', '27', '28'], emoji: bichoNameToEmoji['carneiro'] },
+        { grupo: '08', animal: 'Camelo', dezenas: ['29', '30', '31', '32'], emoji: bichoNameToEmoji['camelo'] },
+        { grupo: '09', animal: 'Cobra', dezenas: ['33', '34', '35', '36'], emoji: bichoNameToEmoji['cobra'] },
+        { grupo: '10', animal: 'Coelho', dezenas: ['37', '38', '39', '40'], emoji: bichoNameToEmoji['coelho'] },
+        { grupo: '11', animal: 'Cavalo', dezenas: ['41', '42', '43', '44'], emoji: bichoNameToEmoji['cavalo'] },
+        { grupo: '12', animal: 'Elefante', dezenas: ['45', '46', '47', '48'], emoji: bichoNameToEmoji['elefante'] },
+        { grupo: '13', animal: 'Galo', dezenas: ['49', '50', '51', '52'], emoji: bichoNameToEmoji['galo'] },
+        { grupo: '14', animal: 'Gato', dezenas: ['53', '54', '55', '56'], emoji: bichoNameToEmoji['gato'] },
+        { grupo: '15', animal: 'Jacaré', dezenas: ['57', '58', '59', '60'], emoji: bichoNameToEmoji['jacare'] },
+        { grupo: '16', animal: 'Leão', dezenas: ['61', '62', '63', '64'], emoji: bichoNameToEmoji['leao'] },
+        { grupo: '17', animal: 'Macaco', dezenas: ['65', '66', '67', '68'], emoji: bichoNameToEmoji['macaco'] },
+        { grupo: '18', animal: 'Porco', dezenas: ['69', '70', '71', '72'], emoji: bichoNameToEmoji['porco'] },
+        { grupo: '19', animal: 'Pavão', dezenas: ['73', '74', '75', '76'], emoji: bichoNameToEmoji['pavao'] },
+        { grupo: '20', animal: 'Peru', dezenas: ['77', '78', '79', '80'], emoji: bichoNameToEmoji['peru'] },
+        { grupo: '21', animal: 'Touro', dezenas: ['81', '82', '83', '84'], emoji: bichoNameToEmoji['touro'] },
+        { grupo: '22', animal: 'Tigre', dezenas: ['85', '86', '87', '88'], emoji: bichoNameToEmoji['tigre'] },
+        { grupo: '23', animal: 'Urso', dezenas: ['89', '90', '91', '92'], emoji: bichoNameToEmoji['urso'] },
+        { grupo: '24', animal: 'Veado', dezenas: ['93', '94', '95', '96'], emoji: bichoNameToEmoji['veado'] },
+        { grupo: '25', animal: 'Vaca', dezenas: ['97', '98', '99', '00'], emoji: bichoNameToEmoji['vaca'] }
+    ];
 
 
     const STORAGE_KEYS = {
@@ -1374,11 +1470,13 @@
             const previewModal = document.getElementById('previewModal');
             const saveListModal = document.getElementById('saveListModal');
             const nomeModal = document.getElementById('nomeModal');
-            const dataManagementModal = document.getElementById('dataManagementModal'); // NOVO
+            const dataManagementModal = document.getElementById('dataManagementModal');
+            const tabelaBichosModal = document.getElementById('tabelaBichosModal'); // NOVO
             if (event.target === previewModal) closePreviewModal();
             if (event.target === saveListModal) closeSaveDialog();
             if (event.target === nomeModal) closeNomeModal();
-            if (event.target === dataManagementModal) closeDataManagementModal(); // NOVO
+            if (event.target === dataManagementModal) closeDataManagementModal();
+            if (event.target === tabelaBichosModal) closeTabelaBichosModal(); // NOVO
         });
 
         // Botões de rádio
@@ -2212,18 +2310,31 @@
         }
     }
 
-    // NOVO: Função para copiar apenas o texto da saída formatada
+    // MODIFICADO: Função de cópia agora ignora nomes de bichos
     function copyOnlyEmojisToClipboard() {
         const outputElement = document.getElementById('emojiOutput');
         const contentElements = outputElement.querySelectorAll('.emoji-content');
         let textToCopy = '';
 
         contentElements.forEach(element => {
-            textToCopy += element.innerText + '\n'; // Adiciona o conteúdo de cada seção e uma quebra de linha
+            // Verifica se é a seção especial de bichos
+            if (element.dataset.contentType === 'bichos') {
+                // Cria um clone temporário para não alterar a exibição
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = element.innerHTML;
+                
+                // Remove todos os spans com nomes de bichos do clone
+                tempDiv.querySelectorAll('.bicho-name').forEach(span => span.remove());
+                
+                // Pega o texto limpo do clone
+                textToCopy += tempDiv.innerText.trim() + '\n';
+            } else {
+                // Comportamento original para as outras seções
+                textToCopy += element.innerText.trim() + '\n';
+            }
         });
 
-        // Remove quebras de linha extras no final
-        textToCopy = textToCopy.trim(); 
+        textToCopy = textToCopy.trim();
         
         copyToClipboard(textToCopy, document.querySelector('#copyButtons button'));
     }
@@ -2328,6 +2439,7 @@
         }
     }
 
+    // MODIFICADO: Função principal de exibição agora lida com a nova lógica dos bichos
     function showMilharesCentenasDezenas() {
         const selectedName = document.getElementById('nomePessoaSelect').value;
         const nome = selectedName || ''; 
@@ -2350,8 +2462,10 @@
 
         const milhares = [], centenas = [], dezenas = [];
         const milharesSet = new Set(), centenasSet = new Set(), dezenasSet = new Set();
-        const bichos = []; // Array para os bichos
-        const bichoSet = new Set(); // Set para controlar bichos únicos
+        
+        // MODIFICADO: `bichos` agora é um array de objetos
+        const bichos = []; 
+        const bichoSet = new Set();
 
         numbers.forEach(n => {
             const len = n.length;
@@ -2383,16 +2497,17 @@
                 }
             }
             
-            // Processamento para a seção de Bichos
-            const bichoName = getBichoNameByDezena(parseInt(n.slice(-2))); // Pega a dezena final
+            // MODIFICADO: Processamento para a seção de Bichos para criar objetos
+            const bichoName = getBichoNameByDezena(parseInt(n.slice(-2)));
             if (bichoName) {
-                const emoji = bichoNameToEmoji[bichoName.toLowerCase()];
-                if (emoji) {
-                    const bichoWithEmoji = `${emoji}${emoji}`; // Repeat the emoji twice
-                    if (!bichoSet.has(bichoWithEmoji)) {
-                        bichos.push(bichoWithEmoji);
-                        bichoSet.add(bichoWithEmoji);
-                    }
+                const emoji = bichoNameToEmoji[bichoName.toLowerCase().replace('á', 'a')];
+                // Usa o nome do bicho para garantir unicidade
+                if (emoji && !bichoSet.has(bichoName)) {
+                    bichos.push({
+                        emoji: `${emoji}${emoji}`,
+                        name: bichoName
+                    });
+                    bichoSet.add(bichoName);
                 }
             }
         });
@@ -2480,9 +2595,13 @@
             const ternos = gerarTernos();
             outputHTML += buildSection('📊 Ternos', ternos, 'ternos');
         }
-        // Seção para Bichos
+        // MODIFICADO: Lógica para construir a exibição dos bichos
         if (selectedOption === 'bicho') {
-            outputHTML += buildSection('🐾 Bichos', bichos, 'bichos');
+            // Mapeia os objetos de bicho para strings de exibição com nome
+            const bichosForDisplay = bichos.map(b => 
+                `${b.emoji}<span class="bicho-name">${b.name}</span>`
+            );
+            outputHTML += buildSection('🐾 Bichos', bichosForDisplay, 'bichos');
         }
 
 
@@ -2499,7 +2618,7 @@
     // Esta função é usada para a exibição dos bichos, não para a conversão de entrada.
     function getBichoNameByDezena(dezena) {
         if (dezena >= 1 && dezena <= 4) return 'Avestruz';
-        if (dezena >= 5 && dezena <= 8) return 'Aguia';
+        if (dezena >= 5 && dezena <= 8) return 'Águia';
         if (dezena >= 9 && dezena <= 12) return 'Burro';
         if (dezena >= 13 && dezena <= 16) return 'Borboleta';
         if (dezena >= 17 && dezena <= 20) return 'Cachorro';
@@ -2512,11 +2631,11 @@
         if (dezena >= 45 && dezena <= 48) return 'Elefante';
         if (dezena >= 49 && dezena <= 52) return 'Galo';
         if (dezena >= 53 && dezena <= 56) return 'Gato';
-        if (dezena >= 57 && dezena <= 60) return 'Jacare';
-        if (dezena >= 61 && dezena <= 64) return 'Leao';
+        if (dezena >= 57 && dezena <= 60) return 'Jacaré';
+        if (dezena >= 61 && dezena <= 64) return 'Leão';
         if (dezena >= 65 && dezena <= 68) return 'Macaco';
         if (dezena >= 69 && dezena <= 72) return 'Porco';
-        if (dezena >= 73 && dezena <= 76) return 'Pavao';
+        if (dezena >= 73 && dezena <= 76) return 'Pavão';
         if (dezena >= 77 && dezena <= 80) return 'Peru';
         if (dezena >= 81 && dezena <= 84) return 'Touro';
         if (dezena >= 85 && dezena <= 88) return 'Tigre';
@@ -2529,7 +2648,7 @@
     // New: Function to get bicho name by group number
     function getBichoNameByGrupo(grupo) {
         if (grupo === 1) return 'Avestruz';
-        if (grupo === 2) return 'Aguia';
+        if (grupo === 2) return 'Águia';
         if (grupo === 3) return 'Burro';
         if (grupo === 4) return 'Borboleta';
         if (grupo === 5) return 'Cachorro';
@@ -2542,11 +2661,11 @@
         if (grupo === 12) return 'Elefante';
         if (grupo === 13) return 'Galo';
         if (grupo === 14) return 'Gato';
-        if (grupo === 15) return 'Jacare';
-        if (grupo === 16) return 'Leao';
+        if (grupo === 15) return 'Jacaré';
+        if (grupo === 16) return 'Leão';
         if (grupo === 17) return 'Macaco';
         if (grupo === 18) return 'Porco';
-        if (grupo === 19) return 'Pavao';
+        if (grupo === 19) return 'Pavão';
         if (grupo === 20) return 'Peru';
         if (grupo === 21) return 'Touro';
         if (grupo === 22) return 'Tigre';
@@ -2757,6 +2876,51 @@
             showToast('Erro ao ler o arquivo.', 'error');
         };
         reader.readAsText(file);
+    }
+    
+    // --- NOVO: Funções para a Tabela de Bichos ---
+    
+    function showTabelaBichosModal() {
+        populateTabelaBichos();
+        document.getElementById('tabelaBichosModal').classList.add('active');
+    }
+
+    function closeTabelaBichosModal() {
+        document.getElementById('tabelaBichosModal').classList.remove('active');
+    }
+
+    function populateTabelaBichos() {
+        const container = document.getElementById('tabelaBichosContainer');
+        container.innerHTML = ''; // Limpa o conteúdo anterior
+
+        const table = document.createElement('table');
+        table.className = 'bichos-table';
+
+        // Cabeçalho da tabela
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>Grupo</th>
+                <th>Animal</th>
+                <th>Dezenas</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+
+        // Corpo da tabela
+        const tbody = document.createElement('tbody');
+        tabelaDeGrupos.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.grupo}</td>
+                <td>${item.emoji} ${item.animal}</td>
+                <td>${item.dezenas.join(', ')}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+
+        container.appendChild(table);
     }
   </script>
 </body>
