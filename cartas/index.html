@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roleta VIP - Sorteio de Cartas</title>
+    <title>Cartas VIP</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -83,7 +83,7 @@
             gap: 25px;
             padding: 20px;
             width: 100%;
-            max-width: 800px;
+            max-width: 650px; 
             perspective: 1200px;
         }
 
@@ -193,12 +193,85 @@
         #reset-btn:hover {
             transform: scale(1.05);
         }
-
+        
+        /* --- ESTILOS DO NOVO POPUP --- */
         .popup-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px;
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0, 0, 0, 0.8); 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 1000; 
+            padding: 15px;
         }
+        
+        @keyframes popup-show {
+            from {
+                opacity: 0;
+                transform: scale(0.7) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
         .popup-box { 
-            background: #fff; color: #333; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 5px 25px rgba(0,0,0,0.4); width: 100%; max-width: 400px;
+            background: linear-gradient(145deg, #f1c40f, #e67e22);
+            color: white;
+            padding: 25px 30px; 
+            border-radius: 20px; 
+            text-align: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 380px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            animation: popup-show 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .popup-box h2 {
+            font-size: 2.2em;
+            margin: 0 0 10px 0;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.2);
+            font-weight: 700;
+        }
+        
+        .popup-box .texto-ganhou {
+            font-size: 1.1em;
+            margin: 0 0 15px 0;
+            opacity: 0.9;
+        }
+
+        .popup-box .premio-nome {
+            display: block;
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #fff;
+            background-color: rgba(0,0,0,0.15);
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .popup-box #fechar-popup {
+            background: #fff;
+            color: #e67e22;
+            border: none;
+            padding: 12px 35px;
+            border-radius: 50px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .popup-box #fechar-popup:hover {
+            transform: scale(1.05);
         }
 
         @keyframes confete-fall {
@@ -251,30 +324,26 @@
              }
         }
         
-        /* --- MEDIA QUERY PARA CELULAR --- */
         @media (max-width: 480px) {
             h1 { font-size: 2em; }
             #reset-btn { font-size: 1.2em; padding: 12px 30px; }
             
-            /* MODIFICAÇÃO PARA AS CARTAS CABEREM NA TELA */
             .cartas-container {
                 display: grid;
-                /* A variável --card-count é definida via JS para criar o número certo de colunas */
-                grid-template-columns: repeat(var(--card-count, 5), 1fr);
-                gap: 5px; /* Espaço menor entre as cartas */
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
                 padding: 0;
             }
 
             .carta { 
-                width: 100%; /* Ocupa a célula do grid */
+                width: 100%;
                 height: auto;
-                aspect-ratio: 140 / 190; /* Mantém a proporção da carta */
+                aspect-ratio: 140 / 190;
             }
             
-            /* Ajusta o tamanho da fonte e ícones dentro das cartas menores */
-            .verso::before { font-size: 2em; bottom: 10%; }
-            .verso::after { font-size: 2.5em; top: 15%; }
-            .frente { font-size: 0.7em; }
+            .verso::before { font-size: 1.5em; bottom: 10%; }
+            .verso::after { font-size: 2em; top: 15%; }
+            .frente { font-size: 0.8em; }
             
             footer { gap: 15px; }
         }
@@ -399,8 +468,8 @@ const firebaseConfig = {
                 btnReset.style.display = 'none';
                 revelando = false;
                 
-                // MODIFICAÇÃO: Define a variável CSS com o número de cartas
-                cartasContainer.style.setProperty('--card-count', premios.length);
+                // Remove a definição da variável CSS, pois não é mais necessária para o layout de 3 colunas
+                // cartasContainer.style.setProperty('--card-count', premios.length);
                 
                 premios.forEach(() => {
                     const carta = document.createElement('div');
@@ -435,7 +504,14 @@ const firebaseConfig = {
 
             const mostrarPopup = (premio) => {
                 criarConfete();
-                popupOverlay.innerHTML = `<div class="popup-box"><h2>Parabéns!</h2><p>Você ganhou:</p><p style="font-size:1.5em; font-weight:bold;">${premio}</p><button id="fechar-popup">Fechar</button></div>`;
+                // MODIFICAÇÃO: Nova estrutura HTML para o popup
+                popupOverlay.innerHTML = `
+                    <div class="popup-box">
+                        <h2>Parabéns!</h2>
+                        <p class="texto-ganhou">Você ganhou:</p>
+                        <span class="premio-nome">${premio}</span>
+                        <button id="fechar-popup">Ok</button>
+                    </div>`;
                 popupOverlay.style.display = 'flex';
                 document.getElementById('fechar-popup').addEventListener('click', esconderPopup);
             };
