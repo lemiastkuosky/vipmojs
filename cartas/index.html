@@ -700,6 +700,40 @@
                 gap: 15px;
             }
         }
+
+        .no-plays-popup-box .popup-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .no-plays-popup-box .countdown-container {
+            background-color: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .no-plays-popup-box .countdown-container p {
+            margin: 0 0 5px 0;
+            font-size: 0.9em;
+            color: var(--cor-texto);
+            opacity: 0.8;
+        }
+
+        #plays-countdown {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--cor-principal);
+            letter-spacing: 2px;
+        }
     </style>
 </head>
 <body>
@@ -774,9 +808,9 @@
                 
                 <div class="admin-instructions">
                     <ul>
-                        <li>O campo <strong>'Chance'</strong> funciona como um peso. Um prêmio com chance '50' tem 10x mais probabilidade de aparecer no tabuleiro do que um com chance '5'.</li>
-                        <li>Use o formulário abaixo para adicionar novos prêmios ao jogo.</li>
-                        <li>Para cada prêmio existente, você pode editar seu nome/chance e <strong>Salvar</strong>, ou <strong>Excluir</strong> o prêmio permanentemente.</li>
+                        <li><strong>Nome do Prêmio:</strong> O texto que aparece na carta quando ela é virada.</li>
+                        <li><strong>Chance:</strong> Define a probabilidade do prêmio aparecer no tabuleiro. Funciona como um peso: um prêmio com chance <strong>50</strong> é 10x mais provável de ser sorteado que um com chance <strong>5</strong>.</li>
+                        <li><strong>URL do Som:</strong> Opcional. Link completo (<code>https://...</code>) de um arquivo de som (.mp3) para tocar ao revelar este prêmio. Se vazio, tocará o som padrão.</li>
                     </ul>
                 </div>
                 
@@ -784,8 +818,9 @@
                     <h3 style="text-align: center; margin-top: 0;">Adicionar Novo Prêmio</h3>
                     <form id="add-prize-form">
                         <div class="prize-actions">
-                            <input type="text" id="new-prize-name" class="user-actions input" placeholder="Nome do Prêmio" required>
-                            <input type="number" id="new-prize-chance" class="user-actions input" placeholder="Chance (ex: 1, 10, 50)" value="1" min="1" required>
+                            <input type="text" id="new-prize-name" class="user-actions input" placeholder="Nome do prêmio (Ex: Vale Desconto)" required>
+                            <input type="number" id="new-prize-chance" class="user-actions input" placeholder="Peso da chance (Ex: 1, 10, 50)" value="1" min="1" required>
+                            <input type="text" id="new-prize-sound" class="user-actions input" placeholder="URL 'https://...' do som (opcional)">
                             <button type="submit" class="action-btn add-btn" style="width: 100%;">Adicionar Prêmio</button>
                         </div>
                         <div id="add-prize-feedback" class="success-message" style="margin-top: 10px;"></div>
@@ -839,13 +874,22 @@
     </div>
 
     <div id="prize-popup" class="popup-overlay"></div>
+
     <div id="no-plays-popup" class="popup-overlay">
         <div class="popup-box no-plays-popup-box">
+            <div class="popup-icon">⏳</div>
             <h2>Suas rodadas acabaram!</h2>
-            <p>Você já usou todas as suas chances de hoje. Volte amanhã para jogar novamente!</p>
-            <button id="close-no-plays-popup" class="popup-btn">Entendi</button>
+            <p>Você já usou todas as suas chances por hoje.</p>
+            <div class="countdown-container">
+                <p>Próximas rodadas em:</p>
+                <span id="plays-countdown">--:--:--</span>
+            </div>
+            <div class="popup-buttons-container">
+                <button id="close-no-plays-popup" class="popup-btn">Entendi</button>
+            </div>
         </div>
     </div>
+
     <div id="auth-popup-overlay" class="popup-overlay">
         <div class="auth-box">
             <span id="close-auth-popup" class="close-btn">&times;</span>
@@ -881,7 +925,7 @@
         </div>
     </div>
     
-    <audio id="som-revelar" src="som-premio.mp3" preload="auto"></audio>
+    <audio id="audio-player" preload="auto"></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -927,7 +971,8 @@ const firebaseConfig = {
         const prizePopup = document.getElementById("prize-popup");
         const noPlaysPopup = document.getElementById("no-plays-popup");
         const closeNoPlaysPopup = document.getElementById("close-no-plays-popup");
-        const somRevelar = document.getElementById("som-revelar");
+        const audioPlayer = document.getElementById("audio-player");
+        const defaultSoundUrl = 'som-premio.mp3'; // Som padrão
         const listaGanhadores = document.getElementById("lista-ganhadores");
         const showMoreContainer = document.getElementById("show-more-container");
         const showMoreBtn = document.getElementById("show-more-btn");
@@ -949,11 +994,41 @@ const firebaseConfig = {
         let currentUser = null;
         let userPlaysData = { max: 0, made: 0 };
         let unsubscribeUserListener = null;
+        let countdownInterval = null;
 
         // Funções de utilidade
         const showPopup = (popup) => popup.classList.add("show");
         const hidePopup = (popup) => popup.classList.remove("show");
         const getTodayDateString = () => new Date().toISOString().split('T')[0];
+
+        function startPlaysCountdown() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            const countdownSpan = document.getElementById('plays-countdown');
+
+            countdownInterval = setInterval(() => {
+                const now = new Date();
+                const tomorrow = new Date();
+
+                // Define o alvo como meia-noite do dia seguinte
+                tomorrow.setDate(now.getDate() + 1);
+                tomorrow.setHours(0, 0, 0, 0);
+
+                const diff = tomorrow.getTime() - now.getTime();
+
+                if (diff <= 0) {
+                    countdownSpan.textContent = "00:00:00";
+                    clearInterval(countdownInterval);
+                    return;
+                }
+
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                countdownSpan.textContent = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
 
         const criarCartasDeFundo = () => {
             cartasContainer.innerHTML = "";
@@ -1100,12 +1175,20 @@ const firebaseConfig = {
             if (revelando || cartaClicada.classList.contains("virada") || !currentUser) return;
             if (userPlaysData.made >= userPlaysData.max) {
                 showPopup(noPlaysPopup);
+                startPlaysCountdown();
                 return;
             }
             
             revelando = true;
             cartaClicada.classList.add("virada");
-            somRevelar.play().catch(()=>{});
+            
+            // ESCOLHE O SOM E TOCA
+            const soundUrl = premioSorteado.soundUrl; // Pega a URL do som do prêmio
+            audioPlayer.src = soundUrl && soundUrl.trim() !== '' ? soundUrl : defaultSoundUrl; // Usa o som do prêmio ou o padrão
+            audioPlayer.play().catch(err => {
+                console.error("Erro ao tocar o som: ", err);
+                alert("Não foi possível carregar o som para este prêmio.");
+            });
 
             const userRef = doc(db, "users", currentUser.uid);
             
@@ -1335,6 +1418,7 @@ const firebaseConfig = {
                         <div class="prize-actions">
                             <input type="text" class="prize-name-input user-actions input" value="${prizeData.nome}">
                             <input type="number" class="prize-chance-input user-actions input" value="${prizeData.chance || 1}" min="1">
+                            <input type="text" class="prize-sound-input user-actions input" placeholder="URL 'https://...' do som (opcional)" value="${prizeData.soundUrl || ''}">
                             <div class="action-buttons" style="display:flex; gap: 10px;">
                                 <button class="action-btn update-btn">Salvar</button>
                                 <button class="action-btn delete-btn">Excluir</button>
@@ -1351,8 +1435,9 @@ const firebaseConfig = {
             e.preventDefault();
             const nome = document.getElementById("new-prize-name").value;
             const chance = parseInt(document.getElementById("new-prize-chance").value, 10);
+            const soundUrl = document.getElementById("new-prize-sound").value;
             try {
-                await addDoc(collection(db, "premios"), { nome, chance });
+                await addDoc(collection(db, "premios"), { nome, chance, soundUrl });
                 addPrizeFeedback.textContent = "Prêmio adicionado!";
                 addPrizeForm.reset();
                 carregarPremiosAdmin();
@@ -1369,8 +1454,9 @@ const firebaseConfig = {
             if (button.classList.contains("update-btn")) {
                 const newName = card.querySelector(".prize-name-input").value;
                 const newChance = parseInt(card.querySelector(".prize-chance-input").value, 10);
+                const newSoundUrl = card.querySelector(".prize-sound-input").value;
                 try {
-                    await updateDoc(prizeRef, { nome: newName, chance: newChance });
+                    await updateDoc(prizeRef, { nome: newName, chance: newChance, soundUrl: newSoundUrl });
                     alert("Prêmio atualizado!");
                 } catch { alert("Falha ao atualizar."); }
             } else if (button.classList.contains("delete-btn")) {
@@ -1453,8 +1539,20 @@ const firebaseConfig = {
             backToLoginLink.addEventListener("click", () => toggleForms(loginForm, registerForm, forgotPasswordForm));
             backToMainPageLink.addEventListener("click", () => signOut(auth));
             logoutButton.addEventListener("click", () => signOut(auth));
-            btnReset.addEventListener("click", () => (userPlaysData.made < userPlaysData.max) ? criarCartas() : showPopup(noPlaysPopup));
-            closeNoPlaysPopup.addEventListener("click", () => hidePopup(noPlaysPopup));
+            
+            btnReset.addEventListener("click", () => {
+                if (userPlaysData.made < userPlaysData.max) {
+                    criarCartas();
+                } else {
+                    showPopup(noPlaysPopup);
+                    startPlaysCountdown();
+                }
+            });
+
+            closeNoPlaysPopup.addEventListener("click", () => {
+                hidePopup(noPlaysPopup);
+                if (countdownInterval) clearInterval(countdownInterval);
+            });
         };
         
         setupAuthAndNav();
