@@ -99,17 +99,40 @@
 
         /* --- POPUPS --- */
         .popup-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
             background-color: rgba(0, 0, 0, 0.75);
-            display: none; /* Alterado por JS para flex */
-            justify-content: center; align-items: center;
-            z-index: 1000; padding: 15px; box-sizing: border-box;
+            display: flex; /* Mudança aqui: sempre flex, controlado por visibility */
+            justify-content: center; 
+            align-items: center;
+            z-index: 1000; 
+            padding: 15px; 
+            box-sizing: border-box;
+            visibility: hidden; /* Controlado por visibility ao invés de display */
+            opacity: 0;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
+        
+        .popup-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
         .popup-box {
             color: white; padding: 30px 35px; border-radius: 20px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 420px;
             border: 2px solid rgba(255, 255, 255, 0.3);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
         }
+        
+        .popup-overlay.show .popup-box {
+            transform: scale(1);
+        }
+        
         .popup-box h2 {
             font-size: 2.2em; margin: 0 0 15px 0;
             text-shadow: 2px 2px 3px rgba(0,0,0,0.2); font-weight: 700;
@@ -320,7 +343,7 @@
                 </span>
                 <span>|</span>
                 <span class="creditos-item">
-                    ⚙️ Versão 3.8 (Correção de inicialização)
+                    ⚙️ Versão 3.9 (Correção de inicialização)
                 </span>
             </div>
         </footer>
@@ -334,7 +357,7 @@
             <button id="close-no-plays-popup" class="popup-btn">Entendi</button>
         </div>
     </div>
-    <div id="auth-popup-overlay" class="popup-overlay hidden">
+    <div id="auth-popup-overlay" class="popup-overlay">
         <div class="auth-box">
             <span id="close-auth-popup" class="close-btn">&times;</span>
             <form id="login-form">
@@ -424,6 +447,15 @@
         let userPlaysData = { max: 0, made: 0 };
         let unsubscribeUserListener = null;
 
+        // Funções para controlar popups
+        const showPopup = (popup) => {
+            popup.classList.add('show');
+        };
+
+        const hidePopup = (popup) => {
+            popup.classList.remove('show');
+        };
+
         const getTodayDateString = () => {
             const today = new Date();
             const year = today.getFullYear();
@@ -475,7 +507,7 @@
                 userNameSpan.textContent = `Olá, ${userProfile.data()?.nomeCompleto || 'Usuário'}`;
                 authContainer.classList.add('hidden');
                 userInfoContainer.classList.remove('hidden');
-                authPopup.classList.add('hidden');
+                hidePopup(authPopup);
                 gameContainer.classList.remove('game-disabled');
                 
                 setupUserPlaysListener(user);
@@ -496,31 +528,50 @@
             if (value.length > 9) value = `${value.substring(0, 10)}-${value.substring(10)}`;
             e.target.value = value;
         };
-        document.getElementById('register-telefone').addEventListener('input', applyPhoneMask);
+        
+        // Event listeners para o botão de autenticação
+        authButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Botão entrar clicado!'); // Debug
+            showPopup(authPopup);
+        });
+        
+        closeAuthPopupBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            hidePopup(authPopup);
+        });
 
-        authButton.addEventListener('click', () => authPopup.classList.remove('hidden'));
-        closeAuthPopupBtn.addEventListener('click', () => authPopup.classList.add('hidden'));
-
-        showRegisterLink.addEventListener('click', () => {
+        // Event listeners para navegação entre formulários
+        showRegisterLink.addEventListener('click', (e) => {
+            e.preventDefault();
             loginForm.classList.add('hidden');
             forgotPasswordForm.classList.add('hidden');
             registerForm.classList.remove('hidden');
         });
-        showLoginLink.addEventListener('click', () => {
+        
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
             registerForm.classList.add('hidden');
             forgotPasswordForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
         });
-        forgotPasswordLink.addEventListener('click', () => {
+        
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
             loginForm.classList.add('hidden');
             registerForm.classList.add('hidden');
             forgotPasswordForm.classList.remove('hidden');
         });
-        backToLoginLink.addEventListener('click', () => {
+        
+        backToLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
             forgotPasswordForm.classList.add('hidden');
             registerForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
         });
+
+        // Aplicar máscara de telefone
+        document.getElementById('register-telefone').addEventListener('input', applyPhoneMask);
 
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -578,8 +629,8 @@
             showMoreBtn.textContent = isCollapsed ? 'Ver mais ▼' : 'Ver menos ▲';
         });
         
-        const showNoPlaysPopup = () => noPlaysPopup.style.display = 'flex';
-        const hideNoPlaysPopup = () => noPlaysPopup.style.display = 'none';
+        const showNoPlaysPopup = () => showPopup(noPlaysPopup);
+        const hideNoPlaysPopup = () => hidePopup(noPlaysPopup);
         closeNoPlaysPopup.addEventListener('click', hideNoPlaysPopup);
 
         const carregarPremios = async () => {
@@ -695,7 +746,7 @@
                     setTimeout(() => carta.classList.add('virada'), 400);
                 }
             });
-            somRevelar.play();
+            somRevelar.play().catch(() => {}); // Ignora erro se não conseguir tocar o som
             setTimeout(() => {
                 if (vitoriaConfirmada) {
                     carregarGanhadores();
@@ -726,8 +777,8 @@
                     <span class="premio-nome">${premio}</span>
                     <button id="fechar-popup" class="popup-btn">Ok</button>
                 </div>`;
-            prizePopup.style.display = 'flex';
-            document.getElementById('fechar-popup').addEventListener('click', () => prizePopup.style.display = 'none');
+            showPopup(prizePopup);
+            document.getElementById('fechar-popup').addEventListener('click', () => hidePopup(prizePopup));
         };
 
         async function initGame() {
@@ -747,3 +798,4 @@
     </script>
 </body>
 </html>
+
