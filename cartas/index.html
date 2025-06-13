@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vip Cards - Unificado</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🃏</text></svg>">
+    <style>
+        :root {
+            --cor-principal: #f1c40f;
+            --cor-fundo: #212121;
+            --cor-texto: #ecf0f1;
+            --cor-borda: #34495e;
+            --cor-sucesso: #2ecc71;
+            --cor-container: #2c2c2c;
+            --cor-info: #3498db;
+        }
+        
+        /* --- ESTILOS GERAIS --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            overflow-x: hidden;
+        }
+
+        .main-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: var(--cor-principal);
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* --- AUTENTICAÇÃO E INFO DO USUÁRIO --- */
+        #auth-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            width: 100%;
+            text-align: center;
+        }
+
+        .welcome-text { margin-bottom: 30px; }
+        .main-welcome {
+            font-size: 2.8em;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.6);
+        }
+        .sub-welcome {
+            font-size: 1.2em;
+            color: #bdc3c7;
+            margin: 5px 0 0 0;
+            font-style: italic;
+        }
+        
+        .user-header {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #user-info-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #auth-button, #logout-button {
+            padding: 12px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--cor-fundo);
+            background-color: var(--cor-principal);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        #auth-button:hover, #logout-button:hover { transform: scale(1.05); }
+
+        /* --- POPUPS --- */
+        .popup-overlay {
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            z-index: 1000; 
+            padding: 15px; 
+            box-sizing: border-box;
+            visibility: hidden; 
+            opacity: 0;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .popup-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .popup-box {
+            color: white; padding: 30px 35px; border-radius: 20px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 420px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+        
+        .popup-overlay.show .popup-box {
+            transform: scale(1);
+        }
+        
+        .popup-box h2 {
+            font-size: 2.2em; margin: 0 0 20px 0;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.2); font-weight: 700;
+        }
+        .popup-box p { font-size: 1.1em; margin: 0 0 25px 0; opacity: 0.9; line-height: 1.5; }
+        
+        .popup-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: stretch;
+        }
+        
+        .popup-box .popup-btn {
+            border: none; padding: 12px 25px; border-radius: 50px;
+            font-size: 1em; font-weight: bold; cursor: pointer; transition: transform 0.2s;
+            text-decoration: none;
+            display: block;
+        }
+        .popup-box .popup-btn:hover { transform: scale(1.05); }
+
+        .prize-popup-box { background: linear-gradient(145deg, var(--cor-principal), #e67e22); }
+        .prize-popup-box .popup-btn.whatsapp-btn { 
+            background: linear-gradient(45deg, #25D366, #128C7E);
+            color: white;
+        }
+        .prize-popup-box .popup-btn.close-btn { background: #fff; color: #e67e22; }
+
+        .no-plays-popup-box { background: linear-gradient(145deg, #2c3e50, #4a5568); }
+        .no-plays-popup-box .popup-btn { background: #fff; color: #34495e; }
+        
+        .prize-details {
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            text-align: left;
+            font-size: 1.1em;
+        }
+        .prize-details div {
+            margin-bottom: 8px;
+        }
+        .prize-details div:last-child {
+            margin-bottom: 0;
+        }
+        .prize-details strong {
+            color: var(--cor-principal);
+            font-weight: 700;
+        }
+
+        .auth-box {
+            background: #2c2c2c; padding: 30px; border-radius: 15px;
+            width: 100%; max-width: 400px; position: relative;
+            border: 1px solid var(--cor-borda);
+        }
+        .auth-box h2 { margin: 0 0 20px 0; color: var(--cor-principal); text-align: center; }
+        .auth-box .form-group { margin-bottom: 15px; }
+        .auth-box input {
+            width: 100%; padding: 12px; background: #333;
+            border: 1px solid var(--cor-borda); border-radius: 8px;
+            color: var(--cor-texto); font-size: 1em; box-sizing: border-box;
+        }
+        .auth-box .submit-btn {
+            width: 100%; padding: 12px; font-size: 1.1em; font-weight: bold;
+            color: var(--cor-fundo); background-color: var(--cor-principal);
+            border: none; border-radius: 8px; cursor: pointer;
+        }
+        .auth-box .toggle-link {
+            text-align: center; margin-top: 20px; font-size: 0.9em; color: #95a5a6;
+        }
+        .auth-box .toggle-link a { color: var(--cor-principal); text-decoration: underline; cursor: pointer; }
+        .auth-box .forgot-password-link { text-align: center; margin: 10px 0; }
+        .auth-box .form-instructions { font-size: 0.9em; color: #bdc3c7; margin-bottom: 15px; text-align: center; }
+        .error-message { color: #e74c3c; }
+        .success-message { color: var(--cor-sucesso); }
+        .error-message, .success-message { font-size: 0.9em; text-align: center; margin-top: 10px; min-height: 1.2em; }
+        .auth-box .close-btn {
+            position: absolute; top: 10px; right: 15px;
+            font-size: 1.5em; color: #7f8c8d; cursor: pointer;
+        }
+        
+        /* --- CONTEÚDO DO JOGO --- */
+        #game-container { 
+            width: 100%; display: flex; flex-direction: column;
+            align-items: center; transition: filter 0.5s ease-in-out;
+        }
+        .game-disabled { filter: blur(5px) brightness(0.6); pointer-events: none; user-select: none; }
+        .main-content {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 30px; width: 100%; flex-grow: 1;
+        }
+        #plays-counter {
+            font-size: 1.2em;
+            font-weight: 500;
+            color: var(--cor-principal);
+            background-color: rgba(0,0,0,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin-bottom: -10px;
+        }
+        .ganhadores-container {
+            width: 100%; max-width: 800px; box-sizing: border-box; margin-top: 20px;
+            padding: 15px; border: 1px solid var(--cor-borda); border-radius: 8px;
+        }
+        .ganhadores-container h2 {
+            margin: 0 0 15px 0; text-align: center; font-size: 1em; font-weight: 400;
+            color: #7f8c8d; text-transform: uppercase; letter-spacing: 2px;
+        }
+        #lista-ganhadores {
+            list-style: none; padding: 0; margin: 0;
+        }
+        #lista-ganhadores.collapsed li:nth-child(n+6) { display: none; }
+        #lista-ganhadores li {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; border-bottom: 1px solid var(--cor-borda); font-size: 1em;
+        }
+         #lista-ganhadores li:last-child { border-bottom: none; }
+        .winner-name { font-weight: 600; color: var(--cor-texto); }
+        .winner-time { font-size: 0.9em; color: #95a5a6; }
+        
+        #show-more-container { text-align: center; margin-top: 15px; }
+        #show-more-btn {
+            background: none; border: 1px solid var(--cor-borda); color: var(--cor-texto);
+            padding: 5px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9em;
+        }
+        #show-more-btn:hover { background: var(--cor-borda); }
+
+        .cartas-container {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 25px;
+            padding: 20px; width: 100%; max-width: 650px; perspective: 1200px;
+        }
+        .carta {
+            width: 140px; height: 190px; position: relative; transform-style: preserve-3d;
+            transition: transform 0.8s, box-shadow 0.3s; cursor: pointer; flex-shrink: 0;
+        }
+        .carta:not(.virada):hover { transform: translateY(-10px); box-shadow: 0 20px 30px rgba(0,0,0,0.4); }
+        .carta.virada { transform: rotateY(180deg); cursor: default; }
+        .carta-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+            font-weight: bold; padding: 10px; box-sizing: border-box; overflow: hidden;
+        }
+        .verso {
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 60%), linear-gradient(135deg, #480ca8 0%, #2a5298 100%);
+            box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.2);
+        }
+        .verso::before {
+            content: 'VIP'; position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            font-family: 'Arial Black', Gadget, sans-serif; font-weight: bold; font-size: 3em;
+            color: rgba(0, 0, 0, 0.15); letter-spacing: -4px; z-index: 1;
+        }
+        .verso::after {
+            content: '★'; position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
+            font-size: 3.5em; color: rgba(255, 255, 255, 0.8); text-shadow: 0 0 15px rgba(255,255,255,0.7); z-index: 2;
+        }
+        .frente {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #412c01;
+            font-size: 1.3em; text-shadow: 0 1px 1px rgba(255,255,255,0.5); transform: rotateY(180deg);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+        .carta.perdedora .frente { background: linear-gradient(135deg, #888, #555); color: #ccc; font-size: 1.1em; }
+        #reset-btn {
+            padding: 15px 40px; font-size: 1.5em; font-weight: bold; color: #fff;
+            background: linear-gradient(45deg, #2ecc71, #28b485); border: none; border-radius: 50px;
+            cursor: pointer; transition: transform 0.2s ease-out; display: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        #reset-btn:hover { transform: scale(1.05); }
+
+        /* --- OUTROS --- */
+        @keyframes confete-fall { 0% { transform: translateY(0) rotateZ(0); opacity: 1; } 100% { transform: translateY(100vh) rotateZ(720deg); opacity: 0; } }
+        .confete { position: fixed; top: -20px; width: 10px; height: 10px; pointer-events: none; z-index: 2000; animation: confete-fall 4s linear forwards; }
+        footer {
+            width: 100%; max-width: 800px; padding: 20px; border-top: 1px solid var(--cor-borda);
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+            color: #7f8c8d; text-align: center;
+        }
+        .instrucoes { font-size: 0.9em; line-height: 1.5; margin: 0; }
+        .instrucoes strong { color: #bdc3c7; font-weight: 600; }
+        .creditos { display: flex; gap: 25px; font-size: 0.85em; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .creditos-item { display: flex; align-items: center; gap: 5px; }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 2em; }
+            .main-welcome { font-size: 2em; }
+            .sub-welcome { font-size: 1em; }
+            .cartas-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 0; }
+            .carta { width: 100%; height: auto; aspect-ratio: 140 / 190; }
+            .verso::before { font-size: 1.5em; bottom: 10%; }
+            .verso::after { font-size: 2em; top: 15%; }
+            .frente { font-size: 0.8em; }
+        }
+
+        /* --- ESTILOS DO PAINEL DE ADMIN --- */
+        .container { 
+            width: 100%;
+            max-width: 1200px; 
+            margin: 20px auto; 
+            background: var(--cor-container); 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid var(--cor-borda);
+            box-sizing: border-box;
+        }
+        h2.section-title { 
+            text-align: center; 
+            color: var(--cor-principal); 
+            border-bottom: 2px solid var(--cor-principal); 
+            padding-bottom: 10px; 
+            margin-top: 40px;
+            margin-bottom: 20px; 
+        }
+
+        .admin-instructions {
+            font-size: 0.9em;
+            color: #bdc3c7;
+            background-color: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--cor-info);
+        }
+        .admin-instructions ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .admin-instructions li {
+            margin-bottom: 5px;
+        }
+        .admin-instructions li:last-child {
+            margin-bottom: 0;
+        }
+
+        #user-search {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            background: #333;
+            border: 1px solid var(--cor-borda);
+            border-radius: 8px;
+            color: var(--cor-texto);
+            font-size: 1.1em;
+            box-sizing: border-box;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        #user-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+
+        #user-table th, #user-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--cor-borda);
+            white-space: nowrap;
+        }
+
+        #user-table thead th {
+            background-color: #343a40;
+            color: var(--cor-principal);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #user-table tbody tr {
+            background-color: var(--cor-container);
+            transition: background-color 0.2s ease;
+        }
+        
+        #user-table tbody tr:nth-child(even) {
+            background-color: #313131;
+        }
+
+        #user-table tbody tr:hover {
+            background-color: #4a4a4a;
+        }
+        
+        #user-table td:nth-child(3) { /* Coluna de Rodadas */
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        #user-table td .user-email {
+            font-size: 0.9em;
+            color: #bdc3c7;
+            word-break: break-all;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .user-actions input {
+            padding: 8px;
+            background: #333;
+            border: 1px solid var(--cor-borda); 
+            border-radius: 5px;
+            color: var(--cor-texto);
+            width: 70px;
+        }
+        .user-actions .action-btn {
+            padding: 8px 12px;
+            font-size: 0.9em;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .set-btn { background-color: var(--cor-info); color: white; }
+        .add-btn { background-color: var(--cor-sucesso); color: white; }
+        
+        #prize-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .prize-card {
+            background-color: #343a40;
+            border: 1px solid var(--cor-borda);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .prize-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .prize-actions input {
+             width: 100%;
+             box-sizing: border-box;
+        }
+        .update-btn { background-color: var(--cor-info); color: white; }
+        .delete-btn { background-color: #e74c3c; color: white; }
+
+        .feedback-box { text-align: center; padding: 40px; }
+        .feedback-box h2 { color: #e74c3c; }
+        .feedback-box p { font-size: 1.1em; color: #bdc3c7; }
+        .feedback-box a { color: var(--cor-principal); font-weight: bold; text-decoration: none; }
+        .feedback-box a:hover { text-decoration: underline; }
+
+        #admin-footer {
+            width: 100%; max-width: 800px; margin: 40px auto 0 auto; padding: 20px;
+            border-top: 1px solid var(--cor-borda); display: flex; flex-direction: column;
+            align-items: center; gap: 20px; color: #7f8c8d; text-align: center; box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        
+        <div id="auth-container">
+            <div class="welcome-text">
+                <p class="main-welcome">Bem-vindo à Vip Cards</p>
+                <p class="sub-welcome">seu site do grupo VipMogi</p>
+            </div>
+            <button id="auth-button">Entrar ou Cadastrar</button>
+        </div>
+
+        <header class="user-header">
+            <div id="user-info-container" class="hidden">
+                <span id="user-name"></span>
+                <button id="logout-button">Sair</button>
+            </div>
+        </header>
+
+        <div id="game-container" class="hidden">
+            <div class="main-content">
+                <h1>Vip Cards</h1>
+                <div id="plays-counter" class="hidden"></div>
+                <div id="cartas-container" class="cartas-container"></div>
+                <button id="reset-btn">Jogar Novamente</button>
+                <div class="ganhadores-container">
+                    <h2>Ganhadores de Hoje</h2>
+                    <ul id="lista-ganhadores"></ul>
+                    <div id="show-more-container" class="hidden">
+                        <button id="show-more-btn">Ver mais ▼</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="admin-panel-container" class="container hidden">
+            <h1>Painel de Controle</h1>
+
+            <section id="users-section">
+                <h2 class="section-title">Gerenciamento de Rodadas de Usuários</h2>
+                
+                <div class="admin-instructions">
+                    <ul>
+                        <li><b>Buscar:</b> Filtre a tabela digitando o nome ou e-mail do usuário.</li>
+                        <li><b>Definir:</b> Altera o número <b>total</b> de rodadas que um usuário pode ter.</li>
+                        <li><b>+1 / +5:</b> Adiciona 1 ou 5 rodadas ao total atual do usuário.</li>
+                    </ul>
+                </div>
+
+                <input type="text" id="user-search" placeholder="🔎 Buscar por nome ou e-mail...">
+                <div class="table-container">
+                    <table id="user-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Rodadas Restantes</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <section id="prizes-section">
+                <h2 class="section-title">Gerenciamento de Prêmios</h2>
+                
+                <div class="admin-instructions">
+                    <ul>
+                        <li>O campo <strong>'Chance'</strong> funciona como um peso. Um prêmio com chance '50' tem 10x mais probabilidade de aparecer no tabuleiro do que um com chance '5'.</li>
+                        <li>Use o formulário abaixo para adicionar novos prêmios ao jogo.</li>
+                        <li>Para cada prêmio existente, você pode editar seu nome/chance e <strong>Salvar</strong>, ou <strong>Excluir</strong> o prêmio permanentemente.</li>
+                    </ul>
+                </div>
+                
+                <div class="prize-card" style="margin-bottom: 30px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    <h3 style="text-align: center; margin-top: 0;">Adicionar Novo Prêmio</h3>
+                    <form id="add-prize-form">
+                        <div class="prize-actions">
+                            <input type="text" id="new-prize-name" class="user-actions input" placeholder="Nome do Prêmio" required>
+                            <input type="number" id="new-prize-chance" class="user-actions input" placeholder="Chance (ex: 1, 10, 50)" value="1" min="1" required>
+                            <button type="submit" class="action-btn add-btn" style="width: 100%;">Adicionar Prêmio</button>
+                        </div>
+                        <div id="add-prize-feedback" class="success-message" style="margin-top: 10px;"></div>
+                    </form>
+                </div>
+                
+                <div id="prize-grid">
+                    <p>Carregando prêmios...</p>
+                </div>
+            </section>
+            
+        </div>
+
+        <div id="loading-container" class="container feedback-box hidden">
+            <p>Verificando permissões...</p>
+        </div>
+
+        <div id="access-denied-container" class="container feedback-box hidden">
+            <h2>Acesso Negado</h2>
+            <p>Você não tem permissão para ver esta página.</p>
+            <p><a href="#" id="back-to-main-page">Voltar para a página inicial</a></p>
+        </div>
+
+        <footer id="main-footer">
+            <p class="instrucoes">
+                <strong>Como Jogar:</strong> Clique em uma carta para sortear seu prêmio. Após ganhar, contate o administrador com a captura de tela. Boa sorte!
+            </p>
+            <div class="creditos">
+                <span class="creditos-item">
+                    👤 Criado por Le Miastkuosky
+                </span>
+                <span>|</span>
+                <span class="creditos-item">
+                    ⚙️ Versão Final
+                </span>
+            </div>
+        </footer>
+
+        <footer id="admin-footer" class="hidden">
+            <div class="creditos">
+                <span class="creditos-item">
+                    👤 Criado por Le Miastkuosky
+                </span>
+                <span>|</span>
+                <span class="creditos-item">
+                    ⚙️ Versão Final
+                </span>
+            </div>
+        </footer>
+
+    </div>
+
+    <div id="prize-popup" class="popup-overlay"></div>
+    <div id="no-plays-popup" class="popup-overlay">
+        <div class="popup-box no-plays-popup-box">
+            <h2>Suas rodadas acabaram!</h2>
+            <p>Você já usou todas as suas chances de hoje. Volte amanhã para jogar novamente!</p>
+            <button id="close-no-plays-popup" class="popup-btn">Entendi</button>
+        </div>
+    </div>
+    <div id="auth-popup-overlay" class="popup-overlay">
+        <div class="auth-box">
+            <span id="close-auth-popup" class="close-btn">&times;</span>
+            <form id="login-form">
+                <h2>Entrar</h2>
+                <div class="form-group"><input type="email" id="login-email" placeholder="E-mail" required></div>
+                <div class="form-group"><input type="password" id="login-senha" placeholder="Senha" required></div>
+                <div class="forgot-password-link"><a id="forgot-password-link">Esqueci minha senha</a></div>
+                <div id="login-error-message" class="error-message"></div>
+                <button type="submit" class="submit-btn">Entrar</button>
+                <div class="toggle-link">Não tem uma conta? <a id="show-register-link">Cadastre-se</a></div>
+            </form>
+            <form id="register-form" class="hidden">
+                <h2>Cadastrar</h2>
+                <div class="form-group"><input type="text" id="register-nome" placeholder="Nome Completo" required></div>
+                <div class="form-group"><input type="email" id="register-email" placeholder="E-mail" required></div>
+                <div class="form-group"><input type="tel" id="register-telefone" placeholder="Telefone" required></div>
+                <div class="form-group"><input type="password" id="register-senha" placeholder="Senha (mínimo 6 caracteres)" required></div>
+                <div id="register-error-message" class="error-message"></div>
+                <button type="submit" class="submit-btn">Cadastrar</button>
+                <div class="toggle-link">Já tem uma conta? <a id="show-login-link">Entre aqui</a></div>
+            </form>
+            <form id="forgot-password-form" class="hidden">
+                <h2>Redefinir Senha</h2>
+                <p class="form-instructions">Digite seu e-mail de cadastro para enviarmos um link de redefinição.</p>
+                <div class="form-group"><input type="email" id="reset-email" placeholder="E-mail" required></div>
+                <div id="reset-error-message" class="error-message"></div>
+                <div id="reset-success-message" class="success-message"></div>
+                <button type="submit" class="submit-btn">Enviar Link</button>
+                <div class="toggle-link">Lembrou a senha? <a id="back-to-login-link">Voltar para o login</a></div>
+            </form>
+        </div>
+    </div>
+    
+    <audio id="som-revelar" src="som-premio.mp3" preload="auto"></audio>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, query, orderBy, addDoc, serverTimestamp, limit, doc, setDoc, getDoc, runTransaction, where, updateDoc, increment, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+       // Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAWVJ2oOrJcn7dUrCppHCWSa1CHp3dTXbI",
+  authDomain: "vipcartas.firebaseapp.com",
+  projectId: "vipcartas",
+  storageBucket: "vipcartas.firebasestorage.app",
+  messagingSenderId: "606058445130",
+  appId: "1:606058445130:web:d96ced2d47a88b8b9be9b3"
+};
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Elementos do DOM
+        const authContainer = document.getElementById("auth-container");
+        const userInfoContainer = document.getElementById("user-info-container");
+        const gameContainer = document.getElementById("game-container");
+        const authButton = document.getElementById("auth-button");
+        const logoutButton = document.getElementById("logout-button");
+        const userNameSpan = document.getElementById("user-name");
+        const authPopup = document.getElementById("auth-popup-overlay");
+        const closeAuthPopupBtn = document.getElementById("close-auth-popup");
+        const loginForm = document.getElementById("login-form");
+        const registerForm = document.getElementById("register-form");
+        const forgotPasswordForm = document.getElementById("forgot-password-form");
+        const showRegisterLink = document.getElementById("show-register-link");
+        const showLoginLink = document.getElementById("show-login-link");
+        const forgotPasswordLink = document.getElementById("forgot-password-link");
+        const backToLoginLink = document.getElementById("back-to-login-link");
+        const loginErrorMsg = document.getElementById("login-error-message");
+        const registerErrorMsg = document.getElementById("register-error-message");
+        const resetErrorMsg = document.getElementById("reset-error-message");
+        const resetSuccessMsg = document.getElementById("reset-success-message");
+        const cartasContainer = document.getElementById("cartas-container");
+        const btnReset = document.getElementById("reset-btn");
+        const prizePopup = document.getElementById("prize-popup");
+        const noPlaysPopup = document.getElementById("no-plays-popup");
+        const closeNoPlaysPopup = document.getElementById("close-no-plays-popup");
+        const somRevelar = document.getElementById("som-revelar");
+        const listaGanhadores = document.getElementById("lista-ganhadores");
+        const showMoreContainer = document.getElementById("show-more-container");
+        const showMoreBtn = document.getElementById("show-more-btn");
+        const playsCounter = document.getElementById("plays-counter");
+        const mainFooter = document.getElementById("main-footer");
+
+        // Elementos do admin
+        const adminPanelContainer = document.getElementById("admin-panel-container");
+        const userTableBody = document.getElementById("user-table-body");
+        const userSearchInput = document.getElementById("user-search");
+        const adminFooter = document.getElementById("admin-footer");
+        const backToMainPageLink = document.getElementById("back-to-main-page");
+        const prizeGrid = document.getElementById("prize-grid");
+        const addPrizeForm = document.getElementById("add-prize-form");
+        const addPrizeFeedback = document.getElementById("add-prize-feedback");
+
+        let revelando = false;
+        let premios = [];
+        let currentUser = null;
+        let userPlaysData = { max: 0, made: 0 };
+        let unsubscribeUserListener = null;
+
+        // Funções de utilidade
+        const showPopup = (popup) => popup.classList.add("show");
+        const hidePopup = (popup) => popup.classList.remove("show");
+        const getTodayDateString = () => new Date().toISOString().split('T')[0];
+
+        // Lógica de Autenticação e Estado
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                const userDocRef = doc(db, "users", user.uid);
+                const userProfile = await getDoc(userDocRef);
+                if (userProfile.exists()) {
+                    const userData = userProfile.data();
+                    userNameSpan.textContent = `Olá, ${userData.nomeCompleto || "Usuário"}`;
+                    hidePopup(authPopup);
+                    setupUserPlaysListener(user);
+                    showInterface(userData.role);
+                } else { 
+                    userNameSpan.textContent = `Olá, Usuário`;
+                    hidePopup(authPopup);
+                    setupUserPlaysListener(user);
+                    showInterface("user");
+                }
+            } else {
+                currentUser = null;
+                if (unsubscribeUserListener) unsubscribeUserListener();
+                authContainer.classList.remove("hidden");
+                userInfoContainer.classList.add("hidden");
+                gameContainer.classList.add("hidden");
+                adminPanelContainer.classList.add("hidden");
+                playsCounter.classList.add("hidden");
+                mainFooter.classList.remove("hidden");
+                adminFooter.classList.add("hidden");
+            }
+        });
+        
+        const showInterface = (role) => {
+            authContainer.classList.add("hidden");
+            userInfoContainer.classList.remove("hidden");
+            if (role === "admin") {
+                gameContainer.classList.add("hidden");
+                mainFooter.classList.add("hidden");
+                adminPanelContainer.classList.remove("hidden");
+                adminFooter.classList.remove("hidden");
+                carregarUsuarios();
+                carregarPremiosAdmin();
+            } else {
+                gameContainer.classList.remove("hidden");
+                mainFooter.classList.remove("hidden");
+                adminPanelContainer.classList.add("hidden");
+                adminFooter.classList.add("hidden");
+                carregarPremios();
+                carregarGanhadores();
+            }
+        };
+
+        // Lógica do Jogo
+        const setupUserPlaysListener = (user) => {
+            if (unsubscribeUserListener) unsubscribeUserListener(); 
+            const userRef = doc(db, "users", user.uid);
+            unsubscribeUserListener = onSnapshot(userRef, async (docSnap) => {
+                if (!docSnap.exists()) return;
+                const userData = docSnap.data();
+                const todayStr = getTodayDateString();
+                userPlaysData.max = userData.maxPlaysPerDay || 0;
+                if (userData.lastPlayDate !== todayStr) {
+                    await updateDoc(userRef, { playsMadeToday: 0, lastPlayDate: todayStr });
+                    userPlaysData.made = 0;
+                } else {
+                    userPlaysData.made = userData.playsMadeToday || 0;
+                }
+                const remaining = Math.max(0, userPlaysData.max - userPlaysData.made);
+                playsCounter.textContent = `Rodadas restantes: ${remaining}`;
+                playsCounter.classList.toggle("hidden", !currentUser);
+            });
+        };
+
+        const carregarPremios = async () => {
+            try {
+                const premiosSnapshot = await getDocs(query(collection(db, "premios"), orderBy("nome")));
+                premios = premiosSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (premios.length === 0) {
+                    cartasContainer.innerHTML = "<p>Nenhum prêmio disponível no momento.</p>";
+                    return;
+                }
+                criarCartas();
+            } catch (error) {
+                cartasContainer.innerHTML = "<p>Erro ao carregar os prêmios.</p>";
+            }
+        };
+
+        const criarCartas = () => {
+            cartasContainer.innerHTML = "";
+            const pool = [];
+            premios.forEach(premio => {
+                const chance = premio.chance || 1;
+                for (let i = 0; i < chance; i++) {
+                    pool.push(premio);
+                }
+            });
+
+            const premiosSelecionados = [];
+            let tempPool = [...pool];
+            while (premiosSelecionados.length < 12 && tempPool.length > 0) {
+                // --- INÍCIO DA CORREÇÃO ---
+                const randomIndex = Math.floor(Math.random() * tempPool.length);
+                const sorteado = tempPool.splice(randomIndex, 1)[0]; // Usa splice para remover 1 item no índice sorteado
+                premiosSelecionados.push(sorteado);
+                // --- FIM DA CORREÇÃO ---
+            }
+            while (premiosSelecionados.length < 12) {
+                premiosSelecionados.push({ nome: "Perdeu a vez" });
+            }
+
+            const premiosEmbaralhados = premiosSelecionados.sort(() => 0.5 - Math.random());
+            premiosEmbaralhados.forEach((premio, index) => {
+                const carta = document.createElement("div");
+                carta.className = `carta ${premio.nome.toLowerCase().includes("perdeu") ? 'perdedora' : ''}`;
+                carta.dataset.premioId = premio.id || `perdeu-${index}`;
+                carta.innerHTML = `<div class="carta-face verso"></div><div class="carta-face frente">${premio.nome}</div>`;
+                carta.addEventListener("click", () => revelarCarta(carta, premio));
+                cartasContainer.appendChild(carta);
+            });
+            revelando = false;
+            btnReset.style.display = "none";
+        };
+        
+        const revelarCarta = async (cartaClicada, premioSorteado) => {
+            if (revelando || cartaClicada.classList.contains("virada") || !currentUser) return;
+            if (userPlaysData.made >= userPlaysData.max) return showPopup(noPlaysPopup);
+            
+            revelando = true;
+            cartaClicada.classList.add("virada");
+            somRevelar.play().catch(()=>{});
+
+            try {
+                const userRef = doc(db, "users", currentUser.uid);
+                await updateDoc(userRef, { playsMadeToday: increment(1) });
+            } catch (error) {
+                alert("Erro ao registrar sua jogada.");
+                revelando = false;
+                cartaClicada.classList.remove("virada");
+                return;
+            }
+
+            setTimeout(() => {
+                document.querySelectorAll(".carta:not(.virada)").forEach(c => c.classList.add("virada"));
+                btnReset.style.display = "block";
+            }, 1000);
+
+            if (!premioSorteado.nome.toLowerCase().includes("perdeu")) {
+                const userName = userNameSpan.textContent.replace('Olá, ', '');
+                const timestamp = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const mensagemWhats = `🎉 Olá! Ganhei um prêmio no Vip Cards! \n\n👤 Jogador: ${userName}\n🎁 Prêmio: ${premioSorteado.nome}\n🗓️ Data: ${timestamp}`;
+                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensagemWhats)}`;
+
+                prizePopup.innerHTML = `
+                    <div class="popup-box prize-popup-box">
+                        <h2>Parabéns, ${userName}!</h2>
+                        <div class="prize-details">
+                            <div><strong>Prêmio:</strong> ${premioSorteado.nome}</div>
+                            <div><strong>Data:</strong> ${timestamp}</div>
+                        </div>
+                        <p style="margin-top: -10px;">Compartilhe seu prêmio no grupo do WhatsApp!</p>
+                        <div class="popup-buttons-container">
+                             <a href="${whatsappUrl}" target="_blank" class="popup-btn whatsapp-btn">Compartilhar no WhatsApp</a>
+                             <button id="close-prize-popup" class="popup-btn close-btn">Fechar</button>
+                        </div>
+                    </div>`;
+                showPopup(prizePopup);
+                prizePopup.querySelector("#close-prize-popup").addEventListener("click", () => hidePopup(prizePopup));
+                lancarConfetes();
+                await addDoc(collection(db, "ganhadores"), {
+                    userId: currentUser.uid,
+                    userName: userName,
+                    premioNome: premioSorteado.nome,
+                    data: serverTimestamp(),
+                    dataSorteio: getTodayDateString()
+                });
+            }
+        };
+
+        const lancarConfetes = () => {
+            for (let i = 0; i < 80; i++) {
+                const confete = document.createElement("div");
+                confete.className = "confete";
+                confete.style.left = `${Math.random() * 100}vw`;
+                confete.style.animationDelay = `${Math.random() * 2}s`;
+                confete.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                document.body.appendChild(confete);
+                setTimeout(() => confete.remove(), 4000);
+            }
+        };
+        
+        const carregarGanhadores = () => {
+            const hoje = getTodayDateString();
+            const q = query(collection(db, "ganhadores"), where("dataSorteio", "==", hoje), orderBy("data", "desc"));
+            onSnapshot(q, (querySnapshot) => {
+                listaGanhadores.innerHTML = "";
+                if (querySnapshot.empty) {
+                    listaGanhadores.innerHTML = "<li>Ninguém ganhou hoje ainda. Seja o primeiro!</li>";
+                    showMoreContainer.classList.add("hidden");
+                    return;
+                }
+                const ganhadores = querySnapshot.docs.map(d => d.data());
+                renderGanhadores(ganhadores);
+                showMoreContainer.classList.toggle("hidden", ganhadores.length <= 5);
+            });
+        };
+
+        const renderGanhadores = (ganhadores) => {
+            const isCollapsed = listaGanhadores.classList.contains("collapsed");
+            const itemsToRender = isCollapsed ? ganhadores.slice(0, 5) : ganhadores;
+            listaGanhadores.innerHTML = itemsToRender.map(ganhador => {
+                const dataHora = ganhador.data ? ganhador.data.toDate().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "N/A";
+                return `<li><span class="winner-name">${ganhador.userName}</span> <span class="winner-time">ganhou ${ganhador.premioNome} às ${dataHora}</span></li>`;
+            }).join('');
+        };
+
+        showMoreBtn.addEventListener("click", () => {
+            listaGanhadores.classList.toggle("collapsed");
+            showMoreBtn.textContent = listaGanhadores.classList.contains("collapsed") ? "Ver mais ▼" : "Ver menos ▲";
+        });
+        
+        // Lógica do Painel de Admin
+        const carregarUsuarios = async () => {
+            try {
+                const q = query(collection(db, "users"), orderBy("nomeCompleto", "asc"));
+                const querySnapshot = await getDocs(q);
+                userTableBody.innerHTML = "";
+                if (querySnapshot.empty) {
+                    userTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
+                    return;
+                }
+                const todayStr = getTodayDateString();
+                querySnapshot.forEach(userDoc => {
+                    const userData = userDoc.data();
+                    const maxPlays = userData.maxPlaysPerDay || 0;
+                    const playsToday = (userData.lastPlayDate === todayStr) ? (userData.playsMadeToday || 0) : 0;
+                    const playsRemaining = Math.max(0, maxPlays - playsToday);
+                    const tr = document.createElement("tr");
+                    tr.dataset.uid = userDoc.id;
+                    tr.innerHTML = `
+                        <td>
+                            ${userData.nomeCompleto}
+                            <div class="user-email">${userData.email}</div>
+                        </td>
+                        <td>${userData.email}</td>
+                        <td>${playsRemaining}</td>
+                        <td>
+                            <div class="user-actions">
+                                <input type="number" class="plays-input" placeholder="Total" min="0">
+                                <button class="action-btn set-btn">Definir</button>
+                                <button class="action-btn add-btn" data-amount="1">+1</button>
+                                <button class="action-btn add-btn" data-amount="5">+5</button>
+                            </div>
+                        </td>
+                    `;
+                    userTableBody.appendChild(tr);
+                });
+            } catch (error) {
+                userTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Falha ao carregar usuários.</td></tr>';
+            }
+        };
+
+        userTableBody.addEventListener("click", async (event) => {
+            const button = event.target.closest('.action-btn');
+            if (!button) return;
+            const uid = button.closest('tr').dataset.uid;
+            if (!uid) return;
+            const userRef = doc(db, "users", uid);
+            try {
+                if (button.classList.contains("set-btn")) {
+                    const input = button.closest('.user-actions').querySelector(".plays-input");
+                    const newMaxPlays = parseInt(input.value, 10);
+                    if (isNaN(newMaxPlays) || newMaxPlays < 0) return alert("Por favor, insira um número válido.");
+                    await updateDoc(userRef, { maxPlaysPerDay: newMaxPlays });
+                } else if (button.classList.contains("add-btn")) {
+                    const amount = parseInt(button.dataset.amount, 10);
+                    await updateDoc(userRef, { maxPlaysPerDay: increment(amount) });
+                }
+                carregarUsuarios();
+            } catch { alert("Não foi possível atualizar as rodadas."); }
+        });
+        
+        userSearchInput.addEventListener("input", (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            Array.from(userTableBody.rows).forEach(row => {
+                const nameCell = row.cells[0]?.textContent.toLowerCase();
+                const emailCell = row.cells[1]?.textContent.toLowerCase();
+                row.style.display = (nameCell.includes(searchTerm) || emailCell.includes(searchTerm)) ? "" : "none";
+            });
+        });
+
+        const carregarPremiosAdmin = async () => {
+            try {
+                const q = query(collection(db, "premios"), orderBy("nome", "asc"));
+                const querySnapshot = await getDocs(q);
+                prizeGrid.innerHTML = "";
+                if (querySnapshot.empty) {
+                    prizeGrid.innerHTML = "<p style='text-align:center;'>Nenhum prêmio encontrado.</p>";
+                    return;
+                }
+                querySnapshot.forEach(d => {
+                    const prizeData = d.data();
+                    const card = document.createElement("div");
+                    card.className = "prize-card";
+                    card.dataset.id = d.id;
+                    card.innerHTML = `
+                        <h4 style="margin:0; text-align:center;">${prizeData.nome}</h4>
+                        <div class="prize-actions">
+                            <input type="text" class="prize-name-input user-actions input" value="${prizeData.nome}">
+                            <input type="number" class="prize-chance-input user-actions input" value="${prizeData.chance || 1}" min="1">
+                            <div class="action-buttons" style="display:flex; gap: 10px;">
+                                <button class="action-btn update-btn">Salvar</button>
+                                <button class="action-btn delete-btn">Excluir</button>
+                            </div>
+                        </div>`;
+                    prizeGrid.appendChild(card);
+                });
+            } catch {
+                prizeGrid.innerHTML = '<p style="color:red; text-align:center;">Falha ao carregar prêmios.</p>';
+            }
+        };
+
+        addPrizeForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById("new-prize-name").value;
+            const chance = parseInt(document.getElementById("new-prize-chance").value, 10);
+            try {
+                await addDoc(collection(db, "premios"), { nome, chance });
+                addPrizeFeedback.textContent = "Prêmio adicionado!";
+                addPrizeForm.reset();
+                carregarPremiosAdmin();
+                setTimeout(() => addPrizeFeedback.textContent = "", 3000);
+            } catch { addPrizeFeedback.textContent = "Erro ao adicionar prêmio."; }
+        });
+
+        prizeGrid.addEventListener("click", async (e) => {
+            const button = e.target.closest('.action-btn');
+            if (!button) return;
+            const card = button.closest('.prize-card');
+            const prizeId = card.dataset.id;
+            const prizeRef = doc(db, "premios", prizeId);
+            if (button.classList.contains("update-btn")) {
+                const newName = card.querySelector(".prize-name-input").value;
+                const newChance = parseInt(card.querySelector(".prize-chance-input").value, 10);
+                try {
+                    await updateDoc(prizeRef, { nome: newName, chance: newChance });
+                    alert("Prêmio atualizado!");
+                } catch { alert("Falha ao atualizar."); }
+            } else if (button.classList.contains("delete-btn")) {
+                if (confirm(`Excluir "${card.querySelector('.prize-name-input').value}"?`)) {
+                    try {
+                        await deleteDoc(prizeRef);
+                        card.remove();
+                    } catch { alert("Falha ao excluir."); }
+                }
+            }
+        });
+        
+        // Lógica de Formulários de Autenticação e Navegação
+        const setupAuthAndNav = () => {
+            document.getElementById("register-telefone").addEventListener("input", e => {
+                e.target.value = e.target.value.replace(/\D/g,"").substring(0,11).replace(/(\d{2})(\d)/,"($1) $2").replace(/(\d{5})(\d)/,"$1-$2");
+            });
+            registerForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const [nome, email, tel, senha] = ['#register-nome', '#register-email', '#register-telefone', '#register-senha'].map(id => document.querySelector(id).value);
+                try {
+                    const cred = await createUserWithEmailAndPassword(auth, email, senha);
+                    await setDoc(doc(db, "users", cred.user.uid), { nomeCompleto: nome, email, telefone: tel, role: "user", maxPlaysPerDay: 2, playsMadeToday: 0, lastPlayDate: "2020-01-01" });
+                } catch { registerErrorMsg.textContent = "Erro ao cadastrar. Verifique os dados."; }
+            });
+            loginForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const [email, senha] = ['#login-email', '#login-senha'].map(id => document.querySelector(id).value);
+                try { await signInWithEmailAndPassword(auth, email, senha); } catch { loginErrorMsg.textContent = "E-mail ou senha inválidos."; }
+            });
+            forgotPasswordForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const email = document.getElementById("reset-email").value;
+                try {
+                    await sendPasswordResetEmail(auth, email);
+                    resetSuccessMsg.textContent = "Link enviado!";
+                } catch { resetErrorMsg.textContent = "Erro ao enviar e-mail."; }
+            });
+            authButton.addEventListener("click", () => showPopup(authPopup));
+            closeAuthPopupBtn.addEventListener("click", () => hidePopup(authPopup));
+            const toggleForms = (show, hide1, hide2) => { show.classList.remove('hidden'); hide1.classList.add('hidden'); hide2.classList.add('hidden'); };
+            showRegisterLink.addEventListener("click", () => toggleForms(registerForm, loginForm, forgotPasswordForm));
+            showLoginLink.addEventListener("click", () => toggleForms(loginForm, registerForm, forgotPasswordForm));
+            forgotPasswordLink.addEventListener("click", () => toggleForms(forgotPasswordForm, loginForm, registerForm));
+            backToLoginLink.addEventListener("click", () => toggleForms(loginForm, registerForm, forgotPasswordForm));
+            backToMainPageLink.addEventListener("click", () => signOut(auth));
+            logoutButton.addEventListener("click", () => signOut(auth));
+            btnReset.addEventListener("click", () => (userPlaysData.made < userPlaysData.max) ? criarCartas() : showPopup(noPlaysPopup));
+            closeNoPlaysPopup.addEventListener("click", () => hidePopup(noPlaysPopup));
+        };
+        setupAuthAndNav();
+
+    </script>
+</body>
+</html>
