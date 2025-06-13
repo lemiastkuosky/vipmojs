@@ -139,24 +139,54 @@
         }
         
         .popup-box h2 {
-            font-size: 2.2em; margin: 0 0 15px 0;
+            font-size: 2.2em; margin: 0 0 20px 0;
             text-shadow: 2px 2px 3px rgba(0,0,0,0.2); font-weight: 700;
         }
         .popup-box p { font-size: 1.1em; margin: 0 0 25px 0; opacity: 0.9; line-height: 1.5; }
+        
+        .popup-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: stretch;
+        }
+        
         .popup-box .popup-btn {
-            border: none; padding: 12px 40px; border-radius: 50px;
+            border: none; padding: 12px 25px; border-radius: 50px;
             font-size: 1em; font-weight: bold; cursor: pointer; transition: transform 0.2s;
+            text-decoration: none;
+            display: block;
         }
         .popup-box .popup-btn:hover { transform: scale(1.05); }
 
         .prize-popup-box { background: linear-gradient(145deg, var(--cor-principal), #e67e22); }
-        .prize-popup-box .popup-btn { background: #fff; color: #e67e22; }
+        .prize-popup-box .popup-btn.whatsapp-btn { 
+            background: linear-gradient(45deg, #25D366, #128C7E);
+            color: white;
+        }
+        .prize-popup-box .popup-btn.close-btn { background: #fff; color: #e67e22; }
+
         .no-plays-popup-box { background: linear-gradient(145deg, #2c3e50, #4a5568); }
         .no-plays-popup-box .popup-btn { background: #fff; color: #34495e; }
         
-        .premio-nome {
-            display: block; font-size: 1.6em; font-weight: 700; color: #fff; background-color: rgba(0,0,0,0.15);
-            padding: 12px 20px; border-radius: 10px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.2);
+        .prize-details {
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            text-align: left;
+            font-size: 1.1em;
+        }
+        .prize-details div {
+            margin-bottom: 8px;
+        }
+        .prize-details div:last-child {
+            margin-bottom: 0;
+        }
+        .prize-details strong {
+            color: var(--cor-principal);
+            font-weight: 700;
         }
 
         .auth-box {
@@ -808,18 +838,21 @@ const firebaseConfig = {
             const pool = [];
             premios.forEach(premio => {
                 const chance = premio.chance || 1;
-                for (let i = 0; i < chance; i++) pool.push(premio);
+                for (let i = 0; i < chance; i++) {
+                    pool.push(premio);
+                }
             });
 
             const premiosSelecionados = [];
             let tempPool = [...pool];
-            while (premiosSelecionados.length < 9 && tempPool.length > 0) {
+            while (premiosSelecionados.length < 12 && tempPool.length > 0) {
+                // --- INÍCIO DA CORREÇÃO ---
                 const randomIndex = Math.floor(Math.random() * tempPool.length);
-                const sorteado = tempPool[randomIndex];
+                const sorteado = tempPool.splice(randomIndex, 1)[0]; // Usa splice para remover 1 item no índice sorteado
                 premiosSelecionados.push(sorteado);
-                tempPool = tempPool.filter(p => p.id !== sorteado.id);
+                // --- FIM DA CORREÇÃO ---
             }
-            while (premiosSelecionados.length < 9) {
+            while (premiosSelecionados.length < 12) {
                 premiosSelecionados.push({ nome: "Perdeu a vez" });
             }
 
@@ -860,19 +893,30 @@ const firebaseConfig = {
             }, 1000);
 
             if (!premioSorteado.nome.toLowerCase().includes("perdeu")) {
+                const userName = userNameSpan.textContent.replace('Olá, ', '');
+                const timestamp = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const mensagemWhats = `🎉 Olá! Ganhei um prêmio no Vip Cards! \n\n👤 Jogador: ${userName}\n🎁 Prêmio: ${premioSorteado.nome}\n🗓️ Data: ${timestamp}`;
+                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensagemWhats)}`;
+
                 prizePopup.innerHTML = `
                     <div class="popup-box prize-popup-box">
-                        <h2>Parabéns!</h2><p>Você ganhou:</p>
-                        <span class="premio-nome">${premioSorteado.nome}</span>
-                        <p>Tire um print e apresente ao administrador.</p>
-                        <button id="close-prize-popup" class="popup-btn">Fechar</button>
+                        <h2>Parabéns, ${userName}!</h2>
+                        <div class="prize-details">
+                            <div><strong>Prêmio:</strong> ${premioSorteado.nome}</div>
+                            <div><strong>Data:</strong> ${timestamp}</div>
+                        </div>
+                        <p style="margin-top: -10px;">Compartilhe seu prêmio no grupo do WhatsApp!</p>
+                        <div class="popup-buttons-container">
+                             <a href="${whatsappUrl}" target="_blank" class="popup-btn whatsapp-btn">Compartilhar no WhatsApp</a>
+                             <button id="close-prize-popup" class="popup-btn close-btn">Fechar</button>
+                        </div>
                     </div>`;
                 showPopup(prizePopup);
                 prizePopup.querySelector("#close-prize-popup").addEventListener("click", () => hidePopup(prizePopup));
                 lancarConfetes();
                 await addDoc(collection(db, "ganhadores"), {
                     userId: currentUser.uid,
-                    userName: userNameSpan.textContent.replace('Olá, ', ''),
+                    userName: userName,
                     premioNome: premioSorteado.nome,
                     data: serverTimestamp(),
                     dataSorteio: getTodayDateString()
@@ -891,6 +935,36 @@ const firebaseConfig = {
                 setTimeout(() => confete.remove(), 4000);
             }
         };
+        
+        const carregarGanhadores = () => {
+            const hoje = getTodayDateString();
+            const q = query(collection(db, "ganhadores"), where("dataSorteio", "==", hoje), orderBy("data", "desc"));
+            onSnapshot(q, (querySnapshot) => {
+                listaGanhadores.innerHTML = "";
+                if (querySnapshot.empty) {
+                    listaGanhadores.innerHTML = "<li>Ninguém ganhou hoje ainda. Seja o primeiro!</li>";
+                    showMoreContainer.classList.add("hidden");
+                    return;
+                }
+                const ganhadores = querySnapshot.docs.map(d => d.data());
+                renderGanhadores(ganhadores);
+                showMoreContainer.classList.toggle("hidden", ganhadores.length <= 5);
+            });
+        };
+
+        const renderGanhadores = (ganhadores) => {
+            const isCollapsed = listaGanhadores.classList.contains("collapsed");
+            const itemsToRender = isCollapsed ? ganhadores.slice(0, 5) : ganhadores;
+            listaGanhadores.innerHTML = itemsToRender.map(ganhador => {
+                const dataHora = ganhador.data ? ganhador.data.toDate().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "N/A";
+                return `<li><span class="winner-name">${ganhador.userName}</span> <span class="winner-time">ganhou ${ganhador.premioNome} às ${dataHora}</span></li>`;
+            }).join('');
+        };
+
+        showMoreBtn.addEventListener("click", () => {
+            listaGanhadores.classList.toggle("collapsed");
+            showMoreBtn.textContent = listaGanhadores.classList.contains("collapsed") ? "Ver mais ▼" : "Ver menos ▲";
+        });
         
         // Lógica do Painel de Admin
         const carregarUsuarios = async () => {
