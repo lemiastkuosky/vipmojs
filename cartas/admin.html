@@ -233,7 +233,7 @@
             </span>
             <span>|</span>
             <span class="creditos-item">
-                ⚙️ Versão 3.6 (Créditos em tempo real)
+                ⚙️ Versão 3.5 (Correções no painel admin)
             </span>
         </div>
     </footer>
@@ -407,7 +407,9 @@
                     userListBody.appendChild(tr);
                 });
                 userTable.style.display = 'table';
-                userListContainer.querySelector('p').style.display = 'none';
+                if(userListContainer.querySelector('p')) {
+                    userListContainer.querySelector('p').style.display = 'none';
+                }
             } catch(error) {
                 console.error("Erro ao carregar usuários:", error);
                 userListContainer.innerHTML = '<p style="color:red;">Falha ao carregar usuários.</p>';
@@ -424,36 +426,31 @@
             const uid = button.dataset.uid;
             const row = button.closest('tr');
             const input = row.querySelector('.max-plays-input');
-            const remainingPlaysCell = row.querySelector('.remaining-plays');
+            
+            if (!input || !uid) {
+                console.error("ERRO: Não foi possível encontrar o campo de input ou o UID para esta linha.", row);
+                alert("Erro de página. Tente recarregar.");
+                return;
+            }
 
             try {
                 const maxPlays = parseInt(input.value, 10);
                 if (isNaN(maxPlays) || maxPlays < 0) {
                     alert('Por favor, insira um número válido.');
-                    button.textContent = 'Erro!';
-                    setTimeout(() => { button.textContent = 'Salvar'; button.disabled = false; }, 2000);
-                    return;
+                    throw new Error("Valor inválido");
                 }
                 
                 const userRef = doc(db, "users", uid);
                 await updateDoc(userRef, { maxPlaysPerDay: maxPlays });
                 
-                const userDoc = await getDoc(userRef);
-                const userData = userDoc.data();
-                const todayStr = getTodayDateString();
-                const playsToday = (userData.lastPlayDate === todayStr) ? (userData.playsMadeToday || 0) : 0;
-                remainingPlaysCell.textContent = Math.max(0, maxPlays - playsToday);
+                // Após salvar, recarrega a lista de usuários para garantir que todos os dados (inclusive rodadas restantes) sejam atualizados.
+                await carregarUsuarios();
 
-                button.textContent = 'Salvo!';
             } catch(error) {
                 console.error("Erro ao salvar rodada do usuário:", error);
                 alert("Ocorreu um erro ao salvar.");
-                button.textContent = 'Erro!';
-            } finally {
-                setTimeout(() => {
-                    button.disabled = false;
-                    button.textContent = 'Salvar';
-                }, 2000);
+                // Se der erro, recarrega os usuários para reverter qualquer mudança visual
+                await carregarUsuarios();
             }
         });
         
