@@ -551,6 +551,7 @@
         }
         .set-btn { background-color: var(--cor-info); color: white; }
         .add-btn { background-color: var(--cor-sucesso); color: white; }
+        .delete-btn { background-color: #e74c3c; color: white; }
         
         #prize-grid {
             display: grid;
@@ -576,7 +577,6 @@
              box-sizing: border-box;
         }
         .update-btn { background-color: var(--cor-info); color: white; }
-        .delete-btn { background-color: #e74c3c; color: white; }
 
         .feedback-box { text-align: center; padding: 40px; }
         .feedback-box h2 { color: #e74c3c; }
@@ -748,6 +748,7 @@
                         <li><b>Buscar:</b> Filtre a tabela digitando o nome ou e-mail do usuário.</li>
                         <li><b>Definir:</b> Altera o número <b>total</b> de rodadas que um usuário pode ter.</li>
                         <li><b>+1 / +5:</b> Adiciona 1 ou 5 rodadas ao total atual do usuário.</li>
+                        <li><b>Excluir:</b> Remove os dados do usuário do aplicativo.</li>
                     </ul>
                 </div>
 
@@ -1262,6 +1263,7 @@ const firebaseConfig = {
                                 <button class="action-btn set-btn">Definir</button>
                                 <button class="action-btn add-btn" data-amount="1">+1</button>
                                 <button class="action-btn add-btn" data-amount="5">+5</button>
+                                <button class="action-btn delete-btn">Excluir</button>
                             </div>
                         </td>
                     `;
@@ -1278,18 +1280,31 @@ const firebaseConfig = {
             const uid = button.closest('tr').dataset.uid;
             if (!uid) return;
             const userRef = doc(db, "users", uid);
+        
             try {
                 if (button.classList.contains("set-btn")) {
                     const input = button.closest('.user-actions').querySelector(".plays-input");
                     const newMaxPlays = parseInt(input.value, 10);
-                    if (isNaN(newMaxPlays) || newMaxPlays < 0) return alert("Por favor, insira um número válido.");
+                    if (isNaN(newMaxPlays) || newMaxPlays < 0) {
+                        alert("Por favor, insira um número válido.");
+                        return;
+                    }
                     await updateDoc(userRef, { maxPlaysPerDay: newMaxPlays });
+                    carregarUsuarios(); // Atualiza a lista
                 } else if (button.classList.contains("add-btn")) {
                     const amount = parseInt(button.dataset.amount, 10);
                     await updateDoc(userRef, { maxPlaysPerDay: increment(amount) });
+                    carregarUsuarios(); // Atualiza a lista
+                } else if (button.classList.contains("delete-btn")) {
+                    const userName = button.closest('tr').cells[0].textContent.trim().split('\n')[0];
+                    if (confirm(`Tem certeza que deseja excluir o usuário "${userName}"?\n\n(Atenção: Isso remove os dados do usuário do app, mas não a conta de login. A exclusão da conta deve ser feita no painel do Firebase.)`)) {
+                        await deleteDoc(userRef);
+                        carregarUsuarios(); // Atualiza a lista após a exclusão
+                    }
                 }
-                carregarUsuarios();
-            } catch { alert("Não foi possível atualizar as rodadas."); }
+            } catch (error) {
+                alert("Não foi possível completar a ação: " + error.message);
+            }
         });
         
         userSearchInput.addEventListener("input", (e) => {
