@@ -494,6 +494,124 @@
             border-top: 1px solid var(--cor-borda); display: flex; flex-direction: column;
             align-items: center; gap: 20px; color: #7f8c8d; text-align: center; box-sizing: border-box;
         }
+
+        /* --- INÍCIO: MELHORIAS VISUAIS PARA ADMIN EM TELAS PEQUENAS --- */
+        @media (max-width: 768px) {
+            #admin-panel-container.container {
+                padding: 15px;
+            }
+
+            h2.section-title {
+                font-size: 1.6em;
+            }
+
+            /* --- Tabela de Usuários Responsiva (Visual de Card) --- */
+            .table-container {
+                overflow-x: hidden;
+            }
+
+            #user-table thead {
+                display: none; /* Oculta o cabeçalho da tabela */
+            }
+
+            #user-table, #user-table tbody, #user-table tr {
+                display: block; /* Transforma a tabela e linhas em blocos */
+            }
+
+            #user-table tr {
+                background-color: #343a40;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                padding: 15px;
+                box-sizing: border-box;
+                border: 1px solid var(--cor-borda);
+            }
+            
+            #user-table tbody tr:nth-child(even) {
+                background-color: #343a40; /* Cor de fundo uniforme para os cards */
+            }
+
+            #user-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--cor-borda);
+                text-align: right;
+                flex-wrap: wrap;
+            }
+
+            #user-table tr td:last-child {
+                border-bottom: none;
+            }
+
+            /* Adiciona o label usando ::before (não precisa mudar o JavaScript) */
+            #user-table td::before {
+                content: var(--label);
+                font-weight: 600;
+                color: var(--cor-texto);
+                text-align: left;
+                margin-right: 15px;
+            }
+
+            /* Define o texto do label para cada coluna */
+            #user-table td:nth-of-type(1) { --label: 'Usuário:'; }
+            #user-table td:nth-of-type(2) { display: none; } /* Oculta a coluna de e-mail, pois já está em "Usuário" */
+            #user-table td:nth-of-type(3) { --label: 'Rodadas:'; }
+            #user-table td:nth-of-type(4) { --label: 'Ações:'; }
+
+            /* Estilos para células específicas para melhor visualização */
+            #user-table td:nth-of-type(1) {
+                display: block;
+                text-align: left;
+                padding-bottom: 15px;
+                font-size: 1.1em;
+                font-weight: bold;
+            }
+            #user-table td:nth-of-type(1)::before {
+                display: none; /* Não precisa do label "Usuário:" */
+            }
+            #user-table td:nth-of-type(1) .user-email {
+                font-size: 0.85em;
+                font-weight: normal;
+                color: #bdc3c7;
+                margin-top: 5px;
+            }
+
+            /* Ajuste para a célula de Ações */
+            #user-table td:nth-of-type(4) {
+                 display: block;
+            }
+             #user-table td:nth-of-type(4)::before {
+                 display: block;
+                 margin-bottom: 12px;
+                 font-size: 1em;
+                 font-weight: 600;
+                 color: var(--cor-principal);
+             }
+            
+            .user-actions {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+            
+            .user-actions input, .user-actions .action-btn {
+                width: 100%;
+                box-sizing: border-box;
+                font-size: 1em;
+                padding: 12px;
+                text-align: center;
+                border-radius: 5px;
+            }
+            
+            /* Ajusta a grade de prêmios para uma única coluna */
+            #prize-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+        }
+        /* --- FIM: MELHORIAS VISUAIS PARA ADMIN --- */
     </style>
 </head>
 <body>
@@ -846,11 +964,9 @@ const firebaseConfig = {
             const premiosSelecionados = [];
             let tempPool = [...pool];
             while (premiosSelecionados.length < 12 && tempPool.length > 0) {
-                // --- INÍCIO DA CORREÇÃO ---
                 const randomIndex = Math.floor(Math.random() * tempPool.length);
-                const sorteado = tempPool.splice(randomIndex, 1)[0]; // Usa splice para remover 1 item no índice sorteado
+                const sorteado = tempPool.splice(randomIndex, 1)[0];
                 premiosSelecionados.push(sorteado);
-                // --- FIM DA CORREÇÃO ---
             }
             while (premiosSelecionados.length < 12) {
                 premiosSelecionados.push({ nome: "Perdeu a vez" });
@@ -984,6 +1100,7 @@ const firebaseConfig = {
                     const playsRemaining = Math.max(0, maxPlays - playsToday);
                     const tr = document.createElement("tr");
                     tr.dataset.uid = userDoc.id;
+                    // HTML simplificado, a formatação para celular é feita 100% via CSS
                     tr.innerHTML = `
                         <td>
                             ${userData.nomeCompleto}
