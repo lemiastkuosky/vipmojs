@@ -708,8 +708,8 @@
         
         <div id="auth-container" class="hidden">
             <div class="welcome-text">
-                <p class="main-welcome">Bem-vindo à VIP CARDS!</p>
-                <p class="sub-welcome">seu site do grupo VipMogi...</p>
+                <p class="main-welcome">Bem-vindo à Vip Cards</p>
+                <p class="sub-welcome">seu site do grupo VipMogi</p>
             </div>
             <button id="auth-button">Entrar ou Cadastrar</button>
         </div>
@@ -723,7 +723,7 @@
 
         <div id="game-container"> 
             <div class="main-content">
-                <h1>VIP CARDS</h1>
+                <h1>Vip Cards</h1>
                 <div id="plays-counter" class="hidden"></div>
                 <div id="cartas-container" class="cartas-container"></div>
                 <button id="reset-btn">Jogar Novamente</button>
@@ -1123,14 +1123,18 @@ const firebaseConfig = {
             }, 1000);
 
             const prizeName = premioSorteado.nome.toLowerCase().trim();
+            const roundsPrizeMatch = prizeName.match(/(\d+)\s*x?\s*rodadas/i);
             let isStandardWin = true;
 
             // Lógica para prêmios especiais
             if (prizeName.includes('tente novamente')) {
                 isStandardWin = false;
                 await updateDoc(userRef, { playsMadeToday: increment(-1) });
-            } else if (prizeName.includes('ganhou 3 rodadas')) {
-                await updateDoc(userRef, { maxPlaysPerDay: increment(3) });
+            } else if (roundsPrizeMatch) {
+                const roundsToAdd = parseInt(roundsPrizeMatch[1], 10);
+                if (!isNaN(roundsToAdd) && roundsToAdd > 0) {
+                    await updateDoc(userRef, { maxPlaysPerDay: increment(roundsToAdd) });
+                }
             } else if (prizeName.includes('perdeu')) {
                 isStandardWin = false;
             }
@@ -1397,7 +1401,7 @@ const firebaseConfig = {
                         email, 
                         telefone: tel, 
                         role: "user", 
-                        maxPlaysPerDay: 3, 
+                        maxPlaysPerDay: 2, 
                         playsMadeToday: 0, 
                         lastPlayDate: "2020-01-01" 
                     });
