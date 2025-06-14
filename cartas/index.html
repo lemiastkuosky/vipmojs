@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vip Cards</title>
+    <title>Vip Cards - Unificado</title>
     <link rel="icon" href="favicon.png">
     <style>
         :root {
@@ -349,14 +349,7 @@
             box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
         }
         .carta.perdedora .frente { background: linear-gradient(135deg, #888, #555); color: #ccc; font-size: 1.1em; }
-        #reset-btn {
-            padding: 15px 40px; font-size: 1.5em; font-weight: bold; color: #fff;
-            background: linear-gradient(45deg, #2ecc71, #28b485); border: none; border-radius: 50px;
-            cursor: pointer; transition: transform 0.2s ease-out; display: none;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-        #reset-btn:hover { transform: scale(1.05); }
-
+        
         /* --- OUTROS --- */
         @keyframes confete-fall { 0% { transform: translateY(0) rotateZ(0); opacity: 1; } 100% { transform: translateY(100vh) rotateZ(720deg); opacity: 0; } }
         .confete { position: fixed; top: -20px; width: 10px; height: 10px; pointer-events: none; z-index: 2000; animation: confete-fall 4s linear forwards; }
@@ -742,8 +735,8 @@
         
         <div id="auth-container" class="hidden">
             <div class="welcome-text">
-                <p class="main-welcome">Bem-vindo à Vip Cards!</p>
-                <p class="sub-welcome">Seu site do grupo VipMogi!</p>
+                <p class="main-welcome">Bem-vindo à Vip Cards</p>
+                <p class="sub-welcome">seu site do grupo VipMogi</p>
             </div>
             <button id="auth-button">Entrar ou Cadastrar</button>
         </div>
@@ -760,7 +753,6 @@
                 <h1>Vip Cards</h1>
                 <div id="plays-counter" class="hidden"></div>
                 <div id="cartas-container" class="cartas-container"></div>
-                <button id="reset-btn">Jogar Novamente</button>
                 <div class="ganhadores-container">
                     <h2>Ganhadores de Hoje</h2>
                     <ul id="lista-ganhadores"></ul>
@@ -854,7 +846,7 @@
                 </span>
                 <span>|</span>
                 <span class="creditos-item">
-                    ⚙️ Versão 4.5 (Melhorias no layout)
+                   ⚙️ Versão 4.5 (Melhorias no layout)
                 </span>
             </div>
         </footer>
@@ -933,14 +925,14 @@
         import { getFirestore, collection, getDocs, query, orderBy, addDoc, serverTimestamp, limit, doc, setDoc, getDoc, runTransaction, where, updateDoc, increment, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
        // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyAWVJ2oOrJcn7dUrCppHCWSa1CHp3dTXbI",
-  authDomain: "vipcartas.firebaseapp.com",
-  projectId: "vipcartas",
-  storageBucket: "vipcartas.firebasestorage.app",
-  messagingSenderId: "606058445130",
-  appId: "1:606058445130:web:d96ced2d47a88b8b9be9b3"
-};
+        const firebaseConfig = {
+          apiKey: "AIzaSyAWVJ2oOrJcn7dUrCppHCWSa1CHp3dTXbI",
+          authDomain: "vipcartas.firebaseapp.com",
+          projectId: "vipcartas",
+          storageBucket: "vipcartas.firebasestorage.app",
+          messagingSenderId: "606058445130",
+          appId: "1:606058445130:web:d96ced2d47a88b8b9be9b3"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -967,12 +959,11 @@ const firebaseConfig = {
         const resetErrorMsg = document.getElementById("reset-error-message");
         const resetSuccessMsg = document.getElementById("reset-success-message");
         const cartasContainer = document.getElementById("cartas-container");
-        const btnReset = document.getElementById("reset-btn");
         const prizePopup = document.getElementById("prize-popup");
         const noPlaysPopup = document.getElementById("no-plays-popup");
         const closeNoPlaysPopup = document.getElementById("close-no-plays-popup");
         const audioPlayer = document.getElementById("audio-player");
-        const defaultSoundUrl = 'som-premio.mp3'; // Som padrão
+        const defaultSoundUrl = 'som-premio.mp3';
         const listaGanhadores = document.getElementById("lista-ganhadores");
         const showMoreContainer = document.getElementById("show-more-container");
         const showMoreBtn = document.getElementById("show-more-btn");
@@ -1009,7 +1000,6 @@ const firebaseConfig = {
                 const now = new Date();
                 const tomorrow = new Date();
 
-                // Define o alvo como meia-noite do dia seguinte
                 tomorrow.setDate(now.getDate() + 1);
                 tomorrow.setHours(0, 0, 0, 0);
 
@@ -1040,7 +1030,6 @@ const firebaseConfig = {
             }
             gameContainer.querySelector('h1').style.visibility = 'hidden';
             gameContainer.querySelector('.ganhadores-container').style.visibility = 'hidden';
-            btnReset.style.display = 'none';
         };
 
         // Lógica de Autenticação e Estado
@@ -1168,11 +1157,22 @@ const firebaseConfig = {
                 cartasContainer.appendChild(carta);
             });
             revelando = false;
-            btnReset.style.display = "none";
+        };
+
+        const resetGameOrShowNoPlays = () => {
+            if (!currentUser) return;
+            if (userPlaysData.made < userPlaysData.max) {
+                criarCartas();
+            } else {
+                showPopup(noPlaysPopup);
+                startPlaysCountdown();
+            }
         };
         
+        // FUNÇÃO CORRIGIDA: `revelarCarta` com lógica mais robusta
         const revelarCarta = async (cartaClicada, premioSorteado) => {
             if (revelando || cartaClicada.classList.contains("virada") || !currentUser) return;
+
             if (userPlaysData.made >= userPlaysData.max) {
                 showPopup(noPlaysPopup);
                 startPlaysCountdown();
@@ -1182,12 +1182,10 @@ const firebaseConfig = {
             revelando = true;
             cartaClicada.classList.add("virada");
             
-            // ESCOLHE O SOM E TOCA
-            const soundUrl = premioSorteado.soundUrl; // Pega a URL do som do prêmio
-            audioPlayer.src = soundUrl && soundUrl.trim() !== '' ? soundUrl : defaultSoundUrl; // Usa o som do prêmio ou o padrão
+            const soundUrl = premioSorteado.soundUrl;
+            audioPlayer.src = soundUrl && soundUrl.trim() !== '' ? soundUrl : defaultSoundUrl;
             audioPlayer.play().catch(err => {
                 console.error("Erro ao tocar o som: ", err);
-                alert("Não foi possível carregar o som para este prêmio.");
             });
 
             const userRef = doc(db, "users", currentUser.uid);
@@ -1196,35 +1194,33 @@ const firebaseConfig = {
                 await updateDoc(userRef, { playsMadeToday: increment(1) });
             } catch (error) {
                 alert("Erro ao registrar sua jogada.");
-                revelando = false;
+                revelando = false; // Permite tentar de novo se o DB falhar
                 cartaClicada.classList.remove("virada");
                 return;
             }
 
+            // Vira as outras cartas em paralelo
             setTimeout(() => {
                 document.querySelectorAll(".carta:not(.virada)").forEach(c => c.classList.add("virada"));
-                btnReset.style.display = "block";
-            }, 1000);
+            }, 1200);
 
+            // Analisa o prêmio e decide o que fazer
             const prizeName = premioSorteado.nome.toLowerCase().trim();
             const roundsPrizeMatch = prizeName.match(/(\d+)\s*x?\s*rodadas/i);
-            let isStandardWin = true;
 
-            // Lógica para prêmios especiais
             if (prizeName.includes('tente novamente')) {
-                isStandardWin = false;
                 await updateDoc(userRef, { playsMadeToday: increment(-1) });
+                setTimeout(resetGameOrShowNoPlays, 2500); // Agenda o reinício
             } else if (roundsPrizeMatch) {
                 const roundsToAdd = parseInt(roundsPrizeMatch[1], 10);
                 if (!isNaN(roundsToAdd) && roundsToAdd > 0) {
                     await updateDoc(userRef, { maxPlaysPerDay: increment(roundsToAdd) });
                 }
+                setTimeout(resetGameOrShowNoPlays, 2500); // Agenda o reinício
             } else if (prizeName.includes('perdeu')) {
-                isStandardWin = false;
-            }
-            
-            // Lógica para prêmios normais que geram pop-up e registro de ganhador
-            if (isStandardWin) {
+                setTimeout(resetGameOrShowNoPlays, 2500); // Agenda o reinício
+            } else {
+                // É um prêmio padrão, então mostra o pop-up
                 const userName = userNameSpan.textContent.replace('Olá, ', '');
                 const timestamp = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                 const mensagemWhats = `🎉 Olá! Ganhei um prêmio no Vip Cards! \n\n👤 Jogador: ${userName}\n🎁 Prêmio: ${premioSorteado.nome}\n🗓️ Data: ${timestamp}`;
@@ -1244,7 +1240,12 @@ const firebaseConfig = {
                         </div>
                     </div>`;
                 showPopup(prizePopup);
-                prizePopup.querySelector("#close-prize-popup").addEventListener("click", () => hidePopup(prizePopup));
+                
+                prizePopup.querySelector("#close-prize-popup").addEventListener("click", () => {
+                    hidePopup(prizePopup);
+                    resetGameOrShowNoPlays();
+                });
+
                 lancarConfetes();
                 await addDoc(collection(db, "ganhadores"), {
                     userId: currentUser.uid,
@@ -1373,16 +1374,16 @@ const firebaseConfig = {
                         return;
                     }
                     await updateDoc(userRef, { maxPlaysPerDay: newMaxPlays });
-                    carregarUsuarios(); // Atualiza a lista
+                    carregarUsuarios();
                 } else if (button.classList.contains("add-btn")) {
                     const amount = parseInt(button.dataset.amount, 10);
                     await updateDoc(userRef, { maxPlaysPerDay: increment(amount) });
-                    carregarUsuarios(); // Atualiza a lista
+                    carregarUsuarios();
                 } else if (button.classList.contains("delete-btn")) {
                     const userName = button.closest('tr').cells[0].textContent.trim().split('\n')[0];
                     if (confirm(`Tem certeza que deseja excluir o usuário "${userName}"?\n\n(Atenção: Isso remove os dados do usuário do app, mas não a conta de login. A exclusão da conta deve ser feita no painel do Firebase.)`)) {
                         await deleteDoc(userRef);
-                        carregarUsuarios(); // Atualiza a lista após a exclusão
+                        carregarUsuarios();
                     }
                 }
             } catch (error) {
@@ -1539,15 +1540,6 @@ const firebaseConfig = {
             backToLoginLink.addEventListener("click", () => toggleForms(loginForm, registerForm, forgotPasswordForm));
             backToMainPageLink.addEventListener("click", () => signOut(auth));
             logoutButton.addEventListener("click", () => signOut(auth));
-            
-            btnReset.addEventListener("click", () => {
-                if (userPlaysData.made < userPlaysData.max) {
-                    criarCartas();
-                } else {
-                    showPopup(noPlaysPopup);
-                    startPlaysCountdown();
-                }
-            });
 
             closeNoPlaysPopup.addEventListener("click", () => {
                 hidePopup(noPlaysPopup);
