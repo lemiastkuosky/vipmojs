@@ -64,7 +64,7 @@
 
     .output {
       font-size: 1.2rem;
-      margin-top: 20px;
+      margin-top: 10px; /* Reduzido para dar espaço ao aviso */
       color: #333;
       white-space: pre-wrap;
       text-align: left;
@@ -81,6 +81,27 @@
     body.dark-mode .output {
       color: #ddd;
       background-color: rgba(0, 0, 0, 0.2);
+    }
+    
+    /* NOVO: Estilo para o aviso de duplicidade fixo */
+    .warning-fixed {
+        display: none; /* Escondido por padrão */
+        max-width: 500px;
+        margin: 15px auto 5px auto; /* Espaçamento */
+        padding: 12px;
+        border-radius: 8px;
+        background-color: #fffbe6; /* Amarelo claro */
+        border: 1px solid #ffe58f; /* Borda amarela */
+        color: #8a6d3b; /* Texto amarelo escuro */
+        font-size: 0.9rem;
+        text-align: left;
+        line-height: 1.4;
+    }
+
+    body.dark-mode .warning-fixed {
+        background-color: #4d442a;
+        border-color: #8b794a;
+        color: #f0e6c6;
     }
 
     .error {
@@ -1003,6 +1024,7 @@
 
     <section aria-live="polite">
         <h2 class="sr-only">Resultado da Conversão</h2>
+        <div id="duplicateWarningMessage" class="warning-fixed"></div>
         <div class="output" id="emojiOutput"></div>
         <div id="copyButtons" style="display: none;">
             <button onclick="copyOnlyEmojisToClipboard()" class="load-button">📋 Copiar Texto</button>
@@ -1084,7 +1106,7 @@
 
 
   <footer>
-    <div>📌 Versão 8.3 (Aviso de Duplicidade)</div>
+    <div>📌 Versão 8.7 (Aviso Clarificado)</div>
     <div>👨‍💻 Criado por: Le Miastkuosky</div>
   </footer>
 
@@ -1196,7 +1218,6 @@
     let convertTimeout; // Para debounce
     const DEBOUNCE_DELAY = 300; // ms
     let showCheckEmoji = false; 
-    let hasShownDuplicateWarning = false; // NOVO: Flag para o aviso de duplicatas
 
     // --- Inicialização ---
     document.addEventListener('DOMContentLoaded', () => {
@@ -1298,7 +1319,7 @@
     // --- Fim das Funções de Ponte para MIT App Inventor ---
 
     async function _initAppOriginalLogic() {
-        console.log("Inicializando Vip Emojs v8.2...");
+        console.log("Inicializando Vip Emojs v8.7...");
         setupEventListeners();
         populateQuantidadeSelect();
         await loadPersistedData();
@@ -1403,10 +1424,8 @@
             });
         }
 
-        // MODIFICADO: Adicionado o reset da flag do aviso aqui
         inputElement.addEventListener('input', () => {
             clearTimeout(convertTimeout);
-            hasShownDuplicateWarning = false; // NOVO: Reseta a flag ao digitar
             convertTimeout = setTimeout(convertToEmojisRealTime, DEBOUNCE_DELAY);
         });
 
@@ -2372,7 +2391,6 @@
         }
     }
 
-    // MODIFICADO: Adicionada lógica de aviso de duplicatas
     function showMilharesCentenasDezenas() {
         const selectedName = document.getElementById('nomePessoaSelect').value;
         const nome = selectedName || ''; 
@@ -2382,6 +2400,11 @@
 
         const numbers = parseNumbers(); 
         const outputElement = document.getElementById('emojiOutput');
+        const warningElement = document.getElementById('duplicateWarningMessage');
+
+        // Reseta o aviso a cada execução
+        warningElement.style.display = 'none';
+        warningElement.innerHTML = '';
         
         if (numbers.length === 0) {
             if (document.getElementById('errorMessage').textContent) {
@@ -2444,35 +2467,58 @@
 
         const selectedOption = document.querySelector('input[name="viewOption"]:checked')?.value || 'both';
 
-        // --- INÍCIO DA NOVA LÓGICA DE AVISO ---
-        if (!hasShownDuplicateWarning && numbers.length > 1) {
-            let potentialDuplicatesFound = false;
-            let message = '';
+        // --- INÍCIO DA LÓGICA DE AVISO DE DUPLICIDADE CONTEXTUAL COM CONTAGEM ---
+        if (numbers.length > 1) {
+            const findCounts = (arr) => {
+                const counts = {};
+                for (const item of arr) {
+                    counts[item] = (counts[item] || 0) + 1;
+                }
+                return counts;
+            };
+
+            const duplicateMessages = [];
+
+            const formatDuplicateMessage = (counts, categoryName) => {
+                const messages = Object.entries(counts)
+                    .filter(([num, count]) => count > 1)
+                    .map(([num, count]) => `${num} (${count}x)`);
+
+                if (messages.length > 0) {
+                    return `${categoryName}: ${messages.join(', ')}`;
+                }
+                return null;
+            };
+
+            if (selectedOption === 'both' || selectedOption === 'milhar') {
+                const rawMilhares = numbers.filter(n => n.length === 4);
+                const countsMilhares = findCounts(rawMilhares);
+                const msg = formatDuplicateMessage(countsMilhares, 'Milhares');
+                if (msg) duplicateMessages.push(msg);
+            }
             
-            // Verifica duplicatas de centena
-            if (selectedOption === 'centena') {
-                const allCentenasRaw = numbers.map(getCentenaPart).filter(Boolean);
-                if (allCentenasRaw.length > centenas.length) { // `centenas` é o array já sem duplicatas
-                    potentialDuplicatesFound = true;
-                    message = 'Aviso: Centenas repetidas foram agrupadas e exibidas apenas uma vez.';
-                }
+            if (selectedOption === 'both' || selectedOption === 'centena') {
+                const rawCentenas = numbers.map(getCentenaPart).filter(Boolean);
+                const countsCentenas = findCounts(rawCentenas);
+                const msg = formatDuplicateMessage(countsCentenas, 'Centenas');
+                if (msg) duplicateMessages.push(msg);
+            }
+            
+            if (selectedOption === 'both' || selectedOption === 'dezena') {
+                const rawDezenas = numbers.map(getDezenaPart).filter(Boolean);
+                const countsDezenas = findCounts(rawDezenas);
+                const msg = formatDuplicateMessage(countsDezenas, 'Dezenas');
+                if (msg) duplicateMessages.push(msg);
             }
 
-            // Verifica duplicatas de dezena
-            if (selectedOption === 'dezena') {
-                const allDezenasRaw = numbers.map(getDezenaPart).filter(Boolean);
-                if (allDezenasRaw.length > dezenas.length) { // `dezenas` é o array já sem duplicatas
-                    potentialDuplicatesFound = true;
-                    message = 'Aviso: Dezenas repetidas foram agrupadas e exibidas apenas uma vez.';
-                }
-            }
-
-            if (potentialDuplicatesFound) {
-                showToast(message, 'info', 4000); // Exibe o aviso por 4 segundos
-                hasShownDuplicateWarning = true; // Marca que o aviso já foi exibido para esta entrada
+            if (duplicateMessages.length > 0) {
+                let finalMessage = "<strong>Aviso:</strong> Números repetidos (agrupados): " + duplicateMessages.join('; ');
+                finalMessage += "<br><small>Lembre-se: A lista de resultados abaixo exibe cada número apenas uma vez.</small>";
+                warningElement.innerHTML = finalMessage;
+                warningElement.style.display = 'block';
             }
         }
-        // --- FIM DA NOVA LÓGICA DE AVISO ---
+        // --- FIM DA LÓGICA DE AVISO ---
 
 
         const formatWithName = (arr) => {
@@ -2648,6 +2694,11 @@
         
         document.getElementById('emojiOutput').textContent = 'Aguardando números...';
         document.getElementById('copyButtons').style.display = 'none';
+        
+        // Limpa o aviso fixo também
+        const warningElement = document.getElementById('duplicateWarningMessage');
+        warningElement.style.display = 'none';
+        warningElement.innerHTML = '';
     }
     
     // --- Utilitários --- 
