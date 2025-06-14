@@ -1084,7 +1084,7 @@
 
 
   <footer>
-    <div>📌 Versão 8.2 (Botão copiar tabela)</div>
+    <div>📌 Versão 8.3 (Aviso de Duplicidade)</div>
     <div>👨‍💻 Criado por: Le Miastkuosky</div>
   </footer>
 
@@ -1195,50 +1195,40 @@
     let deferredPrompt; // Para PWA
     let convertTimeout; // Para debounce
     const DEBOUNCE_DELAY = 300; // ms
-    // showCheckEmoji será false por padrão, então o botão iniciará como "FOI PAGO?"
     let showCheckEmoji = false; 
+    let hasShownDuplicateWarning = false; // NOVO: Flag para o aviso de duplicatas
 
     // --- Inicialização ---
-    // A função initApp será sobrescrita, então o listener será para a nova versão
     document.addEventListener('DOMContentLoaded', () => {
-        // Chamar a função original (ou a que será sobrescrita)
         initApp(); 
     });
     
 
     // --- Início das Funções de Ponte para MIT App Inventor ---
 
-    // Flag para indicar se estamos rodando dentro do MIT App Inventor WebView
     let isInAppInventor = false;
-    let _appInventorCallbacks = {}; // Para gerenciar callbacks de getData assíncrono
+    let _appInventorCallbacks = {}; 
 
-    // Verificar se estamos no ambiente MIT App Inventor
     function checkAppInventorEnvironment() {
         if (window.AppInventor && window.AppInventor.WebViewer) {
             isInAppInventor = true;
             console.log("Executando dentro do MIT App Inventor WebView.");
-            // Opcional: Notificar o App Inventor que o HTML está pronto para receber dados
             window.AppInventor.WebViewer.postMessage(JSON.stringify({ action: "webviewReady" }));
         } else {
             console.log("Não executando dentro do MIT App Inventor WebView. Usando armazenamento padrão do navegador.");
         }
     }
 
-    // Guardar as funções originais antes de sobrescrevê-las
     const originalSaveData = saveData;
     const originalGetData = getData;
     const originalRemoveData = removeData;
 
-    // Nova função saveData que prioriza o App Inventor
     async function saveDataAppInventor(key, value) {
         if (isInAppInventor) {
             console.log(`[AppInventor Bridge] Enviando dados para salvar: ${key}`);
             try {
-                // Enviar o objeto de dados como JSON string
-                // É crucial que 'value' seja serializável em JSON
                 const message = { action: "save", key: key, value: value };
                 window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
-                // Não há um retorno imediato do App Inventor, assumimos sucesso otimista
                 return true; 
             } catch (e) {
                 console.error("[AppInventor Bridge] Erro ao enviar dados para App Inventor:", e);
@@ -1246,45 +1236,40 @@
                 return false;
             }
         } else {
-            // Se não estiver no App Inventor, usa a função original (IndexedDB/LocalStorage/Cookies)
             return await originalSaveData(key, value);
         }
     }
 
-    // Nova função getData que prioriza o App Inventor
     async function getDataAppInventor(key) {
         if (isInAppInventor) {
             return new Promise((resolve) => {
-                // Criar um ID de requisição único para cada chamada
                 const requestId = Date.now() + Math.random().toString(36).substring(2, 9);
-                _appInventorCallbacks[requestId] = resolve; // Armazenar a função de resolução
+                _appInventorCallbacks[requestId] = resolve;
                 
                 console.log(`[AppInventor Bridge] Solicitando dados para: ${key} (reqId: ${requestId})`);
                 const message = { action: "load", key: key, requestId: requestId };
                 window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
                 
-                // Opcional: Timeout para evitar que a promessa fique pendurada
                 setTimeout(() => {
                     if (_appInventorCallbacks[requestId]) {
                         console.warn(`[AppInventor Bridge] Timeout para getData de ${key} (reqId: ${requestId}).`);
-                        _appInventorCallbacks[requestId](null); // Resolve com null em caso de timeout
+                        _appInventorCallbacks[requestId](null);
                         delete _appInventorCallbacks[requestId];
                     }
-                }, 5000); // 5 segundos de timeout
+                }, 5000);
             });
         } else {
             return await originalGetData(key);
         }
     }
 
-    // Nova função removeData que prioriza o App Inventor
     async function removeDataAppInventor(key) {
         if (isInAppInventor) {
             console.log(`[AppInventor Bridge] Enviando requisição para remover dados: ${key}`);
             try {
                 const message = { action: "remove", key: key };
                 window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
-                return true; // Retorna true otimista
+                return true;
             } catch (e) {
                 console.error("[AppInventor Bridge] Erro ao enviar requisição de remoção para App Inventor:", e);
                 showToast("Erro ao remover dados do aplicativo.", "error");
@@ -1295,14 +1280,13 @@
         }
     }
 
-    // Função global que o App Inventor chamará para enviar dados de volta
     window.dataFromAppInventor = (data) => {
         if (data && data.action === "loaded" && data.requestId) {
             const resolve = _appInventorCallbacks[data.requestId];
             if (resolve) {
                 console.log(`[AppInventor Bridge] Resolvendo callback para reqId: ${data.requestId}, key: ${data.key}`);
                 resolve(data.value);
-                delete _appInventorCallbacks[data.requestId]; // Limpar o callback
+                delete _appInventorCallbacks[data.requestId];
             } else {
                 console.warn(`[AppInventor Bridge] Callback não encontrado para reqId: ${data.requestId}`);
             }
@@ -1313,44 +1297,32 @@
 
     // --- Fim das Funções de Ponte para MIT App Inventor ---
 
-    // A função initApp ORIGINAL. Ela será chamada DEPOIS de configurar as funções de ponte.
     async function _initAppOriginalLogic() {
-        console.log("Inicializando Vip Emojs v7.3 (Lógica Original)...");
-        // checkStorageAvailability(); // Esta função não é mais necessária com a ponte ativa
+        console.log("Inicializando Vip Emojs v8.2...");
         setupEventListeners();
         populateQuantidadeSelect();
-        await loadPersistedData(); // Garante que os dados sejam carregados APÓS a sobrescrita das funções
+        await loadPersistedData();
         setupPWA();
         hideSplashScreen();
         convertToEmojisRealTime();
     }
 
-
-    // Sobrescrita da função initApp globalmente para incluir a lógica de detecção do App Inventor
     initApp = async () => {
-        checkAppInventorEnvironment(); // Verifica o ambiente primeiro
+        checkAppInventorEnvironment();
 
-        // Sobrescreve as funções globais se estiver no App Inventor
         if (isInAppInventor) {
             window.saveData = saveDataAppInventor;
             window.getData = getDataAppInventor;
             window.removeData = removeDataAppInventor;
             console.log("Funções de armazenamento sobrescritas para App Inventor.");
-            // No modo App Inventor, initIndexedDB, localStorage, cookies não são usados para persistência principal
-            // Mas as funções saveData e getData originais ainda podem ser chamadas pelo fallback.
-            // Para garantir que o IndexedDB seja inicializado (para caso o fallback seja usado por algum motivo),
-            // podemos chamar initIndexedDB aqui se quisermos manter essa camada.
-            // await checkStorageAvailability(); // Chama initIndexedDB e verifica disponibilidade do navegador
         } else {
-            // Se não estiver no App Inventor, mantém as originais
             window.saveData = originalSaveData;
             window.getData = originalGetData;
             window.removeData = originalRemoveData;
             console.log("Usando funções de armazenamento padrão do navegador.");
-            await checkStorageAvailability(); // Inicia IndexedDB e verifica outras opções no navegador
+            await checkStorageAvailability();
         }
         
-        // Agora, chame a lógica original de inicialização
         await _initAppOriginalLogic();
     };
 
@@ -1377,34 +1349,26 @@
             splashScreen.style.opacity = '0';
             setTimeout(() => {
                 splashScreen.style.display = 'none';
-            }, 500); // Tempo da transição CSS
-        }, 1000); // Tempo mínimo de exibição do splash
+            }, 500);
+        }, 1000);
     }
 
     async function loadPersistedData() {
-        await loadThemePreference(); // Agora usa o window.getData() sobrescrito
-        showCheckEmoji = false; // Garante que o estado seja false ao carregar
+        await loadThemePreference();
+        showCheckEmoji = false;
         updateCheckEmojiButtonAppearance(); 
 
-        await carregarNomesSalvos(); // Agora usa o window.getData() sobrescrito
-        await carregarListasSalvas(); // Agora usa o window.getData() sobrescrito
+        await carregarNomesSalvos();
+        await carregarListasSalvas();
     }
 
-    // Carregar preferência de exibição do emoji de verificação
-    // Esta função foi modificada para sempre forçar o estado inicial de 'false'
-    // e apenas chamar a atualização visual.
     async function loadCheckEmojiPreference() {
-        // showCheckEmoji é definido como false por padrão globalmente
-        // e também é forçado a false em loadPersistedData().
-        // Não há necessidade de ler do armazenamento para esta funcionalidade.
         console.log("Forçando preferência de emoji para 'FOI PAGO?'.");
-        showCheckEmoji = false; // Garante que é false ao carregar
+        showCheckEmoji = false;
         
-        // Ajustar a aparência do botão logo após carregar a preferência
         updateCheckEmojiButtonAppearance();
     }
 
-    // Função para atualizar a aparência do botão "FOI PAGO?"
     function updateCheckEmojiButtonAppearance() {
         const checkEmojiToggle = document.getElementById('checkEmojiToggle');
         if (!checkEmojiToggle) return; 
@@ -1438,8 +1402,11 @@
                 showToast(showCheckEmoji ? 'PAGO ativado!' : 'PAGO desativado!', 'info');
             });
         }
+
+        // MODIFICADO: Adicionado o reset da flag do aviso aqui
         inputElement.addEventListener('input', () => {
             clearTimeout(convertTimeout);
+            hasShownDuplicateWarning = false; // NOVO: Reseta a flag ao digitar
             convertTimeout = setTimeout(convertToEmojisRealTime, DEBOUNCE_DELAY);
         });
 
@@ -1457,7 +1424,6 @@
              nomeSelectModal.addEventListener('change', () => { });
         }
         
-        // Salvamento antes de fechar / ir para background
         window.addEventListener('beforeunload', saveAllData);
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
@@ -1465,21 +1431,19 @@
             }
         });
 
-        // Fechar modais ao clicar fora
         window.addEventListener('click', (event) => {
             const previewModal = document.getElementById('previewModal');
             const saveListModal = document.getElementById('saveListModal');
             const nomeModal = document.getElementById('nomeModal');
             const dataManagementModal = document.getElementById('dataManagementModal');
-            const tabelaBichosModal = document.getElementById('tabelaBichosModal'); // NOVO
+            const tabelaBichosModal = document.getElementById('tabelaBichosModal');
             if (event.target === previewModal) closePreviewModal();
             if (event.target === saveListModal) closeSaveDialog();
             if (event.target === nomeModal) closeNomeModal();
             if (event.target === dataManagementModal) closeDataManagementModal();
-            if (event.target === tabelaBichosModal) closeTabelaBichosModal(); // NOVO
+            if (event.target === tabelaBichosModal) closeTabelaBichosModal();
         });
 
-        // Botões de rádio
         const radioButtons = document.querySelectorAll('input[name="viewOption"]');
         radioButtons.forEach(radio => {
             radio.addEventListener('change', showMilharesCentenasDezenas);
@@ -1490,8 +1454,8 @@
     }
     function saveAllData() {
         console.log("Salvando todos os dados...");
-        salvarNomes(); // Usará window.saveData()
-        salvarListasSalvas(); // Usará window.saveData()
+        salvarNomes();
+        salvarListasSalvas();
         window.saveData(STORAGE_KEYS.THEME, document.body.classList.contains('dark-mode') ? 'dark' : 'light');
     }
 
@@ -1500,9 +1464,7 @@
         document.body.style.display = 'none';
     }
 
-    // --- Sistema de Armazenamento Persistente Robusto (IndexedDB, localStorage e Cookies) ---
-    // Essas funções agora são 'originais' e serão chamadas se !isInAppInventor
-    
+    // --- Sistema de Armazenamento Persistente ---
     let db;
     const DB_NAME = 'vipEmojsDB';
     const DB_VERSION = 1;
@@ -1623,9 +1585,6 @@
             localStorageAvailable = false;
         }
         
-        // A variável global `storageMethod` não é mais usada para decidir
-        // qual `saveData` ou `getData` chamar, pois a lógica de `isInAppInventor`
-        // faz isso agora. Mantendo a mensagem para depuração.
         let detectedMethod = 'nenhum';
         if (indexedDBResult) {
             detectedMethod = 'indexedDB';
@@ -1739,7 +1698,6 @@
         });
     }
 
-    // Função principal para salvar dados em todas as camadas (agora 'originalSaveData')
     async function saveData(key, value) {
         const stringValue = JSON.stringify(value);
         let success = false;
@@ -1786,7 +1744,7 @@
                 saveIndicator.style.backgroundColor = "rgba(40,167,69,0.9)";
                 
                 setTimeout(async () => {
-                    const verifyData = await getData(key); // Chama o getData ORIGINAL aqui
+                    const verifyData = await getData(key);
                     if (!verifyData || JSON.stringify(verifyData) !== JSON.stringify(value)) {
                         console.warn(`Verificação posterior falhou para ${key}`);
                         showToast("Aviso: Verificação de dados falhou. Tente salvar novamente.", "warning");
@@ -1809,7 +1767,6 @@
         return success;
     }
 
-    // Função principal para obter dados de todas as camadas (agora 'originalGetData')
     async function getData(key) {
         let value = null;
         let stringValue = null;
@@ -1873,7 +1830,6 @@
         return null;
     }
 
-    // Função principal para remover dados de todas as camadas (agora 'originalRemoveData')
     async function removeData(key) {
         let success = false;
         
@@ -1905,7 +1861,7 @@
 
     // --- Gerenciar Tema --- 
     async function loadThemePreference() {
-        const savedTheme = await window.getData(STORAGE_KEYS.THEME); // Chama window.getData()
+        const savedTheme = await window.getData(STORAGE_KEYS.THEME);
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = savedTheme || (prefersDark ? 'dark' : 'light');
         setTheme(theme);
@@ -1914,7 +1870,7 @@
     function toggleTheme() {
         const newTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
         setTheme(newTheme);
-        window.saveData(STORAGE_KEYS.THEME, newTheme); // Chama window.saveData()
+        window.saveData(STORAGE_KEYS.THEME, newTheme);
     }
 
     function setTheme(theme) {
@@ -1934,7 +1890,7 @@
 
     // --- Gerenciar Nomes Salvos (com ordenação) ---
     async function carregarNomesSalvos() {
-        const savedNames = await window.getData(STORAGE_KEYS.NAMES); // Chama window.getData()
+        const savedNames = await window.getData(STORAGE_KEYS.NAMES);
         if (Array.isArray(savedNames)) {
             nomesSalvos = savedNames;
             nomesSalvos.sort((a, b) => a.localeCompare(b)); 
@@ -1947,7 +1903,7 @@
     }
 
     async function salvarNomes() {
-        return await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos); // Chama window.saveData()
+        return await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos);
     }
 
     async function addNome() {
@@ -1968,7 +1924,7 @@
         nomesSalvos.sort((a, b) => a.localeCompare(b)); 
         console.log("Nome adicionado. Lista ordenada:", nomesSalvos);
 
-        if (await salvarNomes()) { // Chama salvarNomes que usa window.saveData()
+        if (await salvarNomes()) {
             atualizarSelectNomes();
             input.value = ''; 
             setTimeout(() => {
@@ -2002,7 +1958,7 @@
         nomesSalvos.splice(index, 1);
         console.log("Nome removido. Lista atual:", nomesSalvos);
 
-        if (await salvarNomes()) { // Chama salvarNomes que usa window.saveData()
+        if (await salvarNomes()) {
             document.getElementById('nomePessoaInputModal').value = '';
             atualizarSelectNomes();
             convertToEmojisRealTime(); 
@@ -2067,7 +2023,7 @@
 
     // --- Gerenciar Listas Salvas ---
     async function carregarListasSalvas() {
-        const savedData = await window.getData(STORAGE_KEYS.LISTS); // Chama window.getData()
+        const savedData = await window.getData(STORAGE_KEYS.LISTS);
         if (Array.isArray(savedData)) {
             savedLists = savedData;
             console.log("Listas carregadas:", savedLists.length);
@@ -2077,7 +2033,7 @@
     }
 
     async function salvarListasSalvas() {
-        return await window.saveData(STORAGE_KEYS.LISTS, savedLists); // Chama window.saveData()
+        return await window.saveData(STORAGE_KEYS.LISTS, savedLists);
     }
 
     function showSaveDialog() {
@@ -2113,7 +2069,7 @@
 
         savedLists.unshift(listItem); 
 
-        if (await salvarListasSalvas()) { // Chama salvarListasSalvas que usa window.saveData()
+        if (await salvarListasSalvas()) {
             closeSaveDialog();
             showToast(`Lista "${listName}" salva com sucesso!`, 'success');
             showPreviewModal(); 
@@ -2177,7 +2133,7 @@
             headerDeleteButton.title = 'Excluir lista';
             headerDeleteButton.onclick = (e) => {
                 e.stopPropagation();
-                deleteSavedItem(item.id); // Esta função usará window.removeData()
+                deleteSavedItem(item.id);
             };
 
             headerActionsElement.appendChild(headerCopyButton);
@@ -2233,11 +2189,10 @@
         let copyAttempted = false;
         let copySuccessful = false;
 
-        // Tenta document.execCommand('copy') primeiro, pois pode ser mais confiável em alguns ambientes de webview
         try {
             const textArea = document.createElement('textarea');
             textArea.value = text;
-            textArea.style.position = 'fixed'; // Mantém fora da tela
+            textArea.style.position = 'fixed';
             textArea.style.opacity = '0';
             document.body.appendChild(textArea);
             textArea.select();
@@ -2251,11 +2206,9 @@
             }
         } catch (err) {
             console.error('Erro ao copiar via document.execCommand():', err);
-            copyAttempted = true; // Marca como tentado, mesmo que tenha falhado
-            // Continua para a Clipboard API se execCommand falhar com um erro
+            copyAttempted = true;
         }
 
-        // Se execCommand falhou ou não foi totalmente bem-sucedido, tenta a Clipboard API
         if (!copySuccessful && navigator.clipboard) {
             try {
                 await navigator.clipboard.writeText(text);
@@ -2263,7 +2216,7 @@
                 console.log('Texto copiado via Clipboard API.');
             } catch (err) {
                 console.error('Erro ao copiar com Clipboard API:', err);
-                copySuccessful = false; // Garante que seja falso em caso de erro
+                copySuccessful = false;
             }
             copyAttempted = true;
         }
@@ -2271,9 +2224,9 @@
         if (copySuccessful) {
             showToast('Texto copiado!', 'success');
             if (buttonElement) provideFeedback(buttonElement, '✅');
-        } else if (copyAttempted) { // Se uma tentativa foi feita mas falhou
+        } else if (copyAttempted) {
             showToast('Erro ao copiar.', 'error');
-        } else { // Nenhum mecanismo de cópia pôde ser tentado
+        } else {
             showToast('Nenhum mecanismo de cópia disponível no navegador.', 'error');
         }
     }
@@ -2300,36 +2253,28 @@
         const deletedItemName = savedLists[index].name;
         savedLists.splice(index, 1);
 
-        if (await salvarListasSalvas()) { // Chama salvarListasSalvas que usa window.saveData()
+        if (await salvarListasSalvas()) {
             showToast(`Lista "${deletedItemName}" excluída.`, 'info');
             if (document.getElementById('previewModal').classList.contains('active')) {
                 updateSavedItemsContainer();
             }
-        } else {
-            // Reverter exclusão se falhar (opcional)
         }
     }
 
-    // MODIFICADO: Função de cópia agora ignora nomes de bichos
     function copyOnlyEmojisToClipboard() {
         const outputElement = document.getElementById('emojiOutput');
         const contentElements = outputElement.querySelectorAll('.emoji-content');
         let textToCopy = '';
 
         contentElements.forEach(element => {
-            // Verifica se é a seção especial de bichos
             if (element.dataset.contentType === 'bichos') {
-                // Cria um clone temporário para não alterar a exibição
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = element.innerHTML;
                 
-                // Remove todos os spans com nomes de bichos do clone
                 tempDiv.querySelectorAll('.bicho-name').forEach(span => span.remove());
                 
-                // Pega o texto limpo do clone
                 textToCopy += tempDiv.innerText.trim() + '\n';
             } else {
-                // Comportamento original para as outras seções
                 textToCopy += element.innerText.trim() + '\n';
             }
         });
@@ -2347,51 +2292,42 @@
 
     function parseNumbers() {
         let inputText = document.getElementById('input').value;
-        inputText = inputText.toLowerCase(); // Converte para minúsculas para facilitar a comparação
+        inputText = inputText.toLowerCase();
 
-        // 1. Substituir "grupo XX" por sua dezena equivalente
-        const grupoRegex = /grupo\s*(\d{1,2})/g; // Captura "grupo" seguido por 1 ou 2 dígitos
+        const grupoRegex = /grupo\s*(\d{1,2})/g;
         inputText = inputText.replace(grupoRegex, (match, p1) => {
             let dezena = parseInt(p1, 10);
-            if (dezena >= 1 && dezena <= 25) { // Groups are 1 to 25
-                // Get the animal name from the group number
+            if (dezena >= 1 && dezena <= 25) {
                 const bichoName = getBichoNameByGrupo(dezena);
                 if (bichoName) {
-                    // Get the dezena corresponding to that animal
                     const dezenaBicho = bichoNameToDezena[bichoName.toLowerCase()];
-                    return dezenaBicho || p1.padStart(2, '0'); // Return the dezena or original formatted number
+                    return dezenaBicho || p1.padStart(2, '0');
                 }
             }
-            return p1.padStart(2, '0'); // If not a valid animal group, just keep the number formatted
+            return p1.padStart(2, '0');
         });
 
-        // 2. Substituir nomes de bichos por suas dezenas
-        // Ordena os nomes dos bichos por tamanho, do maior para o menor,
-        // para evitar que substrings sejam substituídas incorretamente (ex: "gato" antes de "lagarto").
         const sortedBichoNames = Object.keys(bichoNameToDezena).sort((a, b) => b.length - a.length);
 
         for (const bichoName of sortedBichoNames) {
             const dezena = bichoNameToDezena[bichoName];
-            // Usa uma regex para substituir o nome do bicho, garantindo que não pegue partes de outras palavras
-            // \b garante que é uma palavra completa (word boundary)
             const regex = new RegExp(`\\b${bichoName}\\b`, 'g'); 
             inputText = inputText.replace(regex, dezena);
         }
 
-        // 3. Substituir emojis de números por dígitos
         for (const [emoji, digit] of Object.entries(emojiToNumber)) {
             inputText = inputText.replaceAll(emoji, digit);
         }
 
-        const parts = inputText.split(/[^\d]+/).filter(Boolean); // Divide por qualquer coisa que não seja dígito
+        const parts = inputText.split(/[^\d]+/).filter(Boolean);
         const numbers = [];
         const invalid = [];
 
         for (const p of parts) {
-            if (/^\d{1,4}$/.test(p)) { // Aceita de 1 a 4 dígitos
+            if (/^\d{1,4}$/.test(p)) {
                 numbers.push(p);
             } else if (p.length > 0) { 
-                if (/\d/.test(p)) { // Se contém algum dígito but is too long or has mixed characters
+                if (/\d/.test(p)) {
                    invalid.push(p); 
                 }
             }
@@ -2429,9 +2365,6 @@
         showMilharesCentenasDezenas(); 
 
         const outputContent = outputElement.textContent.trim();
-        // A lógica para exibir/ocultar o botão 'copyButtons' deve ser baseada
-        // na presença de conteúdo *copiável*, não apenas no textContent do output.
-        // Se `numbers.length > 0` e não há erro, presumimos que há conteúdo copível.
         if (numbers.length > 0 && document.getElementById('errorMessage').textContent === '') {
             copyButtonsDiv.style.display = 'block'; 
         } else {
@@ -2439,13 +2372,13 @@
         }
     }
 
-    // MODIFICADO: Função principal de exibição agora lida com a nova lógica dos bichos
+    // MODIFICADO: Adicionada lógica de aviso de duplicatas
     function showMilharesCentenasDezenas() {
         const selectedName = document.getElementById('nomePessoaSelect').value;
         const nome = selectedName || ''; 
         const quantidadeSelect = document.getElementById('quantidadeSelect');
         const quantidade = quantidadeSelect ? quantidadeSelect.value : '';
-        const paidEmoji = showCheckEmoji ? ' ✅' : ''; // Adicionado emoji de pago
+        const paidEmoji = showCheckEmoji ? ' ✅' : '';
 
         const numbers = parseNumbers(); 
         const outputElement = document.getElementById('emojiOutput');
@@ -2456,14 +2389,13 @@
             } else {
                 outputElement.textContent = 'Aguardando números...';
             }
-            document.getElementById('copyButtons').style.display = 'none'; // Hide copy button if no numbers
+            document.getElementById('copyButtons').style.display = 'none';
             return;
         }
 
         const milhares = [], centenas = [], dezenas = [];
         const milharesSet = new Set(), centenasSet = new Set(), dezenasSet = new Set();
         
-        // MODIFICADO: `bichos` agora é um array de objetos
         const bichos = []; 
         const bichoSet = new Set();
 
@@ -2497,11 +2429,9 @@
                 }
             }
             
-            // MODIFICADO: Processamento para a seção de Bichos para criar objetos
             const bichoName = getBichoNameByDezena(parseInt(n.slice(-2)));
             if (bichoName) {
                 const emoji = bichoNameToEmoji[bichoName.toLowerCase().replace('á', 'a')];
-                // Usa o nome do bicho para garantir unicidade
                 if (emoji && !bichoSet.has(bichoName)) {
                     bichos.push({
                         emoji: `${emoji}${emoji}`,
@@ -2512,9 +2442,42 @@
             }
         });
 
+        const selectedOption = document.querySelector('input[name="viewOption"]:checked')?.value || 'both';
+
+        // --- INÍCIO DA NOVA LÓGICA DE AVISO ---
+        if (!hasShownDuplicateWarning && numbers.length > 1) {
+            let potentialDuplicatesFound = false;
+            let message = '';
+            
+            // Verifica duplicatas de centena
+            if (selectedOption === 'centena') {
+                const allCentenasRaw = numbers.map(getCentenaPart).filter(Boolean);
+                if (allCentenasRaw.length > centenas.length) { // `centenas` é o array já sem duplicatas
+                    potentialDuplicatesFound = true;
+                    message = 'Aviso: Centenas repetidas foram agrupadas e exibidas apenas uma vez.';
+                }
+            }
+
+            // Verifica duplicatas de dezena
+            if (selectedOption === 'dezena') {
+                const allDezenasRaw = numbers.map(getDezenaPart).filter(Boolean);
+                if (allDezenasRaw.length > dezenas.length) { // `dezenas` é o array já sem duplicatas
+                    potentialDuplicatesFound = true;
+                    message = 'Aviso: Dezenas repetidas foram agrupadas e exibidas apenas uma vez.';
+                }
+            }
+
+            if (potentialDuplicatesFound) {
+                showToast(message, 'info', 4000); // Exibe o aviso por 4 segundos
+                hasShownDuplicateWarning = true; // Marca que o aviso já foi exibido para esta entrada
+            }
+        }
+        // --- FIM DA NOVA LÓGICA DE AVISO ---
+
+
         const formatWithName = (arr) => {
             let nomeFormatado = nome;
-            if (nomeFormatado) { // Adiciona o emoji de pago apenas se um nome estiver selecionado
+            if (nomeFormatado) {
                 nomeFormatado = `${nomeFormatado}${paidEmoji}`;
             }
             
@@ -2522,7 +2485,6 @@
             
             if (!nomeCompleto || arr.length === 0) return arr;
             
-            // Aplicar nome apenas no primeiro e no último elemento
             if (arr.length === 1) {
                 return [`${arr[0]} ${nomeCompleto}`];
             } else {
@@ -2532,8 +2494,6 @@
                 return newArr;
             }
         };
-
-        const selectedOption = document.querySelector('input[name="viewOption"]:checked')?.value || 'both';
         
         let outputHTML = '';
         const buildSection = (title, data, type) => {
@@ -2595,9 +2555,7 @@
             const ternos = gerarTernos();
             outputHTML += buildSection('📊 Ternos', ternos, 'ternos');
         }
-        // MODIFICADO: Lógica para construir a exibição dos bichos
         if (selectedOption === 'bicho') {
-            // Mapeia os objetos de bicho para strings de exibição com nome
             const bichosForDisplay = bichos.map(b => 
                 `${b.emoji}<span class="bicho-name">${b.name}</span>`
             );
@@ -2607,15 +2565,13 @@
 
         if (outputHTML.trim() === '') {
             outputElement.textContent = 'Nenhum resultado para a opção selecionada.';
-            document.getElementById('copyButtons').style.display = 'none'; // Hide copy button if no output
+            document.getElementById('copyButtons').style.display = 'none';
         } else {
             outputElement.innerHTML = outputHTML;
-            document.getElementById('copyButtons').style.display = 'block'; // Show copy button if there's output
+            document.getElementById('copyButtons').style.display = 'block';
         }
     }
     
-    // Função para obter o nome do bicho com base na dezena
-    // Esta função é usada para a exibição dos bichos, não para a conversão de entrada.
     function getBichoNameByDezena(dezena) {
         if (dezena >= 1 && dezena <= 4) return 'Avestruz';
         if (dezena >= 5 && dezena <= 8) return 'Águia';
@@ -2641,11 +2597,10 @@
         if (dezena >= 85 && dezena <= 88) return 'Tigre';
         if (dezena >= 89 && dezena <= 92) return 'Urso';
         if (dezena >= 93 && dezena <= 96) return 'Veado';
-        if (dezena >= 97 || dezena === 0) return 'Vaca'; // Dezenas 97, 98, 99, 00
+        if (dezena >= 97 || dezena === 0) return 'Vaca';
         return null;
     }
 
-    // New: Function to get bicho name by group number
     function getBichoNameByGrupo(grupo) {
         if (grupo === 1) return 'Avestruz';
         if (grupo === 2) return 'Águia';
@@ -2761,12 +2716,10 @@
 
     // --- Funções de Importar/Exportar Dados em TXT ---
 
-    // NOVO: Abre o modal de gerenciamento de dados
     function showDataManagementModal() {
         document.getElementById('dataManagementModal').classList.add('active');
     }
 
-    // NOVO: Fecha o modal de gerenciamento de dados
     function closeDataManagementModal() {
         document.getElementById('dataManagementModal').classList.remove('active');
     }
@@ -2779,23 +2732,23 @@
                 nomesSalvos: await window.getData(STORAGE_KEYS.NAMES),
                 savedLists: await window.getData(STORAGE_KEYS.LISTS),
                 themePreference: await window.getData(STORAGE_KEYS.THEME),
-                showCheckEmoji: showCheckEmoji // showCheckEmoji é uma variável global
+                showCheckEmoji: showCheckEmoji
             };
 
-            const dataString = JSON.stringify(allData, null, 2); // Formata com 2 espaços para legibilidade
+            const dataString = JSON.stringify(allData, null, 2);
             const blob = new Blob([dataString], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             
             const a = document.createElement('a');
             a.href = url;
             a.download = `VipEmojs_backup_${new Date().toISOString().slice(0,10)}.txt`;
-            document.body.appendChild(a); // Necessário para Firefox
+            document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
             showToast('Dados exportados com sucesso!', 'success');
-            closeDataManagementModal(); // Fecha o modal após a exportação
+            closeDataManagementModal();
         } catch (error) {
             console.error('Erro ao exportar dados:', error);
             showToast('Erro ao exportar dados.', 'error');
@@ -2810,7 +2763,6 @@
         }
 
         if (!confirm('Importar dados sobrescreverá TODOS os seus dados salvos atuais (nomes, listas e tema). Deseja continuar?')) {
-            // Limpa o input file para que o mesmo arquivo possa ser selecionado novamente
             event.target.value = ''; 
             return;
         }
@@ -2822,24 +2774,21 @@
             try {
                 const importedData = JSON.parse(e.target.result);
                 
-                // Salvar nomes
                 if (importedData.nomesSalvos && Array.isArray(importedData.nomesSalvos)) {
                     await window.saveData(STORAGE_KEYS.NAMES, importedData.nomesSalvos);
-                    nomesSalvos = importedData.nomesSalvos; // Atualiza a variável global
+                    nomesSalvos = importedData.nomesSalvos;
                     atualizarSelectNomes();
                 } else {
                     console.warn("Dados importados não contêm nomesSalvos válidos.");
                 }
 
-                // Salvar listas
                 if (importedData.savedLists && Array.isArray(importedData.savedLists)) {
                     await window.saveData(STORAGE_KEYS.LISTS, importedData.savedLists);
-                    savedLists = importedData.savedLists; // Atualiza a variável global
+                    savedLists = importedData.savedLists;
                 } else {
                     console.warn("Dados importados não contêm savedLists válidos.");
                 }
 
-                // Salvar preferência de tema
                 if (importedData.themePreference) {
                     await window.saveData(STORAGE_KEYS.THEME, importedData.themePreference);
                     setTheme(importedData.themePreference);
@@ -2847,7 +2796,6 @@
                     console.warn("Dados importados não contêm themePreference válido.");
                 }
 
-                // Atualizar estado de showCheckEmoji
                 if (typeof importedData.showCheckEmoji === 'boolean') {
                     showCheckEmoji = importedData.showCheckEmoji;
                     updateCheckEmojiButtonAppearance();
@@ -2856,9 +2804,8 @@
                 }
                 
                 showToast('Dados importados com sucesso! Recarregando a página...', 'success', 4000);
-                closeDataManagementModal(); // Fecha o modal após a importação
+                closeDataManagementModal();
 
-                // Força um pequeno atraso para o toast ser visível e depois recarrega
                 setTimeout(() => {
                     window.location.reload(); 
                 }, 3500);
@@ -2867,7 +2814,6 @@
                 console.error('Erro ao parsear arquivo TXT:', parseError);
                 showToast('Erro: Arquivo TXT inválido ou corrompido.', 'error');
             } finally {
-                // Limpa o input file para que o mesmo arquivo possa ser selecionado novamente
                 event.target.value = ''; 
             }
         };
@@ -2889,17 +2835,13 @@
         document.getElementById('tabelaBichosModal').classList.remove('active');
     }
 
-    /**
-     * MODIFICADO: Preenche o modal da tabela de bichos e adiciona um botão para copiar seu conteúdo.
-     */
     function populateTabelaBichos() {
         const container = document.getElementById('tabelaBichosContainer');
-        container.innerHTML = ''; // Limpa o conteúdo anterior
+        container.innerHTML = '';
 
         const table = document.createElement('table');
         table.className = 'bichos-table';
 
-        // Cabeçalho da tabela
         const thead = document.createElement('thead');
         thead.innerHTML = `
             <tr>
@@ -2910,7 +2852,6 @@
         `;
         table.appendChild(thead);
 
-        // Corpo da tabela
         const tbody = document.createElement('tbody');
         tabelaDeGrupos.forEach(item => {
             const row = document.createElement('tr');
@@ -2925,21 +2866,16 @@
 
         container.appendChild(table);
 
-        // Adiciona o botão de copiar abaixo da tabela
         const copyButton = document.createElement('button');
         copyButton.innerHTML = '📋 Copiar Tabela';
-        copyButton.className = 'load-button'; // Reutiliza um estilo de botão existente
+        copyButton.className = 'load-button';
         copyButton.style.width = '100%';
         copyButton.style.marginTop = '15px';
-        copyButton.onclick = () => copyTabelaBichos(copyButton); // Passa o botão para feedback visual
+        copyButton.onclick = () => copyTabelaBichos(copyButton);
 
         container.appendChild(copyButton);
     }
 
-    /**
-     * NOVO: Gera uma versão em texto da tabela de bichos e a copia para a área de transferência.
-     * @param {HTMLElement} buttonElement - O elemento do botão que foi clicado, para fornecer feedback.
-     */
     function copyTabelaBichos(buttonElement) {
         let tableText = '📊 Tabela de Grupos do Bicho 📊\n\n';
 
