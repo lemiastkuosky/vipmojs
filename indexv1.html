@@ -1,0 +1,4618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#f0f8ff">
+  <meta name="description" content="Conversor de números para emojis">
+  <title>Vip Emojs</title>
+  <link rel="manifest" href="manifest.json">
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+  <style>
+    /* Reset e Estilos Base */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      text-align: center;
+      padding: 16px;
+      background-color: #f0f8ff;
+      color: #000;
+      transition: background-color 0.3s, color 0.3s;
+      margin: 0;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body.dark-mode {
+      background-color: #121212;
+      color: #f0f0f0;
+    }
+
+    h1 { font-size: 1.5rem; margin-bottom: 20px; }
+
+    label { display: block; font-weight: bold; margin-bottom: 5px; text-align: left; max-width: 500px; margin-left: auto; margin-right: auto; }
+
+    textarea {
+      padding: 10px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 500px;
+      height: 140px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      color: #000;
+      -webkit-appearance: none;
+      appearance: none;
+      resize: vertical;
+    }
+
+    body.dark-mode textarea {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
+    }
+    
+    /* --- Estilos para Ações Abaixo do Input --- */
+    .below-textarea-actions {
+      display: flex;
+      gap: 8px;
+      max-width: 500px;
+      margin: 5px auto 0 auto; /* Espaçamento acima do grupo */
+      align-items: stretch; /* Garante que os botões tenham a mesma altura */
+    }
+
+    .below-textarea-actions .toggle-btn {
+      flex: 1; /* Ocupa o espaço restante */
+      width: auto; /* Remove a largura fixa de 100% */
+      margin-top: 0; /* Remove a margem que agora está no container */
+    }
+
+    .below-textarea-actions .shortcut-btn {
+      flex-shrink: 0; /* Impede que o botão encolha */
+    }
+
+    .output {
+      font-size: 1.2rem;
+      margin-top: 10px;
+      color: #333;
+      white-space: pre-wrap;
+      text-align: left;
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 500px;
+      word-wrap: break-word;
+      padding: 10px;
+      border-radius: 8px;
+      background-color: rgba(255, 255, 255, 0.1);
+      min-height: 50px;
+    }
+
+    body.dark-mode .output {
+      color: #ddd;
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+    
+    .warning-fixed {
+        display: none;
+        max-width: 500px;
+        margin: 15px auto 5px auto;
+        padding: 12px;
+        border-radius: 8px;
+        background-color: #fffbe6;
+        border: 1px solid #ffe58f;
+        color: #8a6d3b;
+        font-size: 0.9rem;
+        text-align: left;
+        line-height: 1.4;
+    }
+
+    body.dark-mode .warning-fixed {
+        background-color: #4d442a;
+        border-color: #8b794a;
+        color: #f0e6c6;
+    }
+
+    .error {
+      color: #E74C3C; /* Cor alterada para um vermelho mais suave */
+      font-size: 1.05rem; /* Fonte levemente aumentada */
+      font-weight: bold;
+      margin-top: 10px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+      min-height: 1.2em;
+    }
+
+    body.dark-mode .error {
+      color: #ffc400;
+    }
+
+    .button-group {
+      margin-top: 15px; /* Ajustado para valor positivo para corrigir sobreposição */
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      flex: 1 1 20px;
+      margin: 0;
+      padding: 12px 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      transition: background-color 0.3s, transform 0.1s;
+      min-width: 120px;
+      max-width: 500px;
+      -webkit-appearance: none;
+      appearance: none;
+      touch-action: manipulation;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    button:active {
+      background-color: #0056b3;
+      transform: scale(0.98);
+    }
+
+    body.dark-mode button {
+      background-color: #333;
+      color: #fff;
+    }
+
+    body.dark-mode button:active {
+      background-color: #555;
+    }
+
+    .radio-buttons {
+      margin: 20px 0;
+      text-align: left;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    body.dark-mode .radio-buttons {
+        border-color: #444;
+    }
+
+    .radio-buttons legend {
+        font-weight: bold;
+        padding: 0 5px;
+        margin-left: 10px;
+    }
+
+    .radio-buttons label {
+      margin-right: 15px;
+      display: block;
+      margin-bottom: 5px;
+      padding: 8px;
+      font-weight: normal;
+      cursor: pointer;
+    }
+
+    .radio-buttons input[type="radio"] {
+      margin-right: 8px;
+      transform: scale(1.2);
+      accent-color: #007bff;
+    }
+
+    body.dark-mode .radio-buttons input[type="radio"] {
+        accent-color: #4da3ff;
+    }
+
+    body.dark-mode .radio-buttons label {
+      color: #f0f0f0;
+    }
+
+    #themeToggleContainer {
+      display: flex;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      background-color: inherit;
+      z-index: 10;
+      padding: 10px;
+    }
+
+    .count-red {
+      color: #dc3545;
+      font-weight: normal;
+      font-size: 0.9rem;
+    }
+
+    body.dark-mode .count-red {
+        color: #f8d7da;
+    }
+
+    #mainNomeContainer {
+      max-width: 500px;
+      margin: 20px auto 15px auto;
+      text-align: left;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    body.dark-mode #mainNomeContainer {
+        border-color: #444;
+    }
+
+    #mainNomeContainer .nome-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 180px;
+    }
+    
+    #mainNomeContainer select,
+    #mainNomeContainer button {
+        width: 100%;
+        max-width: none;
+        min-width: unset;
+        box-sizing: border-box;
+    }
+    
+    #mainNomeContainer select {
+        padding: 12px 8px;
+        font-size: 1rem;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        color: #000;
+        margin-bottom: 10px;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    
+    body.dark-mode #mainNomeContainer select {
+        background-color: #1e1e1e;
+        color: #fff;
+        border: 1px solid #444;
+    }
+    
+    .action-buttons-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        text-align: center;
+    }
+    
+    .action-buttons-container button {
+        flex: 1; 
+        padding: 10px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+
+    #checkEmojiToggle {
+      background-color: #dc3545; 
+      color: white;
+    }
+
+    body.dark-mode #checkEmojiToggle {
+      background-color: #ff0000; 
+      color: #ffffff;
+    }
+
+    #checkEmojiToggle.paid {
+      background-color: #28a745; 
+      color: white;
+    }
+
+    body.dark-mode #checkEmojiToggle.paid {
+      background-color: #218838; 
+    }
+
+    #pinClientToggle {
+        background-color: #6c757d; 
+        color: white;
+    }
+    
+    body.dark-mode #pinClientToggle {
+        background-color: #5a6268;
+    }
+    
+    #pinClientToggle.pinned {
+        background-color: #007bff; 
+        color: white;
+    }
+    
+    body.dark-mode #pinClientToggle.pinned {
+        background-color: #0056b3;
+    }
+
+    #bichosSelectorContainer input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    #bichosSelectorContainer {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 5px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+        max-height: 220px;
+        overflow-y: auto;
+        box-shadow: inset 0 1px 4px rgba(0,0,0,0.06); 
+    }
+    
+    body.dark-mode #bichosSelectorContainer {
+        background-color: rgba(0,0,0,0.2);
+        box-shadow: inset 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    #bichosSelectorContainer label {
+      position: relative; 
+      display: flex;
+      align-items: center;
+      justify-content: flex-start; 
+      gap: 8px;
+      padding: 10px 10px 10px 20px; 
+      border-radius: 6px;
+      background-color: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #333;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    body.dark-mode #bichosSelectorContainer label {
+      background-color: #2c2c2c;
+      color: #f0f0f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    #bichosSelectorContainer label::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 15%;
+      bottom: 15%;
+      width: 5px;
+      background-color: #e0e0e0;
+      border-radius: 0 4px 4px 0;
+      transition: all 0.2s ease-in-out;
+    }
+    
+    body.dark-mode #bichosSelectorContainer label::before {
+      background-color: #555;
+    }
+
+    #bichosSelectorContainer label::after {
+      content: '✔';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #007bff;
+      transform: translateY(-50%) scale(0); 
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); 
+    }
+    
+    body.dark-mode #bichosSelectorContainer label::after {
+      color: #4da3ff;
+    }
+
+    #bichosSelectorContainer label:has(input:checked) {
+      background-color: #e0f0ff;
+    }
+    
+    body.dark-mode #bichosSelectorContainer label:has(input:checked) {
+      background-color: #2a4c7e;
+    }
+
+    #bichosSelectorContainer label:has(input:checked)::before {
+      background-color: #007bff;
+      top: 0;
+      bottom: 0;
+      border-radius: 4px 0 0 4px; 
+    }
+    
+    body.dark-mode #bichosSelectorContainer label:has(input:checked)::before {
+      background-color: #4da3ff;
+    }
+
+    #bichosSelectorContainer label:has(input:checked)::after {
+      transform: translateY(-50%) scale(1);
+    }
+
+    #bichosSelectorContainer label:active {
+      transform: scale(0.97);
+      transition-duration: 0.05s;
+    }
+
+    body.dark-mode #bichosSelectorContainer::-webkit-scrollbar { width: 8px; }
+    body.dark-mode #bichosSelectorContainer::-webkit-scrollbar-track { background: #2c2c2c; border-radius: 4px; }
+    body.dark-mode #bichosSelectorContainer::-webkit-scrollbar-thumb { background-color: #555; border-radius: 4px; border: 2px solid #2c2c2c; }
+    body.dark-mode #bichosSelectorContainer::-webkit-scrollbar-thumb:hover { background-color: #777; }
+    body.dark-mode #bichosSelectorContainer { scrollbar-width: thin; scrollbar-color: #555 #2c2c2c; }
+
+    #nomeContainerInModal { 
+      max-width: none; 
+      margin: 0; 
+      text-align: left;
+      border: none; 
+      padding: 0; 
+    }
+
+    #nomeContainerInModal label {
+      max-width: none;
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    #nomeContainerInModal .nomes-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 15px;
+      width: 100%;
+    }
+    
+    #nomeContainerInModal .nome-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
+    }
+
+    #nomeContainerInModal input,
+    #nomeContainerInModal select,
+    #nomeContainerInModal button {
+      padding: 12px 8px;
+      font-size: 1rem;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      color: #000;
+      margin-bottom: 10px;
+      -webkit-appearance: none;
+      appearance: none;
+      box-sizing: border-box;
+    }
+
+    body.dark-mode #nomeContainerInModal input,
+    body.dark-mode #nomeContainerInModal select {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    #nomeContainerInModal button {
+      background-color: #dc3545;
+      color: white;
+      transition: background-color 0.3s, transform 0.1s;
+    }
+
+    #nomeContainerInModal button.save-name-btn {
+        background-color: #28a745; 
+    }
+
+    #nomeContainerInModal button.save-name-btn:active {
+        background-color: #218838;
+    }
+
+    #nomeContainerInModal button:active {
+      background-color: #a71d2a;
+      transform: scale(0.98);
+    }
+
+    .section-title {
+      display: block;
+      font-weight: bold;
+      margin-top: 10px;
+      margin-bottom: 5px;
+    }
+
+    .emoji-content {
+      display: block;
+      padding-left: 10px; 
+    }
+    
+    .bicho-name {
+        display: inline-block;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background-color: #e9ecef;
+        color: #495057;
+        vertical-align: middle;
+    }
+
+    body.dark-mode .bicho-name {
+        background-color: #3a3f44;
+        color: #e9ecef;
+    }
+
+    .save-button {
+      background-color: #28a745;
+    }
+
+    .save-button:active {
+      background-color: #218838;
+    }
+
+    .load-button {
+      background-color: #6c757d; 
+    }
+
+    .load-button:active {
+      background-color: #5a6268;
+    }
+    
+    .manage-data-button {
+        background-color: #6f42c1; 
+    }
+    
+    body.dark-mode .manage-data-button {
+        background-color: #5a00f5; 
+    }
+    
+    .manage-data-button:active {
+        background-color: #5a359b;
+    }
+
+    .view-button {
+      background-color: #17a2b8;
+    }
+
+    .view-button:active {
+      background-color: #138496;
+    }
+
+    .manage-names-button {
+        background-color: #ffc107; 
+        color: #343a40; 
+    }
+
+    .manage-names-button:active {
+        background-color: #e0a800;
+        color: #212529;
+    }
+    
+    body.dark-mode .manage-names-button {
+        background-color: #926d01;
+        color: #f8f9fa;
+    }
+    
+    body.dark-mode .manage-names-button:active {
+        background-color: #7a5a00;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6); 
+      z-index: 1000;
+      overflow-y: auto;
+      align-items: center; 
+      justify-content: center; 
+      padding: 20px;
+    }
+
+    .modal.active {
+        display: flex; 
+    }
+
+    .modal-content {
+      background-color: #f0f8ff;
+      padding: 25px; 
+      border-radius: 10px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh; 
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .modal-search-input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px; 
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+
+    body.dark-mode .modal-search-input {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    body.dark-mode .modal-content {
+      background-color: #2a2a2a; 
+      color: #fff;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 18px; 
+      font-weight: bold;
+      cursor: pointer;
+      color: #aaa;
+      line-height: 1;
+      background: none; 
+      border: none; 
+      padding: 0; 
+      width: auto; 
+      height: auto; 
+      display: inline; 
+      border-radius: 0; 
+    }
+
+    body.dark-mode .close-modal {
+        color: #ccc;
+    }
+
+    .close-modal:hover {
+        color: #333;
+    }
+    
+    body.dark-mode .close-modal:hover {
+        color: #fff;
+    }
+
+    .saved-item {
+      background-color: rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    body.dark-mode .saved-item {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .saved-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding-bottom: 5px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .saved-item-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .saved-item-title {
+      font-size: 0.9rem;
+      font-weight: bold;
+      flex: 1;
+      margin-right: 10px; 
+    }
+
+    .saved-item-toggle {
+      font-size: 1.2rem;
+      transition: transform 0.3s;
+      margin-left: 10px;
+    }
+
+    .saved-item-content {
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .saved-item-content {
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .saved-item-text {
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px; 
+      margin-left: 10px;
+    }
+
+    .header-btn {
+      padding: 5px 8px; 
+      font-size: 0.9rem; 
+      border-radius: 5px; 
+      min-width: auto;
+      max-width: none;
+      background-color: rgba(0,0,0,0.1);
+      color: #333;
+      border: none;
+    }
+
+    body.dark-mode .header-btn {
+        background-color: rgba(255,255,255,0.2);
+        color: #eee;
+    }
+
+    .copy-btn:active {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .delete-btn:active {
+      background-color: #dc3545;
+      color: white;
+    }
+    
+    .edit-btn:active {
+        background-color: #ffc107;
+        color: #343a40;
+    }
+
+    .modal-title {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.3rem;
+    }
+
+    .no-saved-items {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      color: #6c757d;
+    }
+
+    body.dark-mode .no-saved-items {
+        color: #aaa;
+    }
+
+    .save-dialog-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: left;
+    }
+
+    .save-dialog-input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px; 
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+
+    body.dark-mode .save-dialog-input {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .save-dialog-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end; 
+    }
+
+    .save-dialog-buttons button {
+      flex: 0 1 auto; 
+      min-width: 100px;
+    }
+
+    .data-management-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .data-management-buttons button {
+        width: 100%; 
+        max-width: none;
+    }
+    
+    .data-management-buttons .import-btn {
+        background-color: #dc3545; 
+    }
+    
+    .data-management-buttons .import-btn:active {
+        background-color: #a71d2a;
+    }
+    
+    .data-management-buttons .export-btn {
+        background-color: #28a745; 
+    }
+    
+    .data-management-buttons .export-btn:active {
+        background-color: #218838;
+    }
+    
+    .data-management-explanation {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    
+    body.dark-mode .data-management-explanation {
+        color: #aaa;
+    }
+    
+    .bichos-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    
+    .bichos-table th, .bichos-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    
+    .bichos-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    
+    .bichos-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    
+    .bichos-table td:first-child {
+      font-weight: bold;
+      text-align: center;
+    }
+
+    body.dark-mode .bichos-table {
+      color: #e0e0e0;
+    }
+    
+    body.dark-mode .bichos-table th, 
+    body.dark-mode .bichos-table td {
+      border-color: #444;
+    }
+    
+    body.dark-mode .bichos-table th {
+      background-color: #333;
+    }
+    
+    body.dark-mode .bichos-table tr:nth-child(even) {
+      background-color: #2c2c2c;
+    }
+    
+    body.dark-mode #randomResultContainer {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+     body.dark-mode #randomResultWrapper {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 5px;
+    }
+    
+    .result-group {
+        margin-bottom: 15px;
+    }
+    
+    .result-group h4 {
+        margin: 0 0 5px 0;
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        text-align: left;
+    }
+    
+    body.dark-mode .result-group h4 {
+        color: #aaa;
+    }
+    
+    .result-numbers {
+        padding: 10px;
+        border-radius: 5px;
+        background-color: rgba(0,0,0,0.05);
+        min-height: 30px;
+        word-spacing: 8px; 
+        font-size: 1.1rem;
+        letter-spacing: 2px;
+    }
+    
+    body.dark-mode .result-numbers {
+        background-color: rgba(255,255,255,0.1);
+    }
+
+    #toast-container {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .toast {
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px; 
+        font-size: 0.9rem;
+        opacity: 0;
+        transition: opacity 0.5s, transform 0.5s;
+        transform: translateY(20px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        max-width: 80vw;
+        text-align: center;
+    }
+
+    .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .toast.success {
+        background-color: rgba(40, 167, 69, 0.9); 
+    }
+
+    .toast.error {
+        background-color: rgba(220, 53, 69, 0.9); 
+    }
+
+    .toast.info {
+        background-color: rgba(23, 162, 184, 0.9); 
+    }
+    
+    .edit-container {
+        margin-top: 10px;
+    }
+
+    .edit-container textarea {
+        width: 100%;
+        min-height: 120px;
+        margin-bottom: 10px;
+        font-size: 0.95rem;
+        padding: 8px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        resize: vertical;
+    }
+
+    body.dark-mode .edit-container textarea {
+        background-color: #1e1e1e;
+        color: #fff;
+        border-color: #444;
+    }
+
+    .edit-buttons {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .edit-buttons button {
+        flex: 1 1 auto;
+        padding: 8px;
+        font-size: 1.2rem;
+        min-width: 44px;
+        max-width: 44px;
+        height: 44px;
+        line-height: 1;
+    }
+    
+    .edit-buttons .button-group-utility,
+    .edit-buttons .button-group-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    /* --- Estilos para o Modal de Conferência --- */
+    #checkResultOutput {
+        margin-top: 20px;
+        text-align: left;
+        padding: 10px;
+        border-radius: 8px;
+        background-color: rgba(0,0,0,0.05);
+        min-height: 50px;
+    }
+    body.dark-mode #checkResultOutput {
+        background-color: rgba(255,255,255,0.1);
+    }
+    #checkResultOutput h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        border-bottom: 1px solid rgba(128,128,128,0.3);
+        padding-bottom: 8px;
+    }
+    #checkResultOutput p {
+        margin-bottom: 8px;
+    }
+    #checkResultOutput .winner-number {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: bold;
+        margin-right: 5px;
+    }
+    body.dark-mode #checkResultOutput .winner-number {
+        background-color: #28a745;
+        color: #ffffff;
+    }
+
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.3rem; }
+      .output { font-size: 1rem; }
+
+      .button-group {
+        flex-wrap: wrap; 
+        justify-content: space-around; 
+        gap: 8px; 
+      }
+
+      .button-group button {
+        flex: 1 1 45%; 
+        max-width: 100%; 
+        font-size: 0.9rem;
+        padding: 10px 8px;
+        white-space: normal; 
+      }
+      
+      .radio-buttons { flex-wrap: wrap; justify-content: center; }
+      .radio-buttons label { margin: 5px; padding: 5px; }
+      textarea { font-size: 1rem; height: 125px; }
+
+      #nomeContainerInModal .nomes-container {
+        flex-direction: column; 
+        gap: 10px;
+      }
+      
+      #nomeContainerInModal .nome-column {
+        flex: 0 0 100%; 
+        width: 100%;
+        min-width: unset;
+      }
+
+      #nomeContainerInModal button, #mainNomeContainer button {
+        padding: 12px 5px;
+        font-size: 0.9rem;
+      }
+
+      .modal-content {
+        width: 95%;
+        padding: 20px;
+        max-height: 85vh;
+      }
+
+      .header-actions {
+        gap: 5px;
+      }
+
+      .header-btn {
+        padding: 4px 7px;
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+        .edit-buttons {
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 400px) {
+      .button-group {
+        flex-direction: column; 
+        align-items: center;
+      }
+
+      .button-group button {
+        width: 90% !important; 
+        max-width: 300px !important;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        white-space: normal;
+      }
+      
+      .nome-column {
+        flex: 0 0 100%;
+        width: 100%;
+      }
+
+    }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #ccc;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    body.dark-mode footer {
+        border-top-color: #444;
+        color: #aaa;
+    }
+
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease-out;
+    }
+
+    body.dark-mode #splash-screen {
+      background-color: #121212;
+    }
+
+    #splash-logo {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    #install-button {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 56px;
+      height: 56px;
+      font-size: 24px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 100;
+      cursor: pointer;
+    }
+
+    body.dark-mode #install-button {
+      background-color: #333;
+    }
+
+    .sr-only { 
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+    }
+     
+    .generator-options {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 15px;
+        text-align: left;
+    }
+    
+    body.dark-mode .generator-options {
+        border-color: #444;
+    }
+    
+    #randomGeneratorModal fieldset.generator-options {
+        display: flex;
+        justify-content: center; 
+        align-items: center;
+        flex-wrap: wrap; 
+        gap: 20px; 
+        padding: 10px 5px; 
+    }
+
+    #randomGeneratorModal fieldset.generator-options label {
+      margin-bottom: 0; 
+    }
+    
+    .generator-options legend {
+        font-weight: bold;
+        padding: 0 5px;
+        margin-left: 10px;
+    }
+    
+    .generator-options label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: normal;
+        cursor: pointer;
+    }
+    
+    .generator-options input[type="radio"] {
+        margin-right: 8px;
+        transform: scale(1.1);
+    }
+    
+    #bichosSelectorContainer {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 12px; 
+        margin-top: 5px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+        gap: 10px; 
+        max-height: 200px;
+        overflow-y: auto;
+        justify-content: center;
+    }
+
+    #bichosSelectorContainer label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px; 
+        font-weight: normal;
+        font-size: 1rem; 
+        cursor: pointer;
+        padding: 8px; 
+        border-radius: 6px; 
+        border: 1px solid transparent; 
+        transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    #bichosSelectorContainer label:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-color: #ddd;
+    }
+    
+    body.dark-mode #bichosSelectorContainer label:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: #555;
+    }
+
+    #bichosSelectorContainer label:has(input:checked) {
+        background-color: #e0f0ff; 
+        border-color: #007bff;   
+        font-weight: 500;        
+    }
+    
+    body.dark-mode #bichosSelectorContainer label:has(input:checked) {
+      background-color: #4da3ff; 
+      border-color: #4da3ff;   
+      color: #f8f9fa;           
+    }  
+    
+    #bichosSelectorContainerWrapper {
+        margin-top: 15px;
+    }
+
+    body.dark-mode #bichosSelectorContainer {
+        border-color: #444;
+    }
+  
+    #bichosSelectorContainer input[type="checkbox"] {
+        transform: scale(1.2);
+    }
+    
+    @media (max-width: 768px) {
+        #bichosSelectorContainer {
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
+            padding: 10px;
+        }
+
+        #bichosSelectorContainer label {
+            padding: 6px 10px;     
+            font-size: 0.9rem;       
+            border-radius: 5px;     
+        }
+        
+        #randomResultContainer {
+            font-size: 1rem;   
+            letter-spacing: 2px; 
+        }
+    }
+
+    /* --- VERSÃO FINAL: Estilos completos para Choices.js em Modo Escuro e Claro --- */
+
+    /* MODO CLARO - Cor do item com mouse por cima */
+    .choices__list--dropdown .choices__item--selectable.is-highlighted,
+    .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+        background-color: #007bff;
+        color: white;
+    }
+
+    /* A caixa principal visível (onde o nome aparece) */
+    body.dark-mode .choices__inner {
+        background-color: #1e1e1e;
+        color: #fff;
+        border: 1px solid #444;
+    }
+
+    /* A lista que abre (dropdown) */
+    body.dark-mode .choices__list--dropdown {
+        background-color: #2a2a2a;
+        border: 1px solid #444;
+    }
+    
+    /* O campo de busca INTERNO que fica branco */
+    body.dark-mode .choices__input {
+        background-color: #2a2a2a !important;
+        color: #f0f0f0 !important;
+    }
+
+    /* Placeholder ("Digite para buscar...") */
+    body.dark-mode .choices__placeholder {
+        color: #aaa;
+    }
+
+    /* Cada item/opção na lista dropdown (cor base do texto) */
+    body.dark-mode .choices__item--choice {
+        color: #f0f0f0;
+    }
+
+    /* Item que JÁ FOI SELECIONADO, visto ao reabrir a lista */
+    body.dark-mode .choices__item--choice.is-selected {
+        background-color: #3a3f44;
+        color: #ccc;
+    }
+
+    /* MODO ESCURO - Item da lista quando o mouse está por cima (highlight) */
+    body.dark-mode .choices__list--dropdown .choices__item--selectable.is-highlighted,
+    body.dark-mode .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+        background-color: #146afe;
+        color: white;
+    }
+
+    /* Botão para remover um item selecionado */
+    body.dark-mode .choices__button {
+        filter: invert(1);
+    }
+    
+    /* --- Estilos para os Controles de Template --- */
+    .template-controls {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+
+    body.dark-mode .template-controls {
+      border-color: #444;
+    }
+
+    .template-controls .button-group button {
+      font-size: 0.9rem;
+      padding: 8px;
+    }
+
+    /* --- Estilos para os Botões de Atalho Rápido --- */
+    #quickShortcutsContainer {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      justify-content: center;
+      gap: 6px;
+      display: none; /* Começa escondido */
+    }
+
+    .shortcut-btn {
+      flex: 0 1 auto;
+      min-width: 50px;
+      padding: 8px 12px;
+      font-size: 1.2rem;
+      background-color: #e9ecef;
+      color: #495057;
+    }
+
+    .shortcut-btn:active {
+      background-color: #c8d3e0;
+      transform: scale(0.95);
+    }
+
+    body.dark-mode .shortcut-btn {
+      background-color: #3a3f44;
+      color: #e9ecef;
+    }
+
+    body.dark-mode .shortcut-btn:active {
+      background-color: #5a6268;
+    }
+    
+    /* --- Estilos para o Botão de Mostrar/Esconder Atalhos --- */
+  .toggle-btn {
+  display: block; /* Garante que o botão seja tratado como um bloco */
+  background-color: #6c757d;
+  color: white;
+  width: 100%;
+  max-width: 500px;
+  margin-top: 10px;
+  margin-left: auto;
+  margin-right: auto;
+  font-weight: bold;
+}
+
+    body.dark-mode .toggle-btn {
+      background-color: #333
+    }
+
+main {
+  
+  align-items: center;
+}
+  </style>
+</head>
+<body>
+
+  <button id="install-button" title="Instalar Aplicativo">📱</button>
+
+  <div id="toast-container"></div>
+
+  <header>
+    <div id="themeToggleContainer">
+      <button id="themeToggle" onclick="toggleTheme()" aria-label="Alternar tema claro/escuro">🌙 Modo Escuro</button>
+    </div>
+    <h1>🔢 Conversor de Emojs Vip 🔢</h1>
+  </header>
+
+  <main>
+    <section aria-labelledby="input-label">
+        <label id="input-label" for="input">Entrada de números:</label>
+        <textarea id="input" placeholder="Digite ou cole os números, grupos ou bichos aqui. Use espaço ou enter para separar." aria-describedby="errorMessage"></textarea>
+        
+        <div id="errorMessage" class="error" role="alert" aria-live="polite"></div>
+
+        <div class="below-textarea-actions">
+          <button id="toggleShortcutsBtn" class="toggle-btn" onclick="toggleQuickShortcuts()" aria-expanded="false">
+            🔽 Mostrar Bichos 
+          </button>
+          <button id="pasteButton" class="shortcut-btn" title="Colar da Área de Transferência">📋</button>
+        </div>
+        
+        <div id="quickShortcutsContainer" class="button-group">
+        </div>
+    </section>
+
+    <div class="button-group main-buttons">
+      <button onclick="clearAll()">🛑 Limpar Lista</button>
+      <button onclick="showSaveDialog()" class="save-button">💾 Salvar Lista</button>
+      <button onclick="showPreviewModal()" class="view-button">👁️ Listas Salvas</button>
+      <button onclick="showCheckWinnerModal()" class="save-button">🏆 Conferir Ganhadores</button>
+      <button onclick="showNomeModal()" class="manage-names-button">👥 Editar Nomes</button>
+      <button onclick="showTabelaBichosModal()" class="view-button">📊 Mostrar Tabela</button>
+      <button onclick="showDataManagementModal()" class="manage-data-button">⚙️ Gerenciar Dados</button>
+      
+      <button onclick="countNumbers()" class="view-button">#️⃣ Contar Números</button>
+      
+      <button onclick="showRandomGeneratorModal()" class="view-button" style="flex-basis: 100%; margin-top: 8px;">🎲 Gerador de Números Aleatórios</button>
+      <input type="file" id="importFileInput" accept=".txt" style="display: none;" onchange="importDataFromTxt(event)">
+      
+    </div>
+
+    <section id="mainNomeContainer" aria-labelledby="main-nome-section-title">
+      <h2 id="main-nome-section-title" class="sr-only">Seleção de Nome e Status de Pagamento</h2>
+      <div class="nomes-container" style="display: block; flex-wrap: nowrap; margin-bottom: 0;"> 
+        <div class="nome-column" style="margin-bottom: 10px;"> 
+          <label for="quantidadeSelect"><strong>Quantidade:</strong></label>
+          <select id="quantidadeSelect" aria-label="Quantidade de 1x a 200x">
+          </select>
+          <label for="nomePessoaSelect"><strong>Selecionar nome salvo:</strong></label>
+          <select id="nomePessoaSelect" onchange="onNomeSelectChange()" aria-label="Lista de nomes salvos">
+            <option value="">-- Nenhum selecionado --</option>
+          </select>
+        </div>
+        
+       <div class="action-buttons-container">
+    <button id="checkEmojiToggle">✅ FOI PAGO? SE SIM CLIQUE AQUI</button>
+    <button id="pinClientToggle">📌 FIXAR NOME?</button>
+</div>
+
+      </div>
+    </section>
+
+<fieldset class="radio-buttons" id="radioButtons">
+        <legend>Opções de Visualização:</legend>
+        <label><input type="radio" name="viewOption" value="both" checked onchange="showMilharesCentenasDezenas()"> Mostrar Todos</label>
+        <label><input type="radio" name="viewOption" value="milhar" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Milhares</label>
+        <label><input type="radio" name="viewOption" value="centena" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Centenas</label>
+        <label><input type="radio" name="viewOption" value="dezena" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Dezenas</label>
+        <label><input type="radio" name="viewOption" value="terno" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Ternos</label>
+        <label><input type="radio" name="viewOption" value="duque" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Duques</label>
+        <label><input type="radio" name="viewOption" value="bicho" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Bichos</label>
+    </fieldset>
+
+    <div class="radio-buttons" style="margin-top: -10px; padding-top: 5px; padding-bottom: 5px;">
+        <label for="allowRepetitionToggle" style="margin-bottom: 0;">
+            <input type="checkbox" id="allowRepetitionToggle" onchange="toggleRepetition(this)" style="transform: scale(1.1); margin-right: 5px;">
+            <strong>Permitir repetição de números</strong>
+        </label>
+    </div>
+    <section aria-live="polite">
+        <h2 class="sr-only">Resultado da Conversão</h2>
+        <div id="duplicateWarningMessage" class="warning-fixed"></div>
+        <div class="output" id="emojiOutput"></div>
+        <div id="copyButtons" class="button-group" style="display: none; margin-top: 10px;">
+            <button onclick="copyOnlyEmojisToClipboard()" class="load-button">📋 Copiar Texto</button>
+            <button onclick="showPreviewModal()" class="view-button">👁️ Abrir Listas</button>
+        </div>
+    </section>
+
+  </main>
+
+  <div id="previewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closePreviewModal()" aria-label="Fechar">×</span>
+      <h3 id="previewModalTitle" class="modal-title">📋 Listas Salvas</h3>
+      <input type="search" id="searchListasInput" class="modal-search-input" placeholder="🔎 Buscar pelo nome da lista..." oninput="filterListasSalvas()">
+      <div id="savedItemsContainer"></div>
+    </div>
+</div>
+
+  <div id="saveListModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="saveListModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeSaveDialog()" aria-label="Fechar">×</span>
+      <div class="save-dialog">
+        <label id="saveListModalTitle" for="listNameInput" class="save-dialog-title">Nome para esta lista:</label>
+        <input type="text" id="listNameInput" class="save-dialog-input" placeholder="Digite um nome para identificar esta lista">
+        <div class="save-dialog-buttons">
+          <button onclick="closeSaveDialog()" class="load-button">Cancelar</button>
+          <button onclick="saveNumbersListWithName()" class="save-button">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="nomeModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="nomeModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeNomeModal()" aria-label="Fechar">×</span>
+      <h3 id="nomeModalTitle" class="modal-title">👥 Gerenciar Nomes</h3>
+      <section id="nomeContainerInModal" aria-labelledby="nome-modal-section-title">
+        <h2 id="nome-modal-section-title" class="sr-only">Adicionar ou Excluir Nomes</h2>
+        <div class="nomes-container">
+          <div class="nome-column">
+            <label for="nomePessoaInputModal"><strong>Nome da Pessoa:</strong></label>
+            <input type="text" id="nomePessoaInputModal" placeholder="Digite o nome aqui" aria-label="Digite o nome da pessoa para adicionar" />
+            <button onclick="addNome()" class="save-name-btn">💾 Salvar Nome</button>
+          </div>
+
+          <div class="nome-column">
+            <label for="nomePessoaSelectModal"><strong>Excluir nome:</strong></label>
+            <select id="nomePessoaSelectModal" aria-label="Lista de nomes salvos para exclusão">
+              <option value="">-- Selecione para excluir --</option>
+            </select>
+            <button onclick="removeNome()">🗑️ Excluir Nome</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="dataManagementModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dataManagementModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeDataManagementModal()" aria-label="Fechar">×</span>
+      <h3 id="dataManagementModalTitle" class="modal-title">🗄️ Gerenciar Dados</h3>
+      <p class="data-management-explanation">
+        Use o botão VERDE para EXPORTAR um backup de todos os seus nomes e listas salvas em um arquivo TXT.
+        Use o botão VERMELHO para IMPORTAR um arquivo TXT de backup, SOBRESCREVENDO os dados atuais.
+      </p>
+      <div class="data-management-buttons">
+        <button onclick="document.getElementById('importFileInput').click()" class="import-btn">⬆️ Importar Dados</button>
+        <button onclick="exportDataToTxt()" class="export-btn">⬇️ Exportar Dados</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabelaBichosModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="tabelaBichosModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeTabelaBichosModal()" aria-label="Fechar">×</span>
+      <h3 id="tabelaBichosModalTitle" class="modal-title">📊 Tabela de Grupos do Bicho</h3>
+      <div id="tabelaBichosContainer">
+        </div>
+    </div>
+  </div>
+
+<div id="randomGeneratorModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="randomGeneratorModalTitle">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeRandomGeneratorModal()" aria-label="Fechar">×</span>
+        <h3 id="randomGeneratorModalTitle" class="modal-title">🎲 Gerador de Números Aleatórios</h3>
+        
+        <div class="generator-body">
+
+            <div id="generatorPanel">
+                <div class="generator-options-panel">
+                    <h4>1. Opções de Geração</h4>
+                    
+                    <label for="randomQuantityInput" style="margin-bottom: 5px; font-weight: 500;">Quantidade de números:</label>
+                    <input type="number" id="randomQuantityInput" class="save-dialog-input" value="5" placeholder="Ex: 5" style="margin-bottom: 15px;">
+
+                    <fieldset class="generator-options" style="margin-bottom: 15px;">
+                        <legend>Modo de Geração</legend>
+                        <label>
+                            <input type="radio" name="generationMode" value="offline" checked onchange="toggleBichosSelector(this.value)"> Aleatório (Geral)
+                        </label>
+                        <label>
+                            <input type="radio" name="generationMode" value="bichos" onchange="toggleBichosSelector(this.value)"> Baseado nos Bichos
+                        </label>
+                    </fieldset>
+
+                    <div id="bichosSelectorContainerWrapper" style="display: none;">
+                        <label style="font-weight: 500;">Selecione os bichos:</label>
+                        <div id="bichoSelectionActions" style="display: flex; gap: 10px; margin: 8px 0;">
+                            <button onclick="selectAllBichos(true)" class="load-button" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Selecionar Todos</button>
+                            <button onclick="selectAllBichos(false)" class="load-button" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Limpar Seleção</button>
+                        </div>
+                        <div id="bichosSelectorContainer"></div>
+                    </div>
+                </div>
+
+                <div class="generator-results-panel">
+                    <h4>2. Ações e Resultado</h4>
+
+                    <fieldset class="generator-options" style="margin-bottom: 15px;">
+                        <legend>Tipos de Jogo</legend>
+                        <label><input type="checkbox" name="generationType" value="dezena" checked> Dezena</label>
+                        <label><input type="checkbox" name="generationType" value="centena"> Centena</label>
+                        <label><input type="checkbox" name="generationType" value="milhar"> Milhar</label>
+                    </fieldset>
+                    
+                    <button onclick="generateSelectedNumbers()" class="save-button" style="width: 100%; margin-bottom: 15px;">Gerar Números</button>
+
+                    <div id="randomResultWrapper">
+                        <div id="dezenaResult" class="result-group" style="display: none;">
+                            <h4>Dezenas</h4>
+                            <div class="result-numbers"></div>
+                        </div>
+                        <div id="centenaResult" class="result-group" style="display: none;">
+                            <h4>Centenas</h4>
+                            <div class="result-numbers"></div>
+                        </div>
+                        <div id="milharResult" class="result-group" style="display: none;">
+                            <h4>Milhares</h4>
+                            <div class="result-numbers"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="generatorActionButtons" class="button-group" style="margin-top: 15px; display: none;">
+                        <button id="copyRandomNumbersBtn" onclick="copyRandomNumbers()" class="load-button">📋 Copiar</button>
+                        <button id="shareToWhatsAppBtn" onclick="showWhatsAppConfig()" class="save-button" style="background-color: #25D366;">▶️ Configurar e Enviar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="whatsappConfigPanel" style="display: none; text-align: left;">
+                <h4>3. Configurar Mensagem do WhatsApp</h4>
+                
+                <label for="extractionSelect"><strong>Extração:</strong></label>
+                <select id="extractionSelect" class="save-dialog-input" style="margin-bottom: 15px; -webkit-appearance: none; appearance: none;">
+                    <option value="" selected>-- Selecione a Extração --</option>
+                    <option value="Rio de Janeiro">Extração: Rio de Janeiro</option>
+                    <option value="Nacional">Extração: Nacional</option>
+                    <option value="Look">Extração: Look</option>
+                    <option value="Loteria Federal">Extração: Loteria Federal</option>
+                </select>
+
+                <div class="template-controls">
+                    <label for="templateSelect"><strong>Modelos de Mensagem:</strong></label>
+                    <select id="templateSelect" class="save-dialog-input" onchange="handleLoadTemplate()">
+                        <option value="">-- Carregar um modelo --</option>
+                    </select>
+                    <div class="button-group" style="margin-top: 5px; margin-bottom: 15px;">
+                        <button onclick="handleSaveTemplate()" class="save-button">💾 Salvar Atual</button>
+                        <button onclick="handleDeleteTemplate()" class="import-btn">🗑️ Excluir Modelo</button>
+                    </div>
+                </div>
+
+                <label for="whatsappMessageTextarea"><strong>Texto da Mensagem (será salvo):</strong></label>
+                <textarea id="whatsappMessageTextarea" class="save-dialog-input" rows="4" style="height: auto;" placeholder="Já parou pra pensar no sonho de ontem à noite? 👀 Às vezes, o bicho que a gente precisa está lá... 😉
+
+Mas se você não lembra do sonho ou a intuição está quieta, sem problemas segue algumas dicas:"></textarea>
+
+                <label style="display: flex; align-items: center; margin-top: 15px; font-weight: normal; cursor: pointer;">
+                    <input type="checkbox" id="includeFullMessageCheckbox" checked style="margin-right: 8px; transform: scale(1.2);">
+                    Incluir título e texto na mensagem
+                </label>
+
+                <div class="button-group" style="margin-top: 20px; justify-content: flex-end;">
+                    <button id="cancelWhatsAppShareBtn" onclick="hideWhatsAppConfig()" class="load-button">Cancelar</button>
+                    <button id="confirmWhatsAppShareBtn" onclick="sendToWhatsApp()" class="save-button" style="background-color: #25D366;">Enviar no WhatsApp</button>
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="button-group" style="margin-top: 20px; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 20px;">
+             <button onclick="clearRandomResults()" class="import-btn">🗑️ Limpar Resultados</button>
+             <button onclick="closeRandomGeneratorModal()" class="load-button">❌ Fechar Gerador</button>
+        </div>
+    </div>
+</div>
+     
+  <div id="avisosModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="avisosModalTitle">
+    <div class="modal-content">
+      <h3 id="avisosModalTitle" class="modal-title">🎉 Bem-vindo ao Vip Emojs! 🎉</h3>
+      
+      <div id="avisos-content" style="text-align: left; margin-bottom: 25px;">
+        <p>Olá! Fico feliz em te ver por aqui. Para um melhor aproveitamento, leia as dicas abaixo:</p>
+        <ul style="padding-left: 20px;">
+          <li style="margin-bottom: 10px;">
+            <strong>🎲 Números e Bichos:</strong> Você pode digitar dezenas, centenas, milhares, o nome de um bicho (ex: "Urso") ou o grupo (ex: "Grupo 23"). Use <strong>espaço</strong> ou <strong>enter</strong> para separar os números.
+          </li>
+          <li style="margin-bottom: 10px;">
+            <strong>💾 Salve Suas Listas:</strong> Não perca suas anotações! Use o botão <strong>"Salvar Lista"</strong> para guardar seus números e o botão <strong>"Listas Salvas"</strong> para vê-los depois.
+          </li>
+          <li style="margin-bottom: 10px;">
+            <strong>⚙️ Backup é Importante:</strong> Em <strong>"Gerenciar Dados"</strong>, você pode EXPORTAR um arquivo de backup com todos os seus nomes e listas. Guarde-o com segurança!
+          </li>
+          <li style="margin-bottom: 10px;">
+            <strong>📱 Instale o App:</strong> Para uma experiência mais rápida, instale o aplicativo no seu celular clicando no botão <strong>"📱"</strong> que aparece no canto da tela.
+          </li>
+        </ul>
+        <p style="text-align: center; font-style: italic; margin-top: 20px;">Este é um aplicativo para auxílio e entretenimento.</p>
+      </div>
+
+      <button onclick="closeAvisosModal()" class="save-button" style="width: 100%;">OK, ENTENDI!</button>
+    </div>
+  </div>
+  <div id="contagemModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="contagemModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeContagemModal()" aria-label="Fechar">×</span>
+      <h3 id="contagemModalTitle" class="modal-title">📊 Contagem da Lista</h3>
+      
+      <div id="contagemResultado" style="font-size: 1.1rem; margin-bottom: 25px;">
+        </div>
+
+      <button onclick="closeContagemModal()" class="load-button" style="width: 100%;">Fechar</button>
+    </div>
+  </div>
+  
+  <div id="checkWinnerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="checkWinnerModalTitle">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeCheckWinnerModal()" aria-label="Fechar">×</span>
+      <h3 id="checkWinnerModalTitle" class="modal-title">🏆 Conferir Resultado</h3>
+      
+      <label for="winningNumbersInput" style="margin-bottom: 8px;"><strong>Digite ou cole os números sorteados:</strong></label>
+      <textarea id="winningNumbersInput" class="save-dialog-input" style="height: 100px;" placeholder="Ex: 1234 5678 9012..."></textarea>
+      
+      <button onclick="performCheck()" class="save-button" style="width: 100%;">Verificar Ganhadores</button>
+      
+      <div id="checkResultOutput"></div>
+    </div>
+  </div>
+  
+  <footer>
+    <div>📌 Versão 9.15 (Ícones de Edição)</div>
+    <div>👨‍💻 Criado por: Le Miastkuosky</div>
+  </footer>
+
+  <script>
+   
+    // --- Variáveis Globais e Constantes ---
+    const numberToEmoji = {
+      '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
+      '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
+    };
+    
+    const bichoNameToEmoji = {
+        'avestruz': '🦩', 'aguia': '🦅', 'burro': '🐎', 'borboleta': '🦋',
+        'cachorro': '🐕', 'cabra': '🐐', 'carneiro': '🐏', 'camelo': '🐪',
+        'cobra': '🐍', 'coelho': '🐰', 'cavalo': '🐴', 'elefante': '🐘',
+        'galo': '🐓', 'gato': '🐈', 'jacare': '🐊', 'leao': '🦁',
+        'macaco': '🐒', 'porco': '🐖', 'pavao': '🦚', 'peru': '🦃',
+        'touro': '🐂', 'tigre': '🐅', 'urso': '🐻', 'veado': '🦌', 'vaca': '🐄',
+    };
+
+    const bichoNameToDezena = {
+        'avestruz': '01', 'avestruzes': '01', 'aguia': '05', 'aguias': '05',
+        'burro': '09', 'burros': '09', 'borboleta': '13', 'borboletas': '13',
+        'cachorro': '17', 'cachorros': '17', 'cabra': '21', 'cabras': '21',
+        'carneiro': '25', 'carneiros': '25', 'camelo': '29', 'camelos': '29',
+        'cobra': '33', 'cobras': '33', 'coelho': '37', 'coelhos': '37',
+        'cavalo': '41', 'cavalos': '41', 'elefante': '45', 'elefantes': '45',
+        'galo': '49', 'galos': '49', 'gato': '53', 'gatos': '53',
+        'jacare': '57', 'jacares': '57', 'leao': '61', 'leoes': '61',
+        'macaco': '65', 'macacos': '65', 'porco': '69', 'porcos': '69',
+        'pavao': '73', 'pavoes': '73', 'peru': '77', 'perus': '77',
+        'touro': '81', 'touros': '81', 'tigre': '85', 'tigres': '85',
+        'urso': '89', 'ursos': '89', 'veado': '93', 'veados': '93', 'vaca': '97', 'vacas': '97',
+    };
+
+    const tabelaDeGrupos = [
+        { grupo: '01', animal: 'Avestruz', dezenas: ['01', '02', '03', '04'], emoji: bichoNameToEmoji['avestruz'] },
+        { grupo: '02', animal: 'Aguia', dezenas: ['05', '06', '07', '08'], emoji: bichoNameToEmoji['aguia'] },
+        { grupo: '03', animal: 'Burro', dezenas: ['09', '10', '11', '12'], emoji: bichoNameToEmoji['burro'] },
+        { grupo: '04', animal: 'Borboleta', dezenas: ['13', '14', '15', '16'], emoji: bichoNameToEmoji['borboleta'] },
+        { grupo: '05', animal: 'Cachorro', dezenas: ['17', '18', '19', '20'], emoji: bichoNameToEmoji['cachorro'] },
+        { grupo: '06', animal: 'Cabra', dezenas: ['21', '22', '23', '24'], emoji: bichoNameToEmoji['cabra'] },
+        { grupo: '07', animal: 'Carneiro', dezenas: ['25', '26', '27', '28'], emoji: bichoNameToEmoji['carneiro'] },
+        { grupo: '08', animal: 'Camelo', dezenas: ['29', '30', '31', '32'], emoji: bichoNameToEmoji['camelo'] },
+        { grupo: '09', animal: 'Cobra', dezenas: ['33', '34', '35', '36'], emoji: bichoNameToEmoji['cobra'] },
+        { grupo: '10', animal: 'Coelho', dezenas: ['37', '38', '39', '40'], emoji: bichoNameToEmoji['coelho'] },
+        { grupo: '11', animal: 'Cavalo', dezenas: ['41', '42', '43', '44'], emoji: bichoNameToEmoji['cavalo'] },
+        { grupo: '12', animal: 'Elefante', dezenas: ['45', '46', '47', '48'], emoji: bichoNameToEmoji['elefante'] },
+        { grupo: '13', animal: 'Galo', dezenas: ['49', '50', '51', '52'], emoji: bichoNameToEmoji['galo'] },
+        { grupo: '14', animal: 'Gato', dezenas: ['53', '54', '55', '56'], emoji: bichoNameToEmoji['gato'] },
+        { grupo: '15', animal: 'Jacare', dezenas: ['57', '58', '59', '60'], emoji: bichoNameToEmoji['jacare'] },
+        { grupo: '16', animal: 'Leao', dezenas: ['61', '62', '63', '64'], emoji: bichoNameToEmoji['leao'] },
+        { grupo: '17', animal: 'Macaco', dezenas: ['65', '66', '67', '68'], emoji: bichoNameToEmoji['macaco'] },
+        { grupo: '18', animal: 'Porco', dezenas: ['69', '70', '71', '72'], emoji: bichoNameToEmoji['porco'] },
+        { grupo: '19', animal: 'Pavao', dezenas: ['73', '74', '75', '76'], emoji: bichoNameToEmoji['pavao'] },
+        { grupo: '20', animal: 'Peru', dezenas: ['77', '78', '79', '80'], emoji: bichoNameToEmoji['peru'] },
+        { grupo: '21', animal: 'Touro', dezenas: ['81', '82', '83', '84'], emoji: bichoNameToEmoji['touro'] },
+        { grupo: '22', animal: 'Tigre', dezenas: ['85', '86', '87', '88'], emoji: bichoNameToEmoji['tigre'] },
+        { grupo: '23', animal: 'Urso', dezenas: ['89', '90', '91', '92'], emoji: bichoNameToEmoji['urso'] },
+        { grupo: '24', animal: 'Veado', dezenas: ['93', '94', '95', '96'], emoji: bichoNameToEmoji['veado'] },
+        { grupo: '25', animal: 'Vaca', dezenas: ['97', '98', '99', '00'], emoji: bichoNameToEmoji['vaca'] }
+    ];
+
+     const STORAGE_KEYS = {
+        NAMES: 'nomesSalvos', LISTS: 'savedLists', THEME: 'themePreference',
+        SHOW_CHECK_EMOJI: 'showCheckEmoji', ALLOW_REPETITION: 'allowRepetitionState',
+        WHATSAPP_MESSAGE: 'whatsappMessage',
+        LAST_EXTRACTION: 'lastExtraction',
+        TEMPLATES: 'messageTemplates'
+    };
+    
+    let messageTemplates = [];
+    let nomesSalvos = [];
+    let savedLists = [];
+    let deferredPrompt; 
+    let convertTimeout;
+    const DEBOUNCE_DELAY = 300;
+    let showCheckEmoji = false; 
+    let isPinned = false; 
+    let choicesNomePessoa = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initApp(); 
+
+        const avisosJaVistos = localStorage.getItem('avisosVistos');
+        if (!avisosJaVistos) {
+            setTimeout(showAvisosModal, 1000);
+        }
+    });
+    
+    let isInAppInventor = false;
+    let _appInventorCallbacks = {}; 
+
+    function checkAppInventorEnvironment() {
+        if (window.AppInventor && window.AppInventor.WebViewer) {
+            isInAppInventor = true;
+            console.log("Executando dentro do MIT App Inventor WebView.");
+            window.AppInventor.WebViewer.postMessage(JSON.stringify({ action: "webviewReady" }));
+        } else {
+            console.log("Não executando dentro do MIT App Inventor WebView. Usando armazenamento padrão do navegador.");
+        }
+    }
+
+    const originalSaveData = saveData;
+    const originalGetData = getData;
+    const originalRemoveData = removeData;
+
+    async function saveDataAppInventor(key, value) {
+        if (isInAppInventor) {
+            console.log(`[AppInventor Bridge] Enviando dados para salvar: ${key}`);
+            try {
+                const message = { action: "save", key: key, value: value };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
+                return true; 
+            } catch (e) {
+                console.error("[AppInventor Bridge] Erro ao enviar dados para App Inventor:", e);
+                showToast("Erro ao enviar dados para o aplicativo.", "error");
+                return false;
+            }
+        } else {
+            return await originalSaveData(key, value);
+        }
+    }
+
+    async function getDataAppInventor(key) {
+        if (isInAppInventor) {
+            return new Promise((resolve) => {
+                const requestId = Date.now() + Math.random().toString(36).substring(2, 9);
+                _appInventorCallbacks[requestId] = resolve;
+                
+                console.log(`[AppInventor Bridge] Solicitando dados para: ${key} (reqId: ${requestId})`);
+                const message = { action: "load", key: key, requestId: requestId };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
+                
+                setTimeout(() => {
+                    if (_appInventorCallbacks[requestId]) {
+                        console.warn(`[AppInventor Bridge] Timeout para getData de ${key} (reqId: ${requestId}).`);
+                        _appInventorCallbacks[requestId](null);
+                        delete _appInventorCallbacks[requestId];
+                    }
+                }, 5000);
+            });
+        } else {
+            return await originalGetData(key);
+        }
+    }
+
+    async function removeDataAppInventor(key) {
+        if (isInAppInventor) {
+            console.log(`[AppInventor Bridge] Enviando requisição para remover dados: ${key}`);
+            try {
+                const message = { action: "remove", key: key };
+                window.AppInventor.WebViewer.postMessage(JSON.stringify(message));
+                return true;
+            } catch (e) {
+                console.error("[AppInventor Bridge] Erro ao enviar requisição de remoção para App Inventor:", e);
+                showToast("Erro ao remover dados do aplicativo.", "error");
+                return false;
+            }
+        } else {
+            return await originalRemoveData(key);
+        }
+    }
+
+    window.dataFromAppInventor = (data) => {
+        if (data && data.action === "loaded" && data.requestId) {
+            const resolve = _appInventorCallbacks[data.requestId];
+            if (resolve) {
+                console.log(`[AppInventor Bridge] Resolvendo callback para reqId: ${data.requestId}, key: ${data.key}`);
+                resolve(data.value);
+                delete _appInventorCallbacks[data.requestId];
+            } else {
+                console.warn(`[AppInventor Bridge] Callback não encontrado para reqId: ${data.requestId}`);
+            }
+        } else {
+            console.warn("[AppInventor Bridge] Mensagem recebida do App Inventor em formato inesperado:", data);
+        }
+    };
+
+   async function _initAppOriginalLogic() {
+        console.log("Inicializando Vip Emojs...");
+        createQuickShortcuts();
+        setupEventListeners();
+        populateBichosSelector();
+        populateQuantidadeSelect();
+        await loadPersistedData();
+        setupPWA();
+
+        const nomeSelect = document.getElementById('nomePessoaSelect');
+        if (nomeSelect) {
+            choicesNomePessoa = new Choices(nomeSelect, {
+                searchPlaceholderValue: 'Digite para buscar um nome...',
+                itemSelectText: 'Pressione Enter para selecionar',
+                noResultsText: 'Nenhum resultado encontrado',
+                shouldSort: false
+            });
+            atualizarSelectNomes(); 
+        }
+
+        hideSplashScreen();
+        convertToEmojisRealTime();
+    }
+
+    let initApp = async () => {
+        checkAppInventorEnvironment();
+
+        if (isInAppInventor) {
+            window.saveData = saveDataAppInventor;
+            window.getData = getDataAppInventor;
+            window.removeData = removeDataAppInventor;
+            console.log("Funções de armazenamento sobrescritas para App Inventor.");
+        } else {
+            window.saveData = originalSaveData;
+            window.getData = originalGetData;
+            window.removeData = originalRemoveData;
+            console.log("Usando funções de armazenamento padrão do navegador.");
+            await checkStorageAvailability();
+        }
+        
+        await _initAppOriginalLogic();
+    };
+
+    function populateQuantidadeSelect() {
+        const selectMain = document.getElementById('quantidadeSelect');
+        
+        if (selectMain) {
+            for (let i = 1; i <= 200; i++) {
+                const option = document.createElement('option');
+                option.value = i + 'x';
+                option.textContent = i + 'x';
+                selectMain.appendChild(option);
+            }
+        }
+        console.log("Select de quantidade populado.");
+    }
+
+    function hideSplashScreen() {
+        const splashScreen = document.getElementById('splash-screen');
+        if (!splashScreen) return;
+        setTimeout(() => {
+            splashScreen.style.opacity = '0';
+            setTimeout(() => {
+                splashScreen.style.display = 'none';
+            }, 500);
+        }, 1000);
+    }
+
+     async function loadPersistedData() {
+        await loadThemePreference();
+
+        const savedShowCheckEmoji = await window.getData(STORAGE_KEYS.SHOW_CHECK_EMOJI);
+        showCheckEmoji = false;
+        updateCheckEmojiButtonAppearance();
+
+        isPinned = false;
+        updatePinButtonAppearance();
+
+        const savedRepetitionState = await window.getData(STORAGE_KEYS.ALLOW_REPETITION);
+        allowRepetition = savedRepetitionState === true;
+        document.getElementById('allowRepetitionToggle').checked = allowRepetition;
+
+        await carregarNomesSalvos();
+        await carregarListasSalvas();
+        await loadTemplates();
+    }
+
+    function updateCheckEmojiButtonAppearance() {
+        const checkEmojiToggle = document.getElementById('checkEmojiToggle');
+        if (!checkEmojiToggle) return; 
+        
+        checkEmojiToggle.classList.remove('paid');
+        checkEmojiToggle.style.backgroundColor = ''; 
+        checkEmojiToggle.style.color = ''; 
+        
+        if (showCheckEmoji) {
+            checkEmojiToggle.classList.add('paid'); 
+            checkEmojiToggle.innerHTML = 'PAGO ✅'; 
+            checkEmojiToggle.setAttribute('aria-pressed', 'true');
+        } else {
+            checkEmojiToggle.innerHTML = 'FOI PAGO?'; 
+            checkEmojiToggle.setAttribute('aria-pressed', 'false');
+        }
+
+        void checkEmojiToggle.offsetWidth;
+    }
+
+    function updatePinButtonAppearance() {
+        const pinToggle = document.getElementById('pinClientToggle');
+        if (!pinToggle) return;
+
+        pinToggle.classList.remove('pinned');
+
+        if(isPinned) {
+            pinToggle.classList.add('pinned');
+            pinToggle.innerHTML = 'FIXO 📌';
+            pinToggle.setAttribute('aria-pressed', 'true');
+        } else {
+            pinToggle.innerHTML = 'FIXAR NOME?';
+            pinToggle.setAttribute('aria-pressed', 'false');
+        }
+    }
+
+    function setupEventListeners() {
+        const inputElement = document.getElementById('input');
+
+       const checkEmojiToggle = document.getElementById('checkEmojiToggle');
+        if (checkEmojiToggle) {
+            checkEmojiToggle.addEventListener('click', async function() { 
+                showCheckEmoji = !showCheckEmoji;
+                updateCheckEmojiButtonAppearance();
+                await window.saveData(STORAGE_KEYS.SHOW_CHECK_EMOJI, showCheckEmoji); 
+                convertToEmojisRealTime();
+                showToast(showCheckEmoji ? 'Status PAGO ativado!' : 'Status PAGO desativado!', 'info');
+            });
+        }
+
+        const pinClientToggle = document.getElementById('pinClientToggle');
+        if (pinClientToggle) {
+            pinClientToggle.addEventListener('click', function() {
+                isPinned = !isPinned;
+                updatePinButtonAppearance();
+                convertToEmojisRealTime();
+                showToast(isPinned ? 'Nome será fixado na lista!' : 'Nome não será mais fixado.', 'info');
+            });
+        }
+
+        inputElement.addEventListener('input', () => {
+            clearTimeout(convertTimeout);
+            convertTimeout = setTimeout(convertToEmojisRealTime, DEBOUNCE_DELAY);
+        });
+
+        const quantidadeSelectMain = document.getElementById('quantidadeSelect');
+        if (quantidadeSelectMain) {
+            quantidadeSelectMain.addEventListener('change', showMilharesCentenasDezenas);
+        }
+
+        const nomeSelect = document.getElementById('nomePessoaSelect');
+        if (nomeSelect) {
+            nomeSelect.addEventListener('change', onNomeSelectChange);
+        }
+        
+        const nomeSelectModal = document.getElementById('nomePessoaSelectModal');
+        if (nomeSelectModal) {
+             nomeSelectModal.addEventListener('change', () => { });
+        }
+        
+        window.addEventListener('beforeunload', saveAllData);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                saveAllData();
+            }
+        });
+
+        window.addEventListener('click', (event) => {
+            const previewModal = document.getElementById('previewModal');
+            const saveListModal = document.getElementById('saveListModal');
+            const nomeModal = document.getElementById('nomeModal');
+            const dataManagementModal = document.getElementById('dataManagementModal');
+            const tabelaBichosModal = document.getElementById('tabelaBichosModal');
+            const randomGeneratorModal = document.getElementById('randomGeneratorModal'); 
+            const contagemModal = document.getElementById('contagemModal');
+            const checkWinnerModal = document.getElementById('checkWinnerModal');
+
+            if (event.target === previewModal) closePreviewModal();
+            if (event.target === saveListModal) closeSaveDialog();
+            if (event.target === nomeModal) closeNomeModal();
+            if (event.target === dataManagementModal) closeDataManagementModal();
+            if (event.target === tabelaBichosModal) closeTabelaBichosModal();
+            if (event.target === randomGeneratorModal) closeRandomGeneratorModal();
+            if (event.target === contagemModal) closeContagemModal();
+            if (event.target === checkWinnerModal) closeCheckWinnerModal();
+        });
+
+        const radioButtons = document.querySelectorAll('input[name="viewOption"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', showMilharesCentenasDezenas);
+        });
+        
+        if (!Array.from(radioButtons).some(r => r.checked)) {
+            radioButtons[0].checked = true;
+        }
+
+        const pasteButton = document.getElementById('pasteButton');
+        if (pasteButton) {
+            pasteButton.addEventListener('click', async () => {
+                const textarea = document.getElementById('input');
+                textarea.focus();
+                try {
+                    if (navigator.clipboard && navigator.clipboard.readText) {
+                        const text = await navigator.clipboard.readText();
+                        const currentText = textarea.value;
+                        // Adiciona o texto colado ao conteúdo existente
+                        if (currentText.length > 0 && !/\s$/.test(currentText)) {
+                            textarea.value += ' ' + text;
+                        } else {
+                            textarea.value += text;
+                        }
+                        showToast('Texto colado!', 'success');
+                        // Dispara o evento de input para que a conversão automática funcione
+                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    } else {
+                        showToast('Seu navegador não suporta esta função. Segure o dedo na caixa de texto para colar.', 'info');
+                    }
+                } catch (err) {
+                    console.error('Falha ao colar da área de transferência:', err);
+                    showToast('Não foi possível colar. Verifique a permissão do seu navegador.', 'error');
+                }
+            });
+        }
+    }
+    
+    function saveAllData() {
+        console.log("Salvando todos os dados...");
+        salvarNomes();
+        salvarListasSalvas();
+        window.saveData(STORAGE_KEYS.THEME, document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    }
+
+    function closeApp() {
+        console.log("Fechando o aplicativo...");
+        document.body.style.display = 'none';
+    }
+
+    let db;
+    const DB_NAME = 'vipEmojsDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'dataStore';
+    let indexedDBAvailable = false;
+    
+    function initIndexedDB() {
+        return new Promise((resolve, reject) => {
+            if (!window.indexedDB) {
+                console.warn("IndexedDB não é suportado neste navegador");
+                resolve(false);
+                return;
+            }
+            
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            
+            request.onerror = (event) => {
+                console.error("Erro ao abrir IndexedDB:", event.target.error);
+                resolve(false);
+            };
+            
+            request.onsuccess = (event) => {
+                db = event.target.result;
+                console.log("IndexedDB inicializado com sucesso");
+                
+                db.onerror = (event) => {
+                    console.error("Erro no IndexedDB:", event.target.error);
+                    showToast("Erro no armazenamento de dados", "error");
+                };
+                
+                indexedDBAvailable = true;
+                resolve(true);
+            };
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: "key" });
+                    console.log("Object store criado no IndexedDB");
+                }
+            };
+        });
+    }
+    
+    function setCookie(name, value, days = 365) {
+        try {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            
+            const cookieValue = encodeURIComponent(value || "");
+            document.cookie = `${name}=${cookieValue}${expires}; path=/; SameSite=Lax; max-age=${days*24*60*60}`;
+            
+            setTimeout(() => {
+                const testCookie = getCookie(name);
+                if (testCookie) {
+                    console.log(`Cookie definido e verificado: ${name}`);
+                } else {
+                    console.warn(`Cookie não foi definido corretamente: ${name}`);
+                    document.cookie = `${name}=${cookieValue}; path=/;`;
+                }
+            }, 100);
+            
+            return true;
+        } catch (e) {
+            console.error("Erro ao definir cookie:", e);
+            return false;
+        }
+    }
+
+    function getCookie(name) {
+        try {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) {
+                    const value = decodeURIComponent(c.substring(nameEQ.length, c.length));
+                    return value;
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error("Erro ao obter cookie:", e);
+            return null;
+        }
+    }
+
+    function deleteCookie(name) {
+        try {
+            document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0;';
+            return true;
+        } catch (e) {
+            console.error("Erro ao deletar cookie:", e);
+            return false;
+        }
+    }
+
+    async function checkStorageAvailability() {
+        const indexedDBResult = await initIndexedDB();
+        
+        let localStorageAvailable = false;
+        try {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('__storage_test__', '__storage_test__');
+                const testValue = localStorage.getItem('__storage_test__');
+                localStorage.removeItem('__storage_test__');
+                
+                if (testValue === '__storage_test__') {
+                    localStorageAvailable = true;
+                }
+            }
+        } catch (e) {
+            localStorageAvailable = false;
+        }
+        
+        let detectedMethod = 'nenhum';
+        if (indexedDBResult) {
+            detectedMethod = 'indexedDB';
+        } else if (localStorageAvailable) {
+            detectedMethod = 'localStorage';
+        } else {
+            detectedMethod = 'cookies';
+        }
+        
+        showToast(`Sistema de armazenamento padrão do navegador: ${detectedMethod}`, 'info');
+    }
+
+    function saveToIndexedDB(key, value) {
+        return new Promise((resolve, reject) => {
+            if (!indexedDBAvailable || !db) {
+                resolve(false);
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                
+                const request = store.put({ key: key, value: value });
+                
+                request.onsuccess = () => {
+                    console.log(`Dados salvos em IndexedDB: ${key}`);
+                    resolve(true);
+                };
+                
+                request.onerror = (event) => {
+                    console.error(`Erro ao salvar em IndexedDB (${key}):`, event.target.error);
+                    resolve(false);
+                };
+                
+                transaction.oncomplete = () => {
+                    console.log(`Transação IndexedDB concluída para: ${key}`);
+                };
+                
+                transaction.onerror = (event) => {
+                    console.error(`Erro na transação IndexedDB (${key}):`, event.target.error);
+                };
+            } catch (e) {
+                console.error(`Exceção ao salvar em IndexedDB (${key}):`, e);
+                resolve(false);
+            }
+        });
+    }
+
+    function getFromIndexedDB(key) {
+        return new Promise((resolve, reject) => {
+            if (!indexedDBAvailable || !db) {
+                resolve(null);
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                
+                const request = store.get(key);
+                
+                request.onsuccess = (event) => {
+                    const result = event.target.result;
+                    if (result) {
+                        console.log(`Dados obtidos de IndexedDB: ${key}`);
+                        resolve(result.value);
+                    } else {
+                        console.log(`Nenhum dado encontrado em IndexedDB para: ${key}`);
+                        resolve(null);
+                    }
+                };
+                
+                request.onerror = (event) => {
+                    console.error(`Erro ao obter de IndexedDB (${key}):`, event.target.error);
+                    resolve(null);
+                };
+            } catch (e) {
+                console.error(`Exceção ao obter de IndexedDB (${key}):`, e);
+                resolve(null);
+            }
+        });
+    }
+
+    function removeFromIndexedDB(key) {
+        return new Promise((resolve, reject) => {
+            if (!indexedDBAvailable || !db) {
+                resolve(false);
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                
+                const request = store.delete(key);
+                
+                request.onsuccess = () => {
+                    console.log(`Dados removidos de IndexedDB: ${key}`);
+                    resolve(true);
+                };
+                
+                request.onerror = (event) => {
+                    console.error(`Erro ao remover de IndexedDB (${key}):`, event.target.error);
+                    resolve(false);
+                };
+            } catch (e) {
+                console.error(`Exceção ao remover de IndexedDB (${key}):`, e);
+                resolve(false);
+            }
+        });
+    }
+
+    async function saveData(key, value) {
+        const stringValue = JSON.stringify(value);
+        let success = false;
+        
+        const saveIndicator = document.createElement('div');
+        saveIndicator.textContent = "Salvando...";
+        saveIndicator.style.position = "fixed";
+        saveIndicator.style.bottom = "60px";
+        saveIndicator.style.left = "50%";
+        saveIndicator.style.transform = "translateX(-50%)";
+        saveIndicator.style.backgroundColor = "rgba(0,0,0,0.7)";
+        saveIndicator.style.color = "white";
+        saveIndicator.style.padding = "8px 16px";
+        saveIndicator.style.borderRadius = "20px";
+        saveIndicator.style.zIndex = "9999";
+        document.body.appendChild(saveIndicator);
+
+        try {
+            if (indexedDBAvailable) {
+                const idbSuccess = await saveToIndexedDB(key, value);
+                if (idbSuccess) {
+                    success = true;
+                }
+            }
+            
+            try {
+                localStorage.setItem(key, stringValue);
+                const testValue = localStorage.getItem(key);
+                if (testValue === stringValue) {
+                    success = true;
+                }
+            } catch (e) {
+                console.warn(`Erro ao salvar em localStorage (${key}):`, e);
+            }
+            
+            const cookieSuccess = setCookie(key, stringValue);
+            if (cookieSuccess) {
+                success = true;
+            }
+            
+            if (success) {
+                console.log(`Dados salvos com sucesso para ${key}`);
+                saveIndicator.textContent = "Salvo ✓";
+                saveIndicator.style.backgroundColor = "rgba(40,167,69,0.9)";
+                
+                setTimeout(async () => {
+                    const verifyData = await getData(key);
+                    if (!verifyData || JSON.stringify(verifyData) !== JSON.stringify(value)) {
+                        console.warn(`Verificação posterior falhou para ${key}`);
+                        showToast("Aviso: Verificação de dados falhou. Tente salvar novamente.", "warning");
+                    }
+                }, 1000);
+            } else {
+                console.error(`Falha ao salvar dados para ${key}`);
+                saveIndicator.textContent = "Erro ao salvar!";
+                saveIndicator.style.backgroundColor = "rgba(220,53,69,0.9)";
+                showToast(`Erro ao salvar dados. Tente novamente.`, 'error');
+            }
+        } finally {
+            setTimeout(() => {
+                if (document.body.contains(saveIndicator)) {
+                    document.body.removeChild(saveIndicator);
+                }
+            }, 2000);
+        }
+        
+        return success;
+    }
+
+    async function getData(key) {
+        let value = null;
+        let stringValue = null;
+        
+        console.log(`Tentando obter dados para: ${key} (origem: navegador)`);
+        
+        if (indexedDBAvailable) {
+            value = await getFromIndexedDB(key);
+            if (value !== null) {
+                console.log(`Dados obtidos de IndexedDB: ${key}`);
+                try {
+                    const stringValue = JSON.stringify(value);
+                    localStorage.setItem(key, stringValue);
+                    setCookie(key, stringValue);
+                } catch (e) {
+                    console.warn(`Erro ao sincronizar de IndexedDB: ${key}`, e);
+                }
+                return value;
+            }
+        }
+        
+        stringValue = getCookie(key);
+        if (stringValue) {
+            console.log(`Dados obtidos de cookies: ${key}`);
+            try {
+                value = JSON.parse(stringValue);
+                if (indexedDBAvailable) {
+                    saveToIndexedDB(key, value);
+                }
+                try {
+                    localStorage.setItem(key, stringValue);
+                } catch (e) {
+                    console.warn(`Erro ao sincronizar de cookies para localStorage: ${key}`, e);
+                }
+                return value;
+            } catch (parseError) {
+                console.error(`Erro ao parsear dados de cookies (${key}):`, parseError);
+            }
+        }
+        
+        try {
+            stringValue = localStorage.getItem(key);
+            if (stringValue) {
+                console.log(`Dados obtidos de localStorage: ${key}`);
+                try {
+                    value = JSON.parse(stringValue);
+                    if (indexedDBAvailable) {
+                        saveToIndexedDB(key, value);
+                    }
+                    setCookie(key, stringValue);
+                    return value;
+                } catch (parseError) {
+                    console.error(`Erro ao parsear dados de localStorage (${key}):`, parseError);
+                }
+            }
+        } catch (e) {
+            console.warn(`Erro ao obter de localStorage (${key}):`, e);
+        }
+        
+        console.log(`Nenhum dado encontrado para: ${key} em nenhuma camada de armazenamento do navegador`);
+        return null;
+    }
+
+    async function removeData(key) {
+        let success = false;
+        
+        if (indexedDBAvailable) {
+            const idbSuccess = await removeFromIndexedDB(key);
+            if (idbSuccess) {
+                success = true;
+            }
+        }
+        
+        try {
+            localStorage.removeItem(key);
+            success = true;
+        } catch (e) {
+            console.warn(`Erro ao remover de localStorage (${key}):`, e);
+        }
+        
+        const cookieSuccess = deleteCookie(key);
+        if (cookieSuccess) {
+            success = true;
+        }
+        
+        if (!success) {
+            console.error(`Falha ao remover dados (${key}) de todas as camadas do navegador.`);
+        }
+        
+        return success;
+    }
+
+    async function loadThemePreference() {
+        const savedTheme = await getData(STORAGE_KEYS.THEME);
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+        setTheme(theme);
+    }
+
+    function toggleTheme() {
+        const newTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+        setTheme(newTheme);
+        saveData(STORAGE_KEYS.THEME, newTheme);
+    }
+
+    function setTheme(theme) {
+        const body = document.body;
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (theme === 'dark') {
+            body.classList.add('dark-mode');
+            if (themeToggleBtn) themeToggleBtn.textContent = '☀️ Modo Claro';
+            if (themeMeta) themeMeta.setAttribute('content', '#121212');
+        } else {
+            body.classList.remove('dark-mode');
+            if (themeToggleBtn) themeToggleBtn.textContent = '🌙 Modo Escuro';
+            if (themeMeta) themeMeta.setAttribute('content', '#f0f8ff');
+        }
+    }
+
+    async function carregarNomesSalvos() {
+        const savedNames = await window.getData(STORAGE_KEYS.NAMES);
+        if (Array.isArray(savedNames)) {
+            nomesSalvos = savedNames;
+            nomesSalvos.sort((a, b) => a.localeCompare(b)); 
+            console.log("Nomes carregados e ordenados (via getData):", nomesSalvos.length);
+        } else {
+            nomesSalvos = [];
+            console.log("Nenhum nome encontrado ou dados inválidos (via getData).");
+        }
+        atualizarSelectNomes();
+    }
+
+    async function salvarNomes() {
+        return await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos);
+    }
+
+    async function addNome() {
+        const input = document.getElementById('nomePessoaInputModal'); 
+        const nome = input.value.trim();
+
+        if (!nome) {
+            showToast('Digite um nome válido para salvar.', 'error');
+            return;
+        }
+
+        if (nomesSalvos.some(n => n.toLowerCase() === nome.toLowerCase())) {
+            showToast('Este nome já está salvo.', 'info');
+            return;
+        }
+
+        nomesSalvos.push(nome);
+        nomesSalvos.sort((a, b) => a.localeCompare(b)); 
+
+        if (await salvarNomes()) {
+            atualizarSelectNomes();
+            input.value = ''; 
+            setTimeout(() => {
+                if (choicesNomePessoa) {
+                    choicesNomePessoa.setChoiceByValue(nome);
+                }
+            }, 100);
+            showToast('Nome salvo com sucesso!', 'success');
+        } else {
+            nomesSalvos.splice(nomesSalvos.indexOf(nome), 1);
+        }
+    }
+
+    async function removeNome() {
+        const selectModal = document.getElementById('nomePessoaSelectModal'); 
+        const nomeSelecionado = selectModal.value;
+
+        if (!nomeSelecionado) {
+            showToast('Selecione um nome para excluir.', 'info');
+            return;
+        }
+
+        if (!confirm(`Deseja realmente excluir o nome "${nomeSelecionado}"?`)) return;
+
+        const index = nomesSalvos.indexOf(nomeSelecionado);
+        if (index === -1) {
+            showToast('Erro: Nome não encontrado.', 'error');
+            return;
+        }
+
+        nomesSalvos.splice(index, 1);
+
+        if (await salvarNomes()) {
+            document.getElementById('nomePessoaInputModal').value = '';
+            atualizarSelectNomes();
+            convertToEmojisRealTime(); 
+            showToast('Nome excluído com sucesso!', 'success');
+        } else {
+            nomesSalvos.splice(index, 0, nomeSelecionado);
+            nomesSalvos.sort((a, b) => a.localeCompare(b));
+        }
+    }
+
+    function atualizarSelectNomes() {
+        const selectModal = document.getElementById('nomePessoaSelectModal');
+        
+        if (choicesNomePessoa) {
+            choicesNomePessoa.clearStore();
+            const novasOpcoes = [{ value: '', label: '-- Nenhum selecionado --', selected: true, disabled: true }];
+            nomesSalvos.forEach(nome => {
+                novasOpcoes.push({ value: nome, label: nome });
+            });
+            choicesNomePessoa.setChoices(novasOpcoes, 'value', 'label', false);
+        }
+
+        const currentSelectedValueModal = selectModal.value; 
+        selectModal.innerHTML = '<option value="">-- Selecione para excluir --</option>';
+        nomesSalvos.forEach(nome => {
+            const optionModal = document.createElement('option');
+            optionModal.value = nome;
+            optionModal.textContent = nome;
+            selectModal.appendChild(optionModal);
+        });
+        if (nomesSalvos.includes(currentSelectedValueModal)) {
+            selectModal.value = currentSelectedValueModal;
+        } else {
+            selectModal.value = '';
+        }
+    }
+
+    function onNomeSelectChange() {
+        convertToEmojisRealTime(); 
+    }
+
+    function showNomeModal() {
+        const nomeModal = document.getElementById('nomeModal');
+        nomeModal.classList.add('active');
+        document.getElementById('nomePessoaInputModal').focus();
+        atualizarSelectNomes();
+    }
+
+    function closeNomeModal() {
+        document.getElementById('nomeModal').classList.remove('active');
+        convertToEmojisRealTime();
+    }
+
+    async function carregarListasSalvas() {
+        const savedData = await window.getData(STORAGE_KEYS.LISTS);
+        if (Array.isArray(savedData)) {
+            savedLists = savedData;
+            console.log("Listas carregadas:", savedLists.length);
+        } else {
+            savedLists = [];
+        }
+    }
+
+    async function salvarListasSalvas() {
+        return await window.saveData(STORAGE_KEYS.LISTS, savedLists);
+    }
+
+    function showSaveDialog() {
+        const outputText = getFormattedOutputAsText();
+        if (!outputText) {
+            showToast('Não há resultado convertido para salvar.', 'info');
+            return;
+        }
+        document.getElementById('listNameInput').value = ''; 
+        document.getElementById('saveListModal').classList.add('active');
+        document.getElementById('listNameInput').focus(); 
+    }
+
+    function closeSaveDialog() {
+        document.getElementById('saveListModal').classList.remove('active');
+    }
+
+    async function saveNumbersListWithName() {
+        const outputText = getFormattedOutputAsText();
+        const listName = document.getElementById('listNameInput').value.trim();
+
+        if (!listName) {
+            showToast('Por favor, digite um nome para identificar esta lista.', 'error');
+            return;
+        }
+
+        const listItem = {
+            id: Date.now().toString(), 
+            name: listName,
+            date: new Date().toISOString(), 
+            input: outputText 
+        };
+
+        savedLists.unshift(listItem); 
+
+        if (await salvarListasSalvas()) {
+            closeSaveDialog();
+            showToast(`Lista "${listName}" salva com sucesso!`, 'success');
+            showPreviewModal(); 
+        } else {
+            savedLists.shift();
+        }
+    }
+
+    function showPreviewModal() {
+        updateSavedItemsContainer();
+        document.getElementById('previewModal').classList.add('active');
+    }
+
+    function closePreviewModal() {
+        document.getElementById('previewModal').classList.remove('active');
+    }
+
+    function updateSavedItemsContainer() {
+        const container = document.getElementById('savedItemsContainer');
+        container.innerHTML = '';
+
+        if (savedLists.length === 0) {
+            container.innerHTML = '<div class="no-saved-items">Nenhuma lista salva ainda.</div>';
+            return;
+        }
+
+        const sortedLists = [...savedLists].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        sortedLists.forEach((item) => {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'saved-item';
+            itemElement.dataset.id = item.id;
+
+            const headerElement = document.createElement('div');
+            headerElement.className = 'saved-item-header';
+            headerElement.setAttribute('role', 'button');
+            headerElement.setAttribute('tabindex', '0');
+            headerElement.setAttribute('aria-expanded', 'false');
+            headerElement.setAttribute('aria-controls', `content-${item.id}`);
+
+            const titleElement = document.createElement('div');
+            titleElement.className = 'saved-item-title';
+            const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.date));
+            titleElement.textContent = `${item.name} (${formattedDate})`;
+
+            const headerActionsElement = document.createElement('div');
+            headerActionsElement.className = 'header-actions';
+
+            const headerCopyButton = document.createElement('button');
+            headerCopyButton.className = 'header-btn copy-btn';
+            headerCopyButton.innerHTML = '📋 <span class="sr-only">Copiar</span>';
+            headerCopyButton.title = 'Copiar conteúdo';
+            headerCopyButton.onclick = (e) => {
+                e.stopPropagation();
+                copyToClipboard(item.input, headerCopyButton);
+            };
+
+            const headerEditButton = document.createElement('button');
+            headerEditButton.className = 'header-btn edit-btn';
+            headerEditButton.innerHTML = '✏️ <span class="sr-only">Editar</span>';
+            headerEditButton.title = 'Editar lista';
+            headerEditButton.onclick = (e) => {
+                e.stopPropagation();
+                toggleEditMode(item.id, itemElement);
+            };
+
+            const headerDeleteButton = document.createElement('button');
+            headerDeleteButton.className = 'header-btn delete-btn';
+            headerDeleteButton.innerHTML = '🗑️ <span class="sr-only">Excluir</span>';
+            headerDeleteButton.title = 'Excluir lista';
+            headerDeleteButton.onclick = (e) => {
+                e.stopPropagation();
+                deleteSavedItem(item.id);
+            };
+
+            headerActionsElement.appendChild(headerCopyButton);
+            headerActionsElement.appendChild(headerEditButton);
+            headerActionsElement.appendChild(headerDeleteButton);
+
+
+            const toggleElement = document.createElement('div');
+            toggleElement.className = 'saved-item-toggle';
+            toggleElement.textContent = '▼';
+            toggleElement.style.transform = 'rotate(-90deg)';
+            toggleElement.setAttribute('aria-hidden', 'true');
+
+            headerElement.appendChild(titleElement);
+            headerElement.appendChild(headerActionsElement);
+            headerElement.appendChild(toggleElement);
+
+            const contentElement = document.createElement('div');
+            contentElement.className = 'saved-item-content';
+            contentElement.id = `content-${item.id}`;
+
+            const textElement = document.createElement('div');
+            textElement.className = 'saved-item-text';
+            textElement.textContent = item.input;
+            
+            const editContainer = document.createElement('div');
+            editContainer.className = 'edit-container';
+            editContainer.style.display = 'none';
+            
+            const editTextArea = document.createElement('textarea');
+            
+            const editButtons = document.createElement('div');
+            editButtons.className = 'edit-buttons';
+
+            const utilityActions = document.createElement('div');
+            utilityActions.className = 'button-group-utility';
+
+            const finalActions = document.createElement('div');
+            finalActions.className = 'button-group-actions';
+
+            const selectAllBtn = document.createElement('button');
+            selectAllBtn.innerHTML = '📝';
+            selectAllBtn.title = 'Selecionar Tudo';
+            selectAllBtn.className = 'load-button';
+            selectAllBtn.onclick = () => {
+                editTextArea.select();
+                editTextArea.focus();
+            };
+
+            const breakBtn = document.createElement('button');
+            breakBtn.innerHTML = '↩️';
+            breakBtn.title = 'Pular Linha';
+            breakBtn.className = 'load-button';
+            breakBtn.onclick = () => {
+                const currentValue = editTextArea.value;
+                if (currentValue.length > 0 && !/\s$/.test(currentValue)) {
+                    editTextArea.value += ' \n';
+                } else {
+                    editTextArea.value += '\n';
+                }
+                editTextArea.focus();
+            };
+
+            const clearBtn = document.createElement('button');
+            clearBtn.innerHTML = '🗑️';
+            clearBtn.title = 'Apagar Tudo';
+            clearBtn.className = 'load-button';
+            clearBtn.onclick = () => {
+                editTextArea.value = '';
+                editTextArea.focus();
+            };
+
+            const pasteBtn = document.createElement('button');
+            pasteBtn.innerHTML = '📋';
+            pasteBtn.title = 'Colar da Área de Transferência';
+            pasteBtn.className = 'load-button';
+            pasteBtn.onclick = async () => {
+                try {
+                    if (navigator.clipboard && navigator.clipboard.readText) {
+                        const text = await navigator.clipboard.readText();
+                        editTextArea.value += text;
+                        showToast('Texto colado!', 'success');
+                    } else {
+                        showToast('Seu navegador não suporta esta função.', 'error');
+                    }
+                } catch (err) {
+                    console.error('Falha ao colar texto: ', err);
+                    showToast('Não foi possível colar. Verifique a permissão do seu navegador.', 'error');
+                }
+            };
+
+            const cancelButton = document.createElement('button');
+            cancelButton.innerHTML = '❌';
+            cancelButton.title = 'Cancelar Edição';
+            cancelButton.className = 'load-button';
+            cancelButton.onclick = () => toggleEditMode(item.id, itemElement);
+            
+            const saveButton = document.createElement('button');
+            saveButton.innerHTML = '💾';
+            saveButton.title = 'Salvar Alterações';
+            saveButton.className = 'save-button';
+            saveButton.onclick = () => saveEditedItem(item.id, itemElement);
+            
+            utilityActions.appendChild(selectAllBtn);
+            utilityActions.appendChild(breakBtn);
+            utilityActions.appendChild(clearBtn);
+            utilityActions.appendChild(pasteBtn);
+
+            finalActions.appendChild(cancelButton);
+            finalActions.appendChild(saveButton);
+
+            editButtons.appendChild(utilityActions);
+            editButtons.appendChild(finalActions);
+
+            editContainer.appendChild(editTextArea);
+            editContainer.appendChild(editButtons);
+
+            contentElement.appendChild(textElement);
+            contentElement.appendChild(editContainer);
+
+            const toggleItem = () => {
+                const isExpanded = contentElement.style.display === 'block';
+                contentElement.style.display = isExpanded ? 'none' : 'block';
+                toggleElement.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
+                headerElement.setAttribute('aria-expanded', !isExpanded);
+            };
+
+            headerElement.addEventListener('click', (e) => {
+                if (!e.target.closest('button')) {
+                    toggleItem();
+                }
+            });
+            headerElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleItem();
+                }
+            });
+
+            itemElement.appendChild(headerElement);
+            itemElement.appendChild(contentElement);
+
+            container.appendChild(itemElement);
+        });
+    }
+
+    async function copyToClipboard(text, buttonElement = null) {
+        let copyAttempted = false;
+        let copySuccessful = false;
+
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            copySuccessful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (copySuccessful) {
+                console.log('Texto copiado via document.execCommand().');
+                copyAttempted = true;
+            } else {
+                console.warn('document.execCommand(\'copy\') retornou false. Tentando Clipboard API...');
+            }
+        } catch (err) {
+            console.error('Erro ao copiar via document.execCommand():', err);
+            copyAttempted = true;
+        }
+
+        if (!copySuccessful && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(text);
+                copySuccessful = true;
+                console.log('Texto copiado via Clipboard API.');
+            } catch (err) {
+                console.error('Erro ao copiar com Clipboard API:', err);
+                copySuccessful = false;
+            }
+            copyAttempted = true;
+        }
+
+        if (copySuccessful) {
+            showToast('Texto copiado!', 'success');
+            if (buttonElement) provideFeedback(buttonElement, '✅');
+        } else if (copyAttempted) {
+            showToast('Erro ao copiar.', 'error');
+        } else {
+            showToast('Nenhum mecanismo de cópia disponível no navegador.', 'error');
+        }
+    }
+
+    function provideFeedback(button, tempContent) {
+        const originalContent = button.innerHTML;
+        button.innerHTML = tempContent;
+        button.disabled = true;
+        setTimeout(() => {
+            button.innerHTML = originalContent;
+            button.disabled = false;
+        }, 1500); 
+    }
+
+    async function deleteSavedItem(id) {
+        if (!confirm('Deseja realmente excluir esta lista salva?')) return;
+
+        const index = savedLists.findIndex(item => item.id === id);
+        if (index === -1) {
+            showToast('Erro: Item não encontrado.', 'error');
+            return;
+        }
+
+        const deletedItemName = savedLists[index].name;
+        savedLists.splice(index, 1);
+
+        if (await salvarListasSalvas()) {
+            showToast(`Lista "${deletedItemName}" excluída.`, 'info');
+            if (document.getElementById('previewModal').classList.contains('active')) {
+                updateSavedItemsContainer();
+            }
+        }
+    }
+
+    // Usado para SALVAR a lista, mantendo os títulos para contexto.
+    function getFormattedOutputAsText() {
+        const outputElement = document.getElementById('emojiOutput');
+        
+        if (!outputElement.querySelector('.section-title')) {
+            return ''; 
+        }
+
+        let textToReturn = '';
+        const sections = outputElement.querySelectorAll('section');
+
+        sections.forEach(section => {
+            const titleElement = section.querySelector('.section-title');
+            const contentElement = section.querySelector('.emoji-content');
+
+            if (titleElement && contentElement) {
+                const tempTitle = titleElement.cloneNode(true);
+                const countSpan = tempTitle.querySelector('.count-red');
+                if (countSpan) {
+                    countSpan.remove();
+                }
+                const sectionTitle = tempTitle.textContent.trim();
+
+                let sectionContent = '';
+                if (contentElement.dataset.contentType === 'bichos') {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = contentElement.innerHTML;
+                    tempDiv.querySelectorAll('.bicho-name').forEach(span => span.remove());
+                    sectionContent = tempDiv.innerText.trim();
+                } else {
+                    sectionContent = contentElement.innerText.trim();
+                }
+
+                if (sectionContent) {
+                    textToReturn += sectionTitle + '\n' + sectionContent + '\n\n';
+                }
+            }
+        });
+
+        return textToReturn.trim();
+    }
+    
+    // Usado apenas para COPIAR, removendo os títulos.
+    function getFormattedOutputForCopying() {
+        const outputElement = document.getElementById('emojiOutput');
+        
+        if (!outputElement.querySelector('.section-title')) {
+            return '';
+        }
+
+        let textToReturn = '';
+        const sections = outputElement.querySelectorAll('section');
+
+        sections.forEach(section => {
+            const contentElement = section.querySelector('.emoji-content');
+
+            if (contentElement) {
+                let sectionContent = '';
+                if (contentElement.dataset.contentType === 'bichos') {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = contentElement.innerHTML;
+                    tempDiv.querySelectorAll('.bicho-name').forEach(span => span.remove());
+                    sectionContent = tempDiv.innerText.trim();
+                } else {
+                    sectionContent = contentElement.innerText.trim();
+                }
+
+                if (sectionContent) {
+                    textToReturn += sectionContent + '\n';
+                }
+            }
+        });
+
+        return textToReturn.trim();
+    }
+
+    function copyOnlyEmojisToClipboard() {
+        const textToCopy = getFormattedOutputForCopying();
+        copyToClipboard(textToCopy, document.querySelector('#copyButtons button'));
+    }
+
+    const emojiToNumber = { 
+      '0️⃣': '0', '1️⃣': '1', '2️⃣': '2', '3️⃣': '3', '4️⃣': '4',
+      '5️⃣': '5', '6️⃣': '6', '7️⃣': '7', '8️⃣': '8', '9️⃣': '9'
+    };
+
+function preprocessInputWithQuantities(text) {
+        const lines = text.split('\n');
+        const processedLines = [];
+        const quantityRegex = /\b(\d+)x\s*$/i; // Encontra "Nx" no final de uma linha
+
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine === '') continue; // Pula linhas vazias
+
+            const match = trimmedLine.match(quantityRegex);
+
+            if (match) {
+                const repeatCount = parseInt(match[1], 10);
+                // Pega a parte da linha que contém os números (tudo antes da quantidade)
+                const numbersPart = trimmedLine.replace(quantityRegex, '').trim();
+                
+                if (numbersPart && repeatCount > 0) {
+                    // Cria uma string repetindo os números N vezes, separados por espaço
+                    const repeated = (numbersPart + ' ').repeat(repeatCount).trim();
+                    processedLines.push(repeated);
+                }
+            } else {
+                // Se não houver quantidade no final da linha, apenas a adiciona como está
+                processedLines.push(trimmedLine);
+            }
+        }
+
+        // Junta todas as linhas processadas em um único texto novamente
+        return processedLines.join('\n');
+    }
+
+
+    function parseNumbers() {
+        let inputText = document.getElementById('input').value;
+        const errorMessageElement = document.getElementById('errorMessage');
+        errorMessageElement.textContent = ''; // Limpa qualquer erro anterior
+
+        // A lógica de verificação de erros foi removida para que textos como "2x" sejam simplesmente ignorados.
+
+        let processedInput = inputText.toLowerCase();
+        
+        // 1. Traduz nomes de bichos e grupos para suas dezenas correspondentes.
+        const sortedBichoNames = Object.keys(bichoNameToDezena).sort((a, b) => b.length - a.length);
+        const grupoRegex = /grupo\s*(\d{1,2})/g;
+
+        processedInput = processedInput.replace(grupoRegex, (match, p1) => {
+            let dezena = parseInt(p1, 10);
+            if (dezena >= 1 && dezena <= 25) {
+                const bichoName = getBichoNameByGrupo(dezena);
+                if (bichoName) {
+                    const dezenaBicho = bichoNameToDezena[bichoName.toLowerCase()];
+                    return dezenaBicho || p1.padStart(2, '0');
+                }
+            }
+            return p1.padStart(2, '0');
+        });
+
+        for (const bichoName of sortedBichoNames) {
+            const dezena = bichoNameToDezena[bichoName];
+            const regex = new RegExp(`\\b${bichoName}\\b`, 'g');
+            processedInput = processedInput.replace(regex, dezena);
+        }
+
+        // 2. Traduz emojis de números para dígitos.
+        for (const [emoji, digit] of Object.entries(emojiToNumber)) {
+            processedInput = processedInput.replaceAll(emoji, digit);
+        }
+
+        // 3. Extrai APENAS os números da string, ignorando todo o resto (letras, "2x", caracteres especiais, etc.).
+        const numbers = processedInput.split(/\D+/).filter(Boolean);
+
+        return numbers;
+    }
+
+
+    function convertToEmojiStr(numStr) {
+        return numStr.split('').map(d => numberToEmoji[d] || d).join('');
+    }
+
+    function getCentenaPart(numStr) {
+        if (numStr.length >= 3) return numStr.slice(-3);
+        return '';
+    }
+
+    function getDezenaPart(numStr) {
+        if (numStr.length >= 2) return numStr.slice(-2);
+        return '';
+    }
+
+    function convertToEmojisRealTime() {
+        const numbers = parseNumbers();
+        const outputElement = document.getElementById('emojiOutput');
+        const copyButtonsDiv = document.getElementById('copyButtons');
+        
+        showMilharesCentenasDezenas(); 
+
+        const outputContent = outputElement.textContent.trim();
+        if (numbers.length > 0 && document.getElementById('errorMessage').textContent === '') {
+            copyButtonsDiv.style.display = 'flex'; 
+        } else {
+            copyButtonsDiv.style.display = 'none';
+        }
+    }
+
+    function showMilharesCentenasDezenas() {
+        const selectedName = document.getElementById('nomePessoaSelect').value;
+        const nome = selectedName || ''; 
+        const quantidadeSelect = document.getElementById('quantidadeSelect');
+        const quantidade = quantidadeSelect ? quantidadeSelect.value : '';
+        const paidEmoji = showCheckEmoji ? ' ✅' : '';
+        const pinnedEmoji = isPinned ? '📌 ' : ''; 
+
+        const numbers = parseNumbers(); 
+        const outputElement = document.getElementById('emojiOutput');
+        const warningElement = document.getElementById('duplicateWarningMessage');
+
+        warningElement.style.display = 'none';
+        warningElement.innerHTML = '';
+        
+        if (numbers.length === 0) {
+            if (document.getElementById('errorMessage').textContent) {
+                 // A mensagem de erro já está sendo exibida, então não fazemos nada aqui
+            } else {
+                outputElement.textContent = 'Aguardando números...';
+            }
+            document.getElementById('copyButtons').style.display = 'none';
+            return;
+        }
+
+        const milhares = [], centenas = [], dezenas = [];
+        const milharesSet = allowRepetition ? null : new Set();
+        const centenasSet = allowRepetition ? null : new Set();
+        const dezenasSet = allowRepetition ? null : new Set();
+        
+        const bichos = []; 
+        const bichoSet = new Set();
+
+        numbers.forEach(n => {
+            const len = n.length;
+            let mEmoji, cEmoji, dEmoji;
+            
+            if (len === 4) {
+                mEmoji = convertToEmojiStr(n);
+                if (allowRepetition || !milharesSet.has(mEmoji)) {
+                    milhares.push(mEmoji);
+                    if (!allowRepetition) milharesSet.add(mEmoji);
+                }
+            }
+            
+            const cPart = getCentenaPart(n);
+            if (cPart) {
+                cEmoji = convertToEmojiStr(cPart);
+                if (allowRepetition || !centenasSet.has(cEmoji)) {
+                    centenas.push(cEmoji);
+                    if (!allowRepetition) centenasSet.add(cEmoji);
+                }
+            }
+            
+            const dPart = getDezenaPart(n);
+            if (dPart) {
+                dEmoji = convertToEmojiStr(dPart);
+                if (allowRepetition || !dezenasSet.has(dEmoji)) {
+                    dezenas.push(dEmoji);
+                    if (!allowRepetition) dezenasSet.add(dEmoji);
+                }
+            }
+            
+            const bichoName = getBichoNameByDezena(parseInt(n.slice(-2)));
+            if (bichoName) {
+                const emoji = bichoNameToEmoji[bichoName.toLowerCase().replace('á', 'a')];
+                if (emoji && !bichoSet.has(bichoName)) {
+                    bichos.push({
+                        emoji: `${emoji}${emoji}`,
+                        name: bichoName
+                    });
+                    bichoSet.add(bichoName);
+                }
+            }
+        });
+
+        const selectedOption = document.querySelector('input[name="viewOption"]:checked')?.value || 'both';
+
+        if (!allowRepetition && numbers.length > 1) {
+            const findCounts = (arr) => {
+                const counts = {};
+                for (const item of arr) {
+                    counts[item] = (counts[item] || 0) + 1;
+                }
+                return counts;
+            };
+
+            const duplicateMessages = [];
+
+            const formatDuplicateMessage = (counts, categoryName) => {
+                const messages = Object.entries(counts)
+                    .filter(([num, count]) => count > 1)
+                    .map(([num, count]) => `${num} (${count}x)`);
+
+                if (messages.length > 0) {
+                    return `${categoryName}: ${messages.join(', ')}`;
+                }
+                return null;
+            };
+
+            if (selectedOption === 'both' || selectedOption === 'milhar') {
+                const rawMilhares = numbers.filter(n => n.length === 4);
+                const countsMilhares = findCounts(rawMilhares);
+                const msg = formatDuplicateMessage(countsMilhares, 'Milhares');
+                if (msg) duplicateMessages.push(msg);
+            }
+            
+            if (selectedOption === 'both' || selectedOption === 'centena') {
+                const rawCentenas = numbers.map(getCentenaPart).filter(Boolean);
+                const countsCentenas = findCounts(rawCentenas);
+                const msg = formatDuplicateMessage(countsCentenas, 'Centenas');
+                if (msg) duplicateMessages.push(msg);
+            }
+            
+            if (selectedOption === 'both' || selectedOption === 'dezena') {
+                const rawDezenas = numbers.map(getDezenaPart).filter(Boolean);
+                const countsDezenas = findCounts(rawDezenas);
+                const msg = formatDuplicateMessage(countsDezenas, 'Dezenas');
+                if (msg) duplicateMessages.push(msg);
+            }
+
+            if (duplicateMessages.length > 0) {
+                let finalMessage = "<strong>Aviso:</strong> Números repetidos foram agrupados: " + duplicateMessages.join('; ');
+                finalMessage += "<br><small>A lista abaixo exibe cada número apenas uma vez. Ative a opção 'Permitir repetição' para exibi-los.</small>";
+                warningElement.innerHTML = finalMessage;
+                warningElement.style.display = 'block';
+            }
+        }
+
+        const formatWithName = (arr) => {
+        let nomeFormatado = selectedName;
+        if (nomeFormatado) {
+            let emojis = '';
+            if (isPinned) emojis += '📌';
+            if (showCheckEmoji) emojis += '✅';
+            if (emojis) {
+                nomeFormatado = `${nomeFormatado} ${emojis}`;
+            }
+        }
+        
+        const nomeCompleto = quantidade && nomeFormatado ? `${quantidade} ${nomeFormatado}` : nomeFormatado;
+        
+        if (!nomeCompleto || arr.length === 0) return arr;
+        
+        if (arr.length === 1) {
+            return [`${arr[0]} ${nomeCompleto}`];
+        } else {
+            const newArr = [...arr];
+            newArr[0] = `${newArr[0]} ${nomeCompleto}`;
+            newArr[newArr.length - 1] = `${newArr[newArr.length - 1]} ${nomeCompleto}`;
+            return newArr;
+        }
+    };
+        
+        let outputHTML = '';
+        const buildSection = (title, data, type) => {
+            if (data.length === 0) return '';
+            const formattedData = formatWithName(data);
+            const content = formattedData.join('\n');
+            return `<section aria-labelledby="title-${type}">
+                        <h3 id="title-${type}" class="section-title">${title} <span class="count-red">(${data.length})</span>:</h3>
+                        <div class="emoji-content" data-content-type="${type}">${content}</div>
+                    </section>`;
+        };
+
+        const gerarTernos = () => {
+            const dezenasFiltradas = [];
+            for (const n of numbers) {
+                if (n.length === 2) {
+                    dezenasFiltradas.push(n);
+                } 
+                else if (n.length > 2) {
+                    const dezena = getDezenaPart(n);
+                    if (dezena.length === 2) {
+                        dezenasFiltradas.push(dezena);
+                    }
+                }
+            }
+            
+            if (dezenasFiltradas.length < 3) {
+                return [`⚠️ São necessárias pelo menos 3 dezenas para formar ternos.`];
+            }
+            
+            const ternos = [];
+            for (let i = 0; i < dezenasFiltradas.length; i += 3) {
+                if (i + 2 < dezenasFiltradas.length) {
+                    const dezena1Emoji = convertToEmojiStr(dezenasFiltradas[i]);
+                    const dezena2Emoji = convertToEmojiStr(dezenasFiltradas[i+1]);
+                    const dezena3Emoji = convertToEmojiStr(dezenasFiltradas[i+2]);
+                    const terno = `${dezena1Emoji}/${dezena2Emoji}/${dezena3Emoji}`;
+                    ternos.push(terno);
+                }
+            }
+            
+            if (ternos.length === 0) {
+                return [`⚠️ Não foi possível formar ternos completos. Adicione mais dezenas.`];
+            }
+            
+            return ternos;
+        };
+        
+        const gerarDuques = () => {
+            const dezenasFiltradas = [];
+            for (const n of numbers) {
+                if (n.length === 2) {
+                    dezenasFiltradas.push(n);
+                } 
+                else if (n.length > 2) {
+                    const dezena = getDezenaPart(n);
+                    if (dezena.length === 2) {
+                        dezenasFiltradas.push(dezena);
+                    }
+                }
+            }
+            
+            if (dezenasFiltradas.length < 2) {
+                return [`⚠️ São necessárias pelo menos 2 dezenas para formar duques.`];
+            }
+            
+            const duques = [];
+            for (let i = 0; i < dezenasFiltradas.length; i += 2) {
+                if (i + 1 < dezenasFiltradas.length) {
+                    const dezena1Emoji = convertToEmojiStr(dezenasFiltradas[i]);
+                    const dezena2Emoji = convertToEmojiStr(dezenasFiltradas[i+1]);
+                    const duque = `${dezena1Emoji}-${dezena2Emoji}`;
+                    duques.push(duque);
+                }
+            }
+            
+            if (duques.length === 0) {
+                return [`⚠️ Não foi possível formar duques completos. Adicione mais dezenas.`];
+            }
+            
+            return duques;
+        };
+
+
+        if (selectedOption === 'both' || selectedOption === 'milhar') {
+            outputHTML += buildSection('📊 Milhares', milhares, 'milhares');
+        }
+        if (selectedOption === 'both' || selectedOption === 'centena') {
+            outputHTML += buildSection('📊 Centenas', centenas, 'centenas');
+        }
+        if (selectedOption === 'both' || selectedOption === 'dezena') {
+            outputHTML += buildSection('📊 Dezenas', dezenas, 'dezenas');
+        }
+        if (selectedOption === 'terno') {
+            const ternos = gerarTernos();
+            outputHTML += buildSection('📊 Ternos', ternos, 'ternos');
+        }
+        if (selectedOption === 'duque') {
+            const duques = gerarDuques();
+            outputHTML += buildSection('📊 Duques', duques, 'duques');
+        }
+        if (selectedOption === 'bicho') {
+            const bichosForDisplay = bichos.map(b => 
+                `${b.emoji}<span class="bicho-name">${b.name}</span>`
+            );
+            outputHTML += buildSection('🐾 Bichos', bichosForDisplay, 'bichos');
+        }
+
+
+        if (outputHTML.trim() === '') {
+            outputElement.textContent = 'Nenhum resultado para a opção selecionada.';
+            document.getElementById('copyButtons').style.display = 'none';
+        } else {
+            outputElement.innerHTML = outputHTML;
+            document.getElementById('copyButtons').style.display = 'flex';
+        }
+    }
+    
+    function getBichoNameByDezena(dezena) {
+        if (dezena >= 1 && dezena <= 4) return 'Avestruz';
+        if (dezena >= 5 && dezena <= 8) return 'Aguia';
+        if (dezena >= 9 && dezena <= 12) return 'Burro';
+        if (dezena >= 13 && dezena <= 16) return 'Borboleta';
+        if (dezena >= 17 && dezena <= 20) return 'Cachorro';
+        if (dezena >= 21 && dezena <= 24) return 'Cabra';
+        if (dezena >= 25 && dezena <= 28) return 'Carneiro';
+        if (dezena >= 29 && dezena <= 32) return 'Camelo';
+        if (dezena >= 33 && dezena <= 36) return 'Cobra';
+        if (dezena >= 37 && dezena <= 40) return 'Coelho';
+        if (dezena >= 41 && dezena <= 44) return 'Cavalo';
+        if (dezena >= 45 && dezena <= 48) return 'Elefante';
+        if (dezena >= 49 && dezena <= 52) return 'Galo';
+        if (dezena >= 53 && dezena <= 56) return 'Gato';
+        if (dezena >= 57 && dezena <= 60) return 'Jacare';
+        if (dezena >= 61 && dezena <= 64) return 'Leao';
+        if (dezena >= 65 && dezena <= 68) return 'Macaco';
+        if (dezena >= 69 && dezena <= 72) return 'Porco';
+        if (dezena >= 73 && dezena <= 76) return 'Pavao';
+        if (dezena >= 77 && dezena <= 80) return 'Peru';
+        if (dezena >= 81 && dezena <= 84) return 'Touro';
+        if (dezena >= 85 && dezena <= 88) return 'Tigre';
+        if (dezena >= 89 && dezena <= 92) return 'Urso';
+        if (dezena >= 93 && dezena <= 96) return 'Veado';
+        if (dezena >= 97 || dezena === 0) return 'Vaca';
+        return null;
+    }
+
+    function getBichoNameByGrupo(grupo) {
+        if (grupo === 1) return 'Avestruz';
+        if (grupo === 2) return 'Aguia';
+        if (grupo === 3) return 'Burro';
+        if (grupo === 4) return 'Borboleta';
+        if (grupo === 5) return 'Cachorro';
+        if (grupo === 6) return 'Cabra';
+        if (grupo === 7) return 'Carneiro';
+        if (grupo === 8) return 'Camelo';
+        if (grupo === 9) return 'Cobra';
+        if (grupo === 10) return 'Coelho';
+        if (grupo === 11) return 'Cavalo';
+        if (grupo === 12) return 'Elefante';
+        if (grupo === 13) return 'Galo';
+        if (grupo === 14) return 'Gato';
+        if (grupo === 15) return 'Jacare';
+        if (grupo === 16) return 'Leao';
+        if (grupo === 17) return 'Macaco';
+        if (grupo === 18) return 'Porco';
+        if (grupo === 19) return 'Pavao';
+        if (grupo === 20) return 'Peru';
+        if (grupo === 21) return 'Touro';
+        if (grupo === 22) return 'Tigre';
+        if (grupo === 23) return 'Urso';
+        if (grupo === 24) return 'Veado';
+        if (grupo === 25) return 'Vaca';
+        return null;
+    }
+
+    function clearAll() {
+        if (!confirm('Deseja limpar todos os números e resultados?')) return;
+        document.getElementById('input').value = '';
+        document.getElementById('errorMessage').textContent = '';
+        document.getElementById('nomePessoaInputModal').value = ''; 
+        document.getElementById('nomePessoaSelectModal').value = ''; 
+        document.getElementById('quantidadeSelect').value = '1x'; 
+        if (choicesNomePessoa) {
+            choicesNomePessoa.destroy();
+            const nomeSelect = document.getElementById('nomePessoaSelect');
+            nomeSelect.value = '';
+            choicesNomePessoa = new Choices(nomeSelect, {
+                searchPlaceholderValue: 'Digite para buscar um nome...',
+                itemSelectText: 'Pressione Enter para selecionar',
+                noResultsText: 'Nenhum resultado encontrado',
+                shouldSort: false
+            });
+        }
+        document.querySelector('input[name="viewOption"][value="both"]').checked = true;
+        showToast('Campos limpos!', 'info');
+        showCheckEmoji = false;
+        updateCheckEmojiButtonAppearance(); 
+        isPinned = false; 
+        updatePinButtonAppearance(); 
+        document.getElementById('emojiOutput').textContent = 'Aguardando números...';
+        document.getElementById('copyButtons').style.display = 'none';
+        const warningElement = document.getElementById('duplicateWarningMessage');
+        warningElement.style.display = 'none';
+        warningElement.innerHTML = '';
+        convertToEmojisRealTime();
+    }
+    
+    function countNumbers() {
+        const numbers = parseNumbers();
+
+        if (numbers.length === 0) {
+            showToast('Não há números na lista para contar.', 'info');
+            return;
+        }
+
+        const dezenas = [];
+        const centenas = [];
+        const milhares = [];
+
+        numbers.forEach(num => {
+            if (num.length === 2) {
+                dezenas.push(num);
+            } else if (num.length === 3) {
+                centenas.push(num);
+            } else if (num.length === 4) {
+                milhares.push(num);
+            }
+        });
+
+        // Função para encontrar e formatar os números repetidos
+        const findDuplicates = (array) => {
+            const counts = {};
+            array.forEach(item => { counts[item] = (counts[item] || 0) + 1; });
+            return Object.entries(counts)
+                .filter(([key, value]) => value > 1)
+                .map(([key, value]) => `${key} (${value}x)`)
+                .join(', ');
+        };
+
+        const repeatedDezenas = findDuplicates(dezenas);
+        const repeatedCentenas = findDuplicates(centenas);
+        const repeatedMilhares = findDuplicates(milhares);
+
+        let warningHTML = '';
+        if (repeatedDezenas || repeatedCentenas || repeatedMilhares) {
+            warningHTML = `
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccc; font-size: 0.9rem; text-align: left;">
+                    <strong style="color: #dc3545;">Aviso de Repetição:</strong>
+                    <ul style="list-style-type: none; padding-left: 10px; margin-top: 5px;">`;
+            
+            if (repeatedDezenas) {
+                warningHTML += `<li><strong>Dezenas:</strong> ${repeatedDezenas}</li>`;
+            }
+            if (repeatedCentenas) {
+                warningHTML += `<li><strong>Centenas:</strong> ${repeatedCentenas}</li>`;
+            }
+            if (repeatedMilhares) {
+                warningHTML += `<li><strong>Milhares:</strong> ${repeatedMilhares}</li>`;
+            }
+
+            warningHTML += `</ul></div>`;
+
+            // Para o modo escuro, o aviso fica mais legível
+            const body = document.body;
+            if (body.classList.contains('dark-mode')) {
+              warningHTML = warningHTML.replace('border-top: 1px solid #ccc;', 'border-top: 1px solid #444;')
+                                       .replace('#dc3545', '#f8d7da');
+            }
+        }
+
+        const resultadoHTML = `
+            <div style="text-align: left; font-size: 1.2rem;">
+                <ul style="list-style-type: none; padding: 0;">
+                    <li style="margin-bottom: 12px;">
+                        <strong>Total de Dezenas:</strong> 
+                        <span style="font-weight: bold; color: #007bff;">${dezenas.length}</span>
+                    </li>
+                    <li style="margin-bottom: 12px;">
+                        <strong>Total de Centenas:</strong> 
+                        <span style="font-weight: bold; color: #007bff;">${centenas.length}</span>
+                    </li>
+                    <li style="margin-bottom: 12px;">
+                        <strong>Total de Milhares:</strong> 
+                        <span style="font-weight: bold; color: #007bff;">${milhares.length}</span>
+                    </li>
+                </ul>
+            </div>
+            ${warningHTML}
+        `;
+        showContagemModal(resultadoHTML);
+    }
+
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        toast.setAttribute('role', 'alert');
+        container.appendChild(toast);
+        toast.offsetHeight; 
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => {
+                if (toast.parentNode === container) { 
+                    container.removeChild(toast);
+                }
+            }, { once: true });
+        }, duration);
+    }
+    
+    function showAvisosModal() {
+        const modal = document.getElementById('avisosModal');
+        if (modal) {
+            modal.classList.add('active');
+        }
+    }
+
+    function closeAvisosModal() {
+        const modal = document.getElementById('avisosModal');
+        if (modal) {
+            modal.classList.remove('active');
+            localStorage.setItem('avisosVistos', 'true');
+        }
+    }
+
+    function showContagemModal(htmlContent) {
+        const modal = document.getElementById('contagemModal');
+        const resultadoDiv = document.getElementById('contagemResultado');
+        if (modal && resultadoDiv) {
+            resultadoDiv.innerHTML = htmlContent;
+            modal.classList.add('active');
+        }
+    }
+
+    function closeContagemModal() {
+        const modal = document.getElementById('contagemModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+ 
+    function setupPWA() {
+        const installButton = document.getElementById('install-button');
+    
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if(installButton) installButton.style.display = 'block';
+        });
+    
+        installButton?.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+        });
+    
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                console.warn("Registro do Service Worker desabilitado temporariamente.");
+            });
+        }
+    }
+
+    function showDataManagementModal() {
+        document.getElementById('dataManagementModal').classList.add('active');
+    }
+
+    function closeDataManagementModal() {
+        document.getElementById('dataManagementModal').classList.remove('active');
+    }
+
+    async function exportDataToTxt() {
+        showToast('Preparando dados para exportação...', 'info');
+
+        try {
+            const allData = {
+                nomesSalvos: await window.getData(STORAGE_KEYS.NAMES),
+                savedLists: await window.getData(STORAGE_KEYS.LISTS),
+                themePreference: await window.getData(STORAGE_KEYS.THEME),
+                showCheckEmoji: showCheckEmoji
+            };
+
+            const dataString = JSON.stringify(allData, null, 2);
+            const blob = new Blob([dataString], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VipEmojs_backup_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Dados exportados com sucesso!', 'success');
+            closeDataManagementModal();
+        } catch (error) {
+            console.error('Erro ao exportar dados:', error);
+            showToast('Erro ao exportar dados.', 'error');
+        }
+    }
+
+    async function importDataFromTxt(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            showToast('Nenhum arquivo selecionado.', 'info');
+            return;
+        }
+
+        if (!confirm('Importar dados sobrescreverá TODOS os seus dados salvos atuais (nomes, listas e tema). Deseja continuar?')) {
+            event.target.value = ''; 
+            return;
+        }
+
+        showToast('Importando dados...', 'info');
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                
+                if (importedData.nomesSalvos && Array.isArray(importedData.nomesSalvos)) {
+                    await window.saveData(STORAGE_KEYS.NAMES, importedData.nomesSalvos);
+                    nomesSalvos = importedData.nomesSalvos;
+                    atualizarSelectNomes();
+                }
+
+                if (importedData.savedLists && Array.isArray(importedData.savedLists)) {
+                    await window.saveData(STORAGE_KEYS.LISTS, importedData.savedLists);
+                    savedLists = importedData.savedLists;
+                }
+
+                if (importedData.themePreference) {
+                    await window.saveData(STORAGE_KEYS.THEME, importedData.themePreference);
+                    setTheme(importedData.themePreference);
+                }
+
+                if (typeof importedData.showCheckEmoji === 'boolean') {
+                    showCheckEmoji = importedData.showCheckEmoji;
+                    updateCheckEmojiButtonAppearance();
+                }
+                
+                showToast('Dados importados com sucesso! Recarregando a página...', 'success', 4000);
+                closeDataManagementModal();
+
+                setTimeout(() => {
+                    window.location.reload(); 
+                }, 3500);
+
+            } catch (parseError) {
+                console.error('Erro ao parsear arquivo TXT:', parseError);
+                showToast('Erro: Arquivo TXT inválido ou corrompido.', 'error');
+            } finally {
+                event.target.value = ''; 
+            }
+        };
+        reader.onerror = (error) => {
+            console.error('Erro ao ler arquivo:', error);
+            showToast('Erro ao ler o arquivo.', 'error');
+        };
+        reader.readAsText(file);
+    }
+    
+    function showTabelaBichosModal() {
+        populateTabelaBichos();
+        document.getElementById('tabelaBichosModal').classList.add('active');
+    }
+
+    function closeTabelaBichosModal() {
+        document.getElementById('tabelaBichosModal').classList.remove('active');
+    }
+
+    function populateTabelaBichos() {
+        const container = document.getElementById('tabelaBichosContainer');
+        container.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.className = 'bichos-table';
+
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>Grupo</th>
+                <th>Animal</th>
+                <th>Dezenas</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        tabelaDeGrupos.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.grupo}</td>
+                <td>${item.emoji} ${item.animal}</td>
+                <td>${item.dezenas.join(', ')}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+
+        container.appendChild(table);
+    }
+
+    function copyTabelaBichos(buttonElement) {
+        let tableText = '📊 Tabela de Grupos do Bicho 📊\n\n';
+
+        tabelaDeGrupos.forEach(item => {
+            const line = `Grupo ${item.grupo} (${item.animal} ${item.emoji}): ${item.dezenas.join(', ')}\n`;
+            tableText += line;
+        });
+
+        copyToClipboard(tableText.trim(), buttonElement);
+    }
+
+    function filterListasSalvas() {
+        const searchTerm = document.getElementById('searchListasInput').value.toLowerCase();
+        const items = document.querySelectorAll('#savedItemsContainer .saved-item');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const titleElement = item.querySelector('.saved-item-title');
+            if (titleElement) {
+                const title = titleElement.textContent.toLowerCase();
+                if (title.includes(searchTerm)) {
+                    item.style.display = '';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            }
+        });
+
+        const noResultsMessage = document.getElementById('no-saved-items-message');
+        if (visibleCount === 0 && items.length > 0) {
+            if (!noResultsMessage) {
+                const container = document.getElementById('savedItemsContainer');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'no-saved-items';
+                messageDiv.id = 'no-saved-items-message';
+                messageDiv.textContent = 'Nenhum resultado encontrado para a sua busca.';
+                container.appendChild(messageDiv);
+            }
+        } else if (noResultsMessage) {
+            noResultsMessage.remove();
+        }
+    }
+
+    async function toggleRepetition(checkbox) {
+        allowRepetition = checkbox.checked;
+        
+        await window.saveData(STORAGE_KEYS.ALLOW_REPETITION, allowRepetition);
+
+        showToast(allowRepetition ? 'Repetição de números permitida.' : 'Números repetidos serão ignorados.', 'info');
+        showMilharesCentenasDezenas(); 
+    }
+
+    function showRandomGeneratorModal() {
+        const modal = document.getElementById('randomGeneratorModal');
+        modal.classList.add('active');
+        document.getElementById('randomQuantityInput').focus();
+        document.getElementById('generatorActionButtons').style.display = 'none';
+        hideWhatsAppConfig(); 
+    }
+
+    function closeRandomGeneratorModal() {
+        document.getElementById('randomGeneratorModal').classList.remove('active');
+    }
+
+    function clearRandomResults() {
+        ['dezenaResult', 'centenaResult', 'milharResult'].forEach(id => {
+            const resultGroup = document.getElementById(id);
+            if (resultGroup) {
+                const numbersDiv = resultGroup.querySelector('.result-numbers');
+                if (numbersDiv) {
+                    numbersDiv.textContent = '';
+                }
+                resultGroup.style.display = 'none';
+            }
+        });
+
+        const actionButtons = document.getElementById('generatorActionButtons');
+        if (actionButtons) {
+            actionButtons.style.display = 'none';
+        }
+
+        hideWhatsAppConfig(); 
+        
+        showToast('Resultados limpos.', 'info');
+    }
+
+    let bichosPopulated = false;
+    function populateBichosSelector() { 
+        if (bichosPopulated) return; 
+        const container = document.getElementById('bichosSelectorContainer'); 
+        tabelaDeGrupos.forEach(bicho => { 
+            const label = document.createElement('label'); 
+            label.innerHTML = `<input type="checkbox" value="${bicho.grupo}" name="selectedBichos"> ${bicho.emoji} ${bicho.animal}`; 
+            container.appendChild(label); 
+        }); 
+        bichosPopulated = true; 
+    }
+    
+    function toggleBichosSelector(mode) { 
+        document.getElementById('bichosSelectorContainerWrapper').style.display = mode === 'bichos' ? 'block' : 'none'; 
+    }
+    
+    function generateSelectedNumbers() {
+        const checkedTypes = Array.from(document.querySelectorAll('input[name="generationType"]:checked'));
+        const actionButtons = document.getElementById('generatorActionButtons');
+        
+        ['dezenaResult', 'centenaResult', 'milharResult'].forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
+
+        if (checkedTypes.length === 0) {
+            showToast('Selecione pelo menos um tipo de jogo para gerar.', 'error');
+            actionButtons.style.display = 'none';
+            return;
+        }
+
+        const quantityInput = document.getElementById('randomQuantityInput');
+        let quantity = parseInt(quantityInput.value, 10);
+        if (isNaN(quantity) || quantity <= 0 || quantity > 500) {
+            showToast('Por favor, insira uma quantidade válida (1-500).', 'error');
+            return;
+        }
+
+        const mode = document.querySelector('input[name="generationMode"]:checked').value;
+        
+        checkedTypes.forEach(checkbox => {
+            const type = checkbox.value;
+            let min, max, padding;
+            
+            if (type === 'dezena') { [min, max, padding] = [0, 99, 2]; }
+            else if (type === 'centena') { [min, max, padding] = [0, 999, 3]; }
+            else { [min, max, padding] = [0, 9999, 4]; }
+
+            const finalGeneratedSet = new Set();
+
+            if (mode === 'bichos') {
+                const selectedBichosCheckboxes = Array.from(document.querySelectorAll('input[name="selectedBichos"]:checked'));
+                
+                if (selectedBichosCheckboxes.length === 0) {
+                    showToast('Selecione pelo menos um bicho para gerar os números.', 'error');
+                    return;
+                }
+
+                const quantityPerBicho = Math.floor(quantity / selectedBichosCheckboxes.length);
+                let remainder = quantity % selectedBichosCheckboxes.length;
+
+                if (remainder !== 0) {
+                    showToast(`Quantidade (${quantity}) não é perfeitamente divisível por ${selectedBichosCheckboxes.length} bichos. A divisão será aproximada.`, 'info');
+                }
+
+                selectedBichosCheckboxes.forEach(bichoCheckbox => {
+                    let targetCount = quantityPerBicho + (remainder > 0 ? 1 : 0);
+                    if (remainder > 0) remainder--;
+                    
+                    const bichoGrupo = bichoCheckbox.value;
+                    const bichoData = tabelaDeGrupos.find(b => b.grupo === bichoGrupo);
+                    const dezenaPoolForThisBicho = bichoData.dezenas;
+
+                    let generatedForThisBicho = 0;
+                    let localAttempts = 0;
+                    while(generatedForThisBicho < targetCount && localAttempts < 500) {
+                        const randomDezena = dezenaPoolForThisBicho[Math.floor(Math.random() * dezenaPoolForThisBicho.length)];
+                        let finalNumber;
+                        if (type === 'dezena') {
+                            finalNumber = randomDezena;
+                        } else if (type === 'centena') {
+                            finalNumber = String(Math.floor(Math.random() * 10)) + randomDezena;
+                        } else { 
+                            finalNumber = String(Math.floor(Math.random() * 100)).padStart(2, '0') + randomDezena;
+                        }
+                        
+                        if (!finalGeneratedSet.has(finalNumber)) {
+                            finalGeneratedSet.add(finalNumber);
+                            generatedForThisBicho++;
+                        }
+                        localAttempts++;
+                    }
+                });
+            } else { 
+                let attempts = 0;
+                while (finalGeneratedSet.size < quantity && attempts < (quantity * 100)) {
+                    const rand = Math.floor(Math.random() * (max - min + 1)) + min;
+                    const finalNumber = String(rand).padStart(padding, '0');
+                    finalGeneratedSet.add(finalNumber);
+                    attempts++;
+                }
+            }
+            
+            const resultGroup = document.getElementById(`${type}Result`);
+            const shuffledResults = Array.from(finalGeneratedSet).sort(() => Math.random() - 0.5);
+            resultGroup.querySelector('.result-numbers').textContent = shuffledResults.join('  ');
+            resultGroup.style.display = 'block';
+        });
+
+        actionButtons.style.display = 'flex';
+    }
+
+
+    function getFormattedResultsText() {
+        let fullText = '';
+        const types = [
+            { id: 'dezenaResult', title: 'DEZENAS' },
+            { id: 'centenaResult', title: 'CENTENAS' },
+            { id: 'milharResult', title: 'MILHARES' }
+        ];
+
+        types.forEach(type => {
+            const resultGroup = document.getElementById(type.id);
+            if (resultGroup.style.display !== 'none') {
+                const numbers = resultGroup.querySelector('.result-numbers').textContent;
+                fullText += `${type.title}:\n${numbers}\n\n`;
+            }
+        });
+        return fullText.trim();
+    }
+    
+    function copyRandomNumbers() {
+        const textToCopy = getFormattedResultsText();
+        if (textToCopy) {
+            copyToClipboard(textToCopy, document.getElementById('copyRandomNumbersBtn'));
+        } else {
+            showToast('Nenhum número para copiar.', 'info');
+        }
+    }
+
+    function selectAllBichos(checkedState) {
+        document.querySelectorAll('#bichosSelectorContainer input[type="checkbox"]').forEach(c => c.checked = checkedState);
+    }
+
+    function hideWhatsAppConfig() {
+        document.getElementById('generatorPanel').style.display = 'block';
+        document.getElementById('whatsappConfigPanel').style.display = 'none';
+    }
+
+     async function showWhatsAppConfig() {
+        updateTemplateSelect();
+        document.getElementById('generatorPanel').style.display = 'none';
+        document.getElementById('whatsappConfigPanel').style.display = 'block';
+
+        const textarea = document.getElementById('whatsappMessageTextarea');
+        
+        const mode = document.querySelector('input[name="generationMode"]:checked').value;
+
+        const textoPadraoBichos = "Sugestões dos atrasados";
+        const textoPadraoAleatorio = `Já parou pra pensar no sonho de ontem à noite? 👀 Às vezes, o bicho que a gente precisa está lá... 😉
+
+Mas se você não lembra do sonho, sem problemas segue algumas dicas:\``;
+
+        if (mode === 'bichos') {
+            textarea.value = textoPadraoBichos;
+        } else {
+            textarea.value = textoPadraoAleatorio;
+        }
+        
+        const select = document.getElementById('extractionSelect');
+        const savedExtraction = await getData(STORAGE_KEYS.LAST_EXTRACTION);
+        if (savedExtraction) {
+            select.value = savedExtraction;
+        } else {
+            select.value = '';
+        }
+
+        document.getElementById('includeFullMessageCheckbox').checked = true;
+    }
+    
+    function sendToWhatsApp() {
+        const customMessage = document.getElementById('whatsappMessageTextarea').value.trim();
+        const extraction = document.getElementById('extractionSelect').value;
+        const numbers = getFormattedResultsText();
+        const mode = document.querySelector('input[name="generationMode"]:checked').value;
+        const includeFullMessage = document.getElementById('includeFullMessageCheckbox').checked;
+
+        if (!extraction && includeFullMessage) {
+            showToast('Por favor, selecione uma extração.', 'error');
+            return;
+        }
+        if (!numbers) {
+            showToast('Não há números gerados para compartilhar.', 'error');
+            return;
+        }
+        
+        const now = new Date();
+        const formattedDateTime = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(now);
+        let fullMessage = '';
+
+        if (includeFullMessage) {
+            if (mode === 'bichos') {
+                fullMessage = `*🔥 Atrasados da Vip 🔥*\n-----------------------------------\n\n`;
+                if (customMessage) { fullMessage += `📝 ${customMessage}\n\n`; }
+
+                const selectedBichos = Array.from(document.querySelectorAll('input[name="selectedBichos"]:checked'))
+                    .map(checkbox => {
+                        const bichoData = tabelaDeGrupos.find(b => b.grupo === checkbox.value);
+                        return bichoData ? bichoData.animal : '';
+                    })
+                    .filter(Boolean); 
+                
+                if (selectedBichos.length > 0) {
+                    fullMessage += `*🐾 Bichos Selecionados:* ${selectedBichos.join(', ')}\n\n`;
+                }
+
+            } else {
+                fullMessage = `*🎲 Sugestões de Jogos Aleatórios 🎲*\n-----------------------------------\n\n`;
+                if (customMessage) { fullMessage += `📝 ${customMessage}\n\n`; }
+            }
+            
+            fullMessage += `*🗓️ Extração para:* ${extraction} \n\n`;
+            fullMessage += `*⏰ Data:* ${formattedDateTime} \n\n`;
+            fullMessage += `*Sugestões:* 👇\n\n`;
+            fullMessage += `${numbers}\n\n`;
+            fullMessage += `Use como inspiração e que a sorte nos acompanhe hoje e sempre! Muito Obrigado!🍀`;
+        } else {
+            fullMessage = numbers;
+        }
+
+        const encodedMessage = encodeURIComponent(fullMessage);
+        const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
+        window.open(whatsappUrl, '_blank');
+        showToast('Preparando para enviar no WhatsApp...', 'success');
+        
+        if (extraction) {
+            saveData(STORAGE_KEYS.LAST_EXTRACTION, extraction);
+        }
+        
+        setTimeout(() => { closeRandomGeneratorModal(); }, 500);
+    }
+
+    // --- Funções para Modelos de Mensagem (Templates) ---
+    async function loadTemplates() {
+        const savedTemplates = await window.getData(STORAGE_KEYS.TEMPLATES);
+        if (Array.isArray(savedTemplates)) {
+            messageTemplates = savedTemplates;
+            console.log("Modelos de mensagem carregados:", messageTemplates.length);
+        }
+    }
+
+    async function saveTemplates() {
+        return await window.saveData(STORAGE_KEYS.TEMPLATES, messageTemplates);
+    }
+
+    function updateTemplateSelect() {
+        const select = document.getElementById('templateSelect');
+        select.innerHTML = '<option value="">-- Carregar um modelo --</option>';
+        messageTemplates.forEach(template => {
+            const option = document.createElement('option');
+            option.value = template.id;
+            option.textContent = template.name;
+            select.appendChild(option);
+        });
+    }
+
+    function handleLoadTemplate() {
+        const select = document.getElementById('templateSelect');
+        const templateId = select.value;
+        if (!templateId) return;
+
+        const template = messageTemplates.find(t => t.id == templateId);
+        if (template) {
+            document.getElementById('whatsappMessageTextarea').value = template.text;
+            showToast(`Modelo "${template.name}" carregado.`, 'info');
+        }
+    }
+
+    async function handleSaveTemplate() {
+        const textToSave = document.getElementById('whatsappMessageTextarea').value.trim();
+        if (!textToSave) {
+            showToast('A caixa de texto está vazia. Escreva uma mensagem para salvar.', 'error');
+            return;
+        }
+
+        const templateName = prompt('Digite um nome para este modelo de mensagem:', `Modelo ${messageTemplates.length + 1}`);
+        if (!templateName) {
+            showToast('Criação de modelo cancelada.', 'info');
+            return;
+        }
+
+        const newTemplate = {
+            id: Date.now(),
+            name: templateName.trim(),
+            text: textToSave
+        };
+
+        messageTemplates.push(newTemplate);
+        if (await saveTemplates()) {
+            updateTemplateSelect();
+            showToast(`Modelo "${templateName}" salvo com sucesso!`, 'success');
+            document.getElementById('templateSelect').value = newTemplate.id;
+        }
+    }
+
+    async function handleDeleteTemplate() {
+        const select = document.getElementById('templateSelect');
+        const templateId = select.value;
+
+        if (!templateId) {
+            showToast('Selecione um modelo para excluir.', 'error');
+            return;
+        }
+
+        const template = messageTemplates.find(t => t.id == templateId);
+        if (!template) return;
+
+        if (confirm(`Tem certeza que deseja excluir o modelo "${template.name}"?`)) {
+            messageTemplates = messageTemplates.filter(t => t.id != templateId);
+            if (await saveTemplates()) {
+                updateTemplateSelect();
+                document.getElementById('whatsappMessageTextarea').value = '';
+                showToast(`Modelo "${template.name}" excluído.`, 'info');
+            }
+        }
+    }
+
+    // --- Funções para os Atalhos Rápidos de Entrada ---
+    function addBichoDezenas(dezenasArray) {
+        const textarea = document.getElementById('input');
+        const dezenasString = dezenasArray.join(' ');
+
+        if (textarea.value.trim() !== '') {
+            textarea.value += ' ' + dezenasString;
+        } else {
+            textarea.value = dezenasString;
+        }
+
+        textarea.focus();
+        convertToEmojisRealTime();
+    }
+
+    function createQuickShortcuts() {
+        const container = document.getElementById('quickShortcutsContainer');
+        if (!container) return;
+
+        container.innerHTML = ''; 
+
+        tabelaDeGrupos.forEach(bicho => {
+            const button = document.createElement('button');
+            button.className = 'shortcut-btn';
+            button.innerHTML = `+ ${bicho.emoji}`;
+            button.title = `Adicionar dezenas de ${bicho.animal}`;
+            
+            button.onclick = () => addBichoDezenas(bicho.dezenas);
+            
+            container.appendChild(button);
+        });
+    }
+
+    function toggleQuickShortcuts() {
+    const container = document.getElementById('quickShortcutsContainer');
+    const button = document.getElementById('toggleShortcutsBtn');
+    
+    const isHidden = container.style.display === 'none' || container.style.display === '';
+
+    if (isHidden) {
+        container.style.display = 'flex';
+        button.innerHTML = '🔼 Esconder Bichos'; 
+        button.setAttribute('aria-expanded', 'true');
+    } else {
+        container.style.display = 'none';
+        button.innerHTML = '🔽 Mostrar Bichos'; 
+        button.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function toggleEditMode(itemId, itemElement) {
+    const textElement = itemElement.querySelector('.saved-item-text');
+    const editContainer = itemElement.querySelector('.edit-container');
+    const editTextArea = editContainer.querySelector('textarea');
+    const headerActions = itemElement.querySelector('.header-actions');
+
+    const isInEditMode = editContainer.style.display === 'block';
+
+    if (isInEditMode) {
+        editContainer.style.display = 'none';
+        textElement.style.display = 'block';
+        headerActions.style.display = 'flex';
+    } else {
+        editTextArea.value = textElement.textContent;
+        textElement.style.display = 'none';
+        editContainer.style.display = 'block';
+        headerActions.style.display = 'none';
+        
+        const contentElement = itemElement.querySelector('.saved-item-content');
+        if (contentElement.style.display !== 'block') {
+            const headerElement = itemElement.querySelector('.saved-item-header');
+            headerElement.click();
+        }
+        
+        editTextArea.focus();
+    }
+}
+
+async function saveEditedItem(itemId, itemElement) {
+    const editTextArea = itemElement.querySelector('.edit-container textarea');
+    const newText = editTextArea.value.trim();
+
+    const itemIndex = savedLists.findIndex(item => item.id === itemId);
+    if (itemIndex === -1) {
+        showToast('Erro: Não foi possível encontrar a lista para salvar.', 'error');
+        return;
+    }
+
+    savedLists[itemIndex].input = newText;
+    savedLists[itemIndex].date = new Date().toISOString(); 
+
+    if (await salvarListasSalvas()) {
+        showToast('Lista atualizada com sucesso!', 'success');
+        
+        const textElement = itemElement.querySelector('.saved-item-text');
+        textElement.textContent = newText;
+        
+        const titleElement = itemElement.querySelector('.saved-item-title');
+        const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(savedLists[itemIndex].date));
+        titleElement.textContent = `${savedLists[itemIndex].name} (${formattedDate})`;
+        
+        toggleEditMode(itemId, itemElement);
+    } else {
+        showToast('Falha ao salvar as alterações.', 'error');
+        carregarListasSalvas();
+    }
+}
+
+// --- Funções para o Modal de Conferência de Ganhadores ---
+
+function showCheckWinnerModal() {
+    const modal = document.getElementById('checkWinnerModal');
+    if (modal) {
+        document.getElementById('winningNumbersInput').value = '';
+        document.getElementById('checkResultOutput').innerHTML = '';
+        modal.classList.add('active');
+        document.getElementById('winningNumbersInput').focus();
+    }
+}
+
+function closeCheckWinnerModal() {
+    const modal = document.getElementById('checkWinnerModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function performCheck() {
+    const userNumbers = parseNumbers();
+    const winningNumbersInput = document.getElementById('winningNumbersInput').value;
+    const resultOutput = document.getElementById('checkResultOutput');
+
+    if (userNumbers.length === 0) {
+        showToast('Sua lista de jogos está vazia.', 'error');
+        return;
+    }
+    if (winningNumbersInput.trim() === '') {
+        showToast('Por favor, insira os números sorteados para conferir.', 'error');
+        return;
+    }
+
+    const winningNumbers = winningNumbersInput.split(/\D+/).filter(Boolean);
+    
+    const winningMilhares = new Set();
+    const winningCentenas = new Set();
+    const winningDezenas = new Set();
+
+    winningNumbers.forEach(num => {
+        if (num.length === 4) winningMilhares.add(num);
+        const centena = getCentenaPart(num);
+        if (centena) winningCentenas.add(centena);
+        const dezena = getDezenaPart(num);
+        if (dezena) winningDezenas.add(dezena);
+    });
+
+    const foundMilhares = new Set();
+    const foundCentenas = new Set();
+    const foundDezenas = new Set();
+
+    userNumbers.forEach(num => {
+        if (num.length === 4 && winningMilhares.has(num)) {
+            foundMilhares.add(num);
+        }
+        const centena = getCentenaPart(num);
+        if (centena && winningCentenas.has(centena)) {
+            foundCentenas.add(centena);
+        }
+        const dezena = getDezenaPart(num);
+        if (dezena && winningDezenas.has(dezena)) {
+            foundDezenas.add(dezena);
+        }
+    });
+
+    let htmlResult = '<h4>Resultados Encontrados:</h4>';
+    let foundAny = false;
+
+    if (foundMilhares.size > 0) {
+        foundAny = true;
+        const numbersHtml = Array.from(foundMilhares).map(n => `<span class="winner-number">${convertToEmojiStr(n)}</span>`).join('');
+        htmlResult += `<p><strong>Milhar:</strong> ${numbersHtml}</p>`;
+    }
+    if (foundCentenas.size > 0) {
+        foundAny = true;
+        const numbersHtml = Array.from(foundCentenas).map(n => `<span class="winner-number">${convertToEmojiStr(n)}</span>`).join('');
+        htmlResult += `<p><strong>Centena:</strong> ${numbersHtml}</p>`;
+    }
+    if (foundDezenas.size > 0) {
+        foundAny = true;
+        const numbersHtml = Array.from(foundDezenas).map(n => `<span class="winner-number">${convertToEmojiStr(n)}</span>`).join('');
+        htmlResult += `<p><strong>Dezena:</strong> ${numbersHtml}</p>`;
+    }
+
+    if (!foundAny) {
+        htmlResult += '<p>Nenhum número premiado encontrado na sua lista.</p>';
+    }
+
+    resultOutput.innerHTML = htmlResult;
+}
+
+  </script>
+</body>
+</html>
