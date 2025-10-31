@@ -3458,18 +3458,27 @@ body.dark-mode #logout-button:hover {
     background-color: #8b1822;
 }
 
-/* Estilo para o botão de ordenação */
 #sortResultsBtn {
   font-weight: bold;
   /* A cor de fundo inicial já está definida inline no HTML,
      mas você pode definir aqui se preferir remover do HTML */
   /* background-color: #17a2b8; */
-}
 
-/* Estilo específico para o MODO ESCURO do botão de ordenação */
-body.dark-mode #sortResultsBtn {
-    background-color: #525252; /* Cor cinza escuro para o modo escuro */
-    /* A cor do texto (color) já deve ser herdada da classe .view-button ou .button */
+  /* --- ADICIONE ESTAS LINHAS ABAIXO --- */
+  
+  /* 1. Sobrescreve o 'width: 100%' que está no HTML */
+  /*width: auto !important;         
+  
+  /* 2. Sobrescreve o 'display: inline-flex' da regra global 'button' */
+  display: flex !important;        
+  
+  /* 3. Usa margens automáticas para centralizar o botão */
+  margin-left: auto !important;  
+  margin-right: auto !important; 
+  
+  /* 4. Adiciona um preenchimento para o botão não ficar muito "justo" */
+  padding-left: 30px;
+  padding-right: 30px;
 }
 
 /* Efeito ao clicar no botão no MODO ESCURO */
@@ -4128,7 +4137,7 @@ body.dark-mode #db-connection-status.disconnected {
 
    <footer>
    
-    <div>📌 Versão V1.49.35</div>
+    <div>📌 Versão V1.51.35</div>
     <div>👨‍💻 Criado por: Le Miastkuosky by VIP</div><br>
      <div style="text-align: center; margin-bottom: 15px; padding: 0 10px;">
         <span id="auth-status-indicator">Verificando status...</span>
@@ -4375,9 +4384,9 @@ body.dark-mode #db-connection-status.disconnected {
     <div class="form-group">
         <div class="form-group-title">Tipos de Jogo</div>
         <div class="button-style-radios">
-            <label><input type="radio" name="generationType" value="dezena" onchange="updateGeneratorOptions()"> Dezena</label>
-            <label><input type="radio" name="generationType" value="centena" onchange="updateGeneratorOptions()"> Centena</label>
-            <label><input type="radio" name="generationType" value="milhar" onchange="updateGeneratorOptions()" checked=""> Milhar</label>
+            <label><input type="radio" name="generationType" value="dezena" onchange="updateGeneratorOptions(); saveGameTypeSelection();"> Dezena</label>
+            <label><input type="radio" name="generationType" value="centena" onchange="updateGeneratorOptions(); saveGameTypeSelection();"> Centena</label>
+            <label><input type="radio" name="generationType" value="milhar" onchange="updateGeneratorOptions(); saveGameTypeSelection();" checked=""> Milhar</label>
         </div>
     </div>
 
@@ -4464,6 +4473,8 @@ body.dark-mode #db-connection-status.disconnected {
 
         <div class="form-group">
             <div class="form-group-title">Quantidade</div>
+            <div id="quickQuantityButtons" class="quick-values-container" style="margin-top: 10px;">
+                </div>
             <div class="quantity-control" style="margin-top: 15px;">
                 <button type="button" class="quantity-btn" onclick="changeQuantity(-100)">-</button>
                 <input type="number" id="randomQuantityInput" class="save-dialog-input" value="100" placeholder="Ex: 100">
@@ -4478,7 +4489,9 @@ body.dark-mode #db-connection-status.disconnected {
                 <button onclick="selectAllBichos(true)" class="bolao-button" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Selecionar Todos</button>
                 <button onclick="selectAllBichos(false)" class="import-btn" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Limpar Seleção</button>
             </div>
-<div id="fechamentoMilharContainer" class="form-group" style="margin-top: 22px; margin-bottom: 15px; padding: 15px; text-align: left;">                <div class="form-group-title">Opção de Fechamento</div>
+            <div id="bichosSelectorContainer"></div>
+            
+            <div id="fechamentoMilharContainer" class="form-group" style="margin-top: 22px; margin-bottom: 15px; padding: 15px; text-align: left;">                <div class="form-group-title">Opção de Fechamento</div>
                 <label for="fechamentoMilharToggle" style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer; margin-bottom: 0;">
 <input type="checkbox" id="fechamentoMilharToggle" style="transform: scale(1.3); margin-right: 5px;" onchange="handleFechamentoToggle(this)">                    Ativar Fechamento de Milhar (M-C do Bicho)
                 </label>
@@ -4486,8 +4499,7 @@ body.dark-mode #db-connection-status.disconnected {
                     Gera milhares combinando os dígitos (M/C) com as dezenas (D/U) dos bichos selecionados.
                 </p>
             </div>
-            <div id="bichosSelectorContainer"></div>
-        </div>
+            </div>
     </div>
 
     <div class="generator-step-card">
@@ -4560,6 +4572,7 @@ body.dark-mode #db-connection-status.disconnected {
             <button type="button" onclick="closeRandomGeneratorModal()" class="load-button">❌ Cancelar</button>
         </div>
     </div>
+</div>
 </div>
 
 <div id="avisosModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="avisosModalTitle">
@@ -4701,8 +4714,11 @@ async function hashPassword(str) {
 }
 async function handleFechamentoToggle(checkbox) {
     // Só executa a lógica se o checkbox foi MARCADO
-    if (!checkbox.checked) {
-        return;
+    if (checkbox.checked) {
+        // Apenas informa o usuário que o modo foi ativado.
+        showToast('Modo Fechamento M-C Ativado!', 'info');
+    } else {
+        showToast('Modo Fechamento M-C Desativado.', 'info');
     }
 
     const calculatedCombinations = calculateFechamentoCombinations();
@@ -6981,7 +6997,8 @@ function monitorDatabaseConnection() {
     LAST_RECEIPT_EXTRACTION: 'lastReceiptExtraction',
     CUTOFF_TIME: 'cutoffTimePreference',
     LAST_GEN_MODE: 'lastGenerationMode',
-    LAST_GAME_TYPE: 'lastGameTypeSelection' // <-- ADICIONE ESTA LINHA
+    LAST_GAME_TYPE: 'lastGameTypeSelection',
+    QUANTITY_HISTORY: 'quantityUsageHistory'
 };
     
     let messageTemplates = [];
@@ -7039,6 +7056,94 @@ function monitorDatabaseConnection() {
     function selectAllFinalDezenas(checkedState) {
     document.querySelectorAll('#dezenaFinalDigits input[type="checkbox"]').forEach(cb => {
         cb.checked = checkedState;
+    });
+}
+
+function setQuickQuantity(value) {
+    const quantityInput = document.getElementById('randomQuantityInput');
+    if (quantityInput) {
+        quantityInput.value = value;
+        showToast(`${value} unidades selecionadas!`, 'success');
+        // Opcional: faz o input "piscar" para dar feedback
+        quantityInput.style.transition = 'none';
+        quantityInput.style.backgroundColor = '#ffc107';
+        setTimeout(() => {
+            quantityInput.style.transition = 'background-color 0.3s';
+            quantityInput.style.backgroundColor = '';
+        }, 150);
+    }
+}
+
+/**
+ * Salva a quantidade usada no histórico de uso.
+ */
+async function logQuantityUsage(quantity) {
+    // Não salva se a quantidade for inválida
+    if (isNaN(quantity) || quantity <= 0) return; 
+    
+    const STORAGE_KEY = STORAGE_KEYS.QUANTITY_HISTORY;
+    let history = await getData(STORAGE_KEY) || [];
+    
+    // Adiciona a quantidade usada ao final do array
+    history.push(quantity);
+    
+    // Limita o histórico aos últimos 200 usos para não ficar gigante
+    if (history.length > 200) {
+        history = history.slice(history.length - 200);
+    }
+    
+    await saveData(STORAGE_KEY, history);
+    console.log(`Quantidade ${quantity} registrada. Histórico agora com ${history.length} itens.`);
+}
+
+/**
+ * Calcula as 3 quantidades mais usadas e atualiza os botões de atalho.
+ */
+async function updateQuickQuantityButtons() {
+    const container = document.getElementById('quickQuantityButtons');
+    if (!container) return;
+
+    const STORAGE_KEY = STORAGE_KEYS.QUANTITY_HISTORY;
+    const history = await getData(STORAGE_KEY) || [];
+    
+    // Define os valores padrão que você sugeriu
+    const defaultQuantities = [100, 50, 150]; 
+    let topQuantities = [];
+
+    if (history.length > 0) {
+        const counts = {};
+        // 1. Conta a frequência de cada quantidade
+        history.forEach(qty => {
+            counts[qty] = (counts[qty] || 0) + 1;
+        });
+
+        // 2. Transforma em array [quantidade, contagem] e ordena pela contagem (mais alta primeiro)
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        
+        // 3. Pega apenas os números (quantidades)
+        topQuantities = sorted.map(item => parseInt(item[0], 10));
+    }
+
+    // 4. Junta as mais usadas com as padrões e remove duplicatas
+    const uniqueQuantities = [...new Set([...topQuantities, ...defaultQuantities])];
+    
+    // 5. Pega as 3 primeiras da lista final (mudei de 'const' para 'let')
+    let finalTop3 = uniqueQuantities.slice(0, 3);
+
+    // --- LINHA ADICIONADA ---
+    // 5.5. Ordena os 3 números selecionados em ordem crescente
+    finalTop3.sort((a, b) => a - b);
+    // --- FIM DA ADIÇÃO ---
+
+    // 6. Renderiza os botões na tela
+    container.innerHTML = ''; // Limpa botões antigos
+    finalTop3.forEach(qty => {
+        const button = document.createElement('button');
+        button.className = 'quick-value-btn';
+        button.textContent = qty;
+        // Define a ação de clique para chamar setQuickQuantity
+        button.onclick = () => setQuickQuantity(qty); 
+        container.appendChild(button);
     });
 }
 
@@ -10300,6 +10405,7 @@ async function ensureCorrectGenModeVisualState() {
     if (document.activeElement) document.activeElement.blur(); 
     await restoreGameTypeSelection();
     const modal = document.getElementById('randomGeneratorModal');
+    await updateQuickQuantityButtons();
     modal.classList.add('active');
     document.getElementById('generatorActionButtons').style.display = 'none';
     document.getElementById('mcdSearchContainer').style.display = 'none'; // Adicionado para esconder
@@ -10495,57 +10601,66 @@ function fecharPreviewConfirmacao() {
 
     
     function updateGeneratorOptions() {
-    // 1. Lê o estado atual dos botões e checkboxes (seu código existente)
+    // 1. Lê o estado atual dos botões e checkboxes
     const showMilhar = document.querySelector('input[name="generationType"][value="milhar"]').checked;
     const showCentena = document.querySelector('input[name="generationType"][value="centena"]').checked;
     const showDezena = document.querySelector('input[name="generationType"][value="dezena"]').checked;
     const isStartDigitsEnabled = document.getElementById('toggleStartDigitsCheck').checked;
 
-    // 2. Define a visibilidade de cada painel (seu código existente)
-    // ... (lógica para milharStartOptions, centenaStartOptions, dezenaStartOptions) ...
+    // --- INÍCIO DA CORREÇÃO ---
+    // Verifica se um modo de geração JÁ está checado.
+    const checkedModeRadio = document.querySelector('input[name="generationMode"]:checked');
+    // Se nada estiver marcado (o que causa o bug), assume 'offline' como padrão.
+    const selectedMode = checkedModeRadio ? checkedModeRadio.value : 'offline';
+    // --- FIM DA CORREÇÃO ---
+
+    // 2. Define a visibilidade de cada painel
     document.getElementById('milharStartOptions').style.display = (showMilhar && isStartDigitsEnabled) ? 'flex' : 'none';
-    document.getElementById('centenaStartOptions').style.display = (showMilhar && isStartDigitsEnabled) ? 'flex' : 'none'; // Ajuste conforme necessário
+    document.getElementById('centenaStartOptions').style.display = (showCentena && isStartDigitsEnabled) ? 'flex' : 'none'; // Ajuste conforme necessário
     document.getElementById('dezenaStartOptions').style.display = (showDezena && isStartDigitsEnabled) ? 'flex' : 'none';
 
 
-    // 3. Lógica para o painel de Filtros de Centena (MODIFICADA)
+    // 3. Lógica para o painel de Filtros de Centena
     const centenaFiltersPanel = document.getElementById('centenaFiltersContainer');
     if (centenaFiltersPanel) {
-        // Mostra ou esconde o container principal
         centenaFiltersPanel.style.display = showCentena ? 'block' : 'none';
-
-        // --- ADIÇÃO IMPORTANTE ---
-        // Sempre que o painel principal for ATIVADO (showCentena = true),
-        // ou DESATIVADO (showCentena = false), garantimos que o conteúdo interno
-        // comece/volte ao estado minimizado.
+        
+        // Garante que o conteúdo interno comece minimizado
         const content = document.getElementById('centenaFiltersContent');
         const icon = document.getElementById('centenaFiltersToggleIcon');
-        const title = content?.previousElementSibling; // Pega o div do título
+        const title = content?.previousElementSibling; 
 
-        if (content) content.style.display = 'none'; // Força o conteúdo a ficar escondido
-        if (icon) icon.style.transform = 'rotate(0deg)'; // Garante que o ícone aponte para o lado
-        if (title) title.classList.remove('expanded'); // Remove a classe 'expanded' do título
-        // --- FIM DA ADIÇÃO ---
+        if (content) content.style.display = 'none'; 
+        if (icon) icon.style.transform = 'rotate(0deg)'; 
+        if (title) title.classList.remove('expanded');
     }
 
-    // 4. Lógica para o painel de Fechamento (seu código existente)
+    // 4. --- LÓGICA CORRIGIDA PARA O PAINEL DE FECHAMENTO ---
+    // Esta lógica agora pode ler 'selectedMode' sem erro
     const fechamentoPanel = document.getElementById('fechamentoMilharContainer');
+    
+    // O painel SÓ deve aparecer se:
+    // 1. O tipo "Milhar" estiver selecionado E
+    // 2. O modo "Grupo Bichos" (e NÃO a I.A.) estiver ativo
+    const deveMostrarFechamento = showMilhar && (selectedMode === 'bichos');
+
     if (fechamentoPanel) {
-        fechamentoPanel.style.display = showMilhar ? 'block' : 'none';
-        if (!showMilhar) {
+        fechamentoPanel.style.display = deveMostrarFechamento ? 'block' : 'none';
+        
+        // Se o painel for escondido (porque selecionou I.A. ou desmarcou Milhar),
+        // garantimos que o checkbox interno seja desmarcado.
+        if (!deveMostrarFechamento) {
             const fechamentoCheckbox = document.getElementById('fechamentoMilharToggle');
             if (fechamentoCheckbox) fechamentoCheckbox.checked = false;
         }
     }
-    // --- LÓGICA ADICIONADA ---
-    const selectedMode = document.querySelector('input[name="generationMode"]:checked').value;
+    
+    // 5. Lógica para o painel de seleção de Loteria da I.A.
     const iaLotteryContainer = document.getElementById('iaLotterySelectorContainer');
     if (iaLotteryContainer) {
         iaLotteryContainer.style.display = (selectedMode === 'ia_bichos') ? 'block' : 'none';
     }
 }
-
-
 
 function populateBichosSelector() {
     if (bichosPopulated) return;
@@ -10724,7 +10839,13 @@ async function generateSelectedNumbers() {
     }
 
     let summaryParts = ["<strong>Você está prestes a gerar:</strong>\n"];
-    const mode = document.querySelector('input[name="generationMode"]:checked').value;
+    
+    // --- INÍCIO DA CORREÇÃO ---
+    // Adiciona a mesma verificação que fizemos na outra função
+    const checkedModeRadio = document.querySelector('input[name="generationMode"]:checked');
+    const mode = checkedModeRadio ? checkedModeRadio.value : 'offline';
+    // --- FIM DA CORREÇÃO ---
+
     const checkedTypes = Array.from(document.querySelectorAll('input[name="generationType"]:checked'))
                              .map(cb => cb.value.charAt(0).toUpperCase() + cb.value.slice(1));
     const typeKeys = checkedTypes.map(t => t.toLowerCase());
@@ -10761,40 +10882,107 @@ async function generateSelectedNumbers() {
             return;
         }
         
-
         const bichoNames = selectedBichos.map(b => b.animal).join(', ');
 
-        showLoadingIndicator(`Analisando I.A. para ${bichoNames} na ${nomeLoteria}...`);
+        // --- INÍCIO DA NOVA LÓGICA (ADAPTADA DO FECHAMENTO) ---
+        let iaGeneratedThousands = new Set(); // Para guardar as milhares da I.A.
+        let extraRandoms = []; // Para guardar as aleatórias extras
+        const dezenasPool = selectedBichos.flatMap(b => b.dezenas); // Pool de dezenas
 
+        showLoadingIndicator(`Analisando I.A. para ${bichoNames} na ${nomeLoteria}...`);
         try {
             const prefixosQuentes = await analisarHistoricoIA(selectedBichos, loteriaSelecionada);
 
             if (prefixosQuentes.length > 0) {
-                const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
-                const resultSet = new Set();
-                let attempts = 0;
-                while (resultSet.size < totalQuantity && attempts < (totalQuantity * 100)) {
-                    const prefixo = prefixosQuentes[Math.floor(Math.random() * prefixosQuentes.length)];
-                    const dezena = dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
-                    const milharGerada = prefixo + dezena;
-                    if (applyAdvancedFilters(milharGerada, 'milhar')) {
-                        resultSet.add(milharGerada);
+                // 1. Gera TODAS as milhares possíveis da I.A. que passam no filtro
+                for (const prefixo of prefixosQuentes) {
+                    for (const dezena of dezenasPool) {
+                        const milharGerada = prefixo + dezena;
+                        if (applyAdvancedFilters(milharGerada, 'milhar')) {
+                            iaGeneratedThousands.add(milharGerada);
+                        }
                     }
-                    attempts++;
                 }
-                finalResults.milhar = Array.from(resultSet);
             }
         } catch (error) {
             console.error("Erro durante a geração com I.A.:", error);
             showToast('Falha na geração com I.A..', 'error');
+            hideLoadingIndicator(); // Esconde o loading em caso de erro
+            return; // Sai da função se a análise da I.A. falhar
         } finally {
             hideLoadingIndicator();
         }
 
+        let finalIaArray = Array.from(iaGeneratedThousands);
+        const iaGeneratedCount = finalIaArray.length; // Este é o nosso limite (ex: 80)
+
+        // Adiciona informações ao resumo (summary)
         summaryParts.push(`\n<strong>- Modo:</strong> 🔮 I.A. Bichos (Análise Estatística)`);
         summaryParts.push(`<strong>- Loteria Analisada:</strong> ${nomeLoteria}`);
         summaryParts.push(`<strong>- Bichos Base:</strong> ${bichoNames}`);
-        summaryParts.push(`<strong>- Total de Milhares:</strong> ${finalResults.milhar.length} sugestões`);
+        summaryParts.push(`<strong>- Total I.A. (com filtros):</strong> ${iaGeneratedCount} milhares`);
+
+        if (iaGeneratedCount === 0) {
+             showToast('Nenhuma milhar foi gerada com a I.A. e filtros selecionados.', 'error');
+             return;
+        }
+
+        // 2. Compara a quantidade gerada (iaGeneratedCount) com a solicitada (totalQuantity)
+        if (totalQuantity > iaGeneratedCount) {
+            const difference = totalQuantity - iaGeneratedCount;
+            const addRandoms = await showCustomConfirm(
+                `A Análise I.A. gerou <strong>${iaGeneratedCount}</strong> milhares únicas.\n\nVocê solicitou <strong>${totalQuantity}</strong>. Deseja adicionar <strong>${difference}</strong> milhares aleatórias (dos mesmos bichos) para completar o total?`,
+                `Sim, adicionar ${difference}`,
+                `Não, gerar só as ${iaGeneratedCount}`
+            );
+
+            if (addRandoms) {
+                // Usuário quer completar
+                summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (${iaGeneratedCount} I.A. + ${difference} Aleatórias)`);
+                
+                const randomResultSet = new Set();
+                let attempts = 0;
+                
+                // Tenta gerar as 'difference' milhares aleatórias
+                while (randomResultSet.size < difference && attempts < (difference * 100)) {
+                    attempts++;
+                    // GERA PREFIXO ALEATÓRIO (00-99)
+                    let randomPrefix = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+                    let generatedNumber = randomPrefix + dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
+                    
+                    // Garante que o número aleatório passe nos filtros E não seja um que já saiu na I.A.
+                    if (applyAdvancedFilters(generatedNumber, 'milhar') && !iaGeneratedThousands.has(generatedNumber)) {
+                       randomResultSet.add(generatedNumber);
+                    }
+                }
+                extraRandoms = Array.from(randomResultSet);
+                
+                if (extraRandoms.length < difference) {
+                    showToast(`Aviso: Foi possível adicionar apenas ${extraRandoms.length} aleatórias extras (de ${difference} solicitadas).`, 'warning', 4000);
+                }
+            } else {
+                // Usuário NÃO quer completar
+                summaryParts.push(`<strong>- Quantidade:</strong> ${iaGeneratedCount} (Somente I.A.)`);
+            }
+
+        } else if (totalQuantity < iaGeneratedCount) {
+            // Usuário pediu MENOS do que a I.A. gerou
+            summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (Sorteadas das ${iaGeneratedCount} possíveis)`);
+            shuffleArray(finalIaArray); // Embaralha
+            finalIaArray = finalIaArray.slice(0, totalQuantity); // Pega só a quantidade pedida
+
+        } else {
+            // Pediu exatamente a quantidade (totalQuantity === iaGeneratedCount)
+            summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (Todas as ${iaGeneratedCount} sugestões da I.A.)`);
+        }
+
+        // 3. Combina os resultados e limpa os outros tipos
+        finalResults.milhar = [...finalIaArray, ...extraRandoms];
+        shuffleArray(finalResults.milhar); // Embaralha o resultado final
+
+        finalResults.centena = []; // I.A. só gera milhar
+        finalResults.dezena = [];  // I.A. só gera milhar
+        // --- FIM DA NOVA LÓGICA ---
     }
     else if (mode === 'bichos') {
         const selectedBichos = Array.from(document.querySelectorAll('input[name="selectedBichos"]:checked'))
@@ -10806,10 +10994,10 @@ async function generateSelectedNumbers() {
         }
 
         if (isFechamento) {
-           // --- INÍCIO DA LÓGICA DE FECHAMENTO ---
+           // --- INÍCIO DA LÓGICA DE FECHAMENTO (existente) ---
             if (!typeKeys.includes('milhar')) {
                 showToast('O Fechamento M-C só gera Milhares. Por favor, selecione o tipo "Milhar".', 'error');
-                return; // Impede a continuação se Milhar não estiver selecionado
+                return; 
             }
 
             const hotDigits = new Set();
@@ -10831,13 +11019,11 @@ async function generateSelectedNumbers() {
             const dezenasArray = Array.from(allDezenasFromSelectedBichos);
             const allPossibleThousands = new Set();
 
-            // Gera todas as combinações M-C x D-U
             for (let i = 0; i < hotDigitsArray.length; i++) {
                 for (let j = 0; j < hotDigitsArray.length; j++) {
-                    const prefixo = hotDigitsArray[i] + hotDigitsArray[j]; // Forma a centena (M-C)
+                    const prefixo = hotDigitsArray[i] + hotDigitsArray[j]; 
                     dezenasArray.forEach(dezena => {
                         const milharCompleta = prefixo + dezena;
-                        // Aplica filtros avançados ANTES de adicionar ao conjunto
                         if (applyAdvancedFilters(milharCompleta, 'milhar')) {
                              allPossibleThousands.add(milharCompleta);
                         }
@@ -10846,56 +11032,65 @@ async function generateSelectedNumbers() {
             }
 
             let finalThousandsArray = Array.from(allPossibleThousands);
-            const calculatedCombinations = finalThousandsArray.length; // Quantidade REAL possível após filtros
+            const calculatedCombinations = finalThousandsArray.length; 
+            let extraRandoms = []; 
 
             summaryParts.push(`\n<strong>- Modo:</strong> Fechamento M-C do Bicho`);
             summaryParts.push(`<strong>- Bichos Selecionados:</strong> ${selectedBichos.map(b=>b.animal).join(', ')}`);
             summaryParts.push(`<strong>- Total Possível (com filtros):</strong> ${calculatedCombinations} milhares`);
 
 
-            // Decide se vai usar a quantidade calculada ou a digitada
-            if (calculatedCombinations > 0 && calculatedCombinations !== totalQuantity) {
-                 const useCalculated = await showCustomConfirm(
-                    `O fechamento com os filtros atuais gera <strong>${calculatedCombinations}</strong> milhares.\n\nDeseja usar essa quantidade ou as <strong>${totalQuantity}</strong> que você digitou?`,
-                    `Usar ${calculatedCombinations} (Calculado)`,
-                    `Tentar ${totalQuantity} (Digitado)`
-                 );
-                 if (!useCalculated) { // Se escolheu "Tentar ${totalQuantity}"
-                     if (totalQuantity > calculatedCombinations) {
-                        showToast(`Aviso: Solicitou ${totalQuantity}, mas só ${calculatedCombinations} são possíveis. Gerando todas as ${calculatedCombinations}.`, 'warning', 4000);
-                        // A quantidade a ser gerada será a máxima possível (calculatedCombinations)
-                     } else {
-                         // Se a quantidade digitada é MENOR que a calculada, sorteia
-                         shuffleArray(finalThousandsArray);
-                         finalThousandsArray = finalThousandsArray.slice(0, totalQuantity);
-                         summaryParts.push(`<strong>- Quantidade Solicitada:</strong> ${totalQuantity} (sorteadas das ${calculatedCombinations})`);
-                     }
-                 } else {
-                     // Se escolheu usar a calculada, atualiza a variável totalQuantity para refletir isso
-                     totalQuantity = calculatedCombinations;
-                      summaryParts.push(`<strong>- Quantidade a Gerar:</strong> ${totalQuantity} (todas as combinações)`);
-                 }
-
-            } else if (calculatedCombinations === 0) {
+            if (calculatedCombinations === 0) {
                  showToast('Nenhuma milhar foi gerada com os bichos e filtros selecionados para o fechamento.', 'error');
-                 return; // Para a execução se nada foi gerado
+                 return; 
+            }
+
+            if (totalQuantity > calculatedCombinations) {
+                const difference = totalQuantity - calculatedCombinations;
+                const addRandoms = await showCustomConfirm(
+                    `O Fechamento M-C gerou <strong>${calculatedCombinations}</strong> milhares únicas.\n\nVocê solicitou <strong>${totalQuantity}</strong>. Deseja adicionar <strong>${difference}</strong> milhares aleatórias (dos mesmos bichos) para completar o total?`,
+                    `Sim, adicionar ${difference}`,
+                    `Não, gerar só as ${calculatedCombinations}`
+                );
+
+                if (addRandoms) {
+                    summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (${calculatedCombinations} de Fechamento + ${difference} Aleatórias)`);
+                    
+                    const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
+                    const randomResultSet = new Set();
+                    let attempts = 0;
+                    
+                    while (randomResultSet.size < difference && attempts < (difference * 50)) {
+                        attempts++;
+                        let generatedNumber = String(Math.floor(Math.random() * 100)).padStart(2, '0') + dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
+                        
+                        if (applyAdvancedFilters(generatedNumber, 'milhar') && !allPossibleThousands.has(generatedNumber)) {
+                           randomResultSet.add(generatedNumber);
+                        }
+                    }
+                    extraRandoms = Array.from(randomResultSet); 
+                    
+                    if (extraRandoms.length < difference) {
+                        showToast(`Aviso: Foi possível adicionar apenas ${extraRandoms.length} aleatórias extras (de ${difference} solicitadas).`, 'warning', 4000);
+                    }
+                } else {
+                    summaryParts.push(`<strong>- Quantidade:</strong> ${calculatedCombinations} (Somente Fechamento)`);
+                }
+
+            } else if (totalQuantity < calculatedCombinations) {
+                summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (Sorteadas das ${calculatedCombinations} possíveis)`);
+                shuffleArray(finalThousandsArray);
+                finalThousandsArray = finalThousandsArray.slice(0, totalQuantity);
+
             } else {
-                 summaryParts.push(`<strong>- Quantidade a Gerar:</strong> ${totalQuantity} (todas as combinações)`);
+                summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (Todas as ${calculatedCombinations} combinações)`);
             }
 
+            finalResults.milhar = [...finalThousandsArray, ...extraRandoms]; 
+            shuffleArray(finalResults.milhar); 
 
-            // Garante que a quantidade final não exceda o possível
-            if (finalThousandsArray.length > totalQuantity) {
-                 shuffleArray(finalThousandsArray);
-                 finalThousandsArray = finalThousandsArray.slice(0, totalQuantity);
-            }
-
-            finalResults.milhar = finalThousandsArray; // Atribui as milhares geradas
-
-             // Limpa os outros tipos, pois o fechamento só gera milhar
              finalResults.centena = [];
              finalResults.dezena = [];
-
             // --- FIM DA LÓGICA DE FECHAMENTO ---
 
         } else {
@@ -10941,14 +11136,14 @@ async function generateSelectedNumbers() {
             });
             typeKeys.forEach(typeKey => shuffleArray(finalResults[typeKey]));
         }
-
     }
+        
     else { // mode === 'offline'
-// --- INÍCIO DA CORREÇÃO ---
-const checkedGenerationMethodRadio = document.querySelector('input[name="generationMethod"]:checked');
-// Verifica se encontrou um botão marcado. Se não, usa 'padrao' como fallback.
-const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodRadio.value : 'padrao';
-// --- FIM DA CORREÇÃO ---        if (checkedTypes.length > 0) summaryParts.push(`<strong>- Tipos:</strong> ${checkedTypes.join(', ')}`);
+        // (Esta parte já estava correta desde a última vez)
+        const checkedGenerationMethodRadio = document.querySelector('input[name="generationMethod"]:checked');
+        const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodRadio.value : 'padrao';
+        
+        if (checkedTypes.length > 0) summaryParts.push(`<strong>- Tipos:</strong> ${checkedTypes.join(', ')}`);
         summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (para cada tipo)`);
 
         let methodDetails = '';
@@ -10973,7 +11168,7 @@ const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodR
         for (const typeKey of typeKeys) {
             const resultSet = new Set();
             let attempts = 0;
-            const maxAttempts = totalQuantity * 1000 + 100; // Aumentado para métodos mais restritivos
+            const maxAttempts = totalQuantity * 1000 + 100; 
             while (resultSet.size < totalQuantity && attempts < maxAttempts) {
                 attempts++;
                  let generatedNumber = '';
@@ -11005,51 +11200,49 @@ const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodR
         return;
     }
 
-    clearRandomResults(); // Limpa resultados anteriores
-    currentSortOrder = 'original'; // Reseta a ordem
+    logQuantityUsage(totalQuantity); // <-- LOG DE QUANTIDADE
+
+    clearRandomResults(); 
+    currentSortOrder = 'original'; 
     const sortButton = document.getElementById('sortResultsBtn');
     if (sortButton) {
          sortButton.innerHTML = 'Ordenar por Bicho 🔢';
          sortButton.title = 'Ordenar por grupo do bicho (01-25)';
     }
 
-    originalGeneratedNumbers = { milhar: [], centena: [], dezena: [] }; // Guarda os números originais
+    originalGeneratedNumbers = { milhar: [], centena: [], dezena: [] }; 
 
     // Exibe os resultados
     typeKeys.forEach(typeKey => {
         if (finalResults[typeKey] && finalResults[typeKey].length > 0) {
-            originalGeneratedNumbers[typeKey] = [...finalResults[typeKey]]; // Guarda cópia
-            displayResultsWithSummary(typeKey, originalGeneratedNumbers[typeKey]); // Exibe
+            originalGeneratedNumbers[typeKey] = [...finalResults[typeKey]]; 
+            displayResultsWithSummary(typeKey, originalGeneratedNumbers[typeKey]); 
         }
     });
 
-    // Mostra botões de ação e busca
     document.getElementById('generatorActionButtons').style.display = 'flex';
-    document.getElementById('mcdSearchContainer').style.display = 'flex'; // Mostra busca
-    document.getElementById('sendFromFiltersBtn').style.display = 'inline-flex'; // Mostra botão de enviar
+    document.getElementById('mcdSearchContainer').style.display = 'flex'; 
+    document.getElementById('sendFromFiltersBtn').style.display = 'inline-flex'; 
 
-    // Mostra o botão de ordenar se houver resultados
     const hasResultsToSort = typeKeys.some(key => originalGeneratedNumbers[key] && originalGeneratedNumbers[key].length > 0);
     if (sortButton && hasResultsToSort) {
         sortButton.style.display = 'block';
     }
 
-    // Salva no histórico local se algum resultado foi gerado
     const hasAnyResult = typeKeys.some(key => finalResults[key] && finalResults[key].length > 0);
     if (hasAnyResult) {
-        const newCode = generateReceiptCode(); // Gera um código único
-        lastGeneratedCode = newCode; // Guarda para usar no recibo
+        const newCode = generateReceiptCode(); 
+        lastGeneratedCode = newCode; 
         const historyEntry = {
             id: Date.now(),
             code: newCode,
             date: new Date().toISOString(),
-            results: { // Salva apenas os arrays que têm conteúdo
+            results: { 
                 milhar: finalResults.milhar || [],
                 centena: finalResults.centena || [],
                 dezena: finalResults.dezena || []
             }
         };
-        // Adiciona ao histórico local (mantendo os últimos 50)
         getData('generationHistory').then(history => {
             const updatedHistory = history || [];
             updatedHistory.unshift(historyEntry);
@@ -11057,6 +11250,7 @@ const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodR
         });
     }
 }
+
 function copyRandomNumbers(buttonElement = null) {
     const now = new Date();
     const formattedDateTime = now.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
