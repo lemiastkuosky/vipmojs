@@ -4207,7 +4207,7 @@ body.dark-mode #refreshMilharCountBtn:active {
 
    <footer>
    
-    <div>📌 Versão V1.51.35</div>
+    <div>📌 Versão V1.53.35</div>
     <div>👨‍💻 Criado por: Le Miastkuosky by VIP</div><br>
      <div style="text-align: center; margin-bottom: 15px; padding: 0 10px;">
         <span id="auth-status-indicator">Verificando status...</span>
@@ -8258,7 +8258,7 @@ function toggleQuickShortcuts() {
     setupPWA();
 
     getMilharCount(); // Busca a contagem inicial ao carregar a página
-    
+
     const nomeSelect = document.getElementById('nomePessoaSelect');
     if (nomeSelect) {
         choicesNomePessoa = new Choices(nomeSelect, {
@@ -11731,7 +11731,8 @@ async function getMilharCount() {
     // Se o span não for encontrado, sai da função
     if (!countSpan) return;
 
-    // Ativa o estado de "carregando"
+    // Ativa o estado de "carregando" (agora controlado pelo handleUpdateClick,
+    // mas garantimos o '...' aqui)
     countSpan.textContent = '...';
 
     const currentUser = firebase.auth().currentUser;
@@ -11742,9 +11743,20 @@ async function getMilharCount() {
 
     try {
         const collectionRef = firestoreDB.collection('resultados');
-        // Usa o agregador .count()
-        const snapshot = await collectionRef.count().get();
-        const count = snapshot.data().count;
+        
+        // ==========================================================
+        // === INÍCIO DA CORREÇÃO (Substituindo .count().get()) ===
+        // ==========================================================
+        
+        // Método ineficiente (v8/v9 compat) que baixa todos os documentos.
+        const snapshot = await collectionRef.get();
+        
+        // Em vez de snapshot.data().count, usamos snapshot.size
+        const count = snapshot.size; 
+        
+        // ==========================================================
+        // === FIM DA CORREÇÃO ===
+        // ==========================================================
         
         // Formata o número para melhor leitura (ex: 50.000)
         countSpan.textContent = count.toLocaleString('pt-BR');
@@ -11754,7 +11766,8 @@ async function getMilharCount() {
         countSpan.textContent = 'Erro!';
         // Não mostra toast aqui, pois o handleUpdateClick mostrará um geral
     } 
-    // O 'finally' que removia o loading do botão foi removido
+    // O 'finally' que controlava o botão foi removido, 
+    // pois o handleUpdateClick já faz isso
 }
 
 // Adicione esta função completa no seu script
