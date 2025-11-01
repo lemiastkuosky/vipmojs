@@ -3788,6 +3788,16 @@ body.dark-mode #refreshMilharCountBtn:active {
     to { transform: rotate(360deg); }
 }
 
+/* --- Estilos para o Status de DB e Contador (Combinados) --- */
+#db-status-and-counter-wrapper {
+    display: flex;
+    flex-wrap: wrap; /* Permite quebra de linha em telas pequenas */
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* Espaço entre os itens */
+    margin: 10px 0;
+    padding: 0 10px;
+}
 
 /* O status da conexão (span#db-connection-status) já tem estilos, 
    mas garantimos que ele se alinhe */
@@ -3844,46 +3854,6 @@ body.dark-mode .status-divider {
         gap: 5px; /* Reduz o espaço */
     }
 }
-
-#milharCounterSpan {
-    font-size: 0.9em; /* Um pouco menor que o status */
-    font-weight: normal; /* Texto normal */
-    white-space: nowrap;
-    /* A cor será herdada do pai (#db-connection-status) */
-}
-
-/* O número do contador (o <strong>) */
-#milharTotalCount {
-    font-size: 1rem; /* Tamanho normal */
-    font-weight: bold; /* Negrito */
-    min-width: 25px; 
-    display: inline-block;
-    text-align: center;
-    /* A cor também será herdada */
-}
-
-.status-divider {
-    font-size: 1.1em;
-    opacity: 0.5; /* Deixa o separador mais sutil */
-    /* A cor também será herdada */
-}
-
-#db-connection-status.status-logged-in,
-#db-connection-status.status-logged-in * { /* Afeta o span e seus filhos */
-    color: #155724 !important; /* Texto verde escuro */
-}
-
-#db-connection-status.status-logged-out,
-#db-connection-status.status-logged-out * { /* Afeta o span e seus filhos */
-    color: #721c24 !important; /* Texto vermelho escuro */
-}
-
-/* Ajustes Dark Mode (para herança) */
-body.dark-mode #db-connection-status.status-logged-in,
-body.dark-mode #db-connection-status.status-logged-in * {
-    color: #d4edda !important; /* Texto verde claro */
-}
-
 
 </style>
 
@@ -4304,15 +4274,22 @@ body.dark-mode #db-connection-status.status-logged-in * {
 
    <footer>
    
-    <div>📌 Versão V1.57.35</div>
+    <div>📌 Versão V1.53.35</div>
     <div>👨‍💻 Criado por: Le Miastkuosky by VIP</div><br>
      <div style="text-align: center; margin-bottom: 15px; padding: 0 10px;">
         <span id="auth-status-indicator">Verificando status...</span>
         <button id="logout-button" style="display: none; margin-left: 2px;" onclick="handleLogout()">Sair</button>
         <button id="install-button" title="Instalar Aplicativo" style="margin-left: 10px; vertical-align: middle;">📱 Instalar</button>
-       <div style="text-align: center; padding-left: 1px; margin: 4px 0;"> 
+       <div id="db-status-and-counter-wrapper"> 
         <span id="db-connection-status">Verificando conexão...</span>
+        
+        <span class="status-divider">|</span>
+        
+        <span id="milharCounterSpan">
+            Resultados: <strong id="milharTotalCount">...</strong>
+        </span>
      </div>
+</div>
 
     </div>
 </footer>
@@ -7013,7 +6990,7 @@ firebase.auth().onAuthStateChanged(user => {
     // Verifica status no Firestore (AGORA firestoreDB está definida)
     const userDocRef = firestoreDB.collection('users').doc(user.uid);
     userDocRef.get().then(doc => {
-      // ... (código do if !doc.exists) ...
+      // ... (resto do código do listener inalterado) ...
        if (!doc.exists) {
          console.warn("Usuário logado mas sem documento no Firestore!");
          statusIndicator.textContent += ' (Erro Doc)';
@@ -7026,8 +7003,8 @@ firebase.auth().onAuthStateChanged(user => {
          // Não força logout aqui, mas mantém o aviso visual
       } else {
          console.log("Usuário logado e ativo.");
-         
-          }
+         // O status já está correto (verde)
+      }
     }).catch(error => {
         console.error("Erro ao verificar status do usuário no Firestore:", error);
         statusIndicator.textContent += ' (Erro DB)';
@@ -7035,8 +7012,8 @@ firebase.auth().onAuthStateChanged(user => {
     });
 
   } else {
-    // ... (código existente de deslogado) ...
-    console.log('Auth State Changed: Deslogado');
+    // ... (código para usuário deslogado inalterado) ...
+        console.log('Auth State Changed: Deslogado');
     statusIndicator.textContent = 'Deslogado';
     statusIndicator.className = 'status-logged-out'; // Aplica classe CSS
     logoutButton.style.display = 'none'; // Esconde o botão Sair
@@ -7044,62 +7021,29 @@ firebase.auth().onAuthStateChanged(user => {
     localStorage.removeItem('app_authenticated');
     // Chama checkAuth para garantir que o modal de login apareça se necessário
     checkAuth();
-    
-    // ==========================================================
-    // === ADIÇÃO 2: LIMPA A CONTAGEM VISUALMENTE AO DESLOGAR ===
-    // ==========================================================
-    const countSpan = document.getElementById('milharTotalCount');
-    const counterContainer = document.getElementById('milharCounterSpan');
-    const divider = document.querySelector('#db-connection-status .status-divider');
-    if (countSpan) countSpan.textContent = 'N/A';
-    if (counterContainer) counterContainer.style.display = 'none';
-    if (divider) divider.style.display = 'none';
-    // ==========================================================
   }
 });
 
 function updateConnectionStatusBadge(isConnected) {
     const statusBadge = document.getElementById('db-connection-status');
-    const statusText = document.getElementById('db-status-text');
-    const divider = statusBadge.querySelector('.status-divider');
-    const counterSpan = document.getElementById('milharCounterSpan');
-
-    if (!statusBadge || !statusText || !divider || !counterSpan) return;
+    if (!statusBadge) return; // Sai se o elemento não for encontrado
 
     if (isConnected) {
-        statusText.textContent = '☁️ Conectado ao Servidor';
+        statusBadge.textContent = '☁️ Conectado ao Servidor'; // <-- NOVO TEXTO (Português)
         statusBadge.classList.remove('disconnected');
         statusBadge.classList.add('connected');
-        
-        // ==========================================================
-        // === CORREÇÃO DA LÓGICA DE EXIBIÇÃO ===
-        // ==========================================================
-        // Se a conexão for estabelecida, mostramos o contador
-        // (desde que ele não tenha dado um erro 'N/A' ou 'Erro!').
-        // Isso corrige a "corrida" de eventos.
-        
-        const currentCount = document.getElementById('milharTotalCount').textContent;
-        
-        if (currentCount !== 'N/A' && currentCount !== 'Erro!') {
-            divider.style.display = 'inline-block';
-            counterSpan.style.display = 'inline-block';
-        }
-        // ==========================================================
-
     } else {
-        statusText.textContent = '❌ Desconectado';
+        statusBadge.textContent = '❌ Desconectado'; // <-- NOVO TEXTO (Português)
         statusBadge.classList.remove('connected');
         statusBadge.classList.add('disconnected');
-        
-        // Se desconectado, esconde o contador
-        divider.style.display = 'none';
-        counterSpan.style.display = 'none';
-        
-        // Reseta o texto da contagem para a próxima conexão
-        document.getElementById('milharTotalCount').textContent = '...';
     }
 }
 
+function monitorDatabaseConnection() {
+    const connectedRef = rtdb.ref(".info/connected"); // Agora funciona!
+    // ... (resto do código da função) ...
+    connectedRef.on("value", (snap) => { /* ... */ });
+}
 // Chama a função para iniciar o monitoramento
 monitorDatabaseConnection();
 
@@ -8339,49 +8283,6 @@ function toggleQuickShortcuts() {
         }
     }
 
-    // SUBSTITUA A FUNÇÃO na linha 11732 por esta:
-async function getMilharCount() {
-    const countSpan = document.getElementById('milharTotalCount');
-    const counterContainer = document.getElementById('milharCounterSpan');
-    const divider = document.querySelector('#db-connection-status .status-divider');
-
-    if (!countSpan || !counterContainer || !divider) return;
-
-    countSpan.textContent = '...';
-
-    const currentUser = firebase.auth().currentUser;
-    if (!currentUser) {
-        countSpan.textContent = 'N/A';
-        counterContainer.style.display = 'none';
-        divider.style.display = 'none';
-        return;
-    }
-
-    try {
-        const collectionRef = firestoreDB.collection('resultados');
-        const snapshot = await collectionRef.get();
-        const count = snapshot.size; 
-        
-        countSpan.textContent = count.toLocaleString('pt-BR');
-        
-        // Mostra o contador e o separador
-        counterContainer.style.display = 'inline-block';
-        divider.style.display = 'inline-block';
-        
-    } catch (error) {
-        console.error("Erro ao buscar contagem de resultados:", error);
-        
-        // ==========================================================
-        // === CORREÇÃO DA LÓGICA DE ERRO ===
-        // ==========================================================
-        // Se der erro, mostramos "Erro!" em vez de esconder tudo
-        countSpan.textContent = 'Erro!';
-        counterContainer.style.display = 'inline-block'; // Garante que "Erro!" apareça
-        divider.style.display = 'inline-block';          // Garante que o separador apareça
-        // ==========================================================
-    } 
-}
-
     async function removeDataAppInventor(key) {
         if (isInAppInventor) {
             console.log(`[AppInventor Bridge] Enviando requisição para remover dados: ${key}`);
@@ -8426,6 +8327,8 @@ async function getMilharCount() {
     setupCutoffTimeSetting();
     await loadPersistedData();
     setupPWA();
+
+    getMilharCount(); // Busca a contagem inicial ao carregar a página
 
     const nomeSelect = document.getElementById('nomePessoaSelect');
     if (nomeSelect) {
@@ -11890,6 +11793,54 @@ async function handleLogout() {
     }
 }
 
+/**
+ * Busca a contagem total de documentos na coleção 'resultados'.
+ */
+async function getMilharCount() {
+    const countSpan = document.getElementById('milharTotalCount');
+    
+    // Se o span não for encontrado, sai da função
+    if (!countSpan) return;
+
+    // Ativa o estado de "carregando" (agora controlado pelo handleUpdateClick,
+    // mas garantimos o '...' aqui)
+    countSpan.textContent = '...';
+
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        countSpan.textContent = 'N/A';
+        return;
+    }
+
+    try {
+        const collectionRef = firestoreDB.collection('resultados');
+        
+        // ==========================================================
+        // === INÍCIO DA CORREÇÃO (Substituindo .count().get()) ===
+        // ==========================================================
+        
+        // Método ineficiente (v8/v9 compat) que baixa todos os documentos.
+        const snapshot = await collectionRef.get();
+        
+        // Em vez de snapshot.data().count, usamos snapshot.size
+        const count = snapshot.size; 
+        
+        // ==========================================================
+        // === FIM DA CORREÇÃO ===
+        // ==========================================================
+        
+        // Formata o número para melhor leitura (ex: 50.000)
+        countSpan.textContent = count.toLocaleString('pt-BR');
+        
+    } catch (error) {
+        console.error("Erro ao buscar contagem de resultados:", error);
+        countSpan.textContent = 'Erro!';
+        // Não mostra toast aqui, pois o handleUpdateClick mostrará um geral
+    } 
+    // O 'finally' que controlava o botão foi removido, 
+    // pois o handleUpdateClick já faz isso
+}
+
 // Adicione esta função completa no seu script
 async function createReceiptFromHistory(historyItemId) {
     // 1. Busca o histórico salvo no aparelho
@@ -13153,22 +13104,12 @@ async function handleUpdateClick() {
   const headerBtn = document.getElementById('header-update-btn');
   if (headerBtn.classList.contains('loading')) return; // Previne cliques duplos
 
-  // ==========================================================
-  // === CORREÇÃO: VERIFICA SE O USUÁRIO ESTÁ LOGADO PRIMEIRO ===
-  // ==========================================================
-  const currentUser = firebase.auth().currentUser;
-  if (!currentUser) {
-      showToast('Aguarde... Autenticando com o servidor...', 'info');
-      checkAuth(); // Tenta re-autenticar (pode já estar em progresso)
-      return; // Sai da função
-  }
-  // ==========================================================
-
   headerBtn.classList.add('loading'); // Adiciona animação de giro
 
   // 1. Verifica se há uma nova versão do APP
   if (newVersionAvailable) {
     showToast('Atualizando para a nova versão...', 'info');
+    // A animação de loading vai continuar até a página recarregar
     window.location.reload(true);
     return; 
   }
@@ -13183,20 +13124,6 @@ async function handleUpdateClick() {
      return; 
   }
 
-  // 3. ATUALIZA OS RESULTADOS (a função pesada)
-  console.log("Nenhuma nova versão do app detectada. Iniciando atualização manual de resultados...");
-  headerBtn.classList.remove('loading'); 
-  await atualizarTodosResultadosManualmente(); 
-  
-  // 4. APÓS a atualização, busca a NOVA CONTAGEM
-  console.log(">>> handleUpdateClick: Atualização manual concluída. Atualizando contagem do rodapé...");
-  headerBtn.classList.add('loading'); 
-  await getMilharCount(); // Atualiza o número no rodapé
-  
-  showToast('Verificação de dados concluída!', 'success');
-  headerBtn.classList.remove('loading'); // Para a animação final
-
-
   // 3. Se ainda não houver, ATUALIZA OS RESULTADOS (a função pesada)
   console.log("Nenhuma nova versão do app detectada. Iniciando atualização manual de resultados...");
   // A função 'atualizarTodosResultadosManualmente' já mostra seu próprio loading e confirmações
@@ -13206,7 +13133,8 @@ async function handleUpdateClick() {
   // 4. APÓS a atualização, busca a NOVA CONTAGEM
   console.log(">>> handleUpdateClick: Atualização manual concluída. Atualizando contagem do rodapé...");
   headerBtn.classList.add('loading'); // Adiciona o giro DE NOVO para a contagem
-    
+  await getMilharCount(); // Atualiza o número no rodapé
+  
   showToast('Verificação de dados concluída!', 'success');
   headerBtn.classList.remove('loading'); // Para a animação final
 }
