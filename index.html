@@ -4304,7 +4304,7 @@ body.dark-mode #db-connection-status.status-logged-in * {
 
    <footer>
    
-    <div>📌 Versão V1.56.35</div>
+    <div>📌 Versão V1.57.35</div>
     <div>👨‍💻 Criado por: Le Miastkuosky by VIP</div><br>
      <div style="text-align: center; margin-bottom: 15px; padding: 0 10px;">
         <span id="auth-status-indicator">Verificando status...</span>
@@ -13153,12 +13153,22 @@ async function handleUpdateClick() {
   const headerBtn = document.getElementById('header-update-btn');
   if (headerBtn.classList.contains('loading')) return; // Previne cliques duplos
 
+  // ==========================================================
+  // === CORREÇÃO: VERIFICA SE O USUÁRIO ESTÁ LOGADO PRIMEIRO ===
+  // ==========================================================
+  const currentUser = firebase.auth().currentUser;
+  if (!currentUser) {
+      showToast('Aguarde... Autenticando com o servidor...', 'info');
+      checkAuth(); // Tenta re-autenticar (pode já estar em progresso)
+      return; // Sai da função
+  }
+  // ==========================================================
+
   headerBtn.classList.add('loading'); // Adiciona animação de giro
 
   // 1. Verifica se há uma nova versão do APP
   if (newVersionAvailable) {
     showToast('Atualizando para a nova versão...', 'info');
-    // A animação de loading vai continuar até a página recarregar
     window.location.reload(true);
     return; 
   }
@@ -13172,6 +13182,20 @@ async function handleUpdateClick() {
      headerBtn.classList.remove('loading'); // Para a animação
      return; 
   }
+
+  // 3. ATUALIZA OS RESULTADOS (a função pesada)
+  console.log("Nenhuma nova versão do app detectada. Iniciando atualização manual de resultados...");
+  headerBtn.classList.remove('loading'); 
+  await atualizarTodosResultadosManualmente(); 
+  
+  // 4. APÓS a atualização, busca a NOVA CONTAGEM
+  console.log(">>> handleUpdateClick: Atualização manual concluída. Atualizando contagem do rodapé...");
+  headerBtn.classList.add('loading'); 
+  await getMilharCount(); // Atualiza o número no rodapé
+  
+  showToast('Verificação de dados concluída!', 'success');
+  headerBtn.classList.remove('loading'); // Para a animação final
+
 
   // 3. Se ainda não houver, ATUALIZA OS RESULTADOS (a função pesada)
   console.log("Nenhuma nova versão do app detectada. Iniciando atualização manual de resultados...");
