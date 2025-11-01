@@ -3718,6 +3718,76 @@ body.dark-mode #db-connection-status.disconnected {
     z-index: 1000;
 }
 
+#milharCounterContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+body.dark-mode #milharCounterContainer {
+    color: #aaa;
+}
+
+#milharTotalCount {
+    font-size: 1rem;
+    color: #007bff;
+    min-width: 30px; /* Garante espaço para o '...' */
+    display: inline-block;
+    text-align: center;
+}
+
+body.dark-mode #milharTotalCount {
+    color: #4da3ff;
+}
+
+#refreshMilharCountBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.3rem;
+    padding: 4px;
+    color: #007bff;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    transition: all 0.2s;
+    /* Centraliza o ícone */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.dark-mode #refreshMilharCountBtn {
+    color: #4da3ff;
+}
+
+#refreshMilharCountBtn:hover {
+    opacity: 0.7;
+}
+
+#refreshMilharCountBtn:active {
+    transform: scale(0.9);
+    background-color: rgba(0,0,0,0.1);
+}
+
+body.dark-mode #refreshMilharCountBtn:active {
+    background-color: rgba(255,255,255,0.1);
+}
+
+/* Animação de carregamento */
+#refreshMilharCountBtn.loading {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 </style>
 
 </head>
@@ -4145,6 +4215,9 @@ body.dark-mode #db-connection-status.disconnected {
         <button id="install-button" title="Instalar Aplicativo" style="margin-left: 10px; vertical-align: middle;">📱 Instalar</button>
         <div style="text-align: center; padding-left: 1px; margin: 4px 0;"> 
     <span id="db-connection-status">Verificando conexão...</span>
+    <div id="milharCounterContainer">
+        <span>Resultados no DB: <strong id="milharTotalCount">...</strong></span>
+    </div>
 </div>
 
     </div>
@@ -8184,6 +8257,8 @@ function toggleQuickShortcuts() {
     await loadPersistedData();
     setupPWA();
 
+    getMilharCount(); // Busca a contagem inicial ao carregar a página
+    
     const nomeSelect = document.getElementById('nomePessoaSelect');
     if (nomeSelect) {
         choicesNomePessoa = new Choices(nomeSelect, {
@@ -10994,106 +11069,111 @@ async function generateSelectedNumbers() {
         }
 
         if (isFechamento) {
-           // --- INÍCIO DA LÓGICA DE FECHAMENTO (existente) ---
+            // --- INÍCIO DA NOVA LÓGICA DE DIVISÃO (POR BICHO) ---
             if (!typeKeys.includes('milhar')) {
                 showToast('O Fechamento M-C só gera Milhares. Por favor, selecione o tipo "Milhar".', 'error');
                 return; 
             }
 
-            const hotDigits = new Set();
-            const allDezenasFromSelectedBichos = new Set();
-            selectedBichos.forEach(bicho => {
+            // 1. Calcular a divisão de quantidade
+            const baseQuantity = Math.floor(totalQuantity / selectedBichos.length);
+            const remainder = totalQuantity % selectedBichos.length;
+            
+            // 2. Atualizar o sumário para refletir a divisão
+            summaryParts.push(`\n<strong>- Modo:</strong> Fechamento M-C (Dividido por Bicho)`);
+            summaryParts.push(`<strong>- Grupos Selecionados:</strong> ${selectedBichos.length}`);
+            summaryParts.push("\n<strong>- Detalhes da Geração:</strong>");
+
+            selectedBichos.forEach((bicho, index) => {
+                const quantityForThisBicho = baseQuantity + (index < remainder ? 1 : 0);
+                if (quantityForThisBicho > 0) {
+                    summaryParts.push(`  • ${quantityForThisBicho}x Milhares para G${bicho.grupo} ${bicho.animal} ${bicho.emoji}`);
+                }
+            });
+
+            // 3. Iterar por CADA bicho e gerar suas combinações individualmente
+            selectedBichos.forEach((bicho, index) => {
+                const quantityForThisBicho = baseQuantity + (index < remainder ? 1 : 0);
+                if (quantityForThisBicho === 0) return; // Pula este bicho se a quantidade for 0
+
+                // 4. Lógica de Fechamento (M-C) *para este bicho*
+                const hotDigits = new Set();
+                const dezenasDoBicho = new Set(bicho.dezenas);
+                
                 bicho.dezenas.forEach(dezena => {
-                    allDezenasFromSelectedBichos.add(dezena);
                     hotDigits.add(dezena[0]);
                     hotDigits.add(dezena[1]);
                 });
-            });
 
-            if (hotDigits.size === 0 || allDezenasFromSelectedBichos.size === 0) {
-                showToast('Erro: Não foi possível determinar os dígitos ou dezenas para o fechamento.', 'error');
-                return;
-            }
-
-            const hotDigitsArray = Array.from(hotDigits);
-            const dezenasArray = Array.from(allDezenasFromSelectedBichos);
-            const allPossibleThousands = new Set();
-
-            for (let i = 0; i < hotDigitsArray.length; i++) {
-                for (let j = 0; j < hotDigitsArray.length; j++) {
-                    const prefixo = hotDigitsArray[i] + hotDigitsArray[j]; 
-                    dezenasArray.forEach(dezena => {
-                        const milharCompleta = prefixo + dezena;
-                        if (applyAdvancedFilters(milharCompleta, 'milhar')) {
-                             allPossibleThousands.add(milharCompleta);
-                        }
-                    });
+                if (hotDigits.size === 0 || dezenasDoBicho.size === 0) {
+                    console.warn(`Pulando bicho ${bicho.grupo} (sem dezenas ou dígitos).`);
+                    return; // Pula este bicho
                 }
-            }
 
-            let finalThousandsArray = Array.from(allPossibleThousands);
-            const calculatedCombinations = finalThousandsArray.length; 
-            let extraRandoms = []; 
+                const hotDigitsArray = Array.from(hotDigits);
+                const dezenasArray = Array.from(dezenasDoBicho);
+                const allPossibleThousands = new Set();
 
-            summaryParts.push(`\n<strong>- Modo:</strong> Fechamento M-C do Bicho`);
-            summaryParts.push(`<strong>- Bichos Selecionados:</strong> ${selectedBichos.map(b=>b.animal).join(', ')}`);
-            summaryParts.push(`<strong>- Total Possível (com filtros):</strong> ${calculatedCombinations} milhares`);
+                // 5. Gera todas as combinações M-C + D-U *para este bicho*
+                for (let i = 0; i < hotDigitsArray.length; i++) {
+                    for (let j = 0; j < hotDigitsArray.length; j++) {
+                        const prefixo = hotDigitsArray[i] + hotDigitsArray[j]; 
+                        dezenasArray.forEach(dezena => {
+                            const milharCompleta = prefixo + dezena;
+                            // 6. Aplica filtros avançados
+                            if (applyAdvancedFilters(milharCompleta, 'milhar')) {
+                                 allPossibleThousands.add(milharCompleta);
+                            }
+                        });
+                    }
+                }
 
+                let finalThousandsArray = Array.from(allPossibleThousands);
+                const calculatedCombinations = finalThousandsArray.length;
 
-            if (calculatedCombinations === 0) {
-                 showToast('Nenhuma milhar foi gerada com os bichos e filtros selecionados para o fechamento.', 'error');
-                 return; 
-            }
+                if (calculatedCombinations === 0) {
+                    console.warn(`Nenhuma combinação válida (pós-filtro) para ${bicho.animal}.`);
+                    return; // Pula este bicho
+                }
 
-            if (totalQuantity > calculatedCombinations) {
-                const difference = totalQuantity - calculatedCombinations;
-                const addRandoms = await showCustomConfirm(
-                    `O Fechamento M-C gerou <strong>${calculatedCombinations}</strong> milhares únicas.\n\nVocê solicitou <strong>${totalQuantity}</strong>. Deseja adicionar <strong>${difference}</strong> milhares aleatórias (dos mesmos bichos) para completar o total?`,
-                    `Sim, adicionar ${difference}`,
-                    `Não, gerar só as ${calculatedCombinations}`
-                );
-
-                if (addRandoms) {
-                    summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (${calculatedCombinations} de Fechamento + ${difference} Aleatórias)`);
+                // 7. Ajusta a quantidade
+                if (quantityForThisBicho > calculatedCombinations) {
+                    // Pediu mais do que o possível. Adiciona todas as possíveis (calculadas)
+                    finalResults.milhar.push(...finalThousandsArray);
                     
-                    const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
+                    // Tenta adicionar aleatórias (de outros prefixos) para este bicho
+                    const difference = quantityForThisBicho - calculatedCombinations;
                     const randomResultSet = new Set();
                     let attempts = 0;
-                    
+                    // Tenta gerar as 'difference' milhares aleatórias (com prefixos aleatórios)
                     while (randomResultSet.size < difference && attempts < (difference * 50)) {
                         attempts++;
-                        let generatedNumber = String(Math.floor(Math.random() * 100)).padStart(2, '0') + dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
+                        let generatedNumber = String(Math.floor(Math.random() * 100)).padStart(2, '0') + dezenasArray[Math.floor(Math.random() * dezenasArray.length)];
                         
+                        // Garante que o número aleatório passe nos filtros E não seja um que já saiu no fechamento
                         if (applyAdvancedFilters(generatedNumber, 'milhar') && !allPossibleThousands.has(generatedNumber)) {
                            randomResultSet.add(generatedNumber);
                         }
                     }
-                    extraRandoms = Array.from(randomResultSet); 
+                    finalResults.milhar.push(...Array.from(randomResultSet));
                     
-                    if (extraRandoms.length < difference) {
-                        showToast(`Aviso: Foi possível adicionar apenas ${extraRandoms.length} aleatórias extras (de ${difference} solicitadas).`, 'warning', 4000);
-                    }
                 } else {
-                    summaryParts.push(`<strong>- Quantidade:</strong> ${calculatedCombinations} (Somente Fechamento)`);
+                    // Pediu menos ou igual ao possível. Sorteia da lista.
+                    shuffleArray(finalThousandsArray);
+                    finalResults.milhar.push(...finalThousandsArray.slice(0, quantityForThisBicho));
                 }
+            });
 
-            } else if (totalQuantity < calculatedCombinations) {
-                summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (Sorteadas das ${calculatedCombinations} possíveis)`);
-                shuffleArray(finalThousandsArray);
-                finalThousandsArray = finalThousandsArray.slice(0, totalQuantity);
-
-            } else {
-                summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (Todas as ${calculatedCombinations} combinações)`);
-            }
-
-            finalResults.milhar = [...finalThousandsArray, ...extraRandoms]; 
+            // 8. Embaralha o resultado final (de todos os bichos juntos)
             shuffleArray(finalResults.milhar); 
 
-             finalResults.centena = [];
-             finalResults.dezena = [];
-            // --- FIM DA LÓGICA DE FECHAMENTO ---
+            // 9. Zera os outros tipos (Fechamento só faz milhar)
+            finalResults.centena = [];
+            finalResults.dezena = [];
+            // --- FIM DA NOVA LÓGICA DE DIVISÃO ---
 
         } else {
+
             // Lógica Padrão para Bichos (sem fechamento)
             const baseQuantity = Math.floor(totalQuantity / selectedBichos.length);
             const remainder = totalQuantity % selectedBichos.length;
@@ -11640,6 +11720,41 @@ async function handleLogout() {
         console.error("Erro ao fazer logout:", error);
         alert('Erro ao sair. Tente novamente.');
     }
+}
+
+/**
+ * Busca a contagem total de documentos na coleção 'resultados'.
+ */
+async function getMilharCount() {
+    const countSpan = document.getElementById('milharTotalCount');
+    
+    // Se o span não for encontrado, sai da função
+    if (!countSpan) return;
+
+    // Ativa o estado de "carregando"
+    countSpan.textContent = '...';
+
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        countSpan.textContent = 'N/A';
+        return;
+    }
+
+    try {
+        const collectionRef = firestoreDB.collection('resultados');
+        // Usa o agregador .count()
+        const snapshot = await collectionRef.count().get();
+        const count = snapshot.data().count;
+        
+        // Formata o número para melhor leitura (ex: 50.000)
+        countSpan.textContent = count.toLocaleString('pt-BR');
+        
+    } catch (error) {
+        console.error("Erro ao buscar contagem de resultados:", error);
+        countSpan.textContent = 'Erro!';
+        // Não mostra toast aqui, pois o handleUpdateClick mostrará um geral
+    } 
+    // O 'finally' que removia o loading do botão foi removido
 }
 
 // Adicione esta função completa no seu script
@@ -12901,20 +13016,43 @@ if ('serviceWorker' in navigator) {
 }
 
 // 2. NOVA FUNÇÃO CHAMADA PELO CLIQUE DO BOTÃO
-function handleUpdateClick() {
-  // Verifica se a flag global indica que uma nova versão foi detectada
+async function handleUpdateClick() {
+  const headerBtn = document.getElementById('header-update-btn');
+  if (headerBtn.classList.contains('loading')) return; // Previne cliques duplos
+
+  headerBtn.classList.add('loading'); // Adiciona animação de giro
+
+  // 1. Verifica se há uma nova versão do APP
   if (newVersionAvailable) {
-    // Se há nova versão, a ação é recarregar a página para aplicar
     showToast('Atualizando para a nova versão...', 'info');
-    // Força o recarregamento a partir do servidor (ignora cache)
+    // A animação de loading vai continuar até a página recarregar
     window.location.reload(true);
-  } else {
-    // Se NÃO há nova versão, a ação é tentar atualizar os resultados
-    console.log("Nenhuma nova versão do app detectada. Iniciando atualização manual de resultados...");
-    // Chama a função que busca e salva os resultados no Firestore
-    console.log(">>> handleUpdateClick: Chamando atualizarTodosResultadosManualmente...");
-    atualizarTodosResultadosManualmente();
+    return; 
   }
+  
+  // 2. Se não houver, verifica manualmente de novo (checa o cache)
+  showToast('Verificando versão do app...', 'info');
+  await checkForUpdates(true); // Força a verificação
+  
+  if (newVersionAvailable) {
+     showToast('Nova versão encontrada! Clique novamente para instalar.', 'success');
+     headerBtn.classList.remove('loading'); // Para a animação
+     return; 
+  }
+
+  // 3. Se ainda não houver, ATUALIZA OS RESULTADOS (a função pesada)
+  console.log("Nenhuma nova versão do app detectada. Iniciando atualização manual de resultados...");
+  // A função 'atualizarTodosResultadosManualmente' já mostra seu próprio loading e confirmações
+  headerBtn.classList.remove('loading'); // Remove o giro, pois a outra função assume
+  await atualizarTodosResultadosManualmente(); 
+  
+  // 4. APÓS a atualização, busca a NOVA CONTAGEM
+  console.log(">>> handleUpdateClick: Atualização manual concluída. Atualizando contagem do rodapé...");
+  headerBtn.classList.add('loading'); // Adiciona o giro DE NOVO para a contagem
+  await getMilharCount(); // Atualiza o número no rodapé
+  
+  showToast('Verificação de dados concluída!', 'success');
+  headerBtn.classList.remove('loading'); // Para a animação final
 }
 
 // 3. FUNÇÃO DE VERIFICAÇÃO DE VERSÃO (MODIFICADA)
