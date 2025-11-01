@@ -4319,7 +4319,7 @@ body.dark-mode #db-connection-status.status-logged-out * {
 
    <footer>
    
-    <div>📌 Versão V1.53.35</div>
+    <div>📌 Versão V1.54.35</div>
     <div>👨‍💻 Criado por: Le Miastkuosky by VIP</div><br>
      <div style="text-align: center; margin-bottom: 15px; padding: 0 10px;">
         <span id="auth-status-indicator">Verificando status...</span>
@@ -7037,7 +7037,7 @@ firebase.auth().onAuthStateChanged(user => {
     // Verifica status no Firestore (AGORA firestoreDB está definida)
     const userDocRef = firestoreDB.collection('users').doc(user.uid);
     userDocRef.get().then(doc => {
-      // ... (resto do código do listener inalterado) ...
+      // ... (código do if !doc.exists) ...
        if (!doc.exists) {
          console.warn("Usuário logado mas sem documento no Firestore!");
          statusIndicator.textContent += ' (Erro Doc)';
@@ -7050,7 +7050,12 @@ firebase.auth().onAuthStateChanged(user => {
          // Não força logout aqui, mas mantém o aviso visual
       } else {
          console.log("Usuário logado e ativo.");
-         // O status já está correto (verde)
+         
+         // ==========================================================
+         // === ADIÇÃO 1: CHAMA A CONTAGEM QUANDO O LOGIN É CONFIRMADO ===
+         // ==========================================================
+         getMilharCount(); // Busca a contagem assim que o usuário é confirmado como ativo
+         // ==========================================================
       }
     }).catch(error => {
         console.error("Erro ao verificar status do usuário no Firestore:", error);
@@ -7059,8 +7064,8 @@ firebase.auth().onAuthStateChanged(user => {
     });
 
   } else {
-    // ... (código para usuário deslogado inalterado) ...
-        console.log('Auth State Changed: Deslogado');
+    // ... (código existente de deslogado) ...
+    console.log('Auth State Changed: Deslogado');
     statusIndicator.textContent = 'Deslogado';
     statusIndicator.className = 'status-logged-out'; // Aplica classe CSS
     logoutButton.style.display = 'none'; // Esconde o botão Sair
@@ -7068,6 +7073,17 @@ firebase.auth().onAuthStateChanged(user => {
     localStorage.removeItem('app_authenticated');
     // Chama checkAuth para garantir que o modal de login apareça se necessário
     checkAuth();
+    
+    // ==========================================================
+    // === ADIÇÃO 2: LIMPA A CONTAGEM VISUALMENTE AO DESLOGAR ===
+    // ==========================================================
+    const countSpan = document.getElementById('milharTotalCount');
+    const counterContainer = document.getElementById('milharCounterSpan');
+    const divider = document.querySelector('#db-connection-status .status-divider');
+    if (countSpan) countSpan.textContent = 'N/A';
+    if (counterContainer) counterContainer.style.display = 'none';
+    if (divider) divider.style.display = 'none';
+    // ==========================================================
   }
 });
 
@@ -7084,12 +7100,14 @@ function updateConnectionStatusBadge(isConnected) {
         statusBadge.classList.remove('disconnected');
         statusBadge.classList.add('connected');
         
-        // Se conectado, mostra o contador (se ele tiver um número válido)
-        const currentCount = document.getElementById('milharTotalCount').textContent;
-        if (currentCount !== '...' && currentCount !== 'Erro!' && currentCount !== 'N/A') {
-            divider.style.display = 'inline-block';
-            counterSpan.style.display = 'inline-block';
-        }
+        // ==========================================================
+        // === MODIFICAÇÃO 3: CHAMA A CONTAGEM AO CONECTAR ===
+        // ==========================================================
+        // Se conectado, CHAMA a função de contagem.
+        // Ela cuidará de verificar o login e mostrar/esconder o contador.
+        getMilharCount();
+        // ==========================================================
+
     } else {
         statusText.textContent = '❌ Desconectado';
         statusBadge.classList.remove('connected');
@@ -7098,6 +7116,12 @@ function updateConnectionStatusBadge(isConnected) {
         // Se desconectado, esconde o contador
         divider.style.display = 'none';
         counterSpan.style.display = 'none';
+        
+        // ==========================================================
+        // === ADIÇÃO 4: LIMPA O NÚMERO AO DESCONECTAR ===
+        // ==========================================================
+        document.getElementById('milharTotalCount').textContent = '...';
+        // ==========================================================
     }
 }
 
@@ -8406,8 +8430,6 @@ function toggleQuickShortcuts() {
     setupCutoffTimeSetting();
     await loadPersistedData();
     setupPWA();
-
-    getMilharCount(); // Busca a contagem inicial ao carregar a página
 
     const nomeSelect = document.getElementById('nomePessoaSelect');
     if (nomeSelect) {
