@@ -7073,23 +7073,55 @@ firebase.auth().onAuthStateChanged(user => {
 
 function updateConnectionStatusBadge(isConnected) {
     const statusBadge = document.getElementById('db-connection-status');
-    if (!statusBadge) return; // Sai se o elemento não for encontrado
+    const statusText = document.getElementById('db-status-text');
+    const divider = statusBadge.querySelector('.status-divider');
+    const counterSpan = document.getElementById('milharCounterSpan');
+
+    if (!statusBadge || !statusText || !divider || !counterSpan) return;
 
     if (isConnected) {
-        statusBadge.textContent = '☁️ Conectado ao Servidor'; // <-- NOVO TEXTO (Português)
+        statusText.textContent = '☁️ Conectado ao Servidor';
         statusBadge.classList.remove('disconnected');
         statusBadge.classList.add('connected');
+        
+        // Se conectado, mostra o contador (se ele tiver um número válido)
+        const currentCount = document.getElementById('milharTotalCount').textContent;
+        if (currentCount !== '...' && currentCount !== 'Erro!' && currentCount !== 'N/A') {
+            divider.style.display = 'inline-block';
+            counterSpan.style.display = 'inline-block';
+        }
     } else {
-        statusBadge.textContent = '❌ Desconectado'; // <-- NOVO TEXTO (Português)
+        statusText.textContent = '❌ Desconectado';
         statusBadge.classList.remove('connected');
         statusBadge.classList.add('disconnected');
+        
+        // Se desconectado, esconde o contador
+        divider.style.display = 'none';
+        counterSpan.style.display = 'none';
     }
 }
 
 function monitorDatabaseConnection() {
-    const connectedRef = rtdb.ref(".info/connected"); // Agora funciona!
-    // ... (resto do código da função) ...
-    connectedRef.on("value", (snap) => { /* ... */ });
+    const connectedRef = rtdb.ref(".info/connected");
+    
+    // MODIFICAÇÃO: Altera o #db-status-text, não o #db-connection-status
+    const statusText = document.getElementById('db-status-text');
+    if (statusText) {
+        statusText.textContent = 'Conectando...';
+        // Reseta o badge principal
+        const statusBadge = document.getElementById('db-connection-status');
+        if (statusBadge) {
+            statusBadge.className = ''; 
+        }
+    }
+    // FIM DA MODIFICAÇÃO
+
+    // Listener que é chamado sempre que o status de conexão muda
+    connectedRef.on("value", (snap) => {
+        const isConnected = snap.val() === true;
+        console.log("Status da conexão Firebase RTDB:", isConnected ? "Conectado" : "Desconectado");
+        updateConnectionStatusBadge(isConnected);
+    });
 }
 // Chama a função para iniciar o monitoramento
 monitorDatabaseConnection();
@@ -11845,47 +11877,41 @@ async function handleLogout() {
  */
 async function getMilharCount() {
     const countSpan = document.getElementById('milharTotalCount');
-    
-    // Se o span não for encontrado, sai da função
-    if (!countSpan) return;
+    const counterContainer = document.getElementById('milharCounterSpan');
+    const divider = document.querySelector('#db-connection-status .status-divider');
 
-    // Ativa o estado de "carregando" (agora controlado pelo handleUpdateClick,
-    // mas garantimos o '...' aqui)
+    if (!countSpan || !counterContainer || !divider) return;
+
     countSpan.textContent = '...';
 
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) {
         countSpan.textContent = 'N/A';
+        // Esconde o contador se não estiver logado
+        counterContainer.style.display = 'none';
+        divider.style.display = 'none';
         return;
     }
 
     try {
         const collectionRef = firestoreDB.collection('resultados');
-        
-        // ==========================================================
-        // === INÍCIO DA CORREÇÃO (Substituindo .count().get()) ===
-        // ==========================================================
-        
-        // Método ineficiente (v8/v9 compat) que baixa todos os documentos.
         const snapshot = await collectionRef.get();
-        
-        // Em vez de snapshot.data().count, usamos snapshot.size
         const count = snapshot.size; 
         
-        // ==========================================================
-        // === FIM DA CORREÇÃO ===
-        // ==========================================================
-        
-        // Formata o número para melhor leitura (ex: 50.000)
         countSpan.textContent = count.toLocaleString('pt-BR');
+        
+        // MOSTRA o contador e o separador
+        // (A função updateConnectionStatusBadge vai escondê-lo se a conexão cair)
+        counterContainer.style.display = 'inline-block';
+        divider.style.display = 'inline-block';
         
     } catch (error) {
         console.error("Erro ao buscar contagem de resultados:", error);
         countSpan.textContent = 'Erro!';
-        // Não mostra toast aqui, pois o handleUpdateClick mostrará um geral
+        // Esconde o contador se der erro
+        counterContainer.style.display = 'none';
+        divider.style.display = 'none';
     } 
-    // O 'finally' que controlava o botão foi removido, 
-    // pois o handleUpdateClick já faz isso
 }
 
 // Adicione esta função completa no seu script
