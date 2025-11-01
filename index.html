@@ -4304,7 +4304,7 @@ body.dark-mode #db-connection-status.status-logged-in * {
 
    <footer>
    
-    <div>📌 Versão V1.55.35</div>
+    <div>📌 Versão V1.56.35</div>
     <div>👨‍💻 Criado por: Le Miastkuosky by VIP</div><br>
      <div style="text-align: center; margin-bottom: 15px; padding: 0 10px;">
         <span id="auth-status-indicator">Verificando status...</span>
@@ -7072,18 +7072,19 @@ function updateConnectionStatusBadge(isConnected) {
         statusBadge.classList.add('connected');
         
         // ==========================================================
-        // === CORREÇÃO: REMOVEMOS O getMilharCount() DAQUI ===
+        // === CORREÇÃO DA LÓGICA DE EXIBIÇÃO ===
         // ==========================================================
-        // A função 'onAuthStateChanged' (que roda DEPOIS) 
-        // agora é a única responsável por chamar a contagem inicial.
+        // Se a conexão for estabelecida, mostramos o contador
+        // (desde que ele não tenha dado um erro 'N/A' ou 'Erro!').
+        // Isso corrige a "corrida" de eventos.
         
-        // Esta lógica abaixo apenas garante que, se a contagem JÁ FOI MOSTRADA
-        // e a conexão cair e voltar, ela reapareça sem piscar.
         const currentCount = document.getElementById('milharTotalCount').textContent;
-        if (currentCount !== '...' && currentCount !== 'Erro!' && currentCount !== 'N/A') {
+        
+        if (currentCount !== 'N/A' && currentCount !== 'Erro!') {
             divider.style.display = 'inline-block';
             counterSpan.style.display = 'inline-block';
         }
+        // ==========================================================
 
     } else {
         statusText.textContent = '❌ Desconectado';
@@ -8337,6 +8338,49 @@ function toggleQuickShortcuts() {
             return await originalGetData(key);
         }
     }
+
+    // SUBSTITUA A FUNÇÃO na linha 11732 por esta:
+async function getMilharCount() {
+    const countSpan = document.getElementById('milharTotalCount');
+    const counterContainer = document.getElementById('milharCounterSpan');
+    const divider = document.querySelector('#db-connection-status .status-divider');
+
+    if (!countSpan || !counterContainer || !divider) return;
+
+    countSpan.textContent = '...';
+
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        countSpan.textContent = 'N/A';
+        counterContainer.style.display = 'none';
+        divider.style.display = 'none';
+        return;
+    }
+
+    try {
+        const collectionRef = firestoreDB.collection('resultados');
+        const snapshot = await collectionRef.get();
+        const count = snapshot.size; 
+        
+        countSpan.textContent = count.toLocaleString('pt-BR');
+        
+        // Mostra o contador e o separador
+        counterContainer.style.display = 'inline-block';
+        divider.style.display = 'inline-block';
+        
+    } catch (error) {
+        console.error("Erro ao buscar contagem de resultados:", error);
+        
+        // ==========================================================
+        // === CORREÇÃO DA LÓGICA DE ERRO ===
+        // ==========================================================
+        // Se der erro, mostramos "Erro!" em vez de esconder tudo
+        countSpan.textContent = 'Erro!';
+        counterContainer.style.display = 'inline-block'; // Garante que "Erro!" apareça
+        divider.style.display = 'inline-block';          // Garante que o separador apareça
+        // ==========================================================
+    } 
+}
 
     async function removeDataAppInventor(key) {
         if (isInAppInventor) {
