@@ -3788,16 +3788,6 @@ body.dark-mode #refreshMilharCountBtn:active {
     to { transform: rotate(360deg); }
 }
 
-/* --- Estilos para o Status de DB e Contador (Combinados) --- */
-#db-status-and-counter-wrapper {
-    display: flex;
-    flex-wrap: wrap; /* Permite quebra de linha em telas pequenas */
-    align-items: center;
-    justify-content: center;
-    gap: 10px; /* Espaço entre os itens */
-    margin: 10px 0;
-    padding: 0 10px;
-}
 
 /* O status da conexão (span#db-connection-status) já tem estilos, 
    mas garantimos que ele se alinhe */
@@ -3892,11 +3882,6 @@ body.dark-mode .status-divider {
 body.dark-mode #db-connection-status.status-logged-in,
 body.dark-mode #db-connection-status.status-logged-in * {
     color: #d4edda !important; /* Texto verde claro */
-}
-
-body.dark-mode #db-connection-status.status-logged-out,
-body.dark-mode #db-connection-status.status-logged-out * {
-    color: #f8d7da !important; /* Texto vermelho claro */
 }
 
 
@@ -4319,24 +4304,15 @@ body.dark-mode #db-connection-status.status-logged-out * {
 
    <footer>
    
-    <div>📌 Versão V1.54.35</div>
+    <div>📌 Versão V1.55.35</div>
     <div>👨‍💻 Criado por: Le Miastkuosky by VIP</div><br>
      <div style="text-align: center; margin-bottom: 15px; padding: 0 10px;">
         <span id="auth-status-indicator">Verificando status...</span>
         <button id="logout-button" style="display: none; margin-left: 2px;" onclick="handleLogout()">Sair</button>
         <button id="install-button" title="Instalar Aplicativo" style="margin-left: 10px; vertical-align: middle;">📱 Instalar</button>
        <div style="text-align: center; padding-left: 1px; margin: 4px 0;"> 
-        <span id="db-connection-status">
-            <span id="db-status-text">Verificando conexão...</span>
-            
-            <span class="status-divider" style="display: none;">|</span>
-            
-            <span id="milharCounterSpan" style="display: none;">
-                Resultados: <strong id="milharTotalCount">...</strong>
-            </span>
-        </span>
+        <span id="db-connection-status">Verificando conexão...</span>
      </div>
-</div>
 
     </div>
 </footer>
@@ -7051,12 +7027,7 @@ firebase.auth().onAuthStateChanged(user => {
       } else {
          console.log("Usuário logado e ativo.");
          
-         // ==========================================================
-         // === ADIÇÃO 1: CHAMA A CONTAGEM QUANDO O LOGIN É CONFIRMADO ===
-         // ==========================================================
-         getMilharCount(); // Busca a contagem assim que o usuário é confirmado como ativo
-         // ==========================================================
-      }
+          }
     }).catch(error => {
         console.error("Erro ao verificar status do usuário no Firestore:", error);
         statusIndicator.textContent += ' (Erro DB)';
@@ -7101,12 +7072,18 @@ function updateConnectionStatusBadge(isConnected) {
         statusBadge.classList.add('connected');
         
         // ==========================================================
-        // === MODIFICAÇÃO 3: CHAMA A CONTAGEM AO CONECTAR ===
+        // === CORREÇÃO: REMOVEMOS O getMilharCount() DAQUI ===
         // ==========================================================
-        // Se conectado, CHAMA a função de contagem.
-        // Ela cuidará de verificar o login e mostrar/esconder o contador.
-        getMilharCount();
-        // ==========================================================
+        // A função 'onAuthStateChanged' (que roda DEPOIS) 
+        // agora é a única responsável por chamar a contagem inicial.
+        
+        // Esta lógica abaixo apenas garante que, se a contagem JÁ FOI MOSTRADA
+        // e a conexão cair e voltar, ela reapareça sem piscar.
+        const currentCount = document.getElementById('milharTotalCount').textContent;
+        if (currentCount !== '...' && currentCount !== 'Erro!' && currentCount !== 'N/A') {
+            divider.style.display = 'inline-block';
+            counterSpan.style.display = 'inline-block';
+        }
 
     } else {
         statusText.textContent = '❌ Desconectado';
@@ -7117,36 +7094,11 @@ function updateConnectionStatusBadge(isConnected) {
         divider.style.display = 'none';
         counterSpan.style.display = 'none';
         
-        // ==========================================================
-        // === ADIÇÃO 4: LIMPA O NÚMERO AO DESCONECTAR ===
-        // ==========================================================
+        // Reseta o texto da contagem para a próxima conexão
         document.getElementById('milharTotalCount').textContent = '...';
-        // ==========================================================
     }
 }
 
-function monitorDatabaseConnection() {
-    const connectedRef = rtdb.ref(".info/connected");
-    
-    // MODIFICAÇÃO: Altera o #db-status-text, não o #db-connection-status
-    const statusText = document.getElementById('db-status-text');
-    if (statusText) {
-        statusText.textContent = 'Conectando...';
-        // Reseta o badge principal
-        const statusBadge = document.getElementById('db-connection-status');
-        if (statusBadge) {
-            statusBadge.className = ''; 
-        }
-    }
-    // FIM DA MODIFICAÇÃO
-
-    // Listener que é chamado sempre que o status de conexão muda
-    connectedRef.on("value", (snap) => {
-        const isConnected = snap.val() === true;
-        console.log("Status da conexão Firebase RTDB:", isConnected ? "Conectado" : "Desconectado");
-        updateConnectionStatusBadge(isConnected);
-    });
-}
 // Chama a função para iniciar o monitoramento
 monitorDatabaseConnection();
 
@@ -11894,48 +11846,6 @@ async function handleLogout() {
     }
 }
 
-/**
- * Busca a contagem total de documentos na coleção 'resultados'.
- */
-async function getMilharCount() {
-    const countSpan = document.getElementById('milharTotalCount');
-    const counterContainer = document.getElementById('milharCounterSpan');
-    const divider = document.querySelector('#db-connection-status .status-divider');
-
-    if (!countSpan || !counterContainer || !divider) return;
-
-    countSpan.textContent = '...';
-
-    const currentUser = firebase.auth().currentUser;
-    if (!currentUser) {
-        countSpan.textContent = 'N/A';
-        // Esconde o contador se não estiver logado
-        counterContainer.style.display = 'none';
-        divider.style.display = 'none';
-        return;
-    }
-
-    try {
-        const collectionRef = firestoreDB.collection('resultados');
-        const snapshot = await collectionRef.get();
-        const count = snapshot.size; 
-        
-        countSpan.textContent = count.toLocaleString('pt-BR');
-        
-        // MOSTRA o contador e o separador
-        // (A função updateConnectionStatusBadge vai escondê-lo se a conexão cair)
-        counterContainer.style.display = 'inline-block';
-        divider.style.display = 'inline-block';
-        
-    } catch (error) {
-        console.error("Erro ao buscar contagem de resultados:", error);
-        countSpan.textContent = 'Erro!';
-        // Esconde o contador se der erro
-        counterContainer.style.display = 'none';
-        divider.style.display = 'none';
-    } 
-}
-
 // Adicione esta função completa no seu script
 async function createReceiptFromHistory(historyItemId) {
     // 1. Busca o histórico salvo no aparelho
@@ -13228,8 +13138,7 @@ async function handleUpdateClick() {
   // 4. APÓS a atualização, busca a NOVA CONTAGEM
   console.log(">>> handleUpdateClick: Atualização manual concluída. Atualizando contagem do rodapé...");
   headerBtn.classList.add('loading'); // Adiciona o giro DE NOVO para a contagem
-  await getMilharCount(); // Atualiza o número no rodapé
-  
+    
   showToast('Verificação de dados concluída!', 'success');
   headerBtn.classList.remove('loading'); // Para a animação final
 }
