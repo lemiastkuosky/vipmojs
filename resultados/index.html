@@ -188,16 +188,19 @@
         
         <div class="card">
             <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <button id="prevDayButton" ...>
-            <i class="bi bi-arrow-left-circle"></i>
-        </button>
-        <h2 id="dailyResultsTitle" ...>Resultados de Hoje</h2>
-        <button id="nextDayButton" ...>
-            <i class="bi bi-arrow-right-circle"></i>
-        </button>
-    </div>
-    <div id="todayResultsLoading" class="text-center">
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button id="prevDayButton" class="btn btn-outline-primary" style="border: none; font-size: 1.5rem; padding: 0 0.5rem;">
+                        <i class="bi bi-arrow-left-circle"></i>
+                    </button>
+                    <h2 id="dailyResultsTitle" class="card-title-custom text-center" style="border-bottom: none; margin-bottom: 0;">
+                        Resultados de Hoje
+                    </h2>
+                    <button id="nextDayButton" class="btn btn-outline-primary" style="border: none; font-size: 1.5rem; padding: 0 0.5rem;">
+                        <i class="bi bi-arrow-right-circle"></i>
+                    </button>
+                </div>
+                <div id="todayResultsLoading" class="text-center">
                      <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Carregando...</span>
                      </div>
@@ -575,7 +578,7 @@
 
 
         // ===================================================================
-        // ==== 2. NOVO CÓDIGO: LÓGICA DO NAVEGADOR DE RESULTADOS POR DIA ====
+        // ==== CÓDIGO ATUALIZADO: LÓGICA DO NAVEGADOR DE RESULTADOS POR DIA ====
         // ===================================================================
 
         // Variável global para armazenar a data que está sendo exibida
@@ -621,8 +624,9 @@
             const placeholder = document.getElementById('todayResultsPlaceholder');
             const titleElement = document.getElementById('dailyResultsTitle');
 
+            // Esta verificação é a que causa o erro se o HTML estiver errado
             if (!resultsContainer || !loading || !placeholder || !titleElement) {
-                console.error("Elementos do 'Resultados por Dia' não encontrados.");
+                console.error("Elementos do 'Resultados por Dia' não encontrados. Verifique se o HTML está atualizado.");
                 return;
             }
 
@@ -678,7 +682,7 @@
         }
 
         // =========================================================================
-        // ==== 3. NOVO CÓDIGO: DISPARAR FUNÇÕES QUANDO A PÁGINA CARREGAR ====
+        // ==== CÓDIGO ATUALIZADO: DISPARAR FUNÇÕES QUANDO A PÁGINA CARREGAR ====
         // =========================================================================
 
         document.addEventListener('DOMContentLoaded', (event) => {
@@ -689,15 +693,23 @@
             loadResultsForDate(currentDate);
 
             // Adiciona os cliques nos botões de navegação
-            document.getElementById('prevDayButton').addEventListener('click', () => {
-                currentDate.setDate(currentDate.getDate() - 1); // Subtrai um dia
-                loadResultsForDate(currentDate);
-            });
+            const prevButton = document.getElementById('prevDayButton');
+            const nextButton = document.getElementById('nextDayButton');
 
-            document.getElementById('nextDayButton').addEventListener('click', () => {
-                currentDate.setDate(currentDate.getDate() + 1); // Adiciona um dia
-                loadResultsForDate(currentDate);
-            });
+            if(prevButton && nextButton) {
+                prevButton.addEventListener('click', () => {
+                    currentDate.setDate(currentDate.getDate() - 1); // Subtrai um dia
+                    loadResultsForDate(currentDate);
+                });
+
+                nextButton.addEventListener('click', () => {
+                    currentDate.setDate(currentDate.getDate() + 1); // Adiciona um dia
+                    loadResultsForDate(currentDate);
+                });
+            } else {
+                // Isso só acontecerá se o HTML estiver errado
+                console.error("Botões de navegação 'prevDayButton' ou 'nextDayButton' não encontrados.");
+            }
         });
 
 
