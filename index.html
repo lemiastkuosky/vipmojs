@@ -6391,78 +6391,85 @@ async function atualizarTodosResultadosManualmente() {
     let sucessoCount = 0;
     let falhaCount = 0;
     let jaVerificado = new Set();
-    const MINUTOS_TOLERANCIA_BUSCA = 10;
+    const MINUTOS_TOLERANCIA_BUSCA = 10; // Esta variável não é mais usada para o IF, mas pode ser mantida.
 
     for (const loteria of loteriasParaVerificar) {
         const horarios = horariosLoterias[loteria] || [];
         let htmlLoteria = null;
 
         for (const horarioInfo of horarios) {
-            const momentoSorteio = new Date();
-            momentoSorteio.setHours(horarioInfo.hora, horarioInfo.minuto, 0, 0);
+            
+            // ==================================================================
+            // === INÍCIO DA MODIFICAÇÃO ===
+            // As linhas que calculavam 'momentoSorteio', 'momentoLimite' e o
+            // 'if (agora >= momentoLimite)' e seu 'else' foram removidas daqui.
+            // O código agora tentará processar TODOS os horários.
+            // ==================================================================
+            
+            // Log 7: Vai verificar este horário (modificado para "Tentando processar")
+            console.log(`>>> atualizarTodosResultadosManualmente: Tentando processar ${loteria.toUpperCase()} - ${horarioInfo.nome}`);
 
-            const momentoLimite = new Date(momentoSorteio);
-            momentoLimite.setMinutes(momentoSorteio.getMinutes() + MINUTOS_TOLERANCIA_BUSCA);
-
-            if (agora >= momentoLimite) {
-                // Log 7: Vai verificar este horário
-                console.log(`>>> atualizarTodosResultadosManualmente: Verificando ${loteria.toUpperCase()} - ${horarioInfo.nome} (horário ${horarioInfo.hora}:${String(horarioInfo.minuto).padStart(2,'0')} passou).`);
-
-                try {
-                    if (!jaVerificado.has(loteria)) {
-                        showLoadingIndicator(`Buscando dados de ${loteria.toUpperCase()}...`);
-                        await new Promise(resolve => setTimeout(resolve, 700));
-                        // Log 8: Tentando buscar HTML
-                        console.log(`>>> atualizarTodosResultadosManualmente: Buscando HTML para ${loteria.toUpperCase()}...`);
-                        htmlLoteria = await fetchLotteryResults(loteria);
-                        jaVerificado.add(loteria);
-                        if (!htmlLoteria || htmlLoteria.toLowerCase().includes("erro:")) {
-                             console.warn(`>>> atualizarTodosResultadosManualmente: Falha ao buscar HTML ou proxy retornou erro para ${loteria.toUpperCase()}.`);
-                             htmlLoteria = null;
-                        } else {
-                             // Log 9: HTML buscado com sucesso (mostra início)
-                             console.log(`>>> atualizarTodosResultadosManualmente: HTML para ${loteria.toUpperCase()} OK (início):`, htmlLoteria.substring(0, 100));
-                        }
+            try {
+                if (!jaVerificado.has(loteria)) {
+                    showLoadingIndicator(`Buscando dados de ${loteria.toUpperCase()}...`);
+                    await new Promise(resolve => setTimeout(resolve, 700));
+                    // Log 8: Tentando buscar HTML
+                    console.log(`>>> atualizarTodosResultadosManualmente: Buscando HTML para ${loteria.toUpperCase()}...`);
+                    htmlLoteria = await fetchLotteryResults(loteria);
+                    jaVerificado.add(loteria);
+                    if (!htmlLoteria || htmlLoteria.toLowerCase().includes("erro:")) {
+                         console.warn(`>>> atualizarTodosResultadosManualmente: Falha ao buscar HTML ou proxy retornou erro para ${loteria.toUpperCase()}.`);
+                         htmlLoteria = null;
+                    } else {
+                         // Log 9: HTML buscado com sucesso (mostra início)
+                         console.log(`>>> atualizarTodosResultadosManualmente: HTML para ${loteria.toUpperCase()} OK (início):`, htmlLoteria.substring(0, 100));
                     }
+                }
 
-                    if (htmlLoteria) {
-                         showLoadingIndicator(`Processando ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
-                         // Log 10: Tentando extrair dados
-                         console.log(`>>> atualizarTodosResultadosManualmente: Extraindo dados para ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
-                         const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
+                if (htmlLoteria) {
+                     showLoadingIndicator(`Processando ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
+                     // Log 10: Tentando extrair dados
+                     console.log(`>>> atualizarTodosResultadosManualmente: Extraindo dados para ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
+                     const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
 
-                         if (dadosExtraidos && dadosExtraidos.length > 0) {
-                            // Log 11: Dados extraídos com sucesso
-                            console.log(`>>> atualizarTodosResultadosManualmente: Dados extraídos OK (${dadosExtraidos.length}) para ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, dadosExtraidos);
-                            for (const item of dadosExtraidos.slice(0, 5)) {
-                            if (item.milhar && item.milhar.length === 4) {
-                                try {
-                                    // Log 12: Tentando salvar milhar específica
-                                    console.log(`>>> atualizarTodosResultadosManualmente: Tentando salvar ${loteria}-${horarioInfo.nome}-${item.milhar}...`);
-                                    await salvarResultadoNoHistoricoIA(loteria, agora, horarioInfo.nome, item); // <-- MODIFICADO: Passa o 'item' completo
-                                        // Log 13: Salvo com sucesso (só se não deu erro)
-                                        console.log(`>>> atualizarTodosResultadosManualmente: Salvo ${loteria}-${horarioInfo.nome}-${item.milhar} com sucesso.`);
-                                        sucessoCount++;
-                                    } catch (saveError) {
-                                        console.error(`>>> atualizarTodosResultadosManualmente: Erro ao SALVAR ${loteria}-${horarioInfo.nome}-${item.milhar}:`, saveError);
-                                        falhaCount++;
-                                    }
+                     if (dadosExtraidos && dadosExtraidos.length > 0) {
+                        // Log 11: Dados extraídos com sucesso
+                        console.log(`>>> atualizarTodosResultadosManualmente: Dados extraídos OK (${dadosExtraidos.length}) para ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, dadosExtraidos);
+                        
+                        // O loop continua pegando 1º ao 5º prêmio (slice(0, 5))
+                        for (const item of dadosExtraidos.slice(0, 5)) {
+                        if (item.milhar && item.milhar.length === 4) {
+                            try {
+                                // Log 12: Tentando salvar milhar específica
+                                console.log(`>>> atualizarTodosResultadosManualmente: Tentando salvar ${loteria}-${horarioInfo.nome}-${item.milhar}...`);
+                                await salvarResultadoNoHistoricoIA(loteria, agora, horarioInfo.nome, item);
+                                    // Log 13: Salvo com sucesso (só se não deu erro)
+                                    console.log(`>>> atualizarTodosResultadosManualmente: Salvo ${loteria}-${horarioInfo.nome}-${item.milhar} com sucesso.`);
+                                    sucessoCount++;
+                                } catch (saveError) {
+                                    console.error(`>>> atualizarTodosResultadosManualmente: Erro ao SALVAR ${loteria}-${horarioInfo.nome}-${item.milhar}:`, saveError);
+                                    falhaCount++;
                                 }
                             }
-                        } else {
-                            console.log(`>>> atualizarTodosResultadosManualmente: Nenhum dado extraído para ${loteria.toUpperCase()} - ${horarioInfo.nome} no HTML.`);
                         }
-                    } // Fim if(htmlLoteria)
+                    } else {
+                        // Isso é esperado para horários futuros que ainda não saíram
+                        console.log(`>>> atualizarTodosResultadosManualmente: Nenhum dado extraído para ${loteria.toUpperCase()} - ${horarioInfo.nome} no HTML (provavelmente ainda não saiu).`);
+                    }
+                } // Fim if(htmlLoteria)
 
-                } catch (fetchError) {
-                    console.error(`>>> atualizarTodosResultadosManualmente: Erro GERAL ao processar ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, fetchError);
-                    falhaCount++;
-                    jaVerificado.add(loteria); // Marca como falha para não tentar de novo
-                    htmlLoteria = null;
-                }
-            } else {
-                 console.log(`>>> atualizarTodosResultadosManualmente: Pulando ${loteria.toUpperCase()} - ${horarioInfo.nome} (horário ${horarioInfo.hora}:${String(horarioInfo.minuto).padStart(2,'0')} ainda não passou + ${MINUTOS_TOLERANCIA_BUSCA} min).`);
+            } catch (fetchError) {
+                console.error(`>>> atualizarTodosResultadosManualmente: Erro GERAL ao processar ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, fetchError);
+                falhaCount++;
+                jaVerificado.add(loteria); // Marca como falha para não tentar de novo
+                htmlLoteria = null;
             }
+            
+            // ==================================================================
+            // === FIM DA MODIFICAÇÃO ===
+            // O 'else' que continha o 'console.log("Pulando...")' foi removido.
+            // ==================================================================
+            
         } // Fim loop horários
     } // Fim loop loterias
 
