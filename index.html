@@ -11713,44 +11713,65 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
     }
 
     async function salvarResultadoNoHistoricoIA(loteria, dataSorteio, nomeSorteio, item) {
-    const milhar = item.milhar;
-    // Verificação de segurança: Só salva se tiver uma milhar válida e uma posição de prêmio
-    if (!milhar || milhar.length !== 4 || !item.posicao) return;
+            
+            // --- 1. CORREÇÃO DA MILHAR (Limpa pontos) ---
+            const milharSujar = item.milhar ? item.milhar.trim() : '';
+            const milharLimpa = milharSujar.replace(/\D/g, '');
+            const milharFinal = milharLimpa.slice(-4);
+            
+            if (!milharFinal || milharFinal.length !== 4 || !item.posicao) {
+                console.warn(`Resultado pulado (inválido ou milhar < 4 dígitos): ${loteria}, ${nomeSorteio}, ${item.milhar}`);
+                return;
+            }
+            // --- FIM DA CORREÇÃO DA MILHAR ---
 
-    // 1. Cria um ID único para o documento para evitar duplicatas.
-    // Ex: "rj-20251027-PTN-1" (para o 1º prêmio)
-    const dia = String(dataSorteio.getDate()).padStart(2, '0');
-    const mes = String(dataSorteio.getMonth() + 1).padStart(2, '0');
-    const ano = dataSorteio.getFullYear();
-    const posicao = item.posicao.replace('º', ''); // Remove o 'º' para ter "1", "2", etc.
-    const idUnico = `${loteria}-${ano}${mes}${dia}-${nomeSorteio}-${posicao}`;
+            // 1. Cria um ID único para o documento para evitar duplicatas.
+            const dia = String(dataSorteio.getDate()).padStart(2, '0');
+            const mes = String(dataSorteio.getMonth() + 1).padStart(2, '0');
+            const ano = dataSorteio.getFullYear();
+            const posicao = item.posicao.replace('º', ''); 
+            const idUnico = `${loteria}-${ano}${mes}${dia}-${nomeSorteio}-${posicao}`;
 
-    // 2. Obtém os dados do bicho a partir da milhar (usando a dezena)
-    const bichoData = getBichoDataFromNumber(milhar);
-    if (!bichoData) return; // Não salva se não encontrar o bicho
+            // 2. Obtém os dados do bicho a partir da milhar
+            const bichoData = getBichoDataFromNumber(milharFinal); 
+            if (!bichoData) {
+                 console.warn(`Não foi possível encontrar o bicho para a milhar ${milharFinal}`);
+                 return; 
+            }
 
-    // 3. Monta o objeto de dados completo para salvar
-    const dadosParaSalvar = {
-        loteria: loteria,
-        nomeSorteio: nomeSorteio,
-        posicao: parseInt(posicao, 10), // Salva a posição como número
-        data: firebase.firestore.Timestamp.fromDate(dataSorteio), // Salva no formato de data do Firebase
-        milhar: milhar,
-        centena: milhar.slice(-3), // ADICIONADO: Salva a centena
-        dezena: milhar.slice(-2), // ADICIONADO: Salva a dezena
-        bichoGrupo: bichoData.grupo, // ADICIONADO: Salva o grupo
-        bichoNome: bichoData.animal
-    };
+            // 3. Monta o objeto de dados completo para salvar
+            const dadosParaSalvar = {
+                loteria: loteria,
+                nomeSorteio: nomeSorteio,
+                posicao: parseInt(posicao, 10), 
+                data: firebase.firestore.Timestamp.fromDate(dataSorteio), 
+                milhar: milharFinal, 
+                centena: milharFinal.slice(-3), 
+                dezena: milharFinal.slice(-2), 
+                bichoGrupo: bichoData.grupo, 
+                bichoNome: bichoData.animal,
+                nomeLoteria: item.nomeLoteria || loteria.toUpperCase() 
+            };
 
-    try {
-        // 4. Salva no Firestore usando .set() com o ID único.
-        // O .set() irá criar o documento se não existir ou sobrescrevê-lo se já existir.
-        await firestoreDB.collection('resultados').doc(idUnico).set(dadosParaSalvar);
-        console.log(`Resultado salvo/atualizado com sucesso no histórico da I.A.: ${idUnico}`);
-    } catch (error) {
-        console.error(`Erro ao salvar resultado ${idUnico} no Firestore:`, error);
-    }
-}
+            try {
+                // --- 2. CORREÇÃO (NÃO SOBRESCREVER) ---
+                // Trocamos .set() por .create()
+                // .create() falhará se o documento (idUnico) já existir.
+                await firestoreDB.collection('resultados').doc(idUnico).create(dadosParaSalvar);
+                
+                console.log(`Resultado NOVO salvo com sucesso no histórico da I.A.: ${idUnico}`);
+            
+            } catch (error) {
+                // Se o erro for "already-exists", é porque já salvamos este resultado antes.
+                // Isto agora é esperado e não é um "erro" real.
+                if (error.code === 'already-exists') {
+                    console.log(`Resultado pulado (já existe): ${idUnico}`);
+                } else {
+                    // Se for outro erro (como permissão), mostra no console.
+                    console.error(`Erro ao salvar resultado ${idUnico} no Firestore:`, error);
+                }
+            }
+        }
 
     function handleLoadTemplate() {
         const select = document.getElementById('templateSelect');
