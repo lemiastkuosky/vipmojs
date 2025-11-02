@@ -7798,7 +7798,8 @@ function generateReceiptText() {
     let possivelPremio = 0;
     if (valorPagoNumerico > 0) {
         switch (valorPagoNumerico) {
-            case 25: possivelPremio = 1250; break; case 30: possivelPremio = 500; break;
+            case 25: possivelPremio = 1250; break;
+            // A LINHA 'case 30: possivelPremio = 500; break;' FOI REMOVIDA DAQUI
             case 50: possivelPremio = 2500; break; case 75: possivelPremio = 3750; break;
             case 100: possivelPremio = 5000; break; case 150: possivelPremio = 7500; break;
             case 200: possivelPremio = 10000; break; default: possivelPremio = valorPagoNumerico * 50; break;
@@ -7872,7 +7873,7 @@ ${numerosTexto}
         }
     }
     
-} 
+}
 
 
 function showConferenciaModal() {
@@ -13062,10 +13063,8 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         const dadosDosAtrasados = extrairDadosDoHTML(htmlTabela);
         if (dadosDosAtrasados.length === 0) {
             showToast("Não foi possível extrair os dados. O site de origem pode ter mudado.", "error");
-            // Reabilita o botão em caso de falha na extração
-            botao.disabled = false;
-            botao.innerHTML = textoOriginal;
-            return; // Interrompe a função aqui
+            // O 'return' aqui será pego pelo bloco 'finally'
+            return;
         }
 
         // 3. Formata a mensagem (sem alterações)
@@ -13081,7 +13080,6 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         // 4. Gera o link do WhatsApp (sem alterações)
         const linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`;
 
-        // --- INÍCIO DA MODIFICAÇÃO: Pré-visualização ---
         // 5. Mostra a confirmação com a pré-visualização
         const userConfirmed = await showCustomConfirm(
             `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`,
@@ -13095,25 +13093,25 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
             window.open(linkWhats, '_blank'); // Abre o WhatsApp
             closeAtrasadosRealTimeModal();     // Fecha o modal de Atrasados
             showToast('Abrindo WhatsApp...', 'success');
+            // O botão será resetado pelo 'finally'
         } else {
             showToast('Envio cancelado.', 'info');
-            // Apenas reabilita o botão se cancelado, não fecha o modal
-            botao.disabled = false;
-            botao.innerHTML = textoOriginal;
+            // O botão será resetado pelo 'finally'
         }
-        // --- FIM DA MODIFICAÇÃO ---
 
     } catch (error) {
         console.error("Falha na operação:", error);
         showToast(`Ocorreu um erro: ${error.message}`, "error", 5000); // Mostra erro por 5s
-        // Reabilita o botão em caso de erro na busca/processamento
+        // O botão será resetado pelo 'finally'
+    } finally {
+        // *** ESTA É A CORREÇÃO ***
+        // Este bloco 'finally' é executado SEMPRE,
+        // seja por sucesso, cancelamento ou erro.
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
     }
-    // O 'finally' foi removido pois o botão agora é reabilitado
-    // dentro dos fluxos de 'cancelar' ou 'erro'.
 }
-
+        
 // 1. REGISTRO DO SERVICE WORKER
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
