@@ -13132,25 +13132,34 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     botao.disabled = true;
     botao.innerHTML = 'Buscando...';
 
-    const urlProxy = '/api/proxy'; // Certifique-se que '/api/proxy' é o caminho correto
+    const urlProxy = '/api/proxy'; 
 
     try {
-        // 1. Busca os dados (sem alterações)
-        const response = await fetch(`${urlProxy}?loteria=${loteria}`);
-        if (!response.ok) throw new Error(`Erro de rede: ${response.statusText}`);
+        // --- ESTA É A LINHA CORRIGIDA ---
+        // Adicionamos &tipo=atrasados na URL da requisição
+        const response = await fetch(`${urlProxy}?loteria=${loteria}&tipo=atrasados`);
+        // --- FIM DA CORREÇÃO ---
+
+        if (!response.ok) {
+             // Tenta ler a resposta de erro do proxy
+             let errorDetails = await response.text();
+             // Limita o tamanho da mensagem de erro para não poluir o toast
+             if (errorDetails.length > 300) {
+                 errorDetails = errorDetails.substring(0, 300) + "...";
+             }
+             // Mostra o erro 500 (Internal Server Error) ou outro
+             throw new Error(`Erro de rede: ${response.status} ${response.statusText}. Detalhes: ${errorDetails}`);
+        }
 
         const htmlTabela = await response.text();
         if (htmlTabela.toLowerCase().includes("erro:")) throw new Error(`O proxy retornou um erro: ${htmlTabela}`);
 
-        // 2. Extrai os dados (sem alterações)
         const dadosDosAtrasados = extrairDadosDoHTML(htmlTabela);
         if (dadosDosAtrasados.length === 0) {
             showToast("Não foi possível extrair os dados. O site de origem pode ter mudado.", "error");
-            // O 'return' aqui será pego pelo bloco 'finally'
-            return;
+            return; 
         }
 
-        // 3. Formata a mensagem (sem alterações)
         let textoMensagem = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n*GRUPO APP VIP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
         dadosDosAtrasados.forEach(bicho => {
             textoMensagem += `*${bicho.posicao}*: ${bicho.emoji} *${bicho.nome}* ${bicho.status}\n`;
@@ -13160,36 +13169,29 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         const dataFormatada = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         textoMensagem += `\n━━━━━━━━━━━━━━━\n🗓️ _Análise gerada em: ${dataFormatada}_\n\n🍀 *Boa sorte!*`;
 
-        // 4. Gera o link do WhatsApp (sem alterações)
         const linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`;
 
-        // 5. Mostra a confirmação com a pré-visualização
         const userConfirmed = await showCustomConfirm(
             `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`,
-            "✅ Enviar no WhatsApp", // Botão OK
-            "❌ Cancelar",         // Botão Cancelar
-            'atrasadosRealTimeModal' // ID do modal atual para controle de camada (z-index)
+            "✅ Enviar no WhatsApp", 
+            "❌ Cancelar",         
+            'atrasadosRealTimeModal' 
         );
 
-        // 6. Age com base na confirmação do usuário
         if (userConfirmed) {
-            window.open(linkWhats, '_blank'); // Abre o WhatsApp
-            closeAtrasadosRealTimeModal();     // Fecha o modal de Atrasados
+            window.open(linkWhats, '_blank'); 
+            closeAtrasadosRealTimeModal();     
             showToast('Abrindo WhatsApp...', 'success');
-            // O botão será resetado pelo 'finally'
         } else {
             showToast('Envio cancelado.', 'info');
-            // O botão será resetado pelo 'finally'
         }
 
     } catch (error) {
         console.error("Falha na operação:", error);
-        showToast(`Ocorreu um erro: ${error.message}`, "error", 5000); // Mostra erro por 5s
-        // O botão será resetado pelo 'finally'
+        // Exibe o erro detalhado no Toast
+        showToast(`Falha na operação: ${error.message}`, "error", 7000); 
     } finally {
-        // *** ESTA É A CORREÇÃO ***
-        // Este bloco 'finally' é executado SEMPRE,
-        // seja por sucesso, cancelamento ou erro.
+        // Isso garante que o botão volte ao normal
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
     }
