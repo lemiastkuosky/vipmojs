@@ -1,7 +1,7 @@
-// /api/proxy.js - VERSÃO ATUALIZADA
+// /api/proxy.js - VERSÃO CommonJS (Mais compatível)
 
-import fetch from 'node-fetch';
-import cheerio from 'cheerio'; // <--- Importa o 'leitor' de HTML
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
 
 // Mapeamento dos nomes de sorteio (como vêm no HTML)
 // para os nomes que seu app já usa (mapaSorteios)
@@ -22,10 +22,11 @@ const mapaUrls = {
     'lk': 'https://bichocerto.com/resultados/lk/look', 
     'fd': 'https://bichocerto.com/resultados/fd/loteria-federal', 
     'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional',
-    'ba': 'https://bichocerto.com/resultados/ba/bahia' // Adicionei a Bahia que estava faltando
+    'ba': 'https://bichocerto.com/resultados/ba/bahia'
 };
 
-export default async function handler(request, response) {
+// Muda de 'export default' para 'module.exports'
+module.exports = async (request, response) => {
     // 1. Permite CORS
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -35,7 +36,7 @@ export default async function handler(request, response) {
         return response.status(200).end();
     }
 
-    // 2. Pega os parâmetros (ignora 'tipo', vamos focar em 'resultados')
+    // 2. Pega os parâmetros
     const { loteria } = request.query;
 
     if (!loteria) {
@@ -56,32 +57,28 @@ export default async function handler(request, response) {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
         });
-
+        
         if (!res.ok) {
             throw new Error(`Erro ${res.status} ao acessar o site de origem.`);
         }
-
+        
         const html = await res.text();
-
-        // 4. *** A MÁGICA ACONTECE AQUI (Parsing com Cheerio) ***
+        
+        // 4. Parsing com Cheerio
         const $ = cheerio.load(html);
         const resultadosFinais = [];
 
-        // O novo layout usa "result-item" para cada sorteio do dia
         $('div.result-item').each((index, item) => {
             const $item = $(item);
-
-            // Pega o nome do sorteio (ex: "PTM 11:20", "FEDERAL 19:00")
+            
             let nomeSorteioOriginal = $item.find('h4').text().trim();
-            if (!nomeSorteioOriginal) return; // Pula se não tiver título
+            if (!nomeSorteioOriginal) return; 
 
-            // Tenta traduzir o nome para o formato que seu app entende
-            let nomeSorteioApp = nomeSorteioOriginal; // Padrão
-            const nomeCurto = nomeSorteioOriginal.split(' ')[0].toUpperCase(); // Ex: "PTM"
-
+            let nomeSorteioApp = nomeSorteioOriginal;
+            const nomeCurto = nomeSorteioOriginal.split(' ')[0].toUpperCase();
+            
             if (nomeSorteioMap[nomeCurto]) {
                nomeSorteioApp = nomeSorteioMap[nomeCurto];
-               // Caso especial da Look, que pode ter vários horários
                if (nomeCurto === 'LOOK' || nomeCurto === 'NACIONAL') {
                    const horaMatch = nomeSorteioOriginal.match(/(\d{2}:\d{2})/);
                    if (horaMatch) {
@@ -100,19 +97,17 @@ export default async function handler(request, response) {
                 let itemResultado = null;
 
                 if (colunas.length === 5) {
-                    // Formato Padrão (RJ, LK, etc)
                     itemResultado = {
                         posicao: $(colunas[0]).text().trim(),
                         emoji: $(colunas[1]).text().trim(),
-                        milhar: $(colunas[2]).text().trim().replace('.', ''), // Limpa pontos
+                        milhar: $(colunas[2]).text().trim().replace('.', ''),
                         grupo: `${$(colunas[3]).text().trim()} - ${$(colunas[4]).text().trim()}`
                     };
                 } else if (colunas.length === 4) {
-                    // Formato Federal (4 colunas)
                     itemResultado = {
                         posicao: $(colunas[0]).text().trim(),
-                        emoji: '❔', // Federal não tem emoji, vamos adicionar um placeholder
-                        milhar: $(colunas[1]).text().trim().replace('.', ''), // Limpa pontos
+                        emoji: '❔',
+                        milhar: $(colunas[1]).text().trim().replace('.', ''),
                         grupo: `${$(colunas[2]).text().trim()} - ${$(colunas[3]).text().trim()}`
                     };
                 }
@@ -122,22 +117,21 @@ export default async function handler(request, response) {
                 }
             });
 
-            // Adiciona o bloco de resultados ao array final
             if (resultadosDoSorteio.length > 0) {
                 resultadosFinais.push({
-                    nomeSorteio: nomeSorteioApp, // <--- Nome traduzido
-                    nomeSorteioOriginal: nomeSorteioOriginal, // <--- Nome do site
+                    nomeSorteio: nomeSorteioApp,
+                    nomeSorteioOriginal: nomeSorteioOriginal,
                     resultados: resultadosDoSorteio
                 });
             }
         });
 
-        // 5. Envia o JSON limpo de volta para o seu app
+        // 5. Envia o JSON limpo
         response.setHeader('Content-Type', 'application/json');
         return response.status(200).json(resultadosFinais);
 
     } catch (error) {
         console.error("Erro crítico no proxy Vercel:", error); 
-        return response.status(502).send(`Erro no proxy: ${error.message}`);
+        return response.status(502).json({ error: `Erro no proxy: ${error.message}` }); // Retorna JSON no erro
     }
 }
