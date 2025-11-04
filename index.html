@@ -6821,7 +6821,102 @@ function editBolaoParticipant(group, index) {
     document.getElementById('bolaoBicho').focus();
 }
 
+/**
+ * --- FUNÇÃO DE EXTRAIR RESULTADOS ---
+ */
+function extrairDadosResultados(htmlString, nomeSorteio) {
+            const dadosExtraidos = [];
+            const idSorteio = mapaSorteios[nomeSorteio];
 
+            if (!idSorteio) {
+                console.error(`Erro interno: Mapeamento de ID não encontrado para ${nomeSorteio}.`);
+                return [];
+            }
+
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlString, 'text/html');
+                const divSorteio = doc.getElementById(idSorteio);
+
+                if (!divSorteio) {
+                    if (mapaSorteios[nomeSorteio]) {
+                        console.error(`Elemento com ID "${idSorteio}" (para "${nomeSorteio}") não encontrado no HTML.`);
+                    }
+                    return [];
+                }
+
+                const tabelaResultados = divSorteio.querySelector('table');
+                if (!tabelaResultados) {
+                    console.error(`Tabela de resultados não encontrada dentro de #${idSorteio}`);
+                    return [];
+                }
+
+                const linhas = tabelaResultados.querySelectorAll('tbody tr');
+                if (linhas.length === 0) {
+                    console.warn(`Tabela encontrada para "${nomeSorteio}", mas está vazia (sem <tr>).`);
+                    return [];
+                }
+
+                linhas.forEach(linha => {
+                    const celulas = linha.querySelectorAll('td');
+                    let item = null;
+
+                    // Pula linhas que não são de prémio (ex: cabeçalhos)
+                    if (celulas.length < 4 || (celulas[0] && !celulas[0].innerText.trim().match(/^\d+º$/))) {
+                        return; // Pula esta linha
+                    }
+
+                    // =======================================================
+                    // === INÍCIO DA CORREÇÃO: LÓGICA DE 4 OU 5 COLUNAS ===
+                    // =======================================================
+                    
+                    if (celulas.length >= 5) {
+                        // Formato PADRÃO (5 colunas: Posição, Emoji, Milhar, GrupoNum, GrupoNome)
+                        item = {
+                            posicao: celulas[0].innerText.trim(),
+                            emoji: celulas[1].innerText.trim(),
+                            milhar: celulas[2].innerText.trim(),
+                            grupo: `${celulas[3].innerText.trim()} - ${celulas[4].innerText.trim()}`
+                        };
+                    } else {
+                        // Formato ALTERNATIVO (4 colunas: Posição, Milhar, GrupoNum, GrupoNome)
+                        // Provavelmente é a FEDERAL.
+                        const posicao = celulas[0].innerText.trim();
+                        const milhar = celulas[1].innerText.trim();
+                        const grupoNum = celulas[2].innerText.trim().padStart(2, '0'); // Garante '08' em vez de '8'
+                        const grupoNome = celulas[3].innerText.trim();
+                        
+                        // Vamos encontrar o emoji manualmente na nossa tabela de grupos
+                        const bichoData = tabelaDeGrupos.find(b => b.grupo === grupoNum);
+
+                        item = {
+                            posicao: posicao,
+                            emoji: bichoData ? bichoData.emoji : '❔', // Adiciona o emoji correspondente
+                            milhar: milhar,
+                            grupo: `${grupoNum} - ${grupoNome}`
+                        };
+                    }
+                    
+                    // =======================================================
+                    // === FIM DA CORREÇÃO ===
+                    // =======================================================
+
+                    if (item) {
+                        dadosExtraidos.push(item);
+                    }
+                });
+
+            } catch (error) {
+                console.error(`Erro ao processar o HTML dos resultados para "${nomeSorteio}":`, error);
+                return [];
+            }
+
+            if (dadosExtraidos.length === 0 && doc.getElementById(idSorteio) && doc.getElementById(idSorteio).querySelector('table')) {
+                console.warn(`Nenhum dado de prêmio (1º-5º) extraído para "${nomeSorteio}" (ID: ${idSorteio}).`);
+            }
+
+            return dadosExtraidos;
+        }
 
 async function deleteBolaoParticipant(group, index) {
     const participante = bolaoParticipantes[group][index];
