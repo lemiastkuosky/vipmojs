@@ -4310,7 +4310,7 @@ body.dark-mode .footer-info-item strong {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V1.71.35</strong>
+            <strong>V1.72.35</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -6353,127 +6353,127 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
  * VERSÃO COM LOGS DE DEPURAÇÃO ADICIONADOS.
  */
 async function atualizarTodosResultadosManualmente() {
-    // Log 1: Iniciou a função
     console.log(">>> atualizarTodosResultadosManualmente: Função iniciada.");
 
     const currentUser = firebase.auth().currentUser;
-    // Log 2: Verifica o usuário
-    console.log(">>> atualizarTodosResultadosManualmente: currentUser =", currentUser ? currentUser.uid : null); // Mostra o ID se logado
+    console.log(">>> atualizarTodosResultadosManualmente: currentUser =", currentUser ? currentUser.uid : null); 
 
     if (!currentUser) {
         showToast('Você precisa estar logado para atualizar os resultados.', 'error');
-        checkAuth(); // Mostra o modal de login
-        // Log 3: Saiu por falta de usuário
+        checkAuth(); 
         console.log(">>> atualizarTodosResultadosManualmente: Saindo - usuário não logado.");
         return;
     }
 
     const confirmUpdate = await showCustomConfirm(
-        'Isso tentará buscar os resultados de hoje que já passaram do horário e salvá-los no banco de dados.\n\nPode levar alguns instantes e fará várias requisições.\n\nDeseja continuar?',
-        'Sim, Atualizar',
+        'Isso tentará buscar os resultados de <strong>HOJE, ONTEM e ANTEONTEM</strong> e salvá-los no banco de dados da I.A.\n\nPode levar vários instantes.\n\nDeseja continuar?',
+        'Sim, Atualizar 3 dias',
         'Cancelar'
     );
 
-    // Log 4: Verifica a confirmação
     console.log(">>> atualizarTodosResultadosManualmente: confirmUpdate =", confirmUpdate);
 
     if (!confirmUpdate) {
         showToast('Atualização cancelada.', 'info');
-        // Log 5: Saiu porque o usuário cancelou
         console.log(">>> atualizarTodosResultadosManualmente: Saindo - atualização cancelada pelo usuário.");
         return;
     }
 
-    // Log 6: Se chegou aqui, vai começar o processo
     console.log(">>> atualizarTodosResultadosManualmente: Iniciando busca e salvamento...");
-    showLoadingIndicator('Atualizando resultados... Verificando horários...'); // Mostra indicador
+    showLoadingIndicator('Atualizando resultados (3 dias)...');
 
-    const agora = new Date();
-    const loteriasParaVerificar = ['rj', 'lk', 'ln', 'fd', 'ba'];
+    const loteriasParaVerificar = ['rj', 'lk', 'ln', 'fd', 'ba']; // 'ba' (Bahia) foi vista nos logs, mantive
     let sucessoCount = 0;
     let falhaCount = 0;
-    let jaVerificado = new Set();
-    const MINUTOS_TOLERANCIA_BUSCA = 10; // Esta variável não é mais usada para o IF, mas pode ser mantida.
+    let jaVerificadoHTML = new Map(); // Cache de HTML: "rj_2025-11-04" -> "<html>..."
+    const MINUTOS_TOLERANCIA_BUSCA = 10;
 
-    for (const loteria of loteriasParaVerificar) {
-        const horarios = horariosLoterias[loteria] || [];
-        let htmlLoteria = null;
+    // --- INÍCIO DA NOVA LÓGICA DE LOOP DE DATAS ---
+    const diasParaBuscar = 3; // Hoje, ontem, anteontem
+    for (let i = 0; i < diasParaBuscar; i++) {
+        const dataAtual = new Date();
+        dataAtual.setDate(dataAtual.getDate() - i); // 0 = hoje, 1 = ontem, 2 = anteontem
+        
+        // Formata a data para YYYY-MM-DD (necessário para o proxy)
+        const ano = dataAtual.getFullYear();
+        const mes = String(dataAtual.getMonth() + 1).padStart(2, '0');
+        const dia = String(dataAtual.getDate()).padStart(2, '0');
+        const dataISO = `${ano}-${mes}-${dia}`;
+        const dataDisplay = (i === 0) ? "HOJE" : (i === 1) ? "ONTEM" : `(${dia}/${mes})`;
 
-        for (const horarioInfo of horarios) {
-            
-            // ==================================================================
-            // === INÍCIO DA MODIFICAÇÃO ===
-            // As linhas que calculavam 'momentoSorteio', 'momentoLimite' e o
-            // 'if (agora >= momentoLimite)' e seu 'else' foram removidas daqui.
-            // O código agora tentará processar TODOS os horários.
-            // ==================================================================
-            
-            // Log 7: Vai verificar este horário (modificado para "Tentando processar")
-            console.log(`>>> atualizarTodosResultadosManualmente: Tentando processar ${loteria.toUpperCase()} - ${horarioInfo.nome}`);
+        console.log(`--- PROCESSANDO DIA: ${dataISO} (${dataDisplay}) ---`);
+        showLoadingIndicator(`Buscando dia: ${dataDisplay}...`);
+        
+        for (const loteria of loteriasParaVerificar) {
+            const horarios = horariosLoterias[loteria] || [];
+            let htmlLoteria = null;
+            const cacheKey = `${loteria}_${dataISO}`; // Chave de cache por loteria e data
 
-            try {
-                if (!jaVerificado.has(loteria)) {
-                    showLoadingIndicator(`Buscando dados de ${loteria.toUpperCase()}...`);
-                    await new Promise(resolve => setTimeout(resolve, 700));
-                    // Log 8: Tentando buscar HTML
-                    console.log(`>>> atualizarTodosResultadosManualmente: Buscando HTML para ${loteria.toUpperCase()}...`);
-                    htmlLoteria = await fetchLotteryResults(loteria);
-                    jaVerificado.add(loteria);
-                    if (!htmlLoteria || htmlLoteria.toLowerCase().includes("erro:")) {
-                         console.warn(`>>> atualizarTodosResultadosManualmente: Falha ao buscar HTML ou proxy retornou erro para ${loteria.toUpperCase()}.`);
-                         htmlLoteria = null;
-                    } else {
-                         // Log 9: HTML buscado com sucesso (mostra início)
-                         console.log(`>>> atualizarTodosResultadosManualmente: HTML para ${loteria.toUpperCase()} OK (início):`, htmlLoteria.substring(0, 100));
-                    }
-                }
+            for (const horarioInfo of horarios) {
+                
+                const agora = new Date(); // Pega a data/hora atual *dentro* do loop
+                const momentoSorteio = new Date(dataAtual); // Começa com a data do loop
+                momentoSorteio.setHours(horarioInfo.hora, horarioInfo.minuto, 0, 0);
 
-                if (htmlLoteria) {
-                     showLoadingIndicator(`Processando ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
-                     // Log 10: Tentando extrair dados
-                     console.log(`>>> atualizarTodosResultadosManualmente: Extraindo dados para ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
-                     const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
+                const momentoLimite = new Date(momentoSorteio);
+                momentoLimite.setMinutes(momentoSorteio.getMinutes() + MINUTOS_TOLERANCIA_BUSCA);
 
-                     if (dadosExtraidos && dadosExtraidos.length > 0) {
-                        // Log 11: Dados extraídos com sucesso
-                        console.log(`>>> atualizarTodosResultadosManualmente: Dados extraídos OK (${dadosExtraidos.length}) para ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, dadosExtraidos);
-                        
-                        // O loop continua pegando 1º ao 5º prêmio (slice(0, 5))
-                        for (const item of dadosExtraidos.slice(0, 5)) {
-                        if (item.milhar && item.milhar.length === 4) {
-                            try {
-                                // Log 12: Tentando salvar milhar específica
-                                console.log(`>>> atualizarTodosResultadosManualmente: Tentando salvar ${loteria}-${horarioInfo.nome}-${item.milhar}...`);
-                                await salvarResultadoNoHistoricoIA(loteria, agora, horarioInfo.nome, item);
-                                    // Log 13: Salvo com sucesso (só se não deu erro)
-                                    console.log(`>>> atualizarTodosResultadosManualmente: Salvo ${loteria}-${horarioInfo.nome}-${item.milhar} com sucesso.`);
-                                    sucessoCount++;
-                                } catch (saveError) {
-                                    console.error(`>>> atualizarTodosResultadosManualmente: Erro ao SALVAR ${loteria}-${horarioInfo.nome}-${item.milhar}:`, saveError);
-                                    falhaCount++;
+                // Se NÃO for hoje (i > 0) -> [busca tudo]
+                // OU Se for hoje (i === 0) E já passou do horário limite -> [busca o de hoje]
+                if (i > 0 || (i === 0 && agora >= momentoLimite)) {
+                    
+                    console.log(`>>> atualizarTodosResultadosManualmente: Tentando processar ${loteria.toUpperCase()} - ${horarioInfo.nome} [Data: ${dataISO}]`);
+                    try {
+                        // Busca o HTML (com cache por dia/loteria)
+                        if (!jaVerificadoHTML.has(cacheKey)) {
+                            showLoadingIndicator(`Buscando ${loteria.toUpperCase()} (${dataDisplay})...`);
+                            await new Promise(resolve => setTimeout(resolve, 700)); // Evita sobrecarga no proxy
+                            
+                            // CHAMA A NOVA FETCH COM A DATA
+                            htmlLoteria = await fetchLotteryResults(loteria, dataISO); 
+                            
+                            jaVerificadoHTML.set(cacheKey, htmlLoteria); // Salva no cache (mesmo se for null/erro)
+                        } else {
+                            htmlLoteria = jaVerificadoHTML.get(cacheKey);
+                        }
+
+                        if (htmlLoteria) {
+                             console.log(`>>> atualizarTodosResultadosManualmente: Extraindo dados para ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
+                             const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
+
+                             if (dadosExtraidos && dadosExtraidos.length > 0) {
+                                console.log(`>>> atualizarTodosResultadosManualmente: Dados extraídos OK (${dadosExtraidos.length}) para ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, dadosExtraidos);
+                                for (const item of dadosExtraidos.slice(0, 5)) {
+                                if (item.milhar && item.milhar.length === 4) {
+                                    try {
+                                        // Passa 'momentoSorteio' (que é a data do dia 'i')
+                                        console.log(`>>> atualizarTodosResultadosManualmente: Tentando salvar ${loteria}-${horarioInfo.nome}-${item.milhar}...`);
+                                        await salvarResultadoNoHistoricoIA(loteria, momentoSorteio, horarioInfo.nome, item);
+                                        console.log(`>>> atualizarTodosResultadosManualmente: Salvo ${loteria}-${horarioInfo.nome}-${item.milhar} com sucesso.`);
+                                        sucessoCount++;
+                                    } catch (saveError) {
+                                        console.error(`>>> atualizarTodosResultadosManualmente: Erro ao SALVAR ${loteria}-${horarioInfo.nome}-${item.milhar}:`, saveError);
+                                        falhaCount++;
+                                    }
                                 }
                             }
-                        }
-                    } else {
-                        // Isso é esperado para horários futuros que ainda não saíram
-                        console.log(`>>> atualizarTodosResultadosManualmente: Nenhum dado extraído para ${loteria.toUpperCase()} - ${horarioInfo.nome} no HTML (provavelmente ainda não saiu).`);
+                            } else {
+                                console.log(`>>> atualizarTodosResultadosManualmente: Nenhum dado extraído para ${loteria.toUpperCase()} - ${horarioInfo.nome} no HTML (provavelmente ainda não saiu).`);
+                            }
+                        } // Fim if(htmlLoteria)
+                    } catch (fetchError) {
+                        console.error(`>>> atualizarTodosResultadosManualmente: Erro GERAL ao processar ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, fetchError);
+                        falhaCount++;
+                        jaVerificadoHTML.set(cacheKey, null); // Marca como falha para não tentar de novo
+                        htmlLoteria = null;
                     }
-                } // Fim if(htmlLoteria)
-
-            } catch (fetchError) {
-                console.error(`>>> atualizarTodosResultadosManualmente: Erro GERAL ao processar ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, fetchError);
-                falhaCount++;
-                jaVerificado.add(loteria); // Marca como falha para não tentar de novo
-                htmlLoteria = null;
-            }
-            
-            // ==================================================================
-            // === FIM DA MODIFICAÇÃO ===
-            // O 'else' que continha o 'console.log("Pulando...")' foi removido.
-            // ==================================================================
-            
-        } // Fim loop horários
-    } // Fim loop loterias
+                } else {
+                    // Loga por que pulou (só vai acontecer para HOJE)
+                    console.log(`>>> atualizarTodosResultadosManualmente: Pulando ${loteria.toUpperCase()} - ${horarioInfo.nome} (horário ${horarioInfo.hora}:${String(horarioInfo.minuto).padStart(2,'0')} ainda não passou + ${MINUTOS_TOLERANCIA_BUSCA} min).`);
+                }
+            } // Fim loop horários
+        } // Fim loop loterias
+    } // --- FIM DA NOVA LÓGICA DE LOOP DE DATAS ---
 
     hideLoadingIndicator(); // Esconde indicador
 
