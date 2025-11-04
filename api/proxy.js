@@ -1,107 +1,143 @@
-// /api/proxy.js - Versão Final Unificada
+// /api/proxy.js - VERSÃO ATUALIZADA
+
+import fetch from 'node-fetch';
+import cheerio from 'cheerio'; // <--- Importa o 'leitor' de HTML
+
+// Mapeamento dos nomes de sorteio (como vêm no HTML)
+// para os nomes que seu app já usa (mapaSorteios)
+const nomeSorteioMap = {
+    'PTM': 'RIO 11:20',
+    'PT': 'RIO 14:20',
+    'PTV': 'RIO 16:20',
+    'PTN': 'RIO 18:20',
+    'COR': 'CORUJA 21:30',
+    'LOOK': 'LOOK', // Para sorteios da Look
+    'NACIONAL': 'NACIONAL', // Para sorteios da Nacional
+    'FEDERAL': 'FEDERAL' // Para Federal
+};
+
+// Mapeia a sigla da loteria para a URL correta
+const mapaUrls = {
+    'rj': 'https://bichocerto.com/resultados/rj/para-todos/',
+    'lk': 'https://bichocerto.com/resultados/lk/look', 
+    'fd': 'https://bichocerto.com/resultados/fd/loteria-federal', 
+    'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional',
+    'ba': 'https://bichocerto.com/resultados/ba/bahia' // Adicionei a Bahia que estava faltando
+};
 
 export default async function handler(request, response) {
-    // 1. Permite que qualquer site acesse (CORS) - Essencial no início
+    // 1. Permite CORS
     response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); // Permite GET e POST
+    response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Responde a requisições OPTIONS (pré-verificação CORS)
     if (request.method === 'OPTIONS') {
         return response.status(200).end();
     }
 
-    // 2. Pega os parâmetros da URL
-    const { loteria, tipo } = request.query;
+    // 2. Pega os parâmetros (ignora 'tipo', vamos focar em 'resultados')
+    const { loteria } = request.query;
 
-    // *** VALIDAÇÃO DE LOTERIA (essencial para ambos os tipos) ***
     if (!loteria) {
         return response.status(400).send('Erro: Parâmetro "loteria" não especificado.');
     }
 
-    // *** DETERMINA O TIPO DE BUSCA (padrão é 'atrasados' se 'tipo' não for enviado) ***
-    const tipoBusca = tipo || 'atrasados'; // <--- COMPATIBILIDADE
-
-    let urlAlvo = '';
-    let fetchOptions = {};
-
-    // 3. Lógica baseada no TIPO de busca
-    if (tipoBusca === 'atrasados') {
-        // --- LÓGICA PARA ATRASADOS (EQUIVALENTE AO SEU PROXY ANTIGO) ---
-        const loteriasPermitidas = ['fd', 'rj', 'lk', 'ln', 'ba']; // Verifique se estas são as corretas
-        if (!loteriasPermitidas.includes(loteria)) {
-            return response.status(400).send(`Erro: Loteria "${loteria}" inválida para busca de atrasados.`);
-        }
-        
-        urlAlvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/';
-        
-        // Constrói o corpo da requisição POST
-        const postData = new URLSearchParams();
-        postData.append('l', loteria);
-        postData.append('p', '1'); // Parâmetros fixos como no seu proxy antigo
-        postData.append('e', 'all');
-        postData.append('et', 'Geral');
-
-        fetchOptions = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                 // Adicione outros headers se necessário (referer, etc.)
-            },
-            body: postData.toString(),
-        };
-
-    } else if (tipoBusca === 'resultados') {
-        // --- LÓGICA PARA RESULTADOS ---
-        const mapaUrls = {
-            'rj': 'https://bichocerto.com/resultados/rj/para-todos/',
-            'lk': 'https://bichocerto.com/resultados/lk/look', 
-            'fd': 'https://bichocerto.com/resultados/fd/loteria-federal', 
-            'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional' 
-            // Adicione 'ba' aqui se tiver o URL
-        };
-
-        if (!mapaUrls[loteria]) {
-            return response.status(400).send(`Erro: URL de resultados não definida para a loteria "${loteria}".`);
-        }
-        
-        urlAlvo = mapaUrls[loteria];
-        fetchOptions = {
-            method: 'GET', // Resultados são buscados via GET
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                 // Adicione outros headers se necessário
-            }
-        };
-        
-    } else {
-        // Se 'tipo' for enviado mas for inválido
-        return response.status(400).send(`Erro: Tipo de busca "${tipoBusca}" inválido.`);
+    const urlAlvo = mapaUrls[loteria];
+    if (!urlAlvo) {
+        return response.status(400).send(`Erro: URL de resultados não definida para a loteria "${loteria}".`);
     }
 
-    // 4. Faz a busca no site do bicho certo
+    // 3. Faz a busca no site (Fetch)
     try {
-        console.log(`Proxy Vercel: Buscando ${fetchOptions.method} ${urlAlvo}`); // Log para debug na Vercel
-        const res = await fetch(urlAlvo, fetchOptions);
-        
+        console.log(`Proxy Vercel: Buscando resultados em ${urlAlvo}`);
+        const res = await fetch(urlAlvo, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+
         if (!res.ok) {
-            // Tenta ler a mensagem de erro do site de origem, se houver
-            const errorBody = await res.text().catch(() => 'Não foi possível ler o corpo do erro.'); 
-            console.error(`Erro ${res.status} ao buscar ${urlAlvo}: ${res.statusText}. Corpo: ${errorBody}`);
-            throw new Error(`Erro ${res.status} ao acessar o site de origem (${res.statusText}).`);
+            throw new Error(`Erro ${res.status} ao acessar o site de origem.`);
         }
-        
+
         const html = await res.text();
-        
-        // 5. Envia o HTML de volta para o frontend
-        // O header 'Access-Control-Allow-Origin' já foi definido no início
-        response.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return response.status(200).send(html);
+
+        // 4. *** A MÁGICA ACONTECE AQUI (Parsing com Cheerio) ***
+        const $ = cheerio.load(html);
+        const resultadosFinais = [];
+
+        // O novo layout usa "result-item" para cada sorteio do dia
+        $('div.result-item').each((index, item) => {
+            const $item = $(item);
+
+            // Pega o nome do sorteio (ex: "PTM 11:20", "FEDERAL 19:00")
+            let nomeSorteioOriginal = $item.find('h4').text().trim();
+            if (!nomeSorteioOriginal) return; // Pula se não tiver título
+
+            // Tenta traduzir o nome para o formato que seu app entende
+            let nomeSorteioApp = nomeSorteioOriginal; // Padrão
+            const nomeCurto = nomeSorteioOriginal.split(' ')[0].toUpperCase(); // Ex: "PTM"
+
+            if (nomeSorteioMap[nomeCurto]) {
+               nomeSorteioApp = nomeSorteioMap[nomeCurto];
+               // Caso especial da Look, que pode ter vários horários
+               if (nomeCurto === 'LOOK' || nomeCurto === 'NACIONAL') {
+                   const horaMatch = nomeSorteioOriginal.match(/(\d{2}:\d{2})/);
+                   if (horaMatch) {
+                       nomeSorteioApp = `${nomeSorteioMap[nomeCurto]} ${horaMatch[0]}`;
+                   }
+               }
+            } else if (nomeCurto.includes('FEDERAL')) {
+                nomeSorteioApp = nomeSorteioMap['FEDERAL'];
+            }
+
+            const resultadosDoSorteio = [];
+            const linhas = $item.find('table tbody tr');
+
+            linhas.each((i, linha) => {
+                const colunas = $(linha).find('td');
+                let itemResultado = null;
+
+                if (colunas.length === 5) {
+                    // Formato Padrão (RJ, LK, etc)
+                    itemResultado = {
+                        posicao: $(colunas[0]).text().trim(),
+                        emoji: $(colunas[1]).text().trim(),
+                        milhar: $(colunas[2]).text().trim().replace('.', ''), // Limpa pontos
+                        grupo: `${$(colunas[3]).text().trim()} - ${$(colunas[4]).text().trim()}`
+                    };
+                } else if (colunas.length === 4) {
+                    // Formato Federal (4 colunas)
+                    itemResultado = {
+                        posicao: $(colunas[0]).text().trim(),
+                        emoji: '❔', // Federal não tem emoji, vamos adicionar um placeholder
+                        milhar: $(colunas[1]).text().trim().replace('.', ''), // Limpa pontos
+                        grupo: `${$(colunas[2]).text().trim()} - ${$(colunas[3]).text().trim()}`
+                    };
+                }
+
+                if (itemResultado && itemResultado.milhar.length >= 4) {
+                    resultadosDoSorteio.push(itemResultado);
+                }
+            });
+
+            // Adiciona o bloco de resultados ao array final
+            if (resultadosDoSorteio.length > 0) {
+                resultadosFinais.push({
+                    nomeSorteio: nomeSorteioApp, // <--- Nome traduzido
+                    nomeSorteioOriginal: nomeSorteioOriginal, // <--- Nome do site
+                    resultados: resultadosDoSorteio
+                });
+            }
+        });
+
+        // 5. Envia o JSON limpo de volta para o seu app
+        response.setHeader('Content-Type', 'application/json');
+        return response.status(200).json(resultadosFinais);
 
     } catch (error) {
         console.error("Erro crítico no proxy Vercel:", error); 
-        // Envia a mensagem de erro capturada (que inclui o status HTTP se veio do fetch)
         return response.status(502).send(`Erro no proxy: ${error.message}`);
     }
 }
