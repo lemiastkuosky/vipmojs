@@ -1,6 +1,6 @@
 //
 // CONTEÚDO CORRIGIDO PARA /api/proxy.js
-// (URLs atualizadas e "Referer" adicionado para corrigir o erro 403)
+// (URLs atualizadas e "Referer" genérico para corrigir o erro 403)
 //
 
 import fetch from 'node-fetch';
@@ -25,7 +25,9 @@ export default async function handler(request, response) {
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                // O 'Referer' será adicionado dinamicamente abaixo
+                // --- MUDANÇA PRINCIPAL AQUI (CORRIGE O 403) ---
+                // Fingimos ser uma visita vinda da home page
+                'Referer': 'https://bichocerto.com/'
             },
         };
 
@@ -79,9 +81,7 @@ export default async function handler(request, response) {
                 }
             }
             options.method = 'GET';
-            // --- ADICIONADO PARA CORRIGIR O ERRO 403 (BLOQUEIO) ---
-            // Define o Referer com base na URL (ex: .../resultados/rj/)
-            options.headers['Referer'] = url_alvo;
+            // O 'Referer' genérico da home page (definido lá em cima) será usado aqui.
 
         } else {
             response.status(400).send('Erro: Tipo de busca inválido.');
