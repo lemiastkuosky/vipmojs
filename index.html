@@ -4310,7 +4310,7 @@ body.dark-mode .footer-info-item strong {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V1.69.35</strong>
+            <strong>V1.71.35</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -4824,9 +4824,11 @@ body.dark-mode .footer-info-item strong {
         <div id="quick-values-buttons" class="quick-values-container">
     <button class="quick-value-btn" onclick="addReceiptValue(500)">+ R$ 5,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(1000)">+ R$ 10,00</button>
+    <button class="quick-value-btn" onclick="addReceiptValue(2000)">+ R$ 20,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(2500)">+ R$ 25,00</button>
+    <button class="quick-value-btn" onclick="addReceiptValue(3000)">+ R$ 30,00</button>
+    <button class="quick-value-btn" onclick="addReceiptValue(4000)">+ R$ 40,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(5000)">+ R$ 50,00</button>
-    <button class="quick-value-btn" onclick="addReceiptValue(7500)">+ R$ 75,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(10000)">+ R$ 100,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(15000)">+ R$ 150,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(20000)">+ R$ 200,00</button>
@@ -11754,22 +11756,17 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
             };
 
             try {
-                // --- 2. CORREÇÃO (NÃO SOBRESCREVER) ---
-                // Trocamos .set() por .create()
-                // .create() falhará se o documento (idUnico) já existir.
-                await firestoreDB.collection('resultados').doc(idUnico).create(dadosParaSalvar);
+                // --- A CORREÇÃO ESTÁ AQUI ---
+                // Trocamos .create() por .set()
+                // .set() vai criar o documento se não existir ou sobrescrevê-lo se já existir.
+                await firestoreDB.collection('resultados').doc(idUnico).set(dadosParaSalvar);
                 
-                console.log(`Resultado NOVO salvo com sucesso no histórico da I.A.: ${idUnico}`);
+                console.log(`Resultado salvo/atualizado com sucesso no histórico da I.A.: ${idUnico}`);
             
             } catch (error) {
-                // Se o erro for "already-exists", é porque já salvamos este resultado antes.
-                // Isto agora é esperado e não é um "erro" real.
-                if (error.code === 'already-exists') {
-                    console.log(`Resultado pulado (já existe): ${idUnico}`);
-                } else {
-                    // Se for outro erro (como permissão), mostra no console.
-                    console.error(`Erro ao salvar resultado ${idUnico} no Firestore:`, error);
-                }
+                // O .set() não dá erro de "already-exists", então essa checagem não é mais necessária,
+                // mas o catch ainda é útil para pegar erros de permissão ou rede.
+                console.error(`Erro ao salvar resultado ${idUnico} no Firestore:`, error);
             }
         }
 
