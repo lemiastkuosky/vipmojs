@@ -1,6 +1,6 @@
 //
 // CONTEÚDO CORRIGIDO PARA /api/proxy.js
-// (Removido o "/para-todos/" das URLs)
+// (URLs atualizadas e "Referer" adicionado para corrigir o erro 403)
 //
 
 import fetch from 'node-fetch';
@@ -25,6 +25,8 @@ export default async function handler(request, response) {
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                // --- ADICIONADO PARA CORRIGIR O ERRO 403 (BLOQUEIO) ---
+                'Referer': 'https://bichocerto.com/'
             },
         };
 
@@ -37,6 +39,9 @@ export default async function handler(request, response) {
             
             url_alvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/';
             options.method = 'POST';
+            // Adiciona o Referer para o POST também, por segurança
+            options.headers['Referer'] = 'https://bichocerto.com/estatisticas/atrasados/grupo/';
+            
             const post_data = new URLSearchParams({
                 'l': loteria,
                 'p': '1',
@@ -48,13 +53,12 @@ export default async function handler(request, response) {
 
         } else if (tipo === 'resultados') {
             
-            // --- INÍCIO DA CORREÇÃO ---
-            // As URLs aqui foram atualizadas (removido o /para-todos/)
+            // --- INÍCIO DA CORREÇÃO (URLs 404) ---
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/',
-                'lk': 'https://bichocerto.com/resultados/look/',
+                'lk': 'https://bichocerto.com/resultados/look-goias/', // Corrigido de /look/
                 'fd': 'https://bichocerto.com/resultados/federal/',
-                'ln': 'https://bichocerto.com/resultados/nacional/',
+                'ln': 'https://bichocerto.com/resultados/nacional/', // Corrigido de /nacional/L-NAC/
                 'ba': 'https://bichocerto.com/resultados/bahia/',
             };
             // --- FIM DA CORREÇÃO ---
@@ -68,7 +72,6 @@ export default async function handler(request, response) {
 
             if (data) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-                    // O site de origem usa /DATA/ no final
                     url_alvo = url_alvo + data + '/';
                 } else {
                     response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
@@ -76,6 +79,9 @@ export default async function handler(request, response) {
                 }
             }
             options.method = 'GET';
+            // Define o Referer com base na URL (ex: .../resultados/rj/)
+            options.headers['Referer'] = url_alvo;
+
         } else {
             response.status(400).send('Erro: Tipo de busca inválido.');
             return;
@@ -86,7 +92,6 @@ export default async function handler(request, response) {
 
         if (!fetchResponse.ok) {
             console.error(`Erro ao buscar ${url_alvo}. Status: ${fetchResponse.status}`);
-            // Retorna o erro 404 para o app saber que a página não existe
             response.status(502).send(`Erro ao buscar conteudo da URL: ${url_alvo}. Código: ${fetchResponse.status}`);
             return;
         }
