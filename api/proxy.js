@@ -1,6 +1,6 @@
 //
 // CONTEÚDO CORRIGIDO PARA /api/proxy.js
-// (URLs atualizadas e "Referer" genérico para corrigir o erro 403)
+// (URLs atualizadas e "Referer" adicionado para corrigir o erro 403)
 //
 
 import fetch from 'node-fetch';
@@ -25,7 +25,7 @@ export default async function handler(request, response) {
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                // --- MUDANÇA PRINCIPAL AQUI (CORRIGE O 403) ---
+                // --- ADICIONADO PARA CORRIGIR O ERRO 403 (BLOQUEIO) ---
                 // Fingimos ser uma visita vinda da home page
                 'Referer': 'https://bichocerto.com/'
             },
@@ -57,9 +57,9 @@ export default async function handler(request, response) {
             // --- INÍCIO DA CORREÇÃO (URLs 404) ---
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/',
-                'lk': 'https://bichocerto.com/resultados/look/', // Corrigido de /look-goias/
-                'fd': 'https://bichocerto.com/resultados/federal/',
-                'ln': 'https://bichocerto.com/resultados/nacional/', // Corrigido de /nacional/L-NAC/
+                'lk': 'https://bichocerto.com/resultados/go/look-goias/', // CORRIGIDO
+                'fd': 'https://bichocerto.com/resultados/federal/', // URL Base corrigida
+                'ln': 'https://bichocerto.com/resultados/nacional/L-NAC/', // CORRIGIDO
                 'ba': 'https://bichocerto.com/resultados/bahia/',
             };
             // --- FIM DA CORREÇÃO ---
@@ -71,17 +71,26 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
+            // --- LÓGICA DE DATA ATUALIZADA (Para Federal) ---
             if (data) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-                    // O site de origem usa /DATA/ no final
+                    // Se tem data, anexa a data (funciona para todos, inclusive Federal)
                     url_alvo = url_alvo + data + '/';
                 } else {
                     response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
                     return;
                 }
+            } else {
+                // Se NÃO houver data (busca "hoje"), a Federal precisa de um sufixo
+                if (loteria === 'fd') {
+                    url_alvo = url_alvo + 'de-hoje/';
+                }
             }
+            // --- FIM DA LÓGICA DE DATA ---
+
             options.method = 'GET';
-            // O 'Referer' genérico da home page (definido lá em cima) será usado aqui.
+            // Atualiza o Referer para ser específico da página (melhor ainda)
+            options.headers['Referer'] = url_alvo;
 
         } else {
             response.status(400).send('Erro: Tipo de busca inválido.');
@@ -93,7 +102,6 @@ export default async function handler(request, response) {
 
         if (!fetchResponse.ok) {
             console.error(`Erro ao buscar ${url_alvo}. Status: ${fetchResponse.status}`);
-            // Retorna o erro 404/403 para o app saber que a página não existe/está bloqueada
             response.status(502).send(`Erro ao buscar conteudo da URL: ${url_alvo}. Código: ${fetchResponse.status}`);
             return;
         }
