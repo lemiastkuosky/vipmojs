@@ -1,7 +1,7 @@
-// /api/proxy.js - VERSÃO MÓDULO (import)
+// /api/proxy.js - VERSÃO CommonJS (require)
 
-import fetch from 'node-fetch';
-import cheerio from 'cheerio';
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
 
 // Mapeamento dos nomes de sorteio (como vêm no HTML)
 // para os nomes que seu app já usa (mapaSorteios)
@@ -11,9 +11,9 @@ const nomeSorteioMap = {
     'PTV': 'RIO 16:20',
     'PTN': 'RIO 18:20',
     'COR': 'CORUJA 21:30',
-    'LOOK': 'LOOK', // Para sorteios da Look
-    'NACIONAL': 'NACIONAL', // Para sorteios da Nacional
-    'FEDERAL': 'FEDERAL' // Para Federal
+    'LOOK': 'LOOK', 
+    'NACIONAL': 'NACIONAL',
+    'FEDERAL': 'FEDERAL'
 };
 
 // Mapeia a sigla da loteria para a URL correta
@@ -25,8 +25,8 @@ const mapaUrls = {
     'ba': 'https://bichocerto.com/resultados/ba/bahia'
 };
 
-// A função principal que a Vercel executará
-export default async function handler(request, response) {
+// Muda de 'export default' para 'module.exports'
+module.exports = async (request, response) => {
     // 1. Permite CORS
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -132,6 +132,6 @@ export default async function handler(request, response) {
 
     } catch (error) {
         console.error("Erro crítico no proxy Vercel:", error); 
-        return response.status(502).json({ error: `Erro no proxy: ${error.message}` }); // Retorna JSON no erro
+        return response.status(502).json({ error: `Erro no proxy: ${error.message}` });
     }
 }

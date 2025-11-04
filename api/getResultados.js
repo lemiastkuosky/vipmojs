@@ -1,6 +1,6 @@
-// /api/getResultados.js - VERSÃO CORRIGIDA (usa .get().size em vez de .count())
+// /api/getResultados.js - VERSÃO CommonJS (require)
 
-import admin from 'firebase-admin';
+const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
   try {
@@ -16,7 +16,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-export default async function handler(request, response) {
+module.exports = async (request, response) => {
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -49,15 +49,11 @@ export default async function handler(request, response) {
                 query = query.where('loteria', '==', loteria);
             }
 
-        // --- INÍCIO DA CORREÇÃO ---
         } else if (tipo === 'count') {
-             // Trocamos .count().get() por .get() e .size
-             // É menos eficiente, mas muito mais confiável.
              const snapshot = await resultadosRef.get();
              const count = snapshot.size;
              console.log(`Retornando contagem total (via .size): ${count}`);
              return response.status(200).json({ count: count });
-        // --- FIM DA CORREÇÃO ---
 
         } else {
             return response.status(400).send('Parâmetro "tipo" (ex: "ia", "data", "count") é obrigatório.');
