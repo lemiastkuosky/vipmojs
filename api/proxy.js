@@ -59,7 +59,7 @@ export default async function handler(request, response) {
                 'rj': 'https://bichocerto.com/resultados/rj/',
                 'lk': 'https://bichocerto.com/resultados/go/look-goias/', // CORRIGIDO
                 'fd': 'https://bichocerto.com/resultados/federal/', // URL Base corrigida
-                'ln': 'https://bichocerto.com/resultados/nacional/L-NAC/', // CORRIGIDO
+                'ln': 'https://bichocerto.com/resultados/ln/', // CORRIGIDO
                 'ba': 'https://bichocerto.com/resultados/bahia/',
             };
             // --- FIM DA CORREÇÃO ---
