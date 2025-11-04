@@ -25,8 +25,7 @@ export default async function handler(request, response) {
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                // --- ADICIONADO PARA CORRIGIR O ERRO 403 (BLOQUEIO) ---
-                'Referer': 'https://bichocerto.com/'
+                // O 'Referer' será adicionado dinamicamente abaixo
             },
         };
 
@@ -56,7 +55,7 @@ export default async function handler(request, response) {
             // --- INÍCIO DA CORREÇÃO (URLs 404) ---
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/',
-                'lk': 'https://bichocerto.com/resultados/look-goias/', // Corrigido de /look/
+                'lk': 'https://bichocerto.com/resultados/look/', // Corrigido de /look-goias/
                 'fd': 'https://bichocerto.com/resultados/federal/',
                 'ln': 'https://bichocerto.com/resultados/nacional/', // Corrigido de /nacional/L-NAC/
                 'ba': 'https://bichocerto.com/resultados/bahia/',
@@ -80,6 +79,7 @@ export default async function handler(request, response) {
                 }
             }
             options.method = 'GET';
+            // --- ADICIONADO PARA CORRIGIR O ERRO 403 (BLOQUEIO) ---
             // Define o Referer com base na URL (ex: .../resultados/rj/)
             options.headers['Referer'] = url_alvo;
 
@@ -93,7 +93,7 @@ export default async function handler(request, response) {
 
         if (!fetchResponse.ok) {
             console.error(`Erro ao buscar ${url_alvo}. Status: ${fetchResponse.status}`);
-            // Retorna o erro 404 para o app saber que a página não existe
+            // Retorna o erro 404/403 para o app saber que a página não existe/está bloqueada
             response.status(502).send(`Erro ao buscar conteudo da URL: ${url_alvo}. Código: ${fetchResponse.status}`);
             return;
         }
