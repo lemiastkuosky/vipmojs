@@ -1,8 +1,7 @@
-// /api/getResultados.js
+// /api/getResultados.js - VERSÃO CORRIGIDA (usa .get().size em vez de .count())
 
 import admin from 'firebase-admin';
 
-// Inicializa o Firebase Admin (APENAS SE NÃO FOI INICIALIZADO AINDA)
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -18,73 +17,67 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 export default async function handler(request, response) {
-    // Permite CORS
-    response.setHeader('Access-Control-Allow-Origin', '*'); // Ajuste se necessário
+    response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-    if (request.method === 'OPTIONS') {
-        return response.status(200).end();
-    }
-
-    // Garante que seja GET
-    if (request.method !== 'GET') {
-        return response.status(405).send('Método não permitido (apenas GET).');
-    }
-
-    // Garante que o SDK foi inicializado
-    if (!admin.apps.length) {
-         return response.status(500).send('Erro interno: Firebase Admin não inicializado.');
-    }
+    if (request.method === 'OPTIONS') return response.status(200).end();
+    if (request.method !== 'GET') return response.status(405).send('Método não permitido (apenas GET).');
+    if (!admin.apps.length) return response.status(500).send('Erro interno: Firebase Admin não inicializado.');
 
     try {
-        // Pega os parâmetros da query string (ex: ?data=25/10/2025&loteria=rj)
-        const { data, loteria } = request.query;
-
-        // Validação básica
-        if (!data) {
-            return response.status(400).send('Parâmetro "data" (formato dd/mm/yyyy) é obrigatório.');
-        }
-
-        // --- CONSTRUÇÃO DA CONSULTA NO FIRESTORE ---
+        const { tipo, data, loteria, grupos } = request.query;
         const resultadosRef = db.collection('resultados');
-        let query = resultadosRef.where('dataExtracao', '==', data);
+        let query;
 
-        // Adiciona filtro de loteria se fornecido
-        if (loteria) {
-            query = query.where('loteria', '==', loteria);
-            // **IMPORTANTE:** O Firestore pode exigir um índice composto para esta consulta
-            // (em 'dataExtracao' e 'loteria'). Se a consulta falhar com um erro
-            // sobre índice, o Firebase Console geralmente fornece um link para criá-lo.
+        if (tipo === 'ia') {
+            if (!loteria || !grupos) {
+                return response.status(400).send('Para ?tipo=ia, os parâmetros "loteria" e "grupos" (separados por vírgula) são obrigatórios.');
+            }
+            const gruposArray = grupos.split(',');
+            query = resultadosRef
+                .where('loteria', '==', loteria)
+                .where('bichoGrupo', 'in', gruposArray)
+                .orderBy('data', 'desc')
+                .limit(5000);
+        
+        } else if (tipo === 'data') {
+            if (!data) {
+                return response.status(400).send('Para ?tipo=data, o parâmetro "data" (dd/mm/yyyy) é obrigatório.');
+            }
+            query = resultadosRef.where('dataExtracao', '==', data);
+            if (loteria) {
+                query = query.where('loteria', '==', loteria);
+            }
+
+        // --- INÍCIO DA CORREÇÃO ---
+        } else if (tipo === 'count') {
+             // Trocamos .count().get() por .get() e .size
+             // É menos eficiente, mas muito mais confiável.
+             const snapshot = await resultadosRef.get();
+             const count = snapshot.size;
+             console.log(`Retornando contagem total (via .size): ${count}`);
+             return response.status(200).json({ count: count });
+        // --- FIM DA CORREÇÃO ---
+
+        } else {
+            return response.status(400).send('Parâmetro "tipo" (ex: "ia", "data", "count") é obrigatório.');
         }
 
-        // Ordena opcionalmente (ex: por hora de salvamento, se útil)
-        // query = query.orderBy('timestampSalvo', 'asc'); // Ou 'desc'
-
-        // Executa a consulta
         const snapshot = await query.get();
 
-        // --- PROCESSAMENTO DOS RESULTADOS ---
         if (snapshot.empty) {
-            console.log(`Nenhum resultado encontrado para data: ${data}, loteria: ${loteria || 'todas'}`);
-            return response.status(200).json([]); // Retorna array vazio se não encontrar nada
+            console.log(`Nenhum resultado encontrado para: ${JSON.stringify(request.query)}`);
+            return response.status(200).json([]);
         }
 
-        // Mapeia os documentos encontrados para um array de objetos
-        const resultados = snapshot.docs.map(doc => ({
-            id: doc.id, // Inclui o ID do documento
-            ...doc.data() // Inclui todos os campos do documento
-        }));
-
-        console.log(`Retornando ${resultados.length} resultado(s) para data: ${data}, loteria: ${loteria || 'todas'}`);
-        // Retorna os resultados encontrados como JSON
+        const resultados = snapshot.docs.map(doc => doc.data());
+        console.log(`Retornando ${resultados.length} resultado(s) para: ${JSON.stringify(request.query)}`);
         return response.status(200).json(resultados);
 
     } catch (error) {
         console.error("Erro ao buscar resultados no Firestore:", error);
-        // Verifica se o erro é sobre índice ausente
         if (error.message && error.message.includes('requires an index')) {
-             return response.status(500).json({ success: false, message: `Erro de consulta: O Firestore requer um índice para esta combinação de filtros. Verifique o console do Firebase ou os logs da Vercel para o link de criação do índice. Detalhes: ${error.message}` });
+             return response.status(500).json({ success: false, message: `Erro de consulta: O Firestore requer um índice. Verifique os logs da Vercel para o link de criação do índice.` });
         }
         return response.status(500).json({ success: false, message: `Erro interno ao buscar resultados: ${error.message}` });
     }

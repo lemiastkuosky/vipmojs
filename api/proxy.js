@@ -1,7 +1,7 @@
-// /api/proxy.js - VERSÃO CommonJS (Mais compatível)
+// /api/proxy.js - VERSÃO MÓDULO (import)
 
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
+import fetch from 'node-fetch';
+import cheerio from 'cheerio';
 
 // Mapeamento dos nomes de sorteio (como vêm no HTML)
 // para os nomes que seu app já usa (mapaSorteios)
@@ -25,8 +25,8 @@ const mapaUrls = {
     'ba': 'https://bichocerto.com/resultados/ba/bahia'
 };
 
-// Muda de 'export default' para 'module.exports'
-module.exports = async (request, response) => {
+// A função principal que a Vercel executará
+export default async function handler(request, response) {
     // 1. Permite CORS
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
