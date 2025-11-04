@@ -72,6 +72,7 @@ export default async function handler(request, response) {
 
             if (data) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+                    // O site de origem usa /DATA/ no final
                     url_alvo = url_alvo + data + '/';
                 } else {
                     response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
@@ -92,6 +93,7 @@ export default async function handler(request, response) {
 
         if (!fetchResponse.ok) {
             console.error(`Erro ao buscar ${url_alvo}. Status: ${fetchResponse.status}`);
+            // Retorna o erro 404 para o app saber que a página não existe
             response.status(502).send(`Erro ao buscar conteudo da URL: ${url_alvo}. Código: ${fetchResponse.status}`);
             return;
         }
