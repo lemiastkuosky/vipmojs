@@ -4824,11 +4824,9 @@ body.dark-mode .footer-info-item strong {
         <div id="quick-values-buttons" class="quick-values-container">
     <button class="quick-value-btn" onclick="addReceiptValue(500)">+ R$ 5,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(1000)">+ R$ 10,00</button>
-    <button class="quick-value-btn" onclick="addReceiptValue(2000)">+ R$ 20,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(2500)">+ R$ 25,00</button>
-    <button class="quick-value-btn" onclick="addReceiptValue(3000)">+ R$ 30,00</button>
-    <button class="quick-value-btn" onclick="addReceiptValue(4000)">+ R$ 40,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(5000)">+ R$ 50,00</button>
+    <button class="quick-value-btn" onclick="addReceiptValue(7500)">+ R$ 75,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(10000)">+ R$ 100,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(15000)">+ R$ 150,00</button>
     <button class="quick-value-btn" onclick="addReceiptValue(20000)">+ R$ 200,00</button>
@@ -5007,64 +5005,78 @@ const TARGET_PREFIX_COUNT_FOR_100_PERCENT = 25; // Alvo para 100%
  */
 async function fetchAndCacheIaPrefixes(lottery) {
     if (!lottery) {
-        updateIaSuggestionCountsDisplay(null);
+        console.warn("fetchAndCacheIaPrefixes chamado sem loteria.");
+        updateIaSuggestionCountsDisplay(null); // Limpa contagens se loteria for inválida
         return;
     }
+    // Se já temos dados cacheados para esta loteria, não busca de novo
     if (iaHistoricalPrefixesCache[lottery]) {
-        console.log(`[API Client] Usando cache de prefixos para ${lottery.toUpperCase()}.`);
-        updateIaSuggestionCountsDisplay(lottery);
+        console.log(`Usando cache de prefixos para ${lottery.toUpperCase()}.`);
+        updateIaSuggestionCountsDisplay(lottery); // Apenas atualiza a exibição
         return;
     }
 
-    // A I.A. precisa de todos os grupos, então criamos uma string '01,02,03...'
-    const todosOsGrupos = tabelaDeGrupos.map(b => b.grupo).join(',');
-    
-    showLoadingIndicator(`Analisando I.A. para ${lottery.toUpperCase()}...`);
-    iaHistoricalPrefixesCache[lottery] = {};
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        console.error("fetchAndCacheIaPrefixes: Usuário não logado.");
+        showToast('Erro de autenticação para buscar dados da I.A.', 'error');
+        // updateIaSuggestionCountsDisplay(null); // Limpa contagens
+        return; // Sai se não estiver logado
+    }
+
+    showLoadingIndicator(`Analisando histórico da I.A. para ${lottery.toUpperCase()}...`);
+    iaHistoricalPrefixesCache[lottery] = {}; // Inicializa o cache para esta loteria
 
     try {
-        // Monta a URL para a ROTA 1 (tipo=ia) da sua API
-        const url = `/api/getResultados?tipo=ia&loteria=${loteria}&grupos=${todosOsGrupos}`;
-        console.log(`[API Client] Buscando dados da I.A. via: ${url}`);
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.message || `Erro ${response.status} da API`);
-        }
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', lottery)
+            // .orderBy('data', 'desc') // Ordenar pode não ser necessário só para prefixos
+            .limit(10000) // Busca um bom número de resultados recentes
+            .get();
 
-        const querySnapshot = await response.json(); // A API já retorna JSON
-
-        if (querySnapshot.length === 0) {
-            console.warn(`[API Client] Nenhum histórico encontrado para ${lottery.toUpperCase()} via API.`);
+        if (querySnapshot.empty) {
+            console.warn(`Nenhum histórico encontrado para ${lottery.toUpperCase()} na coleção 'resultados'.`);
             showToast(`I.A.: Sem dados históricos para ${lottery.toUpperCase()}.`, 'info', 4000);
         } else {
-            // Processa o JSON recebido (não é mais um snapshot do Firebase)
-            querySnapshot.forEach(data => {
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
                 const milhar = data.milhar;
                 const bichoGrupo = data.bichoGrupo;
 
                 if (milhar && milhar.length === 4 && bichoGrupo) {
                     const prefixo = milhar.substring(0, 2);
+                    // Inicializa o Set para o grupo se ainda não existir
                     if (!iaHistoricalPrefixesCache[lottery][bichoGrupo]) {
                         iaHistoricalPrefixesCache[lottery][bichoGrupo] = new Set();
                     }
                     iaHistoricalPrefixesCache[lottery][bichoGrupo].add(prefixo);
                 }
             });
-            console.log(`[API Client] Cache de prefixos para ${lottery.toUpperCase()} preenchido via API.`);
-        }
+            // LOG EXISTENTE (Manter):
+            console.log(`Cache de prefixos para ${lottery.toUpperCase()} preenchido. Grupos encontrados:`, Object.keys(iaHistoricalPrefixesCache[lottery] || {}).length); // Adicionado || {} para segurança
+
+            // ---> NOVO LOG ADICIONADO AQUI <---
+            console.log(`>>> fetchAndCacheIaPrefixes: Cache CONTEÚDO para ${lottery}:`, iaHistoricalPrefixesCache[lottery]);
+            // ---> FIM DA ADIÇÃO <---
+
+        } // Fim do 'else' que processa o querySnapshot
+
+        // Atualiza a exibição APÓS SUCESSO no try (mesmo se vazio):
         updateIaSuggestionCountsDisplay(lottery);
 
     } catch (error) {
-        console.error(`[API Client] Erro ao buscar/cachear prefixos da I.A. via API:`, error);
-        showToast(`Erro ao carregar dados da I.A.: ${error.message}`, 'error');
-        delete iaHistoricalPrefixesCache[lottery];
+        console.error(`Erro ao buscar/cachear prefixos da I.A. para ${lottery.toUpperCase()}:`, error);
+        showToast('Erro ao carregar dados da I.A.', 'error');
+        delete iaHistoricalPrefixesCache[lottery]; // Remove cache parcial
+        // Limpa a exibição em caso de ERRO:
         updateIaSuggestionCountsDisplay(null);
+
     } finally {
+        // Mantém apenas o hideLoadingIndicator:
         hideLoadingIndicator();
+        console.log(">>> hideLoadingIndicator: Função chamada."); // Log que adicionamos para testar
     }
-}
+} 
 function estimateSuggestionsForBicho(bichoGroup, lottery) {
     // Verifica se temos cache para a loteria e para o grupo específico
     if (!iaHistoricalPrefixesCache[lottery] || !iaHistoricalPrefixesCache[lottery][bichoGroup]) {
@@ -6280,32 +6292,33 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
         showToast('Nenhum bicho selecionado para a análise da I.A.', 'error');
         return [];
     }
-    
-    const bichoGroups = selectedBichos.map(b => b.grupo).join(',');
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        console.error("ERRO: Tentativa de acessar Firestore para I.A. sem usuário logado!");
+        showToast('Erro de autenticação ao buscar dados da I.A. Faça login novamente.', 'error', 5000);
+        checkAuth();
+        return [];
+    }
+
+    const bichoGroups = selectedBichos.map(b => b.grupo);
     const prefixoCounts = {};
     let prefixosQuentes = [];
 
     try {
-        // Monta a URL para a ROTA 1 (tipo=ia) da sua API
-        const url = `/api/getResultados?tipo=ia&loteria=${loteria}&grupos=${bichoGroups}`;
-        console.log(`[API Client] Analisando I.A. via: ${url}`);
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.message || `Erro ${response.status} da API`);
-        }
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('bichoGrupo', 'in', bichoGroups)
+            .where('loteria', '==', loteria) // <-- FILTRO DE LOTERIA ADICIONADO
+            .orderBy('data', 'desc')
+            .limit(5000)
+            .get();
 
-        const querySnapshot = await response.json(); // A API já retorna JSON
-
-        if (querySnapshot.length === 0) {
-            showToast('A I.A. não tem dados históricos suficientes para esta seleção.', 'info', 4000);
+        if (querySnapshot.empty) {
+            showToast('A I.A. não tem dados históricos suficientes para estes bichos na loteria selecionada.', 'info', 4000);
             return [];
         }
 
-        // Processa o JSON recebido
-        querySnapshot.forEach(data => {
-            const milhar = data.milhar;
+        querySnapshot.forEach(doc => {
+            const milhar = doc.data().milhar;
             if (milhar && milhar.length === 4) {
                 const prefixo = milhar.substring(0, 2);
                 prefixoCounts[prefixo] = (prefixoCounts[prefixo] || 0) + 1;
@@ -6313,14 +6326,14 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
         });
 
         prefixosQuentes = Object.keys(prefixoCounts).sort((a, b) => prefixoCounts[b] - prefixoCounts[a]);
-        console.log(`[API Client] Análise da I.A. para ${loteria} concluída. Prefixos:`, prefixosQuentes.slice(0, 10));
+        
+        console.log(`Análise da I.A. para ${loteria} concluída. Prefixos mais frequentes:`, prefixosQuentes.slice(0, 10));
 
     } catch (error) {
-        console.error("[API Client] Erro ao analisar o histórico da I.A. via API:", error);
-        showToast(`Erro ao consultar a I.A.: ${error.message}`, 'error');
+        console.error("Erro ao analisar o histórico da I.A.:", error);
+        showToast('Erro ao consultar o banco de dados da I.A..', 'error');
     }
 
-    // O resto da lógica (completar com aleatórios) permanece igual
     if (prefixosQuentes.length < 20) {
         console.log("Completando com prefixos aleatórios pois o histórico é pequeno.");
         const randomPrefixes = new Set(prefixosQuentes);
@@ -6329,6 +6342,7 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
         }
         prefixosQuentes = Array.from(randomPrefixes);
     }
+
     return prefixosQuentes;
 }
 
@@ -11699,74 +11713,65 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
     }
 
     async function salvarResultadoNoHistoricoIA(loteria, dataSorteio, nomeSorteio, item) {
-    
-    // 1. Limpa e valida os dados (igual a antes)
-    const milharSujar = item.milhar ? item.milhar.trim() : '';
-    const milharLimpa = milharSujar.replace(/\D/g, '');
-    const milharFinal = milharLimpa.slice(-4);
-    
-    if (!milharFinal || milharFinal.length !== 4 || !item.posicao) {
-        console.warn(`[API Client] Resultado pulado (inválido): ${loteria}, ${nomeSorteio}, ${item.milhar}`);
-        return; // Pula se os dados estiverem ruins
-    }
+            
+            // --- 1. CORREÇÃO DA MILHAR (Limpa pontos) ---
+            const milharSujar = item.milhar ? item.milhar.trim() : '';
+            const milharLimpa = milharSujar.replace(/\D/g, '');
+            const milharFinal = milharLimpa.slice(-4);
+            
+            if (!milharFinal || milharFinal.length !== 4 || !item.posicao) {
+                console.warn(`Resultado pulado (inválido ou milhar < 4 dígitos): ${loteria}, ${nomeSorteio}, ${item.milhar}`);
+                return;
+            }
+            // --- FIM DA CORREÇÃO DA MILHAR ---
 
-    // 2. Obtém os dados do bicho (igual a antes)
-    const bichoData = getBichoDataFromNumber(milharFinal);
-    if (!bichoData) {
-         console.warn(`[API Client] Não foi possível encontrar o bicho para a milhar ${milharFinal}`);
-         return; 
-    }
-    
-    // 3. Formata a data para o formato dd/mm/yyyy que sua API espera
-    const dia = String(dataSorteio.getDate()).padStart(2, '0');
-    const mes = String(dataSorteio.getMonth() + 1).padStart(2, '0'); // Mês é 0-indexado
-    const ano = dataSorteio.getFullYear();
-    const dataFormatada = `${dia}/${mes}/${ano}`;
+            // 1. Cria um ID único para o documento para evitar duplicatas.
+            const dia = String(dataSorteio.getDate()).padStart(2, '0');
+            const mes = String(dataSorteio.getMonth() + 1).padStart(2, '0');
+            const ano = dataSorteio.getFullYear();
+            const posicao = item.posicao.replace('º', ''); 
+            const idUnico = `${loteria}-${ano}${mes}${dia}-${nomeSorteio}-${posicao}`;
 
-    // 4. Monta o "corpo" (body) da requisição para a sua API
-    const dadosParaSalvar = {
-        loteria: loteria,
-        nomeSorteio: nomeSorteio,
-        nomeLoteria: item.nomeLoteria || loteria.toUpperCase(),
-        dataExtracao: dataFormatada,
-        // Envia um ARRAY de resultados, mesmo que seja só um item,
-        // pois sua API parece esperar um array (resultados: [...])
-        resultados: [{
-            posicao: item.posicao.replace('º', ''),
-            emoji: item.emoji || bichoData.emoji,
-            milhar: milharFinal,
-            grupo: item.grupo || `${bichoData.grupo} - ${bichoData.animal}`
-        }]
-    };
+            // 2. Obtém os dados do bicho a partir da milhar
+            const bichoData = getBichoDataFromNumber(milharFinal); 
+            if (!bichoData) {
+                 console.warn(`Não foi possível encontrar o bicho para a milhar ${milharFinal}`);
+                 return; 
+            }
 
-    // 5. Chama a sua API /api/saveResult
-    try {
-        const response = await fetch('/api/saveResult', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(dadosParaSalvar)
-        });
+            // 3. Monta o objeto de dados completo para salvar
+            const dadosParaSalvar = {
+                loteria: loteria,
+                nomeSorteio: nomeSorteio,
+                posicao: parseInt(posicao, 10), 
+                data: firebase.firestore.Timestamp.fromDate(dataSorteio), 
+                milhar: milharFinal, 
+                centena: milharFinal.slice(-3), 
+                dezena: milharFinal.slice(-2), 
+                bichoGrupo: bichoData.grupo, 
+                bichoNome: bichoData.animal,
+                nomeLoteria: item.nomeLoteria || loteria.toUpperCase() 
+            };
 
-        if (!response.ok) {
-            // Se a API retornar um erro (400, 500, etc.)
-            const errorData = await response.json();
-            throw new Error(errorData.message || `Erro ${response.status} do servidor`);
+            try {
+                // --- 2. CORREÇÃO (NÃO SOBRESCREVER) ---
+                // Trocamos .set() por .create()
+                // .create() falhará se o documento (idUnico) já existir.
+                await firestoreDB.collection('resultados').doc(idUnico).create(dadosParaSalvar);
+                
+                console.log(`Resultado NOVO salvo com sucesso no histórico da I.A.: ${idUnico}`);
+            
+            } catch (error) {
+                // Se o erro for "already-exists", é porque já salvamos este resultado antes.
+                // Isto agora é esperado e não é um "erro" real.
+                if (error.code === 'already-exists') {
+                    console.log(`Resultado pulado (já existe): ${idUnico}`);
+                } else {
+                    // Se for outro erro (como permissão), mostra no console.
+                    console.error(`Erro ao salvar resultado ${idUnico} no Firestore:`, error);
+                }
+            }
         }
-
-        const result = await response.json();
-        
-        // Sua API saveResult não parece ter um código de "já existe",
-        // então apenas logamos o sucesso.
-        console.log(`[API Client] Resultado salvo/atualizado via API: ${result.id}`);
-    
-    } catch (error) {
-        // Captura erros de rede ou erros retornados pela API
-        console.error(`[API Client] Erro ao chamar /api/saveResult:`, error.message);
-        // Não re-lança o erro para não parar a atualização manual de outros resultados
-    }
-}
 
     function handleLoadTemplate() {
         const select = document.getElementById('templateSelect');
@@ -11903,46 +11908,47 @@ async function handleLogout() {
  */
 async function getMilharCount() {
     const countSpan = document.getElementById('milharTotalCount');
+    
+    // Se o span não for encontrado, sai da função
     if (!countSpan) return;
+
+    // Ativa o estado de "carregando" (agora controlado pelo handleUpdateClick,
+    // mas garantimos o '...' aqui)
     countSpan.textContent = '...';
 
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        countSpan.textContent = 'N/A';
+        return;
+    }
+
     try {
-        const url = `/api/getResultados?tipo=count`;
-        const response = await fetch(url);
-
-        // --- INÍCIO DA CORREÇÃO ---
-        if (!response.ok) {
-            // Se a resposta não for OK (ex: Erro 500), tenta ler como TEXTO
-            let errorText = await response.text();
-            let errorMessage = `Erro ${response.status} da API`; // Mensagem padrão
-
-            try {
-                // Tenta ver se o texto é um JSON (que nossa API envia)
-                const errJson = JSON.parse(errorText);
-                if (errJson.message) errorMessage = errJson.message;
-            } catch (e) {
-                // Se não for JSON, é um erro da Vercel (ex: "A server e...")
-                // Pega só os primeiros 100 caracteres.
-                errorMessage = errorText.substring(0, 100);
-            }
-            throw new Error(errorMessage);
-        }
-        // --- FIM DA CORREÇÃO ---
-
-        const data = await response.json(); // Se a resposta foi OK, o JSON é seguro
-        const count = data.count;
+        const collectionRef = firestoreDB.collection('resultados');
         
-        if (typeof count === 'number') {
-            countSpan.textContent = count.toLocaleString('pt-BR');
-        } else {
-            throw new Error("Resposta da contagem inválida.");
-        }
+        // ==========================================================
+        // === INÍCIO DA CORREÇÃO (Substituindo .count().get()) ===
+        // ==========================================================
+        
+        // Método ineficiente (v8/v9 compat) que baixa todos os documentos.
+        const snapshot = await collectionRef.get();
+        
+        // Em vez de snapshot.data().count, usamos snapshot.size
+        const count = snapshot.size; 
+        
+        // ==========================================================
+        // === FIM DA CORREÇÃO ===
+        // ==========================================================
+        
+        // Formata o número para melhor leitura (ex: 50.000)
+        countSpan.textContent = count.toLocaleString('pt-BR');
         
     } catch (error) {
-        // O log de erro agora mostrará a mensagem correta (ex: "A server e...")
-        console.error("[API Client] Erro ao buscar contagem de resultados:", error);
+        console.error("Erro ao buscar contagem de resultados:", error);
         countSpan.textContent = 'Erro!';
+        // Não mostra toast aqui, pois o handleUpdateClick mostrará um geral
     } 
+    // O 'finally' que controlava o botão foi removido, 
+    // pois o handleUpdateClick já faz isso
 }
 
 // Adicione esta função completa no seu script
