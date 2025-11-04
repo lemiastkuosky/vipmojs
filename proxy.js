@@ -1,12 +1,12 @@
 //
-// Este é o conteúdo completo para o seu NOVO arquivo: /api/proxy.js
+// CONTEÚDO ATUALIZADO PARA /api/proxy.js (FORMATO ESM)
 //
 
-// Funções do Node.js para lidar com requisições
+// 1. Mudança aqui: Usando 'import' (ESM)
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
 
-// O handler da Vercel (substitui o arquivo PHP)
+// 2. Mudança aqui: Usando 'export default' (ESM)
 export default async function handler(request, response) {
     // 1. Configura o CORS para permitir que seu app acesse
     response.setHeader('Access-Control-Allow-Origin', '*');
