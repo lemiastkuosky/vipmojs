@@ -4969,33 +4969,26 @@ if (iaLotterySelect) {
 }
 
 async function fetchLotteryResults(loteria) {
-    // Usaremos a mesma API/proxy do outro arquivo
-    const urlProxy = `/api/proxy?loteria=${loteria}&tipo=resultados`; // Certifique-se que '/api/proxy' é o caminho correto para o seu proxy
-    console.log("Buscando resultados via proxy:", urlProxy); // Log para depuração
+    // O proxy agora é '/api/proxy' e o tipo é 'resultados' (adicionado por padrão)
+    const urlProxy = `/api/proxy?loteria=${loteria}&tipo=resultados`;
+    console.log("Buscando JSON de resultados via proxy:", urlProxy); 
     try {
         const response = await fetch(urlProxy);
         if (!response.ok) {
-            // Tenta ler a mensagem de erro do proxy, se houver
             let errorBody = 'Erro desconhecido do proxy.';
             try {
                 errorBody = await response.text();
             } catch (e) { /* Ignora erro ao ler body */ }
             throw new Error(`Erro no proxy: ${response.status} ${response.statusText}. Detalhes: ${errorBody}`);
         }
-        const htmlText = await response.text();
-        console.log("HTML recebido do proxy OK (primeiros 500 chars):", htmlText.substring(0, 500)); // Log para depuração
-        // Verifica se o HTML recebido parece válido (não contém apenas uma mensagem de erro simples)
-        if (htmlText.trim().toLowerCase().startsWith("erro:") || htmlText.trim().length < 100) {
-             console.warn("Proxy retornou uma resposta curta ou de erro:", htmlText);
-             // Você pode querer lançar um erro aqui também, dependendo de como seu proxy retorna erros
-             // throw new Error(`Proxy retornou uma resposta inesperada: ${htmlText}`);
-        }
-        return htmlText;
+        // A mágica: já recebemos JSON, não mais HTML
+        const jsonData = await response.json(); 
+        console.log("JSON recebido do proxy OK:", jsonData); 
+        return jsonData; // Retorna o Array de resultados
     } catch (error) {
-        console.error("Erro CRÍTICO ao buscar resultados via proxy:", error);
-        // Exibe um erro mais claro para o usuário final
+        console.error("Erro CRÍTICO ao buscar JSON de resultados:", error);
         showToast(`Falha ao buscar dados da loteria ${loteria}. ${error.message}`, 'error', 5000);
-        throw error; // Re-lança o erro para que as funções que chamaram saibam que falhou
+        throw error;
     }
 }
 
@@ -5687,73 +5680,76 @@ function populateShareTimeSlots(loteria, nomeLoteriaDisplay) {
 
 async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay, nomeHorarioDisplay, buttonElement) {
     const originalButtonText = buttonElement.innerHTML;
-    buttonElement.disabled = true; // Desabilita o botão enquanto busca
-    buttonElement.innerHTML = 'Buscando...'; // Feedback visual
+    buttonElement.disabled = true; 
+    buttonElement.innerHTML = 'Buscando...'; 
 
     const agora = new Date();
     const horarios = horariosLoterias[loteria];
     const horarioInfo = horarios.find(h => h.nome === nomeSorteio);
-    let linkWhats = ''; // Declara a variável aqui para ser acessível depois
-    let textoMensagem = ''; // Declara a variável aqui
+    let linkWhats = ''; 
+    let textoMensagem = ''; 
 
-    // --- Verificação de Horário (código existente) ---
+    // --- Verificação de Horário (código existente, sem mudança) ---
     if (horarioInfo) {
         const momentoSorteio = new Date();
         momentoSorteio.setHours(horarioInfo.hora, horarioInfo.minuto, 0, 0);
-        const MINUTOS_TOLERANCIA = 5; // Mantém a tolerância
+        const MINUTOS_TOLERANCIA = 5;
         const momentoLimite = new Date(momentoSorteio);
         momentoLimite.setMinutes(momentoSorteio.getMinutes() + MINUTOS_TOLERANCIA);
 
         if (agora < momentoLimite) {
-            let diaSorteio = "hoje";
+             let diaSorteio = "hoje";
              if (momentoSorteio < agora && agora < momentoLimite) {
                  diaSorteio = "hoje (aguardando)";
-             } else if (agora < momentoSorteio) { // Se a hora atual é ANTES da hora do sorteio
+             } else if (agora < momentoSorteio) {
                  diaSorteio = "hoje";
              } else {
-                 diaSorteio = "hoje (aguardando)"; // Se está entre a hora exata e o limite
+                 diaSorteio = "hoje (aguardando)";
              }
-
             const horaLimiteFormatada = momentoLimite.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             const warningMessage = `O resultado de <strong>${nomeHorarioDisplay}</strong> (${diaSorteio}) ainda não está disponível.\n\nTente novamente após as <strong>${horaLimiteFormatada}</strong>.`;
             await showCustomConfirm(warningMessage, "Fechar", null, 'shareResultsModal');
-            // Reabilita o botão e restaura o texto SE o usuário só fechou o aviso
             buttonElement.disabled = false;
             buttonElement.innerHTML = originalButtonText;
-            // NÃO fecha o modal principal aqui, usuário pode querer escolher outro horário
             return;
         }
-
-        
     } else {
         console.warn("Não foi possível encontrar informações de horário para:", nomeSorteio);
     }
     // --- Fim da Verificação de Horário ---
 
     try {
-        // --- Busca e Extração (código existente) ---
-        const htmlResultados = await fetchLotteryResults(loteria);
-        const dadosExtraidos = extrairDadosResultados(htmlResultados, nomeSorteio);
+        // --- INÍCIO DA MUDANÇA ---
+        // 1. Busca TODOS os resultados do dia (agora é um Array JSON)
+        const todosResultadosDoDia = await fetchLotteryResults(loteria);
+
+        // 2. Encontra o sorteio específico que queremos dentro do Array
+        // Usamos 'includes' para flexibilidade (ex: "PTM 11:20" inclui "RIO 11:20")
+        const sorteioEncontrado = todosResultadosDoDia.find(r => 
+            r.nomeSorteio.includes(nomeSorteio) || r.nomeSorteioOriginal.includes(nomeHorarioDisplay)
+        );
+
+        // 3. Pega os dados extraídos (ou um array vazio se não encontrou)
+        const dadosExtraidos = sorteioEncontrado ? sorteioEncontrado.resultados : [];
+        // --- FIM DA MUDANÇA ---
 
         if (!dadosExtraidos || dadosExtraidos.length === 0) {
-            await showCustomConfirm(`O resultado para <strong>${nomeHorarioDisplay}</strong> não foi encontrado no site fonte neste momento.\n\nPode ser que ainda não tenha sido publicado ou a estrutura do site mudou.`, "Entendi", null, 'shareResultsModal');
-             // Não precisa fechar o modal aqui, só reabilitar o botão
-            // closeShareResultsModal(); // REMOVER esta linha
-            buttonElement.disabled = false; // Reabilita
-            buttonElement.innerHTML = originalButtonText; // Restaura
+            await showCustomConfirm(`O resultado para <strong>${nomeHorarioDisplay}</strong> não foi encontrado no site fonte neste momento.\n\nPode ser que ainda não tenha sido publicado.`, "Entendi", null, 'shareResultsModal');
+            buttonElement.disabled = false; 
+            buttonElement.innerHTML = originalButtonText; 
             return;
+        }
 
-            const dataSorteio = new Date(); // Assume que os resultados são de hoje
+        // Salva no histórico da IA (esta função agora precisa dos dados extraídos)
+        const dataSorteio = new Date(); 
         dadosExtraidos.forEach(item => {
-            // Chama a função para salvar CADA item (1º ao 5º prêmio)
-            if (item.milhar && item.milhar.length === 4 && item.posicao) { // Garante que temos os dados
-                 salvarResultadoNoHistoricoIA(loteria, dataSorteio, nomeSorteio, item); // <-- MODIFICADO: Passa o 'item' completo
+            if (item.milhar && item.milhar.length === 4 && item.posicao) {
+                 // Passamos o 'item' completo que já veio do proxy
+                 salvarResultadoNoHistoricoIA(loteria, dataSorteio, sorteioEncontrado.nomeSorteio, item);
             }
         });
-        }
-        // --- Fim da Busca e Extração ---
 
-        // --- Formatação da Mensagem (código existente) ---
+        // --- Formatação da Mensagem (código existente, sem mudança) ---
         const hoje = new Date();
         const dataFormatada = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'long' });
         const horaFormatada = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -5771,13 +5767,9 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
              }
         }
         textoMensagem = `🌟 *Resultado ${nomeLoteriaDisplay.toUpperCase()} ${horarioCurto ? horarioCurto + ' ' : ''}- 1º ao 5º* 🌟\n\n`;
-        
-        // --- LINHAS ADICIONADAS ---
         textoMensagem += `*GRUPO APP VIP OFICIAL*\n`;
         textoMensagem += `━━━━━━━━━━━━━━━\n\n`;
-        // --- FIM DAS LINHAS ADICIONADAS ---
-
-        textoMensagem += `*Extração:* ${nomeHorarioDisplay}\n`;
+        textoMensagem += `*Extração:* ${sorteioEncontrado.nomeSorteioOriginal}\n`; // Usa o nome original do site
         const capitalizedDataFormatada = dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
         textoMensagem += `*Data:* ${capitalizedDataFormatada}\n`;
         textoMensagem += `-----------------------------------\n\n`;
@@ -5785,42 +5777,37 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
             const grupoSplit = item.grupo.split(' - ');
             const numeroGrupo = grupoSplit[0] ? grupoSplit[0].trim() : '';
             const nomeGrupo = grupoSplit[1] ? grupoSplit[1].trim() : item.grupo;
-            textoMensagem += `*${item.posicao}* ${item.emoji}: *${item.milhar}* - (${numeroGrupo}) ${nomeGrupo}\n`;
+            // Adiciona o emoji (se não veio da federal)
+            const emoji = item.emoji === '❔' ? '' : item.emoji + ' ';
+            textoMensagem += `*${item.posicao}* ${emoji}: *${item.milhar}* - (${numeroGrupo}) ${nomeGrupo}\n`;
         });
         textoMensagem += `\n-----------------------------------\n`;
         textoMensagem += `📲 _Consultado em: ${capitalizedDataFormatada} às ${horaFormatada}_\n\n`;
-        
-        // --- PREVIEW E CONFIRMAÇÃO ---
-        linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`; // Gera o link aqui
+
+        // --- PREVIEW E CONFIRMAÇÃO (código existente, sem mudança) ---
+        linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`; 
         const userConfirmed = await showCustomConfirm(
-            `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`, // Usa <pre> para melhor formatação e <br> para quebras de linha
-            "✅ Enviar no WhatsApp", // Texto do botão OK
-            "❌ Cancelar", // Texto do botão Cancelar
-            'shareResultsModal' // ID do modal que está chamando
+            `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`, 
+            "✅ Enviar no WhatsApp",
+            "❌ Cancelar", 
+            'shareResultsModal' 
         );
 
         if (userConfirmed) {
-            // Se o usuário confirmou, abre o WhatsApp e fecha o modal
             window.open(linkWhats, '_blank');
-            closeShareResultsModal(); // Fecha o modal principal APÓS confirmação
+            closeShareResultsModal(); 
             showToast('Abrindo WhatsApp...', 'success');
         } else {
-            // Se o usuário cancelou, apenas mostra um aviso
             showToast('Envio cancelado.', 'info');
-            // Não fecha o modal, reabilita o botão para tentar outro horário
             buttonElement.disabled = false;
             buttonElement.innerHTML = originalButtonText;
         }
-        // --- FIM DO PREVIEW E CONFIRMAÇÃO ---
 
     } catch (error) {
-        // --- Tratamento de Erro (código existente, mas reabilita o botão) ---
         await showCustomConfirm(`Ocorreu um erro ao buscar ou processar o resultado:\n\n<em>${error.message}</em>`, "Entendi", null, 'shareResultsModal');
-        buttonElement.disabled = false; // Reabilita em caso de erro
-        buttonElement.innerHTML = originalButtonText; // Restaura
-        // Não fecha o modal principal automaticamente em caso de erro
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = originalButtonText;
     }
-    // O finally não é mais necessário aqui, pois o botão é reabilitado nos fluxos de cancelamento/erro
 }
 
 // --- Fim das Funções ---
@@ -6353,146 +6340,95 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
  * VERSÃO COM LOGS DE DEPURAÇÃO ADICIONADOS.
  */
 async function atualizarTodosResultadosManualmente() {
-    // Log 1: Iniciou a função
     console.log(">>> atualizarTodosResultadosManualmente: Função iniciada.");
-
     const currentUser = firebase.auth().currentUser;
-    // Log 2: Verifica o usuário
-    console.log(">>> atualizarTodosResultadosManualmente: currentUser =", currentUser ? currentUser.uid : null); // Mostra o ID se logado
-
     if (!currentUser) {
         showToast('Você precisa estar logado para atualizar os resultados.', 'error');
-        checkAuth(); // Mostra o modal de login
-        // Log 3: Saiu por falta de usuário
-        console.log(">>> atualizarTodosResultadosManualmente: Saindo - usuário não logado.");
+        checkAuth();
         return;
     }
 
     const confirmUpdate = await showCustomConfirm(
-        'Isso tentará buscar os resultados de hoje que já passaram do horário e salvá-los no banco de dados.\n\nPode levar alguns instantes e fará várias requisições.\n\nDeseja continuar?',
+        'Isso tentará buscar os resultados de hoje no site de origem e salvá-los no banco de dados.\n\nPode levar alguns instantes.\n\nDeseja continuar?',
         'Sim, Atualizar',
         'Cancelar'
     );
 
-    // Log 4: Verifica a confirmação
-    console.log(">>> atualizarTodosResultadosManualmente: confirmUpdate =", confirmUpdate);
-
     if (!confirmUpdate) {
         showToast('Atualização cancelada.', 'info');
-        // Log 5: Saiu porque o usuário cancelou
-        console.log(">>> atualizarTodosResultadosManualmente: Saindo - atualização cancelada pelo usuário.");
         return;
     }
 
-    // Log 6: Se chegou aqui, vai começar o processo
-    console.log(">>> atualizarTodosResultadosManualmente: Iniciando busca e salvamento...");
-    showLoadingIndicator('Atualizando resultados... Verificando horários...'); // Mostra indicador
+    showLoadingIndicator('Atualizando resultados... Verificando...');
 
     const agora = new Date();
-    const loteriasParaVerificar = ['rj', 'lk', 'ln', 'fd', 'ba'];
+    const loteriasParaVerificar = ['rj', 'lk', 'ln', 'fd', 'ba']; // Adicionada 'ba'
     let sucessoCount = 0;
     let falhaCount = 0;
-    let jaVerificado = new Set();
-    const MINUTOS_TOLERANCIA_BUSCA = 10; // Esta variável não é mais usada para o IF, mas pode ser mantida.
 
     for (const loteria of loteriasParaVerificar) {
         const horarios = horariosLoterias[loteria] || [];
-        let htmlLoteria = null;
+        let todosResultadosDoDia = []; // Guarda o JSON
 
-        for (const horarioInfo of horarios) {
-            
-            // ==================================================================
-            // === INÍCIO DA MODIFICAÇÃO ===
-            // As linhas que calculavam 'momentoSorteio', 'momentoLimite' e o
-            // 'if (agora >= momentoLimite)' e seu 'else' foram removidas daqui.
-            // O código agora tentará processar TODOS os horários.
-            // ==================================================================
-            
-            // Log 7: Vai verificar este horário (modificado para "Tentando processar")
-            console.log(`>>> atualizarTodosResultadosManualmente: Tentando processar ${loteria.toUpperCase()} - ${horarioInfo.nome}`);
+        try {
+            showLoadingIndicator(`Buscando dados de ${loteria.toUpperCase()}...`);
+            // 1. Busca o JSON com TODOS os resultados do dia para a loteria
+            todosResultadosDoDia = await fetchLotteryResults(loteria);
+            if (!todosResultadosDoDia || todosResultadosDoDia.length === 0) {
+                 console.warn(`Nenhum resultado JSON retornado para ${loteria.toUpperCase()}.`);
+                 continue; // Pula para a próxima loteria
+            }
 
-            try {
-                if (!jaVerificado.has(loteria)) {
-                    showLoadingIndicator(`Buscando dados de ${loteria.toUpperCase()}...`);
-                    await new Promise(resolve => setTimeout(resolve, 700));
-                    // Log 8: Tentando buscar HTML
-                    console.log(`>>> atualizarTodosResultadosManualmente: Buscando HTML para ${loteria.toUpperCase()}...`);
-                    htmlLoteria = await fetchLotteryResults(loteria);
-                    jaVerificado.add(loteria);
-                    if (!htmlLoteria || htmlLoteria.toLowerCase().includes("erro:")) {
-                         console.warn(`>>> atualizarTodosResultadosManualmente: Falha ao buscar HTML ou proxy retornou erro para ${loteria.toUpperCase()}.`);
-                         htmlLoteria = null;
-                    } else {
-                         // Log 9: HTML buscado com sucesso (mostra início)
-                         console.log(`>>> atualizarTodosResultadosManualmente: HTML para ${loteria.toUpperCase()} OK (início):`, htmlLoteria.substring(0, 100));
-                    }
-                }
+            // 2. Itera nos horários que seu APP conhece
+            for (const horarioInfo of horarios) {
+                showLoadingIndicator(`Processando ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
 
-                if (htmlLoteria) {
-                     showLoadingIndicator(`Processando ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
-                     // Log 10: Tentando extrair dados
-                     console.log(`>>> atualizarTodosResultadosManualmente: Extraindo dados para ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
-                     const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
+                // 3. Encontra o resultado correspondente no JSON
+                const sorteioEncontrado = todosResultadosDoDia.find(r => 
+                    r.nomeSorteio.includes(horarioInfo.nome) || r.nomeSorteioOriginal.includes(horarioInfo.display)
+                );
 
-                     if (dadosExtraidos && dadosExtraidos.length > 0) {
-                        // Log 11: Dados extraídos com sucesso
-                        console.log(`>>> atualizarTodosResultadosManualmente: Dados extraídos OK (${dadosExtraidos.length}) para ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, dadosExtraidos);
-                        
-                        // O loop continua pegando 1º ao 5º prêmio (slice(0, 5))
-                        for (const item of dadosExtraidos.slice(0, 5)) {
+                if (sorteioEncontrado && sorteioEncontrado.resultados) {
+                    const dadosExtraidos = sorteioEncontrado.resultados;
+
+                    // 4. Salva no Firebase (a lógica de 'slice' e 'salvar' continua)
+                    for (const item of dadosExtraidos.slice(0, 5)) { // 1º ao 5º prêmio
                         if (item.milhar && item.milhar.length === 4) {
                             try {
-                                // Log 12: Tentando salvar milhar específica
-                                console.log(`>>> atualizarTodosResultadosManualmente: Tentando salvar ${loteria}-${horarioInfo.nome}-${item.milhar}...`);
-                                await salvarResultadoNoHistoricoIA(loteria, agora, horarioInfo.nome, item);
-                                    // Log 13: Salvo com sucesso (só se não deu erro)
-                                    console.log(`>>> atualizarTodosResultadosManualmente: Salvo ${loteria}-${horarioInfo.nome}-${item.milhar} com sucesso.`);
-                                    sucessoCount++;
-                                } catch (saveError) {
-                                    console.error(`>>> atualizarTodosResultadosManualmente: Erro ao SALVAR ${loteria}-${horarioInfo.nome}-${item.milhar}:`, saveError);
-                                    falhaCount++;
-                                }
+                                await salvarResultadoNoHistoricoIA(loteria, agora, sorteioEncontrado.nomeSorteio, item);
+                                sucessoCount++;
+                            } catch (saveError) {
+                                console.error(`Erro ao SALVAR ${loteria}-${horarioInfo.nome}-${item.milhar}:`, saveError);
+                                falhaCount++;
                             }
                         }
-                    } else {
-                        // Isso é esperado para horários futuros que ainda não saíram
-                        console.log(`>>> atualizarTodosResultadosManualmente: Nenhum dado extraído para ${loteria.toUpperCase()} - ${horarioInfo.nome} no HTML (provavelmente ainda não saiu).`);
                     }
-                } // Fim if(htmlLoteria)
+                } else {
+                    console.log(`Nenhum dado encontrado no JSON para ${loteria.toUpperCase()} - ${horarioInfo.nome} (provavelmente ainda não saiu).`);
+                }
+            } // Fim loop horários
 
-            } catch (fetchError) {
-                console.error(`>>> atualizarTodosResultadosManualmente: Erro GERAL ao processar ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, fetchError);
-                falhaCount++;
-                jaVerificado.add(loteria); // Marca como falha para não tentar de novo
-                htmlLoteria = null;
-            }
-            
-            // ==================================================================
-            // === FIM DA MODIFICAÇÃO ===
-            // O 'else' que continha o 'console.log("Pulando...")' foi removido.
-            // ==================================================================
-            
-        } // Fim loop horários
+        } catch (fetchError) {
+            console.error(`Erro GERAL ao processar ${loteria.toUpperCase()}:`, fetchError);
+            falhaCount++;
+        }
     } // Fim loop loterias
 
-    hideLoadingIndicator(); // Esconde indicador
+    hideLoadingIndicator();
 
-    // Mostra resultado final
     let finalMessage = `Atualização concluída!\n`;
     if (sucessoCount > 0) {
         finalMessage += `✅ ${sucessoCount} milhares foram salvas/atualizadas com sucesso.\n`;
     }
     if (falhaCount > 0) {
-        finalMessage += `❌ ${falhaCount} tentativas de salvamento falharam (verifique o console para detalhes).\n`;
+        finalMessage += `❌ ${falhaCount} tentativas de salvamento falharam.\n`;
     }
     if (sucessoCount === 0 && falhaCount === 0) {
-         finalMessage += `ℹ️ Nenhum resultado novo encontrado ou horários ainda não passaram.`;
+         finalMessage += `ℹ️ Nenhum resultado novo encontrado nos sites de origem.`;
     }
 
     await showCustomConfirm(finalMessage.replace(/\n/g, '<br>'), 'OK', null);
-
-    // Log 14: Fim da função
-    console.log(">>> atualizarTodosResultadosManualmente: Processo de atualização manual finalizado.");
+    console.log(">>> Processo de atualização manual finalizado.");
 }
 
 async function saveGameTypeSelection() {
@@ -6820,76 +6756,6 @@ function editBolaoParticipant(group, index) {
     showToast(`Editando ${participante.nome}. Faça as alterações e salve.`, 'info');
     document.getElementById('bolaoBicho').focus();
 }
-
-/**
- * --- FUNÇÃO DE EXTRAIR RESULTADOS ---
- */
-function extrairDadosResultados(htmlString, nomeSorteio) {
-     const dadosExtraidos = [];
-    const idSorteio = mapaSorteios[nomeSorteio];
-
-    if (!idSorteio) {
-        console.error(`Erro interno: Mapeamento de ID não encontrado para ${nomeSorteio} dentro de extrairDadosResultados.`);
-        // Removido o alert daqui para não interromper o fluxo em caso de erro interno
-        return [];
-    }
-
-    try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlString, 'text/html');
-        const divSorteio = doc.getElementById(idSorteio);
-
-        if (!divSorteio) {
-             if (mapaSorteios[nomeSorteio]){
-                console.error(`Elemento com ID "${idSorteio}" (para "${nomeSorteio}") não encontrado no HTML.`);
-                // Poderia adicionar um showToast aqui se quisesse notificar o usuário
-             }
-            return [];
-        }
-
-        const tabelaResultados = divSorteio.querySelector('table');
-        if (!tabelaResultados) {
-            console.error(`Tabela de resultados não encontrada dentro de #${idSorteio}`);
-             // Poderia adicionar um showToast aqui
-            return [];
-        }
-
-        const linhas = tabelaResultados.querySelectorAll('tbody tr');
-        if (linhas.length === 0) {
-            console.warn(`Tabela encontrada para "${nomeSorteio}", mas está vazia (sem <tr>). Resultado pode não ter saído.`);
-            return [];
-        }
-
-        linhas.forEach(linha => {
-            const celulas = linha.querySelectorAll('td');
-            // Verifica se a primeira célula contém um número seguido de 'º' (ex: 1º, 10º)
-            // E se tem pelo menos 5 células (Posição, Emoji, Milhar, GrupoNum, GrupoNome)
-            if (celulas.length < 5 || (celulas[0] && !celulas[0].innerText.trim().match(/^\d+º$/))) {
-                return; // Pula linhas que não parecem ser de resultados (cabeçalhos extras, etc.)
-            }
-            const item = {
-                posicao: celulas[0].innerText.trim(),
-                emoji: celulas[1].innerText.trim(),
-                milhar: celulas[2].innerText.trim(),
-                grupo: `${celulas[3].innerText.trim()} - ${celulas[4].innerText.trim()}` // Junta número e nome do grupo
-            };
-            dadosExtraidos.push(item);
-        });
-
-    } catch (error) {
-        console.error(`Erro ao processar o HTML dos resultados para "${nomeSorteio}":`, error);
-        // Poderia adicionar um showToast com erro genérico
-        return [];
-    }
-
-    if (dadosExtraidos.length === 0 && document.getElementById(idSorteio) && document.getElementById(idSorteio).querySelector('table')) {
-        console.warn(`Nenhum dado de prêmio (1º-5º) extraído para "${nomeSorteio}" (ID: ${idSorteio}). Estrutura pode ter mudado.`);
-        // Poderia adicionar um showToast de aviso
-    }
-
-    return dadosExtraidos;
-}
-
 
 async function deleteBolaoParticipant(group, index) {
     const participante = bolaoParticipantes[group][index];
