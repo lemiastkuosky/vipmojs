@@ -1,85 +1,103 @@
-// /api/proxy.js - VERSÃO FINAL COM AXIOS (usa require)
+//
+// Este é o conteúdo completo para o seu NOVO arquivo: /api/proxy.js
+//
 
-const axios = require('axios'); // <-- MUDANÇA
-const cheerio = require('cheerio');
+// Funções do Node.js para lidar com requisições
+import fetch from 'node-fetch';
+import { URLSearchParams } from 'url';
 
-// Mapeamentos (sem mudança)
-const nomeSorteioMap = { 'PTM': 'RIO 11:20', 'PT': 'RIO 14:20', 'PTV': 'RIO 16:20', 'PTN': 'RIO 18:20', 'COR': 'CORUJA 21:30', 'LOOK': 'LOOK', 'NACIONAL': 'NACIONAL', 'FEDERAL': 'FEDERAL' };
-const mapaUrls = { 'rj': 'https://bichocerto.com/resultados/rj/para-todos/', 'lk': 'https://bichocerto.com/resultados/lk/look', 'fd': 'https://bichocerto.com/resultados/fd/loteria-federal', 'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional', 'ba': 'https://bichocerto.com/resultados/ba/bahia' };
-
-module.exports = async (request, response) => {
-    // CORS (sem mudança)
+// O handler da Vercel (substitui o arquivo PHP)
+export default async function handler(request, response) {
+    // 1. Configura o CORS para permitir que seu app acesse
     response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    if (request.method === 'OPTIONS') return response.status(200).end();
 
-    // Validação de Parâmetros (sem mudança)
-    const { loteria } = request.query;
-    if (!loteria) return response.status(400).send('Erro: Parâmetro "loteria" não especificado.');
-    const urlAlvo = mapaUrls[loteria];
-    if (!urlAlvo) return response.status(400).send(`Erro: URL de resultados não definida para a loteria "${loteria}".`);
+    // Responde a requisições OPTIONS (necessário para o CORS)
+    if (request.method === 'OPTIONS') {
+        response.status(200).end();
+        return;
+    }
 
     try {
-        console.log(`Proxy Vercel (axios): Buscando resultados em ${urlAlvo}`);
-        
-        // --- MUDANÇA: Usando AXIOS ---
-        const res = await axios.get(urlAlvo, {
+        // 2. Obtém os parâmetros da URL (ex: ?loteria=rj&tipo=resultados)
+        const { tipo, loteria, data } = request.query;
+
+        let url_alvo = '';
+        let options = {
+            method: 'GET', // Por padrão é GET
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
-        
-        if (res.status !== 200) {
-            throw new Error(`Erro ${res.status} ao acessar o site de origem.`);
-        }
-        
-        const html = res.data; // <--- No axios, os dados vêm em .data
-        // --- FIM DA MUDANÇA ---
-        
-        const $ = cheerio.load(html);
-        const resultadosFinais = [];
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            },
+        };
 
-        // Lógica do Cheerio (sem mudança)
-        $('div.result-item').each((index, item) => {
-            const $item = $(item);
-            let nomeSorteioOriginal = $item.find('h4').text().trim();
-            if (!nomeSorteioOriginal) return;
-            let nomeSorteioApp = nomeSorteioOriginal;
-            const nomeCurto = nomeSorteioOriginal.split(' ')[0].toUpperCase();
-            if (nomeSorteioMap[nomeCurto]) {
-               nomeSorteioApp = nomeSorteioMap[nomeCurto];
-               if (nomeCurto === 'LOOK' || nomeCurto === 'NACIONAL') {
-                   const horaMatch = nomeSorteioOriginal.match(/(\d{2}:\d{2})/);
-                   if (horaMatch) nomeSorteioApp = `${nomeSorteioMap[nomeCurto]} ${horaMatch[0]}`;
-               }
-            } else if (nomeCurto.includes('FEDERAL')) {
-                nomeSorteioApp = nomeSorteioMap['FEDERAL'];
+        if (tipo === 'atrasados') {
+            // Lógica para buscar os "Atrasados" (usa POST)
+            const loterias_permitidas = ['fd', 'rj', 'lk', 'ln', 'ba'];
+            if (!loterias_permitidas.includes(loteria)) {
+                response.status(400).send('Erro: Loteria inválida para atrasados.');
+                return;
             }
-            const resultadosDoSorteio = [];
-            const linhas = $item.find('table tbody tr');
-            linhas.each((i, linha) => {
-                const colunas = $(linha).find('td');
-                let itemResultado = null;
-                if (colunas.length === 5) {
-                    itemResultado = { posicao: $(colunas[0]).text().trim(), emoji: $(colunas[1]).text().trim(), milhar: $(colunas[2]).text().trim().replace('.', ''), grupo: `${$(colunas[3]).text().trim()} - ${$(colunas[4]).text().trim()}` };
-                } else if (colunas.length === 4) {
-                    itemResultado = { posicao: $(colunas[0]).text().trim(), emoji: '❔', milhar: $(colunas[1]).text().trim().replace('.', ''), grupo: `${$(colunas[2]).text().trim()} - ${$(colunas[3]).text().trim()}` };
-                }
-                if (itemResultado && itemResultado.milhar.length >= 4) {
-                    resultadosDoSorteio.push(itemResultado);
-                }
+            
+            url_alvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/';
+            options.method = 'POST';
+            const post_data = new URLSearchParams({
+                'l': loteria,
+                'p': '1',
+                'e': 'all',
+                'et': 'Geral'
             });
-            if (resultadosDoSorteio.length > 0) {
-                resultadosFinais.push({ nomeSorteio: nomeSorteioApp, nomeSorteioOriginal: nomeSorteioOriginal, resultados: resultadosDoSorteio });
-            }
-        });
+            options.body = post_data.toString();
+            options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
-        response.setHeader('Content-Type', 'application/json');
-        return response.status(200).json(resultadosFinais);
+        } else if (tipo === 'resultados') {
+            // Lógica para buscar os "Resultados" (usa GET)
+            const mapa_urls = {
+                'rj': 'https://bichocerto.com/resultados/rj/para-todos/',
+                'lk': 'https://bichocerto.com/resultados/look/para-todos/',
+                'fd': 'https://bichocerto.com/resultados/federal/para-todos/',
+                'ln': 'https://bichocerto.com/resultados/nacional/para-todos/',
+                'ba': 'https://bichocerto.com/resultados/bahia/para-todos/',
+            };
+            
+            if (!mapa_urls[loteria]) {
+                response.status(400).send(`Erro: URL de resultados não definida para esta loteria: ${loteria}`);
+                return;
+            }
+            
+            url_alvo = mapa_urls[loteria];
+
+            // Lógica da data (para buscar dias anteriores)
+            if (data) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+                    url_alvo = url_alvo + data + '/';
+                } else {
+                    response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
+                    return;
+                }
+            }
+            options.method = 'GET';
+        } else {
+            response.status(400).send('Erro: Tipo de busca inválido.');
+            return;
+        }
+
+        // 3. Faz a busca no site de origem (bichocerto.com)
+        const fetchResponse = await fetch(url_alvo, options);
+
+        if (!fetchResponse.ok) {
+            console.error(`Erro ao buscar ${url_alvo}. Status: ${fetchResponse.status}`);
+            response.status(502).send(`Erro ao buscar conteudo da URL: ${url_alvo}. Código: ${fetchResponse.status}`);
+            return;
+        }
+
+        // 4. Retorna o HTML do site de origem para o seu app
+        const html = await fetchResponse.text();
+        response.setHeader('Content-Type', 'text/html; charset=utf-8');
+        response.status(200).send(html);
 
     } catch (error) {
-        console.error("Erro crítico no proxy Vercel (axios):", error); 
-        return response.status(502).json({ error: `Erro no proxy: ${error.message}` });
+        console.error('Erro GERAL no proxy Vercel:', error);
+        response.status(500).send(`Erro interno no servidor proxy: ${error.message}`);
     }
 }
