@@ -1,10 +1,16 @@
 //
 // CONTEÚDO CORRIGIDO PARA /api/proxy.js
-// (User-Agent mais moderno e URLs corretas)
+// (Disfarce de navegador completo e URLs corretas)
 //
 
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
+
+// --- CABEÇALHOS PADRÃO (DISFARCE) ---
+const baseHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+};
 
 export default async function handler(request, response) {
     // 1. Configura o CORS
@@ -23,14 +29,11 @@ export default async function handler(request, response) {
         let url_alvo = '';
         let options = {
             method: 'GET',
-            headers: {
-                // --- MUDANÇA 1: User-Agent mais moderno ---
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
-                'Referer': 'https://bichocerto.com/' // Mantém um Referer genérico
-            },
+            headers: baseHeaders, // Começa com o disfarce base
         };
 
         if (tipo === 'atrasados') {
+            // --- OPÇÕES PARA REQUISIÇÃO 'ATRASADOS' (POST) ---
             const loterias_permitidas = ['fd', 'rj', 'lk', 'ln', 'ba'];
             if (!loterias_permitidas.includes(loteria)) {
                 response.status(400).send('Erro: Loteria inválida para atrasados.');
@@ -39,29 +42,35 @@ export default async function handler(request, response) {
             
             url_alvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/';
             options.method = 'POST';
-            // Adiciona o Referer específico para o POST
-            options.headers['Referer'] = 'https://bichocerto.com/estatisticas/atrasados/grupo/';
+            
+            // Cabeçalhos específicos para uma requisição POST (fetch)
+            options.headers = {
+                ...baseHeaders,
+                'Accept': '*/*',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Referer': 'https://bichocerto.com/estatisticas/atrasados/grupo/',
+                'Origin': 'https://bichocerto.com',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin'
+            };
             
             const post_data = new URLSearchParams({
-                'l': loteria,
-                'p': '1',
-                'e': 'all',
-                'et': 'Geral'
+                'l': loteria, 'p': '1', 'e': 'all', 'et': 'Geral'
             });
             options.body = post_data.toString();
-            options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
         } else if (tipo === 'resultados') {
+            // --- OPÇÕES PARA REQUISIÇÃO 'RESULTADOS' (GET) ---
             
-            // --- MUDANÇA 2: URLs Corrigidas ---
+            // --- URLs CORRIGIDAS (FINAL) ---
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/',
-                'lk': 'https://bichocerto.com/resultados/go/', // Corrigido
+                'lk': 'https://bichocerto.com/resultados/go/', // Correto é /go/
                 'fd': 'https://bichocerto.com/resultados/federal/',
-                'ln': 'https://bichocerto.com/resultados/ln/', // Corrigido
+                'ln': 'https://bichocerto.com/resultados/ln/', // Correto é /ln/
                 'ba': 'https://bichocerto.com/resultados/bahia/',
             };
-            // --- FIM DA MUDANÇA ---
             
             if (!mapa_urls[loteria]) {
                 response.status(400).send(`Erro: URL de resultados não definida para esta loteria: ${loteria}`);
@@ -70,7 +79,6 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
-            // Lógica de Data (Para Federal e outros)
             if (data) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
                     url_alvo = url_alvo + data + '/';
@@ -79,15 +87,23 @@ export default async function handler(request, response) {
                     return;
                 }
             } else {
-                // Se NÃO houver data (busca "hoje"), a Federal precisa de um sufixo
                 if (loteria === 'fd') {
                     url_alvo = url_alvo + 'de-hoje/';
                 }
             }
             
             options.method = 'GET';
-            // Define o Referer específico para a página de resultados
-            options.headers['Referer'] = url_alvo;
+            // Cabeçalhos específicos para uma navegação (GET)
+            options.headers = {
+                ...baseHeaders,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Referer': url_alvo, // O Referer é a própria URL
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Sec-Fetch-User': '?1',
+                'Upgrade-Insecure-Requests': '1'
+            };
 
         } else {
             response.status(400).send('Erro: Tipo de busca inválido.');
