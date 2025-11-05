@@ -3888,98 +3888,85 @@ body.dark-mode .footer-info-item strong {
     color: #4da3ff; /* Valores em azul claro */
 }
 
-/* PASSO 2: ADICIONE ESTE NOVO BLOCO AO SEU <style>...</style>
-*/
-
-/* --- ESTILOS PARA O NOVO DROPDOWN DE ATUALIZAÇÃO --- */
-
-.update-dropdown-container {
-    position: absolute;
-    top: 50%; /* Centraliza verticalmente no header */
-    right: -10px; /* Posição no canto direito */
-    transform: translateY(-50%);
-    z-index: 1001; /* Garante que fique acima de outros elementos */
+/* 1. Estilo do cabeçalho */
+header {
+  text-align: center;      /* Centraliza o título h1 */
+  position: relative;      /* Serve de referência para o botão */
+  margin-bottom: 10px;
 }
 
-/* Oculta o menu dropdown por padrão */
-.update-menu-dropdown {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 50px; /* Distância abaixo do botão 🔄 */
-    background-color: #f0f8ff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    width: 280px; /* Largura do menu */
-    overflow: hidden; /* Garante que os botões fiquem dentro das bordas arredondadas */
+/* 2. Garante que o título não sobreponha o botão */
+header h1 {
+  margin: 0;
+  padding: 0 40px; 
 }
 
-/* Mostra o menu quando a classe 'active' é adicionada via JS */
-.update-menu-dropdown.active {
-    display: block;
+/* 3. Estilo do botão de atualização */
+#header-update-btn {
+  position: absolute;
+  top: 0.3%;
+  right: -35px; /* <-- Posição correta no canto direito */
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.6rem;
+  padding: 8px;
+  color: #007bff;
+  transition: all 0.2s; /* Transição para todas as propriedades */
+  border-radius: 50%; /* Deixa o fundo do clique mais bonito */
+  width: 44px;
+  height: 44px;
 }
 
-/* Estilo de cada botão dentro do menu */
-.update-menu-dropdown button {
-    display: flex; /* Muda para flex para alinhar o texto */
-    flex-direction: column; /* Empilha o texto principal e o <small> */
-    align-items: flex-start; /* Alinha o texto à esquerda */
-    
-    width: 100%; /* Ocupa toda a largura do menu */
-    padding: 12px 15px;
-    margin: 0;
-    border-radius: 0; /* Remove borda arredondada individual */
-    border-bottom: 1px solid #e0e0e0; /* Linha separadora */
-    
-    font-size: 0.95rem;
-    font-weight: 500;
-    text-align: left;
-    background-color: #fff;
-    color: #333;
+/* 4. Efeitos de interação com o mouse/toque */
+#header-update-btn:hover {
+  opacity: 0.7;
+}
+#header-update-btn:active {
+  transform: translateY(-50%) scale(0.9); /* Ajusta a animação de clique */
 }
 
-.update-menu-dropdown button:last-child {
-    border-bottom: none; /* Remove a linha do último botão */
+/* 5. Estilo do botão QUANDO HÁ ATUALIZAÇÃO */
+#header-update-btn.update-available {
+  color: #dc3545; /* Apenas o ícone fica vermelho */
+  animation: fade-attention 1.8s infinite;
 }
 
-.update-menu-dropdown button:hover {
-    background-color: #f0f0f0;
-}
-.update-menu-dropdown button:active {
-    transform: scale(0.99); /* Efeito de clique mais sutil */
-    background-color: #e0e0e0;
-}
-
-/* Estilo do texto <small> (descrição) */
-.update-menu-dropdown button small {
-    font-size: 0.8rem;
-    font-weight: normal;
-    color: #6c757d;
-    margin-top: 3px;
+/* 6. Animação de pulsação (para o alerta) */
+@keyframes fade-attention {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-/* --- MODO ESCURO PARA O DROPDOWN --- */
-body.dark-mode .update-menu-dropdown {
-    background-color: #2a2a2a;
-    border-color: #444;
+/* 7. Ajuste para o Modo Escuro */
+body.dark-mode #header-update-btn {
+    color: #4da3ff;
 }
 
-body.dark-mode .update-menu-dropdown button {
-    background-color: #3a3f44;
-    color: #f0f0f0;
-    border-bottom-color: #444;
+/* 8. Animação de loading (giro) */
+#header-update-btn.loading {
+    animation: spin 1s linear infinite;
+    /* Garante que o transform do translateY seja mantido */
+    transform-origin: center; 
 }
 
-body.dark-mode .update-menu-dropdown button:hover {
-    background-color: #454545;
+/* Temos que redefinir a animação de giro para incluir o translateY */
+@keyframes spin {
+    from { 
+        transform: translateY(-50%) rotate(0deg); 
+    }
+    to { 
+        transform: translateY(-50%) rotate(360deg); 
+    }
 }
-body.dark-mode .update-menu-dropdown button:active {
-    background-color: #505050;
-}
-
-body.dark-mode .update-menu-dropdown button small {
-    color: #aaa;
+/* Correção da animação de clique quando em loading */
+#header-update-btn.loading:active {
+    transform: translateY(-50%) scale(1);
 }
 
 </style>
@@ -4027,7 +4014,57 @@ body.dark-mode .update-menu-dropdown button small {
     </div>
 </div>
 
-    
+<div id="updateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="updateModalTitle">
+    <div class="modal-content" style="max-width: 450px;">
+      <span class="close-modal" onclick="closeUpdateModal()" aria-label="Fechar">×</span>
+      <h3 id="updateModalTitle" class="modal-title">Atualizar Banco de Dados</h3>
+      <p style="text-align: center; margin-top: -10px; margin-bottom: 25px; color: #6c757d;">
+          Escolha o período que deseja atualizar na I.A.
+      </p>
+      
+      <div class="data-management-buttons">
+        
+        <button id="app-update-button-modal" style="display: none; background-color: #dc3545;" onclick="window.location.reload(true)">
+            <span style="font-size: 1.5rem; line-height: 1;">🎉</span>
+            <div>
+                <strong>Nova Versão!</strong>
+                <small style="font-weight: normal;">Clique aqui para instalar a atualização.</small>
+            </div>
+        </button>
+
+        <button onclick="handleUpdateSelection(1)" class="view-button">
+            <span style="font-size: 1.5rem; line-height: 1;">⚡</span>
+            <div>
+                <strong>Atualizar Agora (Hoje)</strong>
+                <small style="font-weight: normal;">Busca apenas os resultados de hoje.</small>
+            </div>
+        </button>
+        <button onclick="handleUpdateSelection(7)" class="load-button" style="background-color: #ffc107; color: #343a40;">
+            <span style="font-size: 1.5rem; line-height: 1;">🗓️</span>
+            <div>
+                <strong>Atualizar 7 Dias</strong>
+                <small style="font-weight: normal;">Alimenta a I.A. com a última semana.</small>
+            </div>
+        </button>
+        <button onclick="handleUpdateSelection(14)" class="load-button" style="background-color: #fd7e14;">
+            <span style="font-size: 1.5rem; line-height: 1;">📅</span>
+            <div>
+                <strong>Atualizar 14 Dias</strong>
+                <small style="font-weight: normal;">Alimenta a I.A. com 2 semanas.</small>
+            </div>
+        </button>
+        <button onclick="handleUpdateSelection(30)" class="load-button" style="background-color: #dc3545;">
+            <span style="font-size: 1.5rem; line-height: 1;">📅</span>
+            <div>
+                <strong>Atualizar 30 Dias</strong>
+                <small style="font-weight: normal;">Alimenta a I.A. com o último mês.</small>
+            </div>
+        </button>
+      </div>
+    </div>
+</div>    
+
+
 <div id="advancedFiltersModal" class="modal modal-advanced" role="dialog" aria-modal="true" aria-labelledby="advancedFiltersModalTitle">
     <div class="modal-content">
       <span class="close-modal" onclick="closeAdvancedFiltersModal()" aria-label="Fechar">×</span>
@@ -4219,36 +4256,8 @@ body.dark-mode .update-menu-dropdown button small {
   <div id="toast-container"></div>
 
   <header>
-    
-<h1>🔢 VIP Manager 🔢</h1>
-    
-    <div class="update-dropdown-container">
-        <button id="header-update-btn" onclick="toggleUpdateMenu()" title="Verificar se há atualizações">🔄</button>
-        
-        <div id="update-menu" class="update-menu-dropdown">
-            <button onclick="atualizarTodosResultadosManualmente(1)">
-                <span>Atualizar Agora (Hoje)</span>
-                <small>Busca resultados de hoje.</small>
-            </button>
-            <button onclick="atualizarTodosResultadosManualmente(7)">
-                <span>Atualizar 7 Dias</span>
-                <small>Alimenta a I.A. com a última semana.</small>
-            </button>
-            <button onclick="atualizarTodosResultadosManualmente(14)">
-                <span>Atualizar 14 Dias</span>
-                <small>Alimenta a I.A. com 2 semanas.</small>
-            </button>
-            <button onclick="atualizarTodosResultadosManualmente(30)">
-                <span>Atualizar 30 Dias</span>
-                <small>Alimenta a I.A. com o último mês.</small>
-            </button>
-            
-            <button id="app-update-button" style="display: none; background-color: #dc3545; color: white;" onclick="window.location.reload(true)">
-                <span>Nova Versão!</span>
-                <small>Clique para instalar a atualização.</small>
-            </button>
-        </div>
-     
+    <h1>🔢 VIP Manager 🔢</h1>
+<button id="header-update-btn" onclick="showUpdateModal()" title="Verificar se há atualizações">🔄</button>  
 
   <main>
    
@@ -5080,6 +5089,31 @@ function showLoadingIndicator(message = 'Processando...') {
     textElement.textContent = message;
     indicator.style.display = 'flex';
   }
+}
+
+//
+// ADICIONE ESTAS NOVAS FUNÇÕES:
+//
+
+// Abre o novo modal de atualização
+function showUpdateModal() {
+    // Verifica se há atualização do app ANTES de mostrar o modal
+    checkForUpdates(false, true); 
+    document.getElementById('updateModal').classList.add('active');
+}
+
+// Fecha o novo modal
+function closeUpdateModal() {
+    document.getElementById('updateModal').classList.remove('active');
+}
+
+// Nova função "intermediária" que fecha o modal e chama a atualização
+async function handleUpdateSelection(days) {
+    closeUpdateModal();
+    // Adiciona um pequeno atraso para a animação de fechar o modal
+    await new Promise(resolve => setTimeout(resolve, 300));
+    // Chama a função de atualização que já existe
+    await atualizarTodosResultadosManualmente(days);
 }
 
 /**
@@ -6507,6 +6541,8 @@ async function atualizarHistoricoIA(days) {
  * VERSÃO COM LOGS DE DEPURAÇÃO ADICIONADOS.
  */
 async function atualizarTodosResultadosManualmente(daysToFetch) { 
+    // A linha "menu.classList.remove('active');" foi removida daqui.
+
     console.log(`>>> atualizarTodosResultadosManualmente: Função iniciada para ${daysToFetch} dias.`);
 
     const currentUser = firebase.auth().currentUser;
@@ -6540,13 +6576,14 @@ async function atualizarTodosResultadosManualmente(daysToFetch) {
         return;
     }
 
+    // O resto da função (o loop de busca) continua idêntico
+    
     console.log(">>> atualizarTodosResultadosManualmente: Iniciando busca e salvamento...");
     showLoadingIndicator(`Atualizando resultados (${daysToFetch} dias)...`);
 
     let sucessoCount = 0;
     let falhaCount = 0;
     
-    // --- INÍCIO DO TRY...FINALLY (PARA GARANTIR O FIM DO LOADING) ---
     try {
         const loteriasParaVerificar = ['rj', 'lk', 'ln', 'fd', 'ba'];
         let jaVerificadoHTML = new Map(); 
@@ -6631,11 +6668,9 @@ async function atualizarTodosResultadosManualmente(daysToFetch) {
             } 
         } 
     } catch (error) {
-        // Captura qualquer erro inesperado no loop
         console.error("Erro inesperado durante a atualização:", error);
         showToast('Um erro inesperado ocorreu.', 'error');
     } finally {
-        // Garante que o loading desapareça, mesmo se houver erro
         hideLoadingIndicator();
         
         let finalMessage = `Atualização de ${daysToFetch} dia(s) concluída!\n`;
@@ -6649,11 +6684,9 @@ async function atualizarTodosResultadosManualmente(daysToFetch) {
              finalMessage += `ℹ️ Nenhum resultado novo encontrado ou horários ainda não passaram.`;
         }
 
-        // Mostra o resultado final
         await showCustomConfirm(finalMessage.replace(/\n/g, '<br>'), 'OK', null);
         console.log(">>> atualizarTodosResultadosManualmente: Processo de atualização manual finalizado.");
     }
-    // --- FIM DO TRY...FINALLY ---
 }
 
 async function restoreGameTypeSelection() {
@@ -13279,6 +13312,9 @@ function extrairDadosDoHTML(htmlString) {
     return dadosExtraidos;
 }
 
+//
+// 1. SUBSTITUA A FUNÇÃO 'gerarLinkWhatsapp' PELA VERSÃO ABAIXO:
+//
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     const textoOriginal = botao.innerHTML; // Guarda o texto original (ex: "Atrasados RIO DE JANEIRO")
     botao.disabled = true;
@@ -13414,7 +13450,10 @@ async function handleUpdateClick() {
 }
 
 // 3. FUNÇÃO DE VERIFICAÇÃO DE VERSÃO (MODIFICADA)
-async function checkForUpdates(isManualCheck = false) {
+async function checkForUpdates(isManualCheck = false, forceShowButton = false) {
+  // --- MUDANÇA: Alvo do botão de atualização ---
+  const appUpdateButton = document.getElementById('app-update-button-modal'); 
+  
   if (isManualCheck) {
     showToast('Verificando por novas atualizações...', 'info');
   }
@@ -13430,14 +13469,27 @@ async function checkForUpdates(isManualCheck = false) {
       console.log(`Nova versão encontrada! Servidor: ${serverVersion}, Cliente: ${CURRENT_VERSION}`);
       newVersionAvailable = true;
       document.getElementById('header-update-btn').classList.add('update-available');
-      // Para de verificar automaticamente assim que encontra uma atualização
+      // --- MUDANÇA: Alvo do botão de atualização ---
+      if (appUpdateButton) appUpdateButton.style.display = 'flex';
       if (updateInterval) clearInterval(updateInterval); 
-    } else if (isManualCheck) {
-      console.log('O aplicativo já está na versão mais recente.');
-      showToast('Você já está usando a versão mais recente!', 'success');
+      
+    } else {
+      newVersionAvailable = false;
+      document.getElementById('header-update-btn').classList.remove('update-available');
+      // --- MUDANÇA: Alvo do botão de atualização ---
+      if (appUpdateButton) appUpdateButton.style.display = 'none';
+
+      if (isManualCheck) {
+        console.log('O aplicativo já está na versão mais recente.');
+        showToast('Você já está usando a versão mais recente!', 'success');
+      }
     }
   } catch (error) {
     console.error('Erro ao verificar atualizações:', error);
+    // --- MUDANÇA: Alvo do botão de atualização ---
+    if (appUpdateButton && forceShowButton && newVersionAvailable) {
+        appUpdateButton.style.display = 'flex';
+    }
     if (isManualCheck) {
       showToast('Não foi possível verificar. Verifique sua conexão.', 'error');
     }
