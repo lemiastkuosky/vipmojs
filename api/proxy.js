@@ -1,6 +1,6 @@
 //
 // CONTEÚDO CORRIGIDO PARA /api/proxy.js
-// (User-Agent mais moderno e URLs corretas)
+// (Disfarce de navegador completo e URLs corretas)
 //
 
 import fetch from 'node-fetch';
