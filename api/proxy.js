@@ -1,6 +1,6 @@
 //
 // CONTEÚDO CORRIGIDO PARA /api/proxy.js
-// (URLs atualizadas e "Referer" adicionado para corrigir o erro 403)
+// (User-Agent mais moderno e URLs corretas)
 //
 
 import fetch from 'node-fetch';
@@ -24,10 +24,9 @@ export default async function handler(request, response) {
         let options = {
             method: 'GET',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                // --- ADICIONADO PARA CORRIGIR O ERRO 403 (BLOQUEIO) ---
-                // Fingimos ser uma visita vinda da home page
-                'Referer': 'https://bichocerto.com/'
+                // --- MUDANÇA 1: User-Agent mais moderno ---
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+                'Referer': 'https://bichocerto.com/' // Mantém um Referer genérico
             },
         };
 
@@ -40,7 +39,7 @@ export default async function handler(request, response) {
             
             url_alvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/';
             options.method = 'POST';
-            // Adiciona o Referer para o POST também, por segurança
+            // Adiciona o Referer específico para o POST
             options.headers['Referer'] = 'https://bichocerto.com/estatisticas/atrasados/grupo/';
             
             const post_data = new URLSearchParams({
@@ -54,15 +53,15 @@ export default async function handler(request, response) {
 
         } else if (tipo === 'resultados') {
             
-            // --- INÍCIO DA CORREÇÃO (URLs 404) ---
+            // --- MUDANÇA 2: URLs Corrigidas ---
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/',
-                'lk': 'https://bichocerto.com/resultados/go/look-goias/', // CORRIGIDO
-                'fd': 'https://bichocerto.com/resultados/federal/', // URL Base corrigida
-                'ln': 'https://bichocerto.com/resultados/ln/', // CORRIGIDO
+                'lk': 'https://bichocerto.com/resultados/go/', // Corrigido
+                'fd': 'https://bichocerto.com/resultados/federal/',
+                'ln': 'https://bichocerto.com/resultados/ln/', // Corrigido
                 'ba': 'https://bichocerto.com/resultados/bahia/',
             };
-            // --- FIM DA CORREÇÃO ---
+            // --- FIM DA MUDANÇA ---
             
             if (!mapa_urls[loteria]) {
                 response.status(400).send(`Erro: URL de resultados não definida para esta loteria: ${loteria}`);
@@ -71,10 +70,9 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
-            // --- LÓGICA DE DATA ATUALIZADA (Para Federal) ---
+            // Lógica de Data (Para Federal e outros)
             if (data) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-                    // Se tem data, anexa a data (funciona para todos, inclusive Federal)
                     url_alvo = url_alvo + data + '/';
                 } else {
                     response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
@@ -86,10 +84,9 @@ export default async function handler(request, response) {
                     url_alvo = url_alvo + 'de-hoje/';
                 }
             }
-            // --- FIM DA LÓGICA DE DATA ---
-
+            
             options.method = 'GET';
-            // Atualiza o Referer para ser específico da página (melhor ainda)
+            // Define o Referer específico para a página de resultados
             options.headers['Referer'] = url_alvo;
 
         } else {
