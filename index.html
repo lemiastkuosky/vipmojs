@@ -3888,6 +3888,100 @@ body.dark-mode .footer-info-item strong {
     color: #4da3ff; /* Valores em azul claro */
 }
 
+/* PASSO 2: ADICIONE ESTE NOVO BLOCO AO SEU <style>...</style>
+*/
+
+/* --- ESTILOS PARA O NOVO DROPDOWN DE ATUALIZAÇÃO --- */
+
+.update-dropdown-container {
+    position: absolute;
+    top: 50%; /* Centraliza verticalmente no header */
+    right: -10px; /* Posição no canto direito */
+    transform: translateY(-50%);
+    z-index: 1001; /* Garante que fique acima de outros elementos */
+}
+
+/* Oculta o menu dropdown por padrão */
+.update-menu-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 50px; /* Distância abaixo do botão 🔄 */
+    background-color: #f0f8ff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    width: 280px; /* Largura do menu */
+    overflow: hidden; /* Garante que os botões fiquem dentro das bordas arredondadas */
+}
+
+/* Mostra o menu quando a classe 'active' é adicionada via JS */
+.update-menu-dropdown.active {
+    display: block;
+}
+
+/* Estilo de cada botão dentro do menu */
+.update-menu-dropdown button {
+    display: flex; /* Muda para flex para alinhar o texto */
+    flex-direction: column; /* Empilha o texto principal e o <small> */
+    align-items: flex-start; /* Alinha o texto à esquerda */
+    
+    width: 100%; /* Ocupa toda a largura do menu */
+    padding: 12px 15px;
+    margin: 0;
+    border-radius: 0; /* Remove borda arredondada individual */
+    border-bottom: 1px solid #e0e0e0; /* Linha separadora */
+    
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-align: left;
+    background-color: #fff;
+    color: #333;
+}
+
+.update-menu-dropdown button:last-child {
+    border-bottom: none; /* Remove a linha do último botão */
+}
+
+.update-menu-dropdown button:hover {
+    background-color: #f0f0f0;
+}
+.update-menu-dropdown button:active {
+    transform: scale(0.99); /* Efeito de clique mais sutil */
+    background-color: #e0e0e0;
+}
+
+/* Estilo do texto <small> (descrição) */
+.update-menu-dropdown button small {
+    font-size: 0.8rem;
+    font-weight: normal;
+    color: #6c757d;
+    margin-top: 3px;
+}
+
+/* --- MODO ESCURO PARA O DROPDOWN --- */
+body.dark-mode .update-menu-dropdown {
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark-mode .update-menu-dropdown button {
+    background-color: #3a3f44;
+    color: #f0f0f0;
+    border-bottom-color: #444;
+}
+
+body.dark-mode .update-menu-dropdown button:hover {
+    background-color: #454545;
+}
+body.dark-mode .update-menu-dropdown button:active {
+    background-color: #505050;
+}
+
+body.dark-mode .update-menu-dropdown button small {
+    color: #aaa;
+}
+
 </style>
 
 </head>
@@ -3975,8 +4069,22 @@ body.dark-mode .footer-info-item strong {
         </div>
       </fieldset>
 
+      <fieldset class="generator-options" id="historicalUpdateSetting">
+          <legend>Atualização Histórica (I.A.)</legend>
+          <p style="font-size: 0.9rem; margin-bottom: 15px; color: #6c757d;">
+              Busca resultados passados para alimentar o banco de dados da I.A. 
+              Este processo pode demorar vários minutos.
+          </p>
+          <div class="button-group" style="gap: 8px;">
+              <button onclick="atualizarHistoricoIA(7)" class="load-button" style="background-color: #ffc107; color: #343a40;">Buscar 7 Dias</button>
+              <button onclick="atualizarHistoricoIA(15)" class="load-button" style="background-color: #fd7e14;">Buscar 15 Dias</button>
+              <button onclick="atualizarHistoricoIA(30)" class="load-button" style="background-color: #dc3545;">Buscar 30 Dias</button>
+          </div>
+      </fieldset>
+
 
       <div id="advancedFiltersContent">
+          
           <fieldset class="generator-options" id="finalDigitsFilter">
               <legend>Filtro de Dezenas Finais</legend>
               <p style="font-size: 0.9rem; margin-bottom: 10px; color: #6c757d;">
@@ -4019,6 +4127,8 @@ body.dark-mode .footer-info-item strong {
 
               <div id="parityOptions" style="display: none;">
                   <div class="radio-buttons" style="border: none; padding: 0;">
+                      <label style="display:none;"><input type="radio" name="paridadeDezena" value="any" checked></label>
+                      
                       <label><input type="radio" name="paridadeDezena" value="even"> Apenas Pares</label>
                       <label><input type="radio" name="paridadeDezena" value="odd"> Apenas Ímpares</label>
                   </div>
@@ -4103,12 +4213,42 @@ body.dark-mode .footer-info-item strong {
     </div>
 </div>
 
+    </div>
+</div>
+
   <div id="toast-container"></div>
 
   <header>
-    <h1>🔢 VIP Manager 🔢</h1>
-<button id="header-update-btn" onclick="handleUpdateClick()" title="Verificar se há atualizações">🔄</button>  </header>
-  
+    
+<h1>🔢 VIP Manager 🔢</h1>
+    
+    <div class="update-dropdown-container">
+        <button id="header-update-btn" onclick="toggleUpdateMenu()" title="Verificar se há atualizações">🔄</button>
+        
+        <div id="update-menu" class="update-menu-dropdown">
+            <button onclick="atualizarTodosResultadosManualmente(1)">
+                <span>Atualizar Agora (Hoje)</span>
+                <small>Busca resultados de hoje.</small>
+            </button>
+            <button onclick="atualizarTodosResultadosManualmente(7)">
+                <span>Atualizar 7 Dias</span>
+                <small>Alimenta a I.A. com a última semana.</small>
+            </button>
+            <button onclick="atualizarTodosResultadosManualmente(14)">
+                <span>Atualizar 14 Dias</span>
+                <small>Alimenta a I.A. com 2 semanas.</small>
+            </button>
+            <button onclick="atualizarTodosResultadosManualmente(30)">
+                <span>Atualizar 30 Dias</span>
+                <small>Alimenta a I.A. com o último mês.</small>
+            </button>
+            
+            <button id="app-update-button" style="display: none; background-color: #dc3545; color: white;" onclick="window.location.reload(true)">
+                <span>Nova Versão!</span>
+                <small>Clique para instalar a atualização.</small>
+            </button>
+        </div>
+     
 
   <main>
    
@@ -6348,16 +6488,28 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
     return prefixosQuentes;
 }
 
+//
+// ADICIONE ESTA NOVA FUNÇÃO AO SEU <script>
+//
+async function atualizarHistoricoIA(days) {
+    // Fecha o modal de configurações primeiro para o usuário ver o loading
+    closeAdvancedFiltersModal();
+    
+    // Adiciona um pequeno atraso para a animação do modal terminar
+    await new Promise(resolve => setTimeout(resolve, 300)); 
+    
+    // Chama a função principal de atualização, passando o número de dias
+    await atualizarTodosResultadosManualmente(days); 
+}
+
 /**
  * Tenta buscar e salvar resultados que já deveriam ter ocorrido no dia.
  * VERSÃO COM LOGS DE DEPURAÇÃO ADICIONADOS.
  */
-async function atualizarTodosResultadosManualmente() {
-    console.log(">>> atualizarTodosResultadosManualmente: Função iniciada.");
+async function atualizarTodosResultadosManualmente(daysToFetch) { 
+    console.log(`>>> atualizarTodosResultadosManualmente: Função iniciada para ${daysToFetch} dias.`);
 
     const currentUser = firebase.auth().currentUser;
-    console.log(">>> atualizarTodosResultadosManualmente: currentUser =", currentUser ? currentUser.uid : null); 
-
     if (!currentUser) {
         showToast('Você precisa estar logado para atualizar os resultados.', 'error');
         checkAuth(); 
@@ -6365,143 +6517,143 @@ async function atualizarTodosResultadosManualmente() {
         return;
     }
 
-    const confirmUpdate = await showCustomConfirm(
-        'Isso tentará buscar os resultados de <strong>HOJE, ONTEM e ANTEONTEM</strong> e salvá-los no banco de dados da I.A.\n\nPode levar vários instantes.\n\nDeseja continuar?',
-        'Sim, Atualizar 3 dias',
+    let confirmMessage = '';
+    let confirmButtonText = '';
+    
+    if (daysToFetch === 1) { 
+        confirmMessage = 'Isso tentará buscar os resultados de <strong>HOJE</strong> que já passaram do horário e salvá-los no banco de dados.\n\nDeseja continuar?';
+        confirmButtonText = 'Sim, Buscar Hoje';
+    } else { 
+        confirmMessage = `Você está prestes a buscar os resultados dos últimos <strong>${daysToFetch} dias</strong>.\n\nEsta ação pode levar vários minutos.\n\nDeseja continuar?`;
+        confirmButtonText = `Sim, Buscar ${daysToFetch} dias`;
+    }
+    
+    const userConfirmed = await showCustomConfirm(
+        confirmMessage,
+        confirmButtonText,
         'Cancelar'
     );
 
-    console.log(">>> atualizarTodosResultadosManualmente: confirmUpdate =", confirmUpdate);
-
-    if (!confirmUpdate) {
+    if (!userConfirmed) {
         showToast('Atualização cancelada.', 'info');
         console.log(">>> atualizarTodosResultadosManualmente: Saindo - atualização cancelada pelo usuário.");
         return;
     }
 
     console.log(">>> atualizarTodosResultadosManualmente: Iniciando busca e salvamento...");
-    showLoadingIndicator('Atualizando resultados (3 dias)...');
+    showLoadingIndicator(`Atualizando resultados (${daysToFetch} dias)...`);
 
-    const loteriasParaVerificar = ['rj', 'lk', 'ln', 'fd', 'ba']; // 'ba' (Bahia) foi vista nos logs, mantive
     let sucessoCount = 0;
     let falhaCount = 0;
-    let jaVerificadoHTML = new Map(); // Cache de HTML: "rj_2025-11-04" -> "<html>..."
-    const MINUTOS_TOLERANCIA_BUSCA = 10;
+    
+    // --- INÍCIO DO TRY...FINALLY (PARA GARANTIR O FIM DO LOADING) ---
+    try {
+        const loteriasParaVerificar = ['rj', 'lk', 'ln', 'fd', 'ba'];
+        let jaVerificadoHTML = new Map(); 
+        const MINUTOS_TOLERANCIA_BUSCA = 10;
 
-    // --- INÍCIO DA NOVA LÓGICA DE LOOP DE DATAS ---
-    const diasParaBuscar = 3; // Hoje, ontem, anteontem
-    for (let i = 0; i < diasParaBuscar; i++) {
-        const dataAtual = new Date();
-        dataAtual.setDate(dataAtual.getDate() - i); // 0 = hoje, 1 = ontem, 2 = anteontem
-        
-        // Formata a data para YYYY-MM-DD (necessário para o proxy)
-        const ano = dataAtual.getFullYear();
-        const mes = String(dataAtual.getMonth() + 1).padStart(2, '0');
-        const dia = String(dataAtual.getDate()).padStart(2, '0');
-        const dataISO = `${ano}-${mes}-${dia}`;
-        const dataDisplay = (i === 0) ? "HOJE" : (i === 1) ? "ONTEM" : `(${dia}/${mes})`;
+        const diasParaBuscar = daysToFetch; 
+        for (let i = 0; i < diasParaBuscar; i++) {
+            const dataAtual = new Date();
+            dataAtual.setDate(dataAtual.getDate() - i); 
+            
+            const ano = dataAtual.getFullYear();
+            const mes = String(dataAtual.getMonth() + 1).padStart(2, '0');
+            const dia = String(dataAtual.getDate()).padStart(2, '0');
+            const dataISO = `${ano}-${mes}-${dia}`;
+            const dataDisplay = (i === 0) ? "HOJE" : (i === 1) ? "ONTEM" : `(${dia}/${mes})`;
 
-        console.log(`--- PROCESSANDO DIA: ${dataISO} (${dataDisplay}) ---`);
-        showLoadingIndicator(`Buscando dia: ${dataDisplay}...`);
-        
-        for (const loteria of loteriasParaVerificar) {
-            const horarios = horariosLoterias[loteria] || [];
-            let htmlLoteria = null;
-            const cacheKey = `${loteria}_${dataISO}`; // Chave de cache por loteria e data
+            console.log(`--- PROCESSANDO DIA: ${dataISO} (${dataDisplay}) ---`);
+            showLoadingIndicator(`Buscando dia: ${dataDisplay}...`);
+            
+            for (const loteria of loteriasParaVerificar) {
+                const horarios = horariosLoterias[loteria] || [];
+                let htmlLoteria = null;
+                const cacheKey = `${loteria}_${dataISO}`; 
 
-            for (const horarioInfo of horarios) {
-                
-                const agora = new Date(); // Pega a data/hora atual *dentro* do loop
-                const momentoSorteio = new Date(dataAtual); // Começa com a data do loop
-                momentoSorteio.setHours(horarioInfo.hora, horarioInfo.minuto, 0, 0);
-
-                const momentoLimite = new Date(momentoSorteio);
-                momentoLimite.setMinutes(momentoSorteio.getMinutes() + MINUTOS_TOLERANCIA_BUSCA);
-
-                // Se NÃO for hoje (i > 0) -> [busca tudo]
-                // OU Se for hoje (i === 0) E já passou do horário limite -> [busca o de hoje]
-                if (i > 0 || (i === 0 && agora >= momentoLimite)) {
+                for (const horarioInfo of horarios) {
                     
-                    console.log(`>>> atualizarTodosResultadosManualmente: Tentando processar ${loteria.toUpperCase()} - ${horarioInfo.nome} [Data: ${dataISO}]`);
-                    try {
-                        // Busca o HTML (com cache por dia/loteria)
-                        if (!jaVerificadoHTML.has(cacheKey)) {
-                            showLoadingIndicator(`Buscando ${loteria.toUpperCase()} (${dataDisplay})...`);
-                            await new Promise(resolve => setTimeout(resolve, 700)); // Evita sobrecarga no proxy
-                            
-                            // CHAMA A NOVA FETCH COM A DATA
-                            htmlLoteria = await fetchLotteryResults(loteria, dataISO); 
-                            
-                            jaVerificadoHTML.set(cacheKey, htmlLoteria); // Salva no cache (mesmo se for null/erro)
-                        } else {
-                            htmlLoteria = jaVerificadoHTML.get(cacheKey);
-                        }
+                    const agora = new Date(); 
+                    const momentoSorteio = new Date(dataAtual); 
+                    momentoSorteio.setHours(horarioInfo.hora, horarioInfo.minuto, 0, 0);
 
-                        if (htmlLoteria) {
-                             console.log(`>>> atualizarTodosResultadosManualmente: Extraindo dados para ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
-                             const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
+                    const momentoLimite = new Date(momentoSorteio);
+                    momentoLimite.setMinutes(momentoSorteio.getMinutes() + MINUTOS_TOLERANCIA_BUSCA);
 
-                             if (dadosExtraidos && dadosExtraidos.length > 0) {
-                                console.log(`>>> atualizarTodosResultadosManualmente: Dados extraídos OK (${dadosExtraidos.length}) para ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, dadosExtraidos);
-                                for (const item of dadosExtraidos.slice(0, 5)) {
-                                if (item.milhar && item.milhar.length === 4) {
-                                    try {
-                                        // Passa 'momentoSorteio' (que é a data do dia 'i')
-                                        console.log(`>>> atualizarTodosResultadosManualmente: Tentando salvar ${loteria}-${horarioInfo.nome}-${item.milhar}...`);
-                                        await salvarResultadoNoHistoricoIA(loteria, momentoSorteio, horarioInfo.nome, item);
-                                        console.log(`>>> atualizarTodosResultadosManualmente: Salvo ${loteria}-${horarioInfo.nome}-${item.milhar} com sucesso.`);
-                                        sucessoCount++;
-                                    } catch (saveError) {
-                                        console.error(`>>> atualizarTodosResultadosManualmente: Erro ao SALVAR ${loteria}-${horarioInfo.nome}-${item.milhar}:`, saveError);
-                                        falhaCount++;
+                    if (i > 0 || (i === 0 && agora >= momentoLimite)) {
+                        
+                        console.log(`>>> atualizarTodosResultadosManualmente: Tentando processar ${loteria.toUpperCase()} - ${horarioInfo.nome} [Data: ${dataISO}]`);
+                        try {
+                            if (!jaVerificadoHTML.has(cacheKey)) {
+                                showLoadingIndicator(`Buscando ${loteria.toUpperCase()} (${dataDisplay})...`);
+                                await new Promise(resolve => setTimeout(resolve, 700)); 
+                                
+                                htmlLoteria = await fetchLotteryResults(loteria, dataISO); 
+                                
+                                jaVerificadoHTML.set(cacheKey, htmlLoteria); 
+                            } else {
+                                htmlLoteria = jaVerificadoHTML.get(cacheKey);
+                            }
+
+                            if (htmlLoteria) {
+                                 console.log(`>>> atualizarTodosResultadosManualmente: Extraindo dados para ${loteria.toUpperCase()} - ${horarioInfo.nome}...`);
+                                 const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
+
+                                 if (dadosExtraidos && dadosExtraidos.length > 0) {
+                                    console.log(`>>> atualizarTodosResultadosManualmente: Dados extraídos OK (${dadosExtraidos.length}) para ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, dadosExtraidos);
+                                    for (const item of dadosExtraidos.slice(0, 5)) {
+                                    if (item.milhar && item.milhar.length === 4) {
+                                        try {
+                                            console.log(`>>> atualizarTodosResultadosManualmente: Tentando salvar ${loteria}-${horarioInfo.nome}-${item.milhar}...`);
+                                            await salvarResultadoNoHistoricoIA(loteria, momentoSorteio, horarioInfo.nome, item);
+                                            console.log(`>>> atualizarTodosResultadosManualmente: Salvo ${loteria}-${horarioInfo.nome}-${item.milhar} com sucesso.`);
+                                            sucessoCount++;
+                                        } catch (saveError) {
+                                            console.error(`>>> atualizarTodosResultadosManualmente: Erro ao SALVAR ${loteria}-${horarioInfo.nome}-${item.milhar}:`, saveError);
+                                            falhaCount++;
+                                        }
                                     }
                                 }
-                            }
-                            } else {
-                                console.log(`>>> atualizarTodosResultadosManualmente: Nenhum dado extraído para ${loteria.toUpperCase()} - ${horarioInfo.nome} no HTML (provavelmente ainda não saiu).`);
-                            }
-                        } // Fim if(htmlLoteria)
-                    } catch (fetchError) {
-                        console.error(`>>> atualizarTodosResultadosManualmente: Erro GERAL ao processar ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, fetchError);
-                        falhaCount++;
-                        jaVerificadoHTML.set(cacheKey, null); // Marca como falha para não tentar de novo
-                        htmlLoteria = null;
+                                } else {
+                                    console.log(`>>> atualizarTodosResultadosManualmente: Nenhum dado extraído para ${loteria.toUpperCase()} - ${horarioInfo.nome} no HTML (provavelmente ainda não saiu).`);
+                                }
+                            } 
+                        } catch (fetchError) {
+                            console.error(`>>> atualizarTodosResultadosManualmente: Erro GERAL ao processar ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, fetchError);
+                            falhaCount++;
+                            jaVerificadoHTML.set(cacheKey, null); 
+                            htmlLoteria = null;
+                        }
+                    } else {
+                        console.log(`>>> atualizarTodosResultadosManualmente: Pulando ${loteria.toUpperCase()} - ${horarioInfo.nome} (horário ${horarioInfo.hora}:${String(horarioInfo.minuto).padStart(2,'0')} ainda não passou + ${MINUTOS_TOLERANCIA_BUSCA} min).`);
                     }
-                } else {
-                    // Loga por que pulou (só vai acontecer para HOJE)
-                    console.log(`>>> atualizarTodosResultadosManualmente: Pulando ${loteria.toUpperCase()} - ${horarioInfo.nome} (horário ${horarioInfo.hora}:${String(horarioInfo.minuto).padStart(2,'0')} ainda não passou + ${MINUTOS_TOLERANCIA_BUSCA} min).`);
-                }
-            } // Fim loop horários
-        } // Fim loop loterias
-    } // --- FIM DA NOVA LÓGICA DE LOOP DE DATAS ---
+                } 
+            } 
+        } 
+    } catch (error) {
+        // Captura qualquer erro inesperado no loop
+        console.error("Erro inesperado durante a atualização:", error);
+        showToast('Um erro inesperado ocorreu.', 'error');
+    } finally {
+        // Garante que o loading desapareça, mesmo se houver erro
+        hideLoadingIndicator();
+        
+        let finalMessage = `Atualização de ${daysToFetch} dia(s) concluída!\n`;
+        if (sucessoCount > 0) {
+            finalMessage += `✅ ${sucessoCount} milhares foram salvas/atualizadas com sucesso.\n`;
+        }
+        if (falhaCount > 0) {
+            finalMessage += `❌ ${falhaCount} tentativas de salvamento falharam (verifique o console para detalhes).\n`;
+        }
+        if (sucessoCount === 0 && falhaCount === 0) {
+             finalMessage += `ℹ️ Nenhum resultado novo encontrado ou horários ainda não passaram.`;
+        }
 
-    hideLoadingIndicator(); // Esconde indicador
-
-    // Mostra resultado final
-    let finalMessage = `Atualização concluída!\n`;
-    if (sucessoCount > 0) {
-        finalMessage += `✅ ${sucessoCount} milhares foram salvas/atualizadas com sucesso.\n`;
+        // Mostra o resultado final
+        await showCustomConfirm(finalMessage.replace(/\n/g, '<br>'), 'OK', null);
+        console.log(">>> atualizarTodosResultadosManualmente: Processo de atualização manual finalizado.");
     }
-    if (falhaCount > 0) {
-        finalMessage += `❌ ${falhaCount} tentativas de salvamento falharam (verifique o console para detalhes).\n`;
-    }
-    if (sucessoCount === 0 && falhaCount === 0) {
-         finalMessage += `ℹ️ Nenhum resultado novo encontrado ou horários ainda não passaram.`;
-    }
-
-    await showCustomConfirm(finalMessage.replace(/\n/g, '<br>'), 'OK', null);
-
-    // Log 14: Fim da função
-    console.log(">>> atualizarTodosResultadosManualmente: Processo de atualização manual finalizado.");
-}
-
-async function saveGameTypeSelection() {
-    // Cria um array com os valores dos checkboxes marcados (ex: ['dezena', 'milhar'])
-    const selectedTypes = Array.from(document.querySelectorAll('input[name="generationType"]:checked'))
-                               .map(cb => cb.value);
-    // Salva esse array
-    await saveData('lastGameTypeSelection', selectedTypes);
-    console.log("Seleção de tipos de jogo salva:", selectedTypes);
+    // --- FIM DO TRY...FINALLY ---
 }
 
 async function restoreGameTypeSelection() {
@@ -13128,26 +13280,20 @@ function extrairDadosDoHTML(htmlString) {
 }
 
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
-    const textoOriginal = botao.innerHTML;
+    const textoOriginal = botao.innerHTML; // Guarda o texto original (ex: "Atrasados RIO DE JANEIRO")
     botao.disabled = true;
     botao.innerHTML = 'Buscando...';
 
     const urlProxy = '/api/proxy'; 
 
     try {
-        // --- ESTA É A LINHA CORRIGIDA ---
-        // Adicionamos &tipo=atrasados na URL da requisição
+        // A busca é feita aqui, dentro do 'try'
         const response = await fetch(`${urlProxy}?loteria=${loteria}&tipo=atrasados`);
-        // --- FIM DA CORREÇÃO ---
-
         if (!response.ok) {
-             // Tenta ler a resposta de erro do proxy
              let errorDetails = await response.text();
-             // Limita o tamanho da mensagem de erro para não poluir o toast
              if (errorDetails.length > 300) {
                  errorDetails = errorDetails.substring(0, 300) + "...";
              }
-             // Mostra o erro 500 (Internal Server Error) ou outro
              throw new Error(`Erro de rede: ${response.status} ${response.statusText}. Detalhes: ${errorDetails}`);
         }
 
@@ -13157,41 +13303,43 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         const dadosDosAtrasados = extrairDadosDoHTML(htmlTabela);
         if (dadosDosAtrasados.length === 0) {
             showToast("Não foi possível extrair os dados. O site de origem pode ter mudado.", "error");
-            return; 
-        }
-
-        let textoMensagem = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n*GRUPO APP VIP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
-        dadosDosAtrasados.forEach(bicho => {
-            textoMensagem += `*${bicho.posicao}*: ${bicho.emoji} *${bicho.nome}* ${bicho.status}\n`;
-        });
-
-        const hoje = new Date();
-        const dataFormatada = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        textoMensagem += `\n━━━━━━━━━━━━━━━\n🗓️ _Análise gerada em: ${dataFormatada}_\n\n🍀 *Boa sorte!*`;
-
-        const linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`;
-
-        const userConfirmed = await showCustomConfirm(
-            `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`,
-            "✅ Enviar no WhatsApp", 
-            "❌ Cancelar",         
-            'atrasadosRealTimeModal' 
-        );
-
-        if (userConfirmed) {
-            window.open(linkWhats, '_blank'); 
-            closeAtrasadosRealTimeModal();     
-            showToast('Abrindo WhatsApp...', 'success');
+            // Mesmo se der erro aqui, o 'finally' vai limpar o botão
         } else {
-            showToast('Envio cancelado.', 'info');
+            // Se deu certo, formata a mensagem e mostra o popup
+            let textoMensagem = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n*GRUPO APP VIP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
+            dadosDosAtrasados.forEach(bicho => {
+                textoMensagem += `*${bicho.posicao}*: ${bicho.emoji} *${bicho.nome}* ${bicho.status}\n`;
+            });
+
+            const hoje = new Date();
+            const dataFormatada = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            textoMensagem += `\n━━━━━━━━━━━━━━━\n🗓️ _Análise gerada em: ${dataFormatada}_\n\n🍀 *Boa sorte!*`;
+
+            const linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`;
+
+            const userConfirmed = await showCustomConfirm(
+                `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`,
+                "✅ Enviar no WhatsApp", 
+                "❌ Cancelar",         
+                'atrasadosRealTimeModal' 
+            );
+
+            if (userConfirmed) {
+                window.open(linkWhats, '_blank'); 
+                closeAtrasadosRealTimeModal();     
+                showToast('Abrindo WhatsApp...', 'success');
+            } else {
+                showToast('Envio cancelado.', 'info');
+            }
         }
 
-    } catch (error) {
+    } catch (error) { // Se der qualquer erro (ex: 403, 404, 502)
         console.error("Falha na operação:", error);
-        // Exibe o erro detalhado no Toast
         showToast(`Falha na operação: ${error.message}`, "error", 7000); 
     } finally {
-        // Isso garante que o botão volte ao normal
+        // *** ESTA É A CORREÇÃO ***
+        // Este bloco 'finally' é executado SEMPRE
+        // e restaura o botão ao seu estado original.
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
     }
@@ -13223,41 +13371,46 @@ if ('serviceWorker' in navigator) {
 // 2. NOVA FUNÇÃO CHAMADA PELO CLIQUE DO BOTÃO
 async function handleUpdateClick() {
   const headerBtn = document.getElementById('header-update-btn');
-  if (headerBtn.classList.contains('loading')) return; // Previne cliques duplos
-
+  if (headerBtn.classList.contains('loading')) return; 
   headerBtn.classList.add('loading'); // Adiciona animação de giro
 
-  // 1. Verifica se há uma nova versão do APP
-  if (newVersionAvailable) {
-    showToast('Atualizando para a nova versão...', 'info');
-    // A animação de loading vai continuar até a página recarregar
-    window.location.reload(true);
-    return; 
-  }
-  
-  // 2. Se não houver, verifica manualmente de novo (checa o cache)
-  showToast('Verificando versão do app...', 'info');
-  await checkForUpdates(true); // Força a verificação
-  
-  if (newVersionAvailable) {
-     showToast('Nova versão encontrada! Clique novamente para instalar.', 'success');
-     headerBtn.classList.remove('loading'); // Para a animação
-     return; 
-  }
+  try {
+      // 1. Verifica se há uma nova versão do APP
+      if (newVersionAvailable) {
+        showToast('Atualizando para a nova versão...', 'info');
+        window.location.reload(true);
+        return; 
+      }
+      
+      // 2. Se não houver, verifica manualmente de novo (checa o cache)
+      showToast('Verificando versão do app...', 'info');
+      await checkForUpdates(true); // Força a verificação
+      
+      if (newVersionAvailable) {
+         showToast('Nova versão encontrada! Clique novamente para instalar.', 'success');
+         return; // Sai da função para o usuário clicar de novo
+      }
 
-  // 3. Se ainda não houver, ATUALIZA OS RESULTADOS (a função pesada)
-  console.log("Nenhuma nova versão do app detectada. Iniciando atualização manual de resultados...");
-  // A função 'atualizarTodosResultadosManualmente' já mostra seu próprio loading e confirmações
-  headerBtn.classList.remove('loading'); // Remove o giro, pois a outra função assume
-  await atualizarTodosResultadosManualmente(); 
-  
-  // 4. APÓS a atualização, busca a NOVA CONTAGEM
-  console.log(">>> handleUpdateClick: Atualização manual concluída. Atualizando contagem do rodapé...");
-  headerBtn.classList.add('loading'); // Adiciona o giro DE NOVO para a contagem
-  await getMilharCount(); // Atualiza o número no rodapé
-  
-  showToast('Verificação de dados concluída!', 'success');
-  headerBtn.classList.remove('loading'); // Para a animação final
+      // 3. Se ainda não houver, ATUALIZA OS RESULTADOS
+      console.log("Nenhuma nova versão do app detectada. Iniciando atualização manual de resultados...");
+      
+      // Chama a atualização de 1 dia (HOJE)
+      await atualizarTodosResultadosManualmente(1); 
+      
+      // 4. APÓS a atualização, busca a NOVA CONTAGEM
+      console.log(">>> handleUpdateClick: Atualização manual concluída. Atualizando contagem do rodapé...");
+      await getMilharCount(); // Atualiza o número no rodapé
+      
+      showToast('Verificação de dados concluída!', 'success');
+
+  } catch (error) {
+      // Se qualquer coisa der errado, mostra o erro
+      console.error("Erro durante o handleUpdateClick:", error);
+      showToast('Ocorreu um erro durante a atualização.', 'error');
+  } finally {
+      // 5. IMPORTANTE: Para de girar o botão, não importa o que aconteça
+      headerBtn.classList.remove('loading'); 
+  }
 }
 
 // 3. FUNÇÃO DE VERIFICAÇÃO DE VERSÃO (MODIFICADA)
