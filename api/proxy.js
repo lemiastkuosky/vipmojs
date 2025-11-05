@@ -65,11 +65,11 @@ export default async function handler(request, response) {
             
             // --- URLs CORRIGIDAS (FINAL) ---
             const mapa_urls = {
-                'rj': 'https://bichocerto.com/resultados/rj/',
-                'lk': 'https://bichocerto.com/resultados/go/', // Correto é /go/
-                'fd': 'https://bichocerto.com/resultados/federal/',
-                'ln': 'https://bichocerto.com/resultados/ln/', // Correto é /ln/
-                'ba': 'https://bichocerto.com/resultados/bahia/',
+                'rj': 'https://bichocerto.com/resultados/rj/para-todos',
+                'lk': 'https://bichocerto.com/resultados/lk/look', // Correto é /go/
+                'fd': 'https://bichocerto.com/resultados/fd/loteria-federal/',
+                'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional', // Correto é /ln/
+                'ba': 'https://bichocerto.com/resultados/ba/para-todos',
             };
             
             if (!mapa_urls[loteria]) {
