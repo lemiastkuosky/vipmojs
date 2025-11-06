@@ -4574,7 +4574,7 @@ body.dark-mode .ia-analysis-list {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V1.75.35</strong>
+            <strong>V1.77.35</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -5347,19 +5347,19 @@ async function generateIAPalpites() {
     
     // 1. Roda todos os motores de análise em paralelo
     const [
-        bichosAtrasados,    // Top 5 Frios
-        bichosFrequentes,   // Top 5 Quentes
+        bichosAtrasados,
+        bichosFrequentes,
         dezenasAtrasadas,
         centenasAtrasadas,
         unidadesAtrasadas,
         puxada
     ] = await Promise.all([
-        getPalpitesIA(loteria, 1),        // Motor 1 (Bichos 1º Prêmio)
-        getBichosFrequentesIA(loteria, 7), // Motor Quente (Últimos 7 dias)
-        getDezenasAtrasadasIA(loteria), // Motor 2 (Dezenas 1º-5º)
-        getCentenasAtrasadasIA(loteria),// Motor 3 (Centenas 1º-5º)
-        getUnidadesAtrasadasIA(loteria),// Motor 3 (Unidades 1º-5º)
-        getPuxadaDoDiaIA(loteria)       // Motor 3 (Puxada)
+        getPalpitesIA(loteria, 1),
+        getBichosFrequentesIA(loteria, 7),
+        getDezenasAtrasadasIA(loteria),
+        getCentenasAtrasadasIA(loteria),
+        getUnidadesAtrasadasIA(loteria),
+        getPuxadaDoDiaIA(loteria)
     ]);
     
     const dataDoDia = generateDateBasedDezenas().slice(0, 3);
@@ -5389,7 +5389,6 @@ async function generateIAPalpites() {
         return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo})</li>`).join('');
     };
 
-    // --- MUDANÇA AQUI --- (Removido o "- ${b.count}x")
     const criarTop5QuentesHTML = (lista) => {
         return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo})</li>`).join('');
     };
@@ -5438,7 +5437,6 @@ async function generateIAPalpites() {
             <h4>📊 Outras Fontes da Análise</h4>
             <ul class="ia-analysis-list">
                 <li><strong>Dezena Fria (1º-5º):</strong> ${analiseFontes.dezena}</li>
-                <li><strong>Bicho Quente (1º-5º):</strong> ${analiseFontes.bichoQuente}</li>
                 <li><strong>Puxada do Dia:</strong> ${analiseFontes.puxada}</li>
                 <li><strong>Data Base:</strong> ${analiseFontes.data}</li>
             </ul>
@@ -5455,7 +5453,6 @@ async function generateIAPalpites() {
         `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo})`
     ).join('\n');
 
-    // --- MUDANÇA AQUI --- (Removido o "- *${b.count}x*")
     const top5BichosQuentesTexto = analiseCompleta.bichosFrequentes.map((b, index) => 
         `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo})`
     ).join('\n');
@@ -6734,7 +6731,7 @@ function getPalpitesMisturadosIA(analise) {
     
     const analiseFontes = {
         bichoFrio: "(N/A)",
-        bichoQuente: "(N/A)", // <-- NOVO
+        // A linha 'bichoQuente' foi removida daqui
         dezena: "(N/A)",
         data: "(N/A)",
         puxada: "(N/A)"
@@ -6755,10 +6752,10 @@ function getPalpitesMisturadosIA(analise) {
     if (analise.bichosFrequentes.length > 0) {
         const bichoQuente1 = analise.bichosFrequentes[0];
         const dezenas = bichoQuente1.dezenas;
-        // Gera uma centena baseada no bicho "quente"
+        // Gera a centena baseada no bicho "quente"
         palpites.centena.push({ palpite: `${dezenas[0][0]}${dezenas[1]}`, tipo: 'Bicho Quente' });
         
-        analiseFontes.bichoQuente = `${bichoQuente1.emoji} ${bichoQuente1.animal} (G${bichoQuente1.grupo}) - ${bichoQuente1.count}x`;
+        // A linha 'analiseFontes.bichoQuente = ...' foi removida daqui
     }
 
     // --- Estratégia 3: Dezena Mais Atrasada (FRIA) ---
@@ -6771,6 +6768,8 @@ function getPalpitesMisturadosIA(analise) {
         analiseFontes.dezena = dezena1;
     }
 
+    // ... (O resto da função continua exatamente igual) ...
+    
     // --- Estratégia 4: Dezena Nº 2 Atrasada (FRIA) ---
     if (analise.dezenasAtrasadas.length > 1) {
         const dezena2 = analise.dezenasAtrasadas[1].numero;
