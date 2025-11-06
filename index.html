@@ -5347,25 +5347,27 @@ async function generateIAPalpites() {
     
     // 1. Roda todos os motores de análise em paralelo
     const [
-        bichosAtrasados,
+        bichosAtrasados,    // Agora conterá o Top 5
+        bichosFrequentes,   // Top 5 Quentes
         dezenasAtrasadas,
         centenasAtrasadas,
         unidadesAtrasadas,
         puxada
     ] = await Promise.all([
-        getPalpitesIA(loteria, 1),      // Motor 1 (Bichos 1º Prêmio)
+        getPalpitesIA(loteria, 1),        // Motor 1 (Bichos 1º Prêmio) - AGORA RETORNA 5
+        getBichosFrequentesIA(loteria, 7), // Motor Quente (Últimos 7 dias)
         getDezenasAtrasadasIA(loteria), // Motor 2 (Dezenas 1º-5º)
         getCentenasAtrasadasIA(loteria),// Motor 3 (Centenas 1º-5º)
         getUnidadesAtrasadasIA(loteria),// Motor 3 (Unidades 1º-5º)
         getPuxadaDoDiaIA(loteria)       // Motor 3 (Puxada)
     ]);
     
-    // Pega a data do dia (já temos essa função)
-    const dataDoDia = generateDateBasedDezenas().slice(0, 3); // Pega [dia, mes, ano]
+    const dataDoDia = generateDateBasedDezenas().slice(0, 3);
 
     // 2. Agrupa os resultados das análises
     const analiseCompleta = {
-        bichosAtrasados,
+        bichosAtrasados,    // Top 5
+        bichosFrequentes, // Top 5
         dezenasAtrasadas,
         centenasAtrasadas,
         unidadesAtrasadas,
@@ -5374,53 +5376,115 @@ async function generateIAPalpites() {
     };
 
     // 3. Roda o Motor 4 para misturar tudo e criar os palpites finais
-    const { palpites, analiseTexto } = getPalpitesMisturadosIA(analiseCompleta);
+    const { palpites, analiseFontes } = getPalpitesMisturadosIA(analiseCompleta);
 
-    // 4. Constrói o HTML para exibir os resultados
+    // 4. Constrói o HTML para exibir os resultados (VISUAL ATUALIZADO)
     const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
+    
+    const criarListaPalpitesHTML = (lista) => {
+        return lista.map(p => `<li title="Base: ${p.tipo}">${p.palpite}</li>`).join('');
+    };
+    
+    // Esta função agora vai renderizar 5 itens
+    const criarTopBichosHTML = (lista) => {
+        return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo})</li>`).join('');
+    };
+
+    const criarTop5QuentesHTML = (lista) => {
+        return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo}) - ${b.count}x</li>`).join('');
+    };
+
     resultsOutput.innerHTML = `
         <div class="ia-result-card">
-            <h4>🧠 Sugestões de Milhar (5)</h4>
+            <h4>🎯 Sugestões de Milhar (5)</h4>
             <ul class="ia-palpite-list">
-                ${palpites.milhar.map(p => `<li title="${p.tipo}">${p.palpite}</li>`).join('')}
+                ${criarListaPalpitesHTML(palpites.milhar)}
             </ul>
         </div>
         <div class="ia-result-card">
-            <h4>🧠 Sugestões de Centena (5)</h4>
+            <h4>🎯 Sugestões de Centena (5)</h4>
             <ul class="ia-palpite-list">
-                ${palpites.centena.map(p => `<li title="${p.tipo}">${p.palpite}</li>`).join('')}
+                ${criarListaPalpitesHTML(palpites.centena)}
             </ul>
         </div>
         <div class="ia-result-card">
-            <h4>🧠 Sugestões de Dezena (2)</h4>
+            <h4>🎯 Sugestões de Dezena (2)</h4>
             <ul class="ia-palpite-list">
-                ${palpites.dezena.map(p => `<li title="${p.tipo}">${p.palpite}</li>`).join('')}
+                ${criarListaPalpitesHTML(palpites.dezena)}
             </ul>
         </div>
         <div class="ia-result-card">
-            <h4>🧠 Sugestões de Unidade (2)</h4>
+            <h4>🎯 Sugestões de Unidade (2)</h4>
             <ul class="ia-palpite-list">
-                ${palpites.unidade.map(p => `<li title="${p.tipo}">${p.palpite}</li>`).join('')}
+                ${criarListaPalpitesHTML(palpites.unidade)}
             </ul>
         </div>
+        
         <div class="ia-result-card" style="border-left-color: #ffc107;">
-            <h4>📊 Fonte da Análise</h4>
+            <h4>❄️ Top 5 Frios (Atrasados 1º Prêmio)</h4>
             <ul class="ia-analysis-list">
-                ${analiseTexto.map(t => `<li>${t}</li>`).join('')}
+                ${criarTopBichosHTML(analiseCompleta.bichosAtrasados)}
+            </ul>
+        </div>
+
+        <div class="ia-result-card" style="border-left-color: #dc3545;">
+            <h4>🔥 Top 5 Quentes (Frequentes 1º-5º)</h4>
+            <ul class="ia-analysis-list">
+                ${criarTop5QuentesHTML(analiseCompleta.bichosFrequentes)}
+            </ul>
+        </div>
+        
+        <div class="ia-result-card" style="border-left-color: #6c757d;">
+            <h4>📊 Outras Fontes da Análise</h4>
+            <ul class="ia-analysis-list">
+                <li><strong>Dezena Fria (1º-5º):</strong> ${analiseFontes.dezena}</li>
+                <li><strong>Bicho Quente (1º-5º):</strong> ${analiseFontes.bichoQuente}</li>
+                <li><strong>Puxada do Dia:</strong> ${analiseFontes.puxada}</li>
+                <li><strong>Data Base:</strong> ${analiseFontes.data}</li>
             </ul>
         </div>
     `;
     
-    // 5. Salva o texto de compartilhamento globalmente
-    // (Vamos criar esta variável no próximo trecho)
-    window.iaPalpiteShareText = `🔮 *Palpites da I.A. para ${loteriaNome.toUpperCase()}*\n\n` +
-        `Analisei o banco de dados e as estratégias clássicas. Aqui estão os palpites:\n\n` +
-        `*Sugestões de Milhar (5):*\n${palpites.milhar.map(p => `\`${p.palpite}\` (${p.tipo})`).join('\n')}\n\n` +
-        `*Sugestões de Centena (5):*\n${palpites.centena.map(p => `\`${p.palpite}\` (${p.tipo})`).join('\n')}\n\n` +
-        `*Sugestões de Dezena (2):*\n${palpites.dezena.map(p => `\`${p.palpite}\` (${p.tipo})`).join('\n')}\n\n` +
-        `*Sugestões de Unidade (2):*\n${palpites.unidade.map(p => `\`${p.palpite}\` (${p.tipo})`).join('\n')}\n\n` +
-        `*--- Fonte da Análise ---*\n${analiseTexto.join('\n')}\n\n` +
-        `Boa sorte! 🍀`;
+    // 5. Salva o texto de compartilhamento globalmente (MENSAGEM ATUALIZADA)
+    
+    const formatarListaWpp = (lista) => {
+        return lista.map(p => `• \`${p.palpite}\` _(Base: ${p.tipo})_`).join('\n');
+    };
+    
+    // Renomeado para top5BichosTexto
+    const top5BichosTexto = analiseCompleta.bichosAtrasados.map((b, index) => 
+        `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo})`
+    ).join('\n');
+
+    const top5BichosQuentesTexto = analiseCompleta.bichosFrequentes.map((b, index) => 
+        `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo}) - *${b.count}x*`
+    ).join('\n');
+
+    // Monta a mensagem final
+    window.iaPalpiteShareText = `🔮 *Vip Palpites da I.A. para ${loteriaNome.toUpperCase()}* 🔮\n\n` +
+        `Olá! 🧠 Nossa I.A. processou os últimos resultados e identificou padrões! Aqui estão os palpites mais quentes para hoje:\n\n` +
+        
+        `🎯 *Sugestões de Milhar (5)*\n${formatarListaWpp(palpites.milhar)}\n\n` +
+        
+        `🎯 *Sugestões de Centena (5)*\n${formatarListaWpp(palpites.centena)}\n\n` +
+        
+        `🎯 *Sugestões de Dezena (2)*\n${formatarListaWpp(palpites.dezena)}\n\n` +
+        
+        `🎯 *Sugestões de Unidade (2)*\n${formatarListaWpp(palpites.unidade)}\n\n` +
+        
+        `-----------------------------------\n` +
+        `❄️ *Top 5 Frios (Atrasados 1º Prêmio)*\n` + // <-- TÍTULO ATUALIZADO
+        `${top5BichosTexto}\n\n` + // <-- Variável renomeada
+        
+        `🔥 *Top 5 Quentes (Frequentes 1º-5º)*\n` +
+        `${top5BichosQuentesTexto}\n\n` +
+
+        `📊 *Fontes Adicionais da Análise*\n` +
+        `• *Dezena Fria:* ${analiseFontes.dezena}\n` +
+        `• *Puxada do Dia:* ${analiseFontes.puxada}\n` +
+        `• *Data Base:* ${analiseFontes.data}\n\n` +
+        
+        `Boa sorte e jogue com responsabilidade! 🍀`;
 
     // 6. Exibe a área de resultados
     hideLoadingIndicator();
@@ -5444,8 +5508,7 @@ async function getPalpitesIA(loteria, posicaoPremio = 1) {
     const ultimosVistos = new Map();
 
     try {
-        // 2. Busca os últimos 1000 resultados (para garantir que temos todos os bichos)
-        //    para a loteria e prêmio específicos, ordenados do mais novo para o mais antigo.
+        // 2. Busca os últimos 1000 resultados
         const querySnapshot = await firestoreDB.collection('resultados')
             .where('loteria', '==', loteria)
             .where('posicao', '==', posicaoPremio)
@@ -5459,20 +5522,18 @@ async function getPalpitesIA(loteria, posicaoPremio = 1) {
             return [];
         }
 
-        // 3. Preenche o mapa. Como está ordenado (mais novo primeiro),
-        //    só registramos a data na PRIMEIRA vez que vemos o bicho.
+        // 3. Preenche o mapa com a data mais recente
         querySnapshot.forEach(doc => {
             const data = doc.data();
             const grupo = data.bichoGrupo;
             
-            // Se ainda não vimos esse grupo, registramos a data (que é a mais recente)
             if (grupo && !ultimosVistos.has(grupo)) {
-                ultimosVistos.set(grupo, data.data.toDate()); // Converte Timestamp do Firebase para Date
+                ultimosVistos.set(grupo, data.data.toDate());
             }
         });
 
-        // 4. Mapeia todos os 25 bichos para descobrir o atraso
-        const dataMaisAntiga = new Date('2000-01-01'); // Uma data "default" para bichos nunca vistos
+        // 4. Mapeia todos os 25 bichos
+        const dataMaisAntiga = new Date('2000-01-01');
         
         const listaDeAtraso = tabelaDeGrupos.map(bicho => {
             const dataUltimaVez = ultimosVistos.get(bicho.grupo);
@@ -5480,16 +5541,16 @@ async function getPalpitesIA(loteria, posicaoPremio = 1) {
                 grupo: bicho.grupo,
                 animal: bicho.animal,
                 emoji: bicho.emoji,
-                dezenas: bicho.dezenas, // <-- CORREÇÃO IMPORTANTE (para o "Mix" funcionar)
+                dezenas: bicho.dezenas,
                 data: dataUltimaVez || dataMaisAntiga 
             };
         });
 
-        // 5. Ordena a lista pela data, da MAIS ANTIGA para a MAIS NOVA.
+        // 5. Ordena a lista (mais antiga primeiro)
         listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
 
         // 6. Retorna os 5 primeiros (os mais atrasados)
-        return listaDeAtraso.slice(0, 5);
+        return listaDeAtraso.slice(0, 5); // <-- MUDANÇA AQUI (de 10 para 5)
 
     } catch (error) {
         hideLoadingIndicator();
@@ -5562,14 +5623,19 @@ if (iaLotterySelect) {
     });
 }
 
-async function fetchLotteryResults(loteria) {
-    // Usaremos a mesma API/proxy do outro arquivo
-    const urlProxy = `/api/proxy?loteria=${loteria}&tipo=resultados`; // Certifique-se que '/api/proxy' é o caminho correto para o seu proxy
-    console.log("Buscando resultados via proxy:", urlProxy); // Log para depuração
+async function fetchLotteryResults(loteria, dataISO = null) {
+    // 1. Cria a URL base
+    let urlProxy = `/api/proxy?loteria=${loteria}&tipo=resultados`;
+    
+    // 2. Adiciona a data à URL (se ela foi fornecida)
+    if (dataISO) {
+        urlProxy += `&data=${dataISO}`;
+    }
+
+    console.log("Buscando resultados via proxy:", urlProxy); // O log agora mostrará a data
     try {
         const response = await fetch(urlProxy);
         if (!response.ok) {
-            // Tenta ler a mensagem de erro do proxy, se houver
             let errorBody = 'Erro desconhecido do proxy.';
             try {
                 errorBody = await response.text();
@@ -5577,19 +5643,15 @@ async function fetchLotteryResults(loteria) {
             throw new Error(`Erro no proxy: ${response.status} ${response.statusText}. Detalhes: ${errorBody}`);
         }
         const htmlText = await response.text();
-        console.log("HTML recebido do proxy OK (primeiros 500 chars):", htmlText.substring(0, 500)); // Log para depuração
-        // Verifica se o HTML recebido parece válido (não contém apenas uma mensagem de erro simples)
+        console.log("HTML recebido do proxy OK (primeiros 500 chars):", htmlText.substring(0, 500));
         if (htmlText.trim().toLowerCase().startsWith("erro:") || htmlText.trim().length < 100) {
              console.warn("Proxy retornou uma resposta curta ou de erro:", htmlText);
-             // Você pode querer lançar um erro aqui também, dependendo de como seu proxy retorna erros
-             // throw new Error(`Proxy retornou uma resposta inesperada: ${htmlText}`);
         }
         return htmlText;
     } catch (error) {
         console.error("Erro CRÍTICO ao buscar resultados via proxy:", error);
-        // Exibe um erro mais claro para o usuário final
         showToast(`Falha ao buscar dados da loteria ${loteria}. ${error.message}`, 'error', 5000);
-        throw error; // Re-lança o erro para que as funções que chamaram saibam que falhou
+        throw error;
     }
 }
 
@@ -6670,107 +6732,92 @@ function getPalpitesMisturadosIA(analise) {
         unidade: []
     };
     
-    const analiseTexto = []; // Para o texto de compartilhamento
+    const analiseFontes = {
+        bichoFrio: "(N/A)",
+        bichoQuente: "(N/A)", // <-- NOVO
+        dezena: "(N/A)",
+        data: "(N/A)",
+        puxada: "(N/A)"
+    };
 
-    // --- Estratégia 1: Bicho Mais Atrasado ---
+    // --- Estratégia 1: Bicho Mais Atrasado (FRIO) ---
     if (analise.bichosAtrasados.length > 0) {
-        const bicho1 = analise.bichosAtrasados[0]; // Pega o 1º mais atrasado
-        const dezenas = bicho1.dezenas; // ex: ['89', '90', '91', '92']
+        const bicho1 = analise.bichosAtrasados[0];
+        const dezenas = bicho1.dezenas;
         
-        // Milhar: Fechamento (ex: 8990)
-        palpites.milhar.push({ palpite: `${dezenas[0]}${dezenas[1]}`, tipo: 'Atraso Bicho' });
-        // Dezena: A primeira dezena do bicho (ex: 89)
-        palpites.dezena.push({ palpite: dezenas[0], tipo: 'Bicho Atrasado' });
+        palpites.milhar.push({ palpite: `${dezenas[0]}${dezenas[1]}`, tipo: 'Bicho Frio' });
+        palpites.dezena.push({ palpite: dezenas[0], tipo: 'Do Bicho Frio' });
         
-        analiseTexto.push(`📊 *Bicho Atrasado:* ${bicho1.emoji} ${bicho1.animal} (G${bicho1.grupo})`);
-    } else {
-        analiseTexto.push(`📊 *Bicho Atrasado:* (N/A)`);
+        analiseFontes.bichoFrio = `${bicho1.emoji} ${bicho1.animal} (G${bicho1.grupo})`;
     }
 
-    // --- Estratégia 2: Bicho Nº 2 Atrasado ---
-    if (analise.bichosAtrasados.length > 1) {
-        const bicho2 = analise.bichosAtrasados[1]; // Pega o 2º mais atrasado
-        const dezenas = bicho2.dezenas;
-        // Centena: (ex: 334)
-        palpites.centena.push({ palpite: `${dezenas[0][0]}${dezenas[1]}`, tipo: 'Atraso Bicho 2' });
+    // --- ESTRATÉGIA NOVA: Bicho Mais Frequente (QUENTE) ---
+    if (analise.bichosFrequentes.length > 0) {
+        const bichoQuente1 = analise.bichosFrequentes[0];
+        const dezenas = bichoQuente1.dezenas;
+        // Gera uma centena baseada no bicho "quente"
+        palpites.centena.push({ palpite: `${dezenas[0][0]}${dezenas[1]}`, tipo: 'Bicho Quente' });
+        
+        analiseFontes.bichoQuente = `${bichoQuente1.emoji} ${bichoQuente1.animal} (G${bichoQuente1.grupo}) - ${bichoQuente1.count}x`;
     }
 
-    // --- Estratégia 3: Dezena Mais Atrasada ---
+    // --- Estratégia 3: Dezena Mais Atrasada (FRIA) ---
     if (analise.dezenasAtrasadas.length > 0) {
-        const dezena1 = analise.dezenasAtrasadas[0].numero; // ex: '14'
-        // Milhar: Dobradinha (ex: 1414)
-        palpites.milhar.push({ palpite: `${dezena1}${dezena1}`, tipo: 'Atraso Dezena' });
-        // Dezena: A própria dezena (ex: 14)
-        palpites.dezena.push({ palpite: dezena1, tipo: 'A mais Atrasada' });
-        // Unidade: A unidade da dezena (ex: 4)
-        palpites.unidade.push({ palpite: dezena1[1], tipo: 'Da Dezena Atrasada' });
+        const dezena1 = analise.dezenasAtrasadas[0].numero;
+        palpites.milhar.push({ palpite: `${dezena1}${dezena1}`, tipo: 'Dezena Fria' });
+        palpites.dezena.push({ palpite: dezena1, tipo: 'A mais Fria' });
+        palpites.unidade.push({ palpite: dezena1[1], tipo: 'Da Dezena Fria' });
         
-        analiseTexto.push(`📊 *Dezena Atrasada:* ${dezena1}`);
-    } else {
-        analiseTexto.push(`📊 *Dezena Atrasada:* (N/A)`);
+        analiseFontes.dezena = dezena1;
     }
 
-    // --- Estratégia 4: Dezena Nº 2 Atrasada ---
+    // --- Estratégia 4: Dezena Nº 2 Atrasada (FRIA) ---
     if (analise.dezenasAtrasadas.length > 1) {
-        const dezena2 = analise.dezenasAtrasadas[1].numero; // ex: '58'
-        // Centena: Invertida (ex: 858)
-        palpites.centena.push({ palpite: `${dezena2[1]}${dezena2}`, tipo: 'Atraso Dezena 2' });
+        const dezena2 = analise.dezenasAtrasadas[1].numero;
+        palpites.centena.push({ palpite: `${dezena2.slice(-1)}${dezena2}`, tipo: 'Dezena Fria 2' });
     }
 
-    // --- Estratégia 5: Centena Mais Atrasada ---
+    // --- Estratégia 5: Centena Mais Atrasada (FRIA) ---
     if (analise.centenasAtrasadas.length > 0) {
-        const centena1 = analise.centenasAtrasadas[0].numero; // ex: '115'
-        // Milhar: Aleatória com a centena (ex: 7115)
-        palpites.milhar.push({ palpite: `${Math.floor(Math.random() * 10)}${centena1}`, tipo: 'Atraso Centena' });
-        // Centena: A própria centena (ex: 115)
-        palpites.centena.push({ palpite: centena1, tipo: 'A mais Atrasada' });
+        const centena1 = analise.centenasAtrasadas[0].numero;
+        palpites.milhar.push({ palpite: `${Math.floor(Math.random() * 10)}${centena1}`, tipo: 'Centena Fria' });
+        palpites.centena.push({ palpite: centena1, tipo: 'A mais Fria' });
     }
 
-    // --- Estratégia 6: Unidade Mais Atrasada ---
+    // --- Estratégia 6: Unidade Mais Atrasada (FRIA) ---
     if (analise.unidadesAtrasadas.length > 0) {
-        const unidade1 = analise.unidadesAtrasadas[0].numero; // ex: '7'
-        // Unidade: A própria unidade (ex: 7)
-        palpites.unidade.push({ palpite: unidade1, tipo: 'A mais Atrasada' });
+        const unidade1 = analise.unidadesAtrasadas[0].numero;
+        palpites.unidade.push({ palpite: unidade1, tipo: 'A mais Fria' });
     }
 
-    // --- Estratégia 7: Data do Dia ---
-    if (analise.dataDoDia.length > 0) {
-        const dezenasData = analise.dataDoDia; // ex: ['06', '11', '25'] (Dia, Mês, Ano)
-        // Milhar: Dia + Ano (ex: 0625)
-        palpites.milhar.push({ palpite: `${dezenasData[0]}${dezenasData[2]}`, tipo: 'Data do Dia' });
-        // Centena: (ex: 011)
-        palpites.centena.push({ palpite: `0${dezenasData[1]}`, tipo: 'Data do Dia' });
+    // --- Estratégia 7: Data do Dia (NEUTRA) ---
+    if (analise.dataDoDia.length >= 3) {
+        const [dia, mes, ano] = analise.dataDoDia;
+        palpites.milhar.push({ palpite: `${dia}${ano}`, tipo: 'Data do Dia' });
+        palpites.centena.push({ palpite: `0${mes}`, tipo: 'Data do Dia' });
         
-        analiseTexto.push(`📊 *Data Base:* ${dezenasData[0]}/${dezenasData[1]}/${dezenasData[2]}`);
-    } else {
-        analiseTexto.push(`📊 *Data Base:* (N/A)`);
+        analiseFontes.data = `${dia}/${mes}/${ano}`;
     }
 
-    // --- Estratégia 8: Puxada do Dia ---
+    // --- Estratégia 8: Puxada do Dia (QUENTE) ---
     if (analise.puxada) {
         const bichoPuxado = analise.puxada.bichoPuxado;
-        const dezenasPuxadas = bichoPuxado.dezenas; // ex: ['73', '74', '75', '76']
+        const dezenasPuxadas = bichoPuxado.dezenas;
         
-        // Milhar: Aleatória (ex: 4973)
         palpites.milhar.push({ palpite: `${Math.floor(Math.random() * 90 + 10)}${dezenasPuxadas[0]}`, tipo: 'Puxada do Dia' });
-        // Centena: Aleatória (ex: 973)
         palpites.centena.push({ palpite: `${Math.floor(Math.random() * 10)}${dezenasPuxadas[0]}`, tipo: 'Puxada do Dia' });
         
         const bSaiu = analise.puxada.bichoSaiu;
-        analiseTexto.push(`📊 *Puxada:* ${bSaiu.emoji} ${bSaiu.animal} (Saiu) puxa ${bichoPuxado.emoji} ${bichoPuxado.animal}`);
-    } else {
-        analiseTexto.push(`📊 *Puxada:* (N/A)`);
+        analiseFontes.puxada = `${bSaiu.emoji} ${bSaiu.animal} (Saiu) ⇢ ${bichoPuxado.emoji} ${bichoPuxado.animal}`;
     }
 
-    // --- Limpeza Final ---
-    // Garante que temos a quantidade exata de palpites, preenchendo com aleatórios se faltar
+    // --- Limpeza Final (Preenchimento) ---
     const preencherPalpites = (tipo, alvo, len) => {
         while (palpites[tipo].length < alvo) {
             let num = String(Math.floor(Math.random() * Math.pow(10, len))).padStart(len, '0');
             palpites[tipo].push({ palpite: num, tipo: 'Aleatório' });
         }
-        // Garante que não tenhamos mais do que o alvo
-        palpites[tipo] = palpites[tipo].slice(0, alvo);
+        palpites[tipo] = palpites[tipo].slice(0, alvo); // Garante o limite
     };
 
     preencherPalpites('milhar', 5, 4);
@@ -6778,7 +6825,7 @@ function getPalpitesMisturadosIA(analise) {
     preencherPalpites('dezena', 2, 2);
     preencherPalpites('unidade', 2, 1);
 
-    return { palpites, analiseTexto };
+    return { palpites, analiseFontes };
 }
 
 const puxadas = {
@@ -7216,6 +7263,12 @@ async function handleLogin() {
             passwordError.textContent = '';
             emailInput.value = ''; // Limpa campos
             passwordInput.value = '';
+
+            // --- [PROPOSTA 2] INICIA A ATUALIZAÇÃO AUTOMÁTICA ---
+            console.log("Usuário logado e ativo. Chamando getMilharCount e runAutoUpdateIA...");
+            getMilharCount(user); // Busca a contagem de milhares
+            runAutoUpdateIA(); // Inicia a verificação de atualização silenciosa
+            // --- FIM DA ADIÇÃO ---
             
         } else if (doc.exists && doc.data().ativo === false) {
             // Login correto, mas NÃO APROVADO
@@ -7479,6 +7532,126 @@ async function restoreGameTypeSelection() {
                 checkbox.checked = true;
             }
         });
+    }
+}
+
+async function runSilentIAUpdate(daysToFetch) {
+    console.log(`[AutoUpdate] Iniciando atualização silenciosa para ${daysToFetch} dia(s)...`);
+
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        console.warn("[AutoUpdate] Usuário não logado. Atualização silenciosa cancelada.");
+        return false;
+    }
+
+    let sucessoCount = 0;
+    let falhaCount = 0;
+    let errorOccurred = false;
+
+    try {
+        const loteriasParaVerificar = ['rj', 'lk', 'ln', 'fd', 'ba'];
+        let jaVerificadoHTML = new Map();
+        const MINUTOS_TOLERANCIA_BUSCA = 10;
+        
+        for (let i = 0; i < daysToFetch; i++) {
+            const dataAtual = new Date();
+            dataAtual.setDate(dataAtual.getDate() - i);
+            const ano = dataAtual.getFullYear();
+            const mes = String(dataAtual.getMonth() + 1).padStart(2, '0');
+            const dia = String(dataAtual.getDate()).padStart(2, '0');
+            const dataISO = `${ano}-${mes}-${dia}`;
+            const dataDisplay = (i === 0) ? "HOJE" : (i === 1) ? "ONTEM" : `(${dia}/${mes})`;
+
+            console.log(`[AutoUpdate] Processando dia: ${dataISO} (${dataDisplay})`);
+
+            for (const loteria of loteriasParaVerificar) {
+                const horarios = horariosLoterias[loteria] || [];
+                let htmlLoteria = null;
+                const cacheKey = `${loteria}_${dataISO}`;
+                
+                for (const horarioInfo of horarios) {
+                    const agora = new Date();
+                    const momentoSorteio = new Date(dataAtual);
+                    momentoSorteio.setHours(horarioInfo.hora, horarioInfo.minuto, 0, 0);
+                    const momentoLimite = new Date(momentoSorteio);
+                    momentoLimite.setMinutes(momentoSorteio.getMinutes() + MINUTOS_TOLERANCIA_BUSCA);
+
+                    // Só busca se for um dia passado (i > 0) ou se o horário já passou (i === 0)
+                    if (i > 0 || (i === 0 && agora >= momentoLimite)) {
+                        try {
+                            if (!jaVerificadoHTML.has(cacheKey)) {
+                                console.log(`[AutoUpdate] Buscando HTML para ${loteria.toUpperCase()} (${dataDisplay})...`);
+                                await new Promise(resolve => setTimeout(resolve, 1000)); // Pequeno delay
+                                htmlLoteria = await fetchLotteryResults(loteria, dataISO);
+                                jaVerificadoHTML.set(cacheKey, htmlLoteria);
+                            } else {
+                                htmlLoteria = jaVerificadoHTML.get(cacheKey);
+                            }
+
+                            if (htmlLoteria) {
+                                const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
+                                if (dadosExtraidos && dadosExtraidos.length > 0) {
+                                    for (const item of dadosExtraidos.slice(0, 5)) {
+                                        if (item.milhar && item.milhar.length === 4) {
+                                            try {
+                                                await salvarResultadoNoHistoricoIA(loteria, momentoSorteio, horarioInfo.nome, item);
+                                                sucessoCount++;
+                                            } catch (saveError) {
+                                                falhaCount++;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (fetchError) {
+                            console.error(`[AutoUpdate] Erro GERAL ao processar ${loteria.toUpperCase()} - ${horarioInfo.nome}:`, fetchError);
+                            falhaCount++;
+                            jaVerificadoHTML.set(cacheKey, null);
+                            htmlLoteria = null;
+                        }
+                    }
+                } // Fim loop horarios
+            } // Fim loop loterias
+        } // Fim loop dias
+    } catch (error) {
+        console.error("[AutoUpdate] Erro inesperado durante a atualização silenciosa:", error);
+        errorOccurred = true;
+    } finally {
+        console.log(`[AutoUpdate] Atualização silenciosa concluída. Salvos: ${sucessoCount}, Falhas: ${falhaCount}`);
+    }
+    
+    return !errorOccurred;
+}
+
+async function runAutoUpdateIA() {
+    const STORAGE_KEY = 'lastIAAutoUpdate';
+    const COOLDOWN_HOURS = 6;
+    const cooldownMillis = COOLDOWN_HOURS * 60 * 60 * 1000;
+
+    try {
+        const lastUpdateString = await getData(STORAGE_KEY);
+        const lastUpdateTime = lastUpdateString ? new Date(lastUpdateString).getTime() : 0;
+        const now = new Date().getTime();
+
+        if (now - lastUpdateTime > cooldownMillis) {
+            console.log("[AutoUpdate] Cooldown expirado. Iniciando atualização silenciosa de 2 dias...");
+            
+            // Roda a atualização silenciosa para os últimos 2 dias
+            const success = await runSilentIAUpdate(2); 
+            
+            if (success) {
+                // Salva a nova data/hora da atualização bem-sucedida
+                await saveData(STORAGE_KEY, new Date().toISOString());
+                console.log("[AutoUpdate] Timestamp de atualização salvo.");
+                
+                // Atualiza a contagem de milhares no rodapé (já que atualizamos os dados)
+                getMilharCount(firebase.auth().currentUser);
+            }
+        } else {
+            console.log("[AutoUpdate] Dentro do cooldown de 6 horas. Pulando atualização.");
+        }
+    } catch (error) {
+        console.error("[AutoUpdate] Erro ao executar o gatilho de atualização:", error);
     }
 }
 
@@ -9349,6 +9522,57 @@ function toggleQuickShortcuts() {
             return await originalGetData(key);
         }
     }
+
+    async function getBichosFrequentesIA(loteria, daysAgo = 7) {
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) return []; // Retorna vazio se não estiver logado
+
+    // 1. Define a data de início da análise (ex: 7 dias atrás)
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysAgo);
+    const startTimestamp = firebase.firestore.Timestamp.fromDate(startDate);
+
+    // 2. Cria um "placar" para contar os bichos
+    const bichoCounts = new Map();
+    tabelaDeGrupos.forEach(b => {
+        // Inicializa o placar com os dados do bicho e contagem 0
+        bichoCounts.set(b.grupo, { ...b, count: 0 });
+    });
+
+    try {
+        // 3. Busca todos os resultados (1º-5º prêmio) da loteria DESDE a data de início
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', loteria)
+            .where('data', '>=', startTimestamp)
+            .get();
+
+        if (querySnapshot.empty) {
+            console.log(`[IA Quente] Nenhum dado encontrado nos últimos ${daysAgo} dias para ${loteria}`);
+            return [];
+        }
+
+        // 4. Conta as ocorrências de cada bicho (1º ao 5º prêmio)
+        querySnapshot.forEach(doc => {
+            const grupo = doc.data().bichoGrupo;
+            if (bichoCounts.has(grupo)) {
+                bichoCounts.get(grupo).count++;
+            }
+        });
+
+        // 5. Converte o placar (Mapa) em um array
+        const listaFrequencia = Array.from(bichoCounts.values());
+
+        // 6. Ordena o array pela contagem (do maior para o menor)
+        listaFrequencia.sort((a, b) => b.count - a.count);
+
+        // 7. Retorna os 5 bichos mais "quentes"
+        return listaFrequencia.slice(0, 5);
+
+    } catch (error) {
+        console.error("[IA Quente] Erro ao buscar bichos frequentes:", error);
+        return [];
+    }
+}
 
     async function removeDataAppInventor(key) {
         if (isInAppInventor) {
