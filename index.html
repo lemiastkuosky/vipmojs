@@ -4005,6 +4005,87 @@ body:not(.dark-mode) #bichoMilharMethodContainer .button-style-radios label:has(
     box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
 }
 
+/* --- Nova Cor para o Botão "Análises e Consultas" --- */
+.analysis-button {
+    background-color: #17a2b8; /* Ciano/Teal */
+    color: white;
+}
+.analysis-button:active {
+    background-color: #117a8b;
+}
+body.dark-mode .analysis-button {
+    background-color: #00bcd4; /* Ciano mais vibrante */
+    color: #212529; /* Texto escuro para contraste */
+}
+body.dark-mode .analysis-button:active {
+    background-color: #0097a7;
+}
+
+/* --- Estilos para o Modal de Palpites I.A. --- */
+#iaPalpiteResultsOutput {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espaço entre cada "card" de resultado */
+}
+
+.ia-result-card {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    padding: 12px 15px;
+    border-left: 5px solid #007bff;
+}
+
+body.dark-mode .ia-result-card {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-left-color: #4da3ff;
+}
+
+.ia-result-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: #333;
+}
+body.dark-mode .ia-result-card h4 {
+    color: #f0f0f0;
+}
+
+/* Estilo para as listas de palpites (Milhar, Centena, etc.) */
+.ia-palpite-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+    font-size: 1.1rem;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    display: flex;
+    flex-wrap: wrap; /* Faz os itens quebrarem a linha */
+    gap: 8px 12px; /* Espaçamento vertical e horizontal */
+}
+
+.ia-palpite-list li {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 4px 10px;
+    border-radius: 5px;
+}
+body.dark-mode .ia-palpite-list li {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Estilo para a lista de análise (Bicho, Dezena, etc.) */
+.ia-analysis-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+body.dark-mode .ia-analysis-list {
+    color: #aaa;
+}
+.ia-analysis-list li {
+    margin-bottom: 5px;
+}
+
 </style>
 
 </head>
@@ -4301,8 +4382,7 @@ body:not(.dark-mode) #bichoMilharMethodContainer .button-style-radios label:has(
     <button type="button" onclick="showFechamentoModal()" class="calculator-button">🔢 2- Gerador Duque e Terno</button>
     <button type="button" onclick="showBolaoModal()" class="bolao-button">📋 Gerar Lista Bolão</button>
     <button type="button" onclick="showTabelaBichosModal()" class="view-button">📊 Mostrar Tabela Bichos</button>
-    <button type="button" onclick="showAtrasadosRealTimeModal()" class="import-btn">⏱️ Bichos Atrasados</button>    
-    <button type="button" onclick="showShareResultsModal()" class="view-button" style="background-color: #28a745;">📲 Resultados Live</button>
+    <button type="button" onclick="showAnalysisHubModal()" class="analysis-button">🔮 Análises e Consultas</button>
     </div>
     <section aria-labelledby="input-label">
     <label id="input-label" for="input">Entrada de números:</label>
@@ -4530,6 +4610,82 @@ body:not(.dark-mode) #bichoMilharMethodContainer .button-style-radios label:has(
             <button data-loteria="ba" data-nome="PT Bahia" class="btn-share view-button">Atrasados BAHIA</button>
         </div> <button onclick="closeAtrasadosRealTimeModal()" class="load-button" style="width: 100%; margin-top: 20px;">Fechar</button>
         </div>
+</div>
+
+<div id="analysisHubModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="analysisHubModalTitle">
+    <div class="modal-content" style="max-width: 450px;">
+      <span class="close-modal" onclick="closeAnalysisHubModal()" aria-label="Fechar">×</span>
+      <h3 id="analysisHubModalTitle" class="modal-title">🔮 Análises e Consultas</h3>
+      <p style="text-align: center; margin-top: -10px; margin-bottom: 25px; color: #6c757d;">
+          Escolha o tipo de análise que deseja executar.
+      </p>
+
+      <div class="data-management-buttons">
+
+        <button onclick="openAtrasadosFromHub()" class="import-btn">
+            <span style="font-size: 1.5rem; line-height: 1;">⏱️</span>
+            <div>
+                <strong>Bichos Atrasados</strong>
+                <small style="font-weight: normal;">(Análise ao vivo - site externo)</small>
+            </div>
+        </button>
+
+        <button onclick="openResultadosLiveFromHub()" class="view-button" style="background-color: #28a745;">
+            <span style="font-size: 1.5rem; line-height: 1;">📲</span>
+            <div>
+                <strong>Resultados Live</strong>
+                <small style="font-weight: normal;">(Compartilhar resultados do dia)</small>
+            </div>
+        </button>
+
+        <button onclick="openPalpitesIAFromHub()" class="analysis-button" style="background-color: #6f42c1; color: white;">
+            <span style="font-size: 1.5rem; line-height: 1;">🧠</span>
+            <div>
+                <strong>Palpites da I.A.</strong>
+                <small style="font-weight: normal;">(Análise do nosso banco de dados)</small>
+            </div>
+        </button>
+
+      </div>
+    </div>
+</div>
+
+<div id="palpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true" aria-labelledby="palpitesIAModalTitle">
+    <div class="modal-content" style="max-width: 550px;">
+      <span class="close-modal" onclick="closePalpitesIAModal()" aria-label="Fechar">×</span>
+      <h3 id="palpitesIAModalTitle" class="modal-title">🧠 Palpites da I.A.</h3>
+      
+      <div id="iaPalpiteForm" class="generator-step-card" style="padding: 15px; margin-bottom: 20px;">
+          <div class="form-group" style="margin-top: 10px; margin-bottom: 0;">
+              <div class="form-group-title">1. Selecione a Loteria</div>
+              <select id="iaPalpiteLoteriaSelect" class="save-dialog-input" style="text-align: center; text-align-last: center;">
+                  <option value="rj">PT Rio (RJ)</option>
+                  <option value="lk">Look Goiás (LK)</option>
+                  <option value="ln">Loteria Nacional (LN)</option>
+                  <option value="fd">Federal (FD)</option>
+                  <option value="ba">Bahia (BA)</option>
+              </select>
+          </div>
+          <button onclick="generateIAPalpites()" class="bolao-button" style="width: 100%; margin-top: 15px; padding: 12px; font-size: 1rem;">
+              ⚡ Gerar Palpites
+          </button>
+      </div>
+
+      <div id="iaPalpiteResultsContainer" style="display: none;">
+          <div class="generator-step-card" style="padding: 15px;">
+              <div class="step-title" style="margin-bottom: 15px;">
+                  🔮 Análise I.A. para <span id="iaPalpiteLoteriaNome"></span>
+              </div>
+              
+              <div id="iaPalpiteResultsOutput"></div>
+
+          </div>
+          <button id="iaPalpiteShareBtn" onclick="shareIAPalpites()" class="save-button" style="background-color: #25D366; width: 100%; margin-top: 15px; padding: 12px; font-size: 1rem;">
+              📲 Compartilhar no WhatsApp
+          </button>
+      </div>
+
+    </div>
 </div>
 
   <div id="previewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle">
@@ -5129,9 +5285,235 @@ function showLoadingIndicator(message = 'Processando...') {
   }
 }
 
-//
-// ADICIONE ESTAS NOVAS FUNÇÕES:
-//
+function showAnalysisHubModal() {
+    document.getElementById('analysisHubModal').classList.add('active');
+}
+
+function closeAnalysisHubModal() {
+    document.getElementById('analysisHubModal').classList.remove('active');
+}
+
+// --- Funções "ponte" que fecham o Hub e abrem o modal de destino ---
+
+function openAtrasadosFromHub() {
+    closeAnalysisHubModal();
+    // Adiciona um pequeno atraso para a animação do modal
+    setTimeout(() => {
+        showAtrasadosRealTimeModal();
+    }, 300); // 300ms
+}
+
+function openResultadosLiveFromHub() {
+    closeAnalysisHubModal();
+    setTimeout(() => {
+        showShareResultsModal();
+    }, 300);
+}
+
+function openPalpitesIAFromHub() {
+    closeAnalysisHubModal();
+    setTimeout(() => {
+        showPalpitesIAModal(); // Chama a nova função
+    }, 300);
+}
+
+// --- Funções Reais para o NOVO Modal de Palpites ---
+
+function showPalpitesIAModal() {
+    const modal = document.getElementById('palpitesIAModal');
+    
+    // Reseta o modal para o estado inicial
+    document.getElementById('iaPalpiteForm').style.display = 'block';
+    document.getElementById('iaPalpiteResultsContainer').style.display = 'none';
+    document.getElementById('iaPalpiteResultsOutput').innerHTML = ''; // Limpa resultados antigos
+    
+    modal.classList.add('active');
+}
+
+function closePalpitesIAModal() {
+    document.getElementById('palpitesIAModal').classList.remove('active');
+}
+
+/**
+ * Esta é a função principal que o botão "Gerar Palpites" vai chamar.
+ * Ela ainda não vai rodar a I.A., mas podemos testar o fluxo.
+ */
+async function generateIAPalpites() {
+    const loteriaSelect = document.getElementById('iaPalpiteLoteriaSelect');
+    const loteria = loteriaSelect.value;
+    const loteriaNome = loteriaSelect.options[loteriaSelect.selectedIndex].text;
+    
+    showLoadingIndicator(`Analisando ${loteriaNome}...`);
+    
+    // 1. Roda todos os motores de análise em paralelo
+    const [
+        bichosAtrasados,
+        dezenasAtrasadas,
+        centenasAtrasadas,
+        unidadesAtrasadas,
+        puxada
+    ] = await Promise.all([
+        getPalpitesIA(loteria, 1),      // Motor 1 (Bichos 1º Prêmio)
+        getDezenasAtrasadasIA(loteria), // Motor 2 (Dezenas 1º-5º)
+        getCentenasAtrasadasIA(loteria),// Motor 3 (Centenas 1º-5º)
+        getUnidadesAtrasadasIA(loteria),// Motor 3 (Unidades 1º-5º)
+        getPuxadaDoDiaIA(loteria)       // Motor 3 (Puxada)
+    ]);
+    
+    // Pega a data do dia (já temos essa função)
+    const dataDoDia = generateDateBasedDezenas().slice(0, 3); // Pega [dia, mes, ano]
+
+    // 2. Agrupa os resultados das análises
+    const analiseCompleta = {
+        bichosAtrasados,
+        dezenasAtrasadas,
+        centenasAtrasadas,
+        unidadesAtrasadas,
+        puxada,
+        dataDoDia
+    };
+
+    // 3. Roda o Motor 4 para misturar tudo e criar os palpites finais
+    const { palpites, analiseTexto } = getPalpitesMisturadosIA(analiseCompleta);
+
+    // 4. Constrói o HTML para exibir os resultados
+    const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
+    resultsOutput.innerHTML = `
+        <div class="ia-result-card">
+            <h4>🧠 Sugestões de Milhar (5)</h4>
+            <ul class="ia-palpite-list">
+                ${palpites.milhar.map(p => `<li title="${p.tipo}">${p.palpite}</li>`).join('')}
+            </ul>
+        </div>
+        <div class="ia-result-card">
+            <h4>🧠 Sugestões de Centena (5)</h4>
+            <ul class="ia-palpite-list">
+                ${palpites.centena.map(p => `<li title="${p.tipo}">${p.palpite}</li>`).join('')}
+            </ul>
+        </div>
+        <div class="ia-result-card">
+            <h4>🧠 Sugestões de Dezena (2)</h4>
+            <ul class="ia-palpite-list">
+                ${palpites.dezena.map(p => `<li title="${p.tipo}">${p.palpite}</li>`).join('')}
+            </ul>
+        </div>
+        <div class="ia-result-card">
+            <h4>🧠 Sugestões de Unidade (2)</h4>
+            <ul class="ia-palpite-list">
+                ${palpites.unidade.map(p => `<li title="${p.tipo}">${p.palpite}</li>`).join('')}
+            </ul>
+        </div>
+        <div class="ia-result-card" style="border-left-color: #ffc107;">
+            <h4>📊 Fonte da Análise</h4>
+            <ul class="ia-analysis-list">
+                ${analiseTexto.map(t => `<li>${t}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+    
+    // 5. Salva o texto de compartilhamento globalmente
+    // (Vamos criar esta variável no próximo trecho)
+    window.iaPalpiteShareText = `🔮 *Palpites da I.A. para ${loteriaNome.toUpperCase()}*\n\n` +
+        `Analisei o banco de dados e as estratégias clássicas. Aqui estão os palpites:\n\n` +
+        `*Sugestões de Milhar (5):*\n${palpites.milhar.map(p => `\`${p.palpite}\` (${p.tipo})`).join('\n')}\n\n` +
+        `*Sugestões de Centena (5):*\n${palpites.centena.map(p => `\`${p.palpite}\` (${p.tipo})`).join('\n')}\n\n` +
+        `*Sugestões de Dezena (2):*\n${palpites.dezena.map(p => `\`${p.palpite}\` (${p.tipo})`).join('\n')}\n\n` +
+        `*Sugestões de Unidade (2):*\n${palpites.unidade.map(p => `\`${p.palpite}\` (${p.tipo})`).join('\n')}\n\n` +
+        `*--- Fonte da Análise ---*\n${analiseTexto.join('\n')}\n\n` +
+        `Boa sorte! 🍀`;
+
+    // 6. Exibe a área de resultados
+    hideLoadingIndicator();
+    document.getElementById('iaPalpiteForm').style.display = 'none';
+    document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
+    document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+}
+
+async function getPalpitesIA(loteria, posicaoPremio = 1) {
+    showLoadingIndicator(`I.A. está analisando os bichos mais atrasados...`);
+
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        hideLoadingIndicator();
+        showToast('Você precisa estar logado para consultar a I.A.', 'error');
+        checkAuth();
+        return [];
+    }
+
+    // 1. Cria um mapa para rastrear a data do último aparecimento de cada bicho
+    const ultimosVistos = new Map();
+
+    try {
+        // 2. Busca os últimos 1000 resultados (para garantir que temos todos os bichos)
+        //    para a loteria e prêmio específicos, ordenados do mais novo para o mais antigo.
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', loteria)
+            .where('posicao', '==', posicaoPremio)
+            .orderBy('data', 'desc')
+            .limit(1000) 
+            .get();
+
+        if (querySnapshot.empty) {
+            hideLoadingIndicator();
+            showToast(`I.A.: Nenhum dado histórico encontrado para 1º prêmio da ${loteria.toUpperCase()}.`, 'info', 4000);
+            return [];
+        }
+
+        // 3. Preenche o mapa. Como está ordenado (mais novo primeiro),
+        //    só registramos a data na PRIMEIRA vez que vemos o bicho.
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            const grupo = data.bichoGrupo;
+            
+            // Se ainda não vimos esse grupo, registramos a data (que é a mais recente)
+            if (grupo && !ultimosVistos.has(grupo)) {
+                ultimosVistos.set(grupo, data.data.toDate()); // Converte Timestamp do Firebase para Date
+            }
+        });
+
+        // 4. Mapeia todos os 25 bichos para descobrir o atraso
+        const dataMaisAntiga = new Date('2000-01-01'); // Uma data "default" para bichos nunca vistos
+        
+        const listaDeAtraso = tabelaDeGrupos.map(bicho => {
+            const dataUltimaVez = ultimosVistos.get(bicho.grupo);
+            return {
+                grupo: bicho.grupo,
+                animal: bicho.animal,
+                emoji: bicho.emoji,
+                dezenas: bicho.dezenas, // <-- CORREÇÃO IMPORTANTE (para o "Mix" funcionar)
+                data: dataUltimaVez || dataMaisAntiga 
+            };
+        });
+
+        // 5. Ordena a lista pela data, da MAIS ANTIGA para a MAIS NOVA.
+        listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
+
+        // 6. Retorna os 5 primeiros (os mais atrasados)
+        return listaDeAtraso.slice(0, 5);
+
+    } catch (error) {
+        hideLoadingIndicator();
+        console.error("Erro ao buscar palpites da I.A.:", error);
+        showToast('Erro ao analisar o banco de dados da I.A.', 'error');
+        return [];
+    }
+}
+
+/**
+ * (Placeholder) Função que o botão de compartilhar vai chamar
+ */
+function shareIAPalpites() {
+    if (!window.iaPalpiteShareText) {
+        showToast('Erro: Nenhum texto de palpite para compartilhar.', 'error');
+        return;
+    }
+
+    const encodedMessage = encodeURIComponent(window.iaPalpiteShareText);
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
+    window.open(whatsappUrl, '_blank');
+    showToast('Abrindo WhatsApp...', 'success');
+}
 
 // Abre o novo modal de atualização
 function showUpdateModal() {
@@ -6059,7 +6441,345 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
     // O finally não é mais necessário aqui, pois o botão é reabilitado nos fluxos de cancelamento/erro
 }
 
-// --- Fim das Funções ---
+async function getDezenasAtrasadasIA(loteria) {
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+         showToast('Você precisa estar logado para consultar a I.A.', 'error');
+         return [];
+    }
+
+    // 1. Cria um mapa para rastrear as 100 dezenas (00-99)
+    const ultimosVistos = new Map();
+    // Pré-popula o mapa com uma data muito antiga para todas as dezenas
+    const dataMaisAntiga = new Date('2000-01-01');
+    for (let i = 0; i < 100; i++) {
+        ultimosVistos.set(String(i).padStart(2, '0'), dataMaisAntiga);
+    }
+
+    try {
+        // 2. Busca os últimos 2500 resultados (1º ao 5º) da loteria.
+        // (500 sorteios * 5 prêmios = 2500 dezenas)
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', loteria)
+            .orderBy('data', 'desc')
+            .limit(2500)
+            .get();
+
+        if (querySnapshot.empty) {
+            showToast(`I.A.: Nenhum dado histórico encontrado para ${loteria.toUpperCase()}.`, 'info');
+            return [];
+        }
+
+        // 3. Atualiza o mapa com a data mais recente de cada dezena
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            const dezena = data.dezena; // Pega a dezena (ex: '34')
+            const dataSorteio = data.data.toDate();
+
+            // Se a data deste sorteio for MAIS RECENTE que a data que temos no mapa...
+            // (E o mapa ainda não tiver uma data mais nova)
+            if (dezena && dataSorteio > ultimosVistos.get(dezena)) {
+                ultimosVistos.set(dezena, dataSorteio);
+            }
+        });
+
+        // 4. Converte o mapa em uma lista de objetos
+        const listaDeAtraso = [];
+        ultimosVistos.forEach((data, dezena) => {
+            listaDeAtraso.push({
+                numero: dezena,
+                data: data
+            });
+        });
+
+        // 5. Ordena pela data (mais antiga primeiro)
+        listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
+
+        // 6. Retorna as 5 mais atrasadas
+        return listaDeAtraso.slice(0, 5);
+
+    } catch (error) {
+        console.error("Erro ao buscar dezenas atrasadas da I.A.:", error);
+        showToast('Erro ao analisar as dezenas no banco de dados.', 'error');
+        return [];
+    }
+}
+
+async function getCentenasAtrasadasIA(loteria) {
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) return [];
+
+    // 1. Cria um mapa para rastrear as 1000 centenas (000-999)
+    const ultimosVistos = new Map();
+    const dataMaisAntiga = new Date('2000-01-01');
+    // NOTA: Pré-popular 1000 centenas pode ser lento.
+    // Vamos popular dinamicamente apenas as que encontrarmos.
+
+    try {
+        // 2. Busca um volume grande de resultados
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', loteria)
+            .orderBy('data', 'desc')
+            .limit(5000) // 1000 sorteios * 5 prêmios
+            .get();
+
+        if (querySnapshot.empty) return [];
+
+        // 3. Preenche o mapa com a data mais recente de cada centena
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            const centena = data.centena; // Pega a centena (ex: '134')
+            const dataSorteio = data.data.toDate();
+
+            if (centena && !ultimosVistos.has(centena)) {
+                 ultimosVistos.set(centena, dataSorteio);
+            }
+        });
+
+        // 4. Adiciona centenas "nunca vistas"
+        for (let i = 0; i < 1000; i++) {
+            const centenaStr = String(i).padStart(3, '0');
+            if (!ultimosVistos.has(centenaStr)) {
+                ultimosVistos.set(centenaStr, dataMaisAntiga);
+            }
+        }
+        
+        // 5. Converte o mapa em lista e ordena
+        const listaDeAtraso = [];
+        ultimosVistos.forEach((data, centena) => {
+            listaDeAtraso.push({
+                numero: centena,
+                data: data
+            });
+        });
+
+        listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
+
+        // 6. Retorna as 5 mais atrasadas
+        return listaDeAtraso.slice(0, 5);
+
+    } catch (error) {
+        console.error("Erro ao buscar centenas atrasadas da I.A.:", error);
+        return [];
+    }
+}
+
+async function getUnidadesAtrasadasIA(loteria) {
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) return [];
+
+    // 1. Cria um mapa para rastrear as 10 unidades (0-9)
+    const ultimosVistos = new Map();
+    const dataMaisAntiga = new Date('2000-01-01');
+    for (let i = 0; i < 10; i++) {
+        ultimosVistos.set(String(i), dataMaisAntiga);
+    }
+
+    try {
+        // 2. Busca os últimos 500 resultados (1º ao 5º)
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', loteria)
+            .orderBy('data', 'desc')
+            .limit(500) // 100 sorteios * 5 prêmios = 500 unidades
+            .get();
+
+        if (querySnapshot.empty) return [];
+
+        // 3. Atualiza o mapa com a data mais recente de cada unidade
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            const dezena = data.dezena; // Pega a dezena (ex: '34')
+            const dataSorteio = data.data.toDate();
+
+            if (dezena && dezena.length === 2) {
+                const unidade = dezena[1]; // Pega o último dígito
+                if (dataSorteio > ultimosVistos.get(unidade)) {
+                    ultimosVistos.set(unidade, dataSorteio);
+                }
+            }
+        });
+
+        // 4. Converte o mapa em lista e ordena
+        const listaDeAtraso = [];
+        ultimosVistos.forEach((data, unidade) => {
+            listaDeAtraso.push({
+                numero: unidade,
+                data: data
+            });
+        });
+
+        listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
+
+        // 6. Retorna as 2 mais atrasadas
+        return listaDeAtraso.slice(0, 2);
+
+    } catch (error) {
+        console.error("Erro ao buscar unidades atrasadas da I.A.:", error);
+        return [];
+    }
+}
+
+async function getPuxadaDoDiaIA(loteria) {
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) return null;
+
+    try {
+        // 1. Busca o ÚLTIMO resultado (o mais recente) do 1º prêmio
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', loteria)
+            .where('posicao', '==', 1) // Apenas 1º prêmio
+            .orderBy('data', 'desc')
+            .limit(1)
+            .get();
+
+        if (querySnapshot.empty) return null;
+
+        const ultimoBichoData = querySnapshot.docs[0].data();
+        const ultimoGrupo = ultimoBichoData.bichoGrupo; // ex: '01' (Avestruz)
+
+        if (!ultimoGrupo || !puxadas[ultimoGrupo]) return null;
+
+        // 2. Pega a lista de grupos que ele puxa (ex: ['02', '08', '11', '17'])
+        const gruposPuxados = puxadas[ultimoGrupo];
+        
+        // 3. Sorteia UM grupo da lista de puxadas
+        const grupoPuxadoSorteado = gruposPuxados[Math.floor(Math.random() * gruposPuxados.length)];
+
+        // 4. Busca os dados dos dois bichos
+        const bichoQueSaiu = tabelaDeGrupos.find(b => b.grupo === ultimoGrupo);
+        const bichoPuxado = tabelaDeGrupos.find(b => b.grupo === grupoPuxadoSorteado);
+
+        if (!bichoQueSaiu || !bichoPuxado) return null;
+
+        return {
+            bichoSaiu: bichoQueSaiu,  // Objeto completo (com dezenas, emoji, etc.)
+            bichoPuxado: bichoPuxado // Objeto completo (com dezenas, emoji, etc.)
+        };
+
+    } catch (error) {
+        console.error("Erro ao buscar Puxada do Dia I.A.:", error);
+        return null;
+    }
+}
+
+function getPalpitesMisturadosIA(analise) {
+    const palpites = {
+        milhar: [],
+        centena: [],
+        dezena: [],
+        unidade: []
+    };
+    
+    const analiseTexto = []; // Para o texto de compartilhamento
+
+    // --- Estratégia 1: Bicho Mais Atrasado ---
+    if (analise.bichosAtrasados.length > 0) {
+        const bicho1 = analise.bichosAtrasados[0]; // Pega o 1º mais atrasado
+        const dezenas = bicho1.dezenas; // ex: ['89', '90', '91', '92']
+        
+        // Milhar: Fechamento (ex: 8990)
+        palpites.milhar.push({ palpite: `${dezenas[0]}${dezenas[1]}`, tipo: 'Atraso Bicho' });
+        // Dezena: A primeira dezena do bicho (ex: 89)
+        palpites.dezena.push({ palpite: dezenas[0], tipo: 'Bicho Atrasado' });
+        
+        analiseTexto.push(`📊 *Bicho Atrasado:* ${bicho1.emoji} ${bicho1.animal} (G${bicho1.grupo})`);
+    } else {
+        analiseTexto.push(`📊 *Bicho Atrasado:* (N/A)`);
+    }
+
+    // --- Estratégia 2: Bicho Nº 2 Atrasado ---
+    if (analise.bichosAtrasados.length > 1) {
+        const bicho2 = analise.bichosAtrasados[1]; // Pega o 2º mais atrasado
+        const dezenas = bicho2.dezenas;
+        // Centena: (ex: 334)
+        palpites.centena.push({ palpite: `${dezenas[0][0]}${dezenas[1]}`, tipo: 'Atraso Bicho 2' });
+    }
+
+    // --- Estratégia 3: Dezena Mais Atrasada ---
+    if (analise.dezenasAtrasadas.length > 0) {
+        const dezena1 = analise.dezenasAtrasadas[0].numero; // ex: '14'
+        // Milhar: Dobradinha (ex: 1414)
+        palpites.milhar.push({ palpite: `${dezena1}${dezena1}`, tipo: 'Atraso Dezena' });
+        // Dezena: A própria dezena (ex: 14)
+        palpites.dezena.push({ palpite: dezena1, tipo: 'A mais Atrasada' });
+        // Unidade: A unidade da dezena (ex: 4)
+        palpites.unidade.push({ palpite: dezena1[1], tipo: 'Da Dezena Atrasada' });
+        
+        analiseTexto.push(`📊 *Dezena Atrasada:* ${dezena1}`);
+    } else {
+        analiseTexto.push(`📊 *Dezena Atrasada:* (N/A)`);
+    }
+
+    // --- Estratégia 4: Dezena Nº 2 Atrasada ---
+    if (analise.dezenasAtrasadas.length > 1) {
+        const dezena2 = analise.dezenasAtrasadas[1].numero; // ex: '58'
+        // Centena: Invertida (ex: 858)
+        palpites.centena.push({ palpite: `${dezena2[1]}${dezena2}`, tipo: 'Atraso Dezena 2' });
+    }
+
+    // --- Estratégia 5: Centena Mais Atrasada ---
+    if (analise.centenasAtrasadas.length > 0) {
+        const centena1 = analise.centenasAtrasadas[0].numero; // ex: '115'
+        // Milhar: Aleatória com a centena (ex: 7115)
+        palpites.milhar.push({ palpite: `${Math.floor(Math.random() * 10)}${centena1}`, tipo: 'Atraso Centena' });
+        // Centena: A própria centena (ex: 115)
+        palpites.centena.push({ palpite: centena1, tipo: 'A mais Atrasada' });
+    }
+
+    // --- Estratégia 6: Unidade Mais Atrasada ---
+    if (analise.unidadesAtrasadas.length > 0) {
+        const unidade1 = analise.unidadesAtrasadas[0].numero; // ex: '7'
+        // Unidade: A própria unidade (ex: 7)
+        palpites.unidade.push({ palpite: unidade1, tipo: 'A mais Atrasada' });
+    }
+
+    // --- Estratégia 7: Data do Dia ---
+    if (analise.dataDoDia.length > 0) {
+        const dezenasData = analise.dataDoDia; // ex: ['06', '11', '25'] (Dia, Mês, Ano)
+        // Milhar: Dia + Ano (ex: 0625)
+        palpites.milhar.push({ palpite: `${dezenasData[0]}${dezenasData[2]}`, tipo: 'Data do Dia' });
+        // Centena: (ex: 011)
+        palpites.centena.push({ palpite: `0${dezenasData[1]}`, tipo: 'Data do Dia' });
+        
+        analiseTexto.push(`📊 *Data Base:* ${dezenasData[0]}/${dezenasData[1]}/${dezenasData[2]}`);
+    } else {
+        analiseTexto.push(`📊 *Data Base:* (N/A)`);
+    }
+
+    // --- Estratégia 8: Puxada do Dia ---
+    if (analise.puxada) {
+        const bichoPuxado = analise.puxada.bichoPuxado;
+        const dezenasPuxadas = bichoPuxado.dezenas; // ex: ['73', '74', '75', '76']
+        
+        // Milhar: Aleatória (ex: 4973)
+        palpites.milhar.push({ palpite: `${Math.floor(Math.random() * 90 + 10)}${dezenasPuxadas[0]}`, tipo: 'Puxada do Dia' });
+        // Centena: Aleatória (ex: 973)
+        palpites.centena.push({ palpite: `${Math.floor(Math.random() * 10)}${dezenasPuxadas[0]}`, tipo: 'Puxada do Dia' });
+        
+        const bSaiu = analise.puxada.bichoSaiu;
+        analiseTexto.push(`📊 *Puxada:* ${bSaiu.emoji} ${bSaiu.animal} (Saiu) puxa ${bichoPuxado.emoji} ${bichoPuxado.animal}`);
+    } else {
+        analiseTexto.push(`📊 *Puxada:* (N/A)`);
+    }
+
+    // --- Limpeza Final ---
+    // Garante que temos a quantidade exata de palpites, preenchendo com aleatórios se faltar
+    const preencherPalpites = (tipo, alvo, len) => {
+        while (palpites[tipo].length < alvo) {
+            let num = String(Math.floor(Math.random() * Math.pow(10, len))).padStart(len, '0');
+            palpites[tipo].push({ palpite: num, tipo: 'Aleatório' });
+        }
+        // Garante que não tenhamos mais do que o alvo
+        palpites[tipo] = palpites[tipo].slice(0, alvo);
+    };
+
+    preencherPalpites('milhar', 5, 4);
+    preencherPalpites('centena', 5, 3);
+    preencherPalpites('dezena', 2, 2);
+    preencherPalpites('unidade', 2, 1);
+
+    return { palpites, analiseTexto };
+}
 
 const puxadas = {
     '01': ['02', '08', '11', '17'], // Avestruz puxa Águia, Camelo, Cavalo, Macaco
