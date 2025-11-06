@@ -5347,14 +5347,14 @@ async function generateIAPalpites() {
     
     // 1. Roda todos os motores de análise em paralelo
     const [
-        bichosAtrasados,    // Agora conterá o Top 5
+        bichosAtrasados,    // Top 5 Frios
         bichosFrequentes,   // Top 5 Quentes
         dezenasAtrasadas,
         centenasAtrasadas,
         unidadesAtrasadas,
         puxada
     ] = await Promise.all([
-        getPalpitesIA(loteria, 1),        // Motor 1 (Bichos 1º Prêmio) - AGORA RETORNA 5
+        getPalpitesIA(loteria, 1),        // Motor 1 (Bichos 1º Prêmio)
         getBichosFrequentesIA(loteria, 7), // Motor Quente (Últimos 7 dias)
         getDezenasAtrasadasIA(loteria), // Motor 2 (Dezenas 1º-5º)
         getCentenasAtrasadasIA(loteria),// Motor 3 (Centenas 1º-5º)
@@ -5366,8 +5366,8 @@ async function generateIAPalpites() {
 
     // 2. Agrupa os resultados das análises
     const analiseCompleta = {
-        bichosAtrasados,    // Top 5
-        bichosFrequentes, // Top 5
+        bichosAtrasados,
+        bichosFrequentes,
         dezenasAtrasadas,
         centenasAtrasadas,
         unidadesAtrasadas,
@@ -5385,13 +5385,13 @@ async function generateIAPalpites() {
         return lista.map(p => `<li title="Base: ${p.tipo}">${p.palpite}</li>`).join('');
     };
     
-    // Esta função agora vai renderizar 5 itens
     const criarTopBichosHTML = (lista) => {
         return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo})</li>`).join('');
     };
 
+    // --- MUDANÇA AQUI --- (Removido o "- ${b.count}x")
     const criarTop5QuentesHTML = (lista) => {
-        return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo}) - ${b.count}x</li>`).join('');
+        return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo})</li>`).join('');
     };
 
     resultsOutput.innerHTML = `
@@ -5451,13 +5451,13 @@ async function generateIAPalpites() {
         return lista.map(p => `• \`${p.palpite}\` _(Base: ${p.tipo})_`).join('\n');
     };
     
-    // Renomeado para top5BichosTexto
     const top5BichosTexto = analiseCompleta.bichosAtrasados.map((b, index) => 
         `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo})`
     ).join('\n');
 
+    // --- MUDANÇA AQUI --- (Removido o "- *${b.count}x*")
     const top5BichosQuentesTexto = analiseCompleta.bichosFrequentes.map((b, index) => 
-        `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo}) - *${b.count}x*`
+        `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo})`
     ).join('\n');
 
     // Monta a mensagem final
@@ -5473,8 +5473,8 @@ async function generateIAPalpites() {
         `🎯 *Sugestões de Unidade (2)*\n${formatarListaWpp(palpites.unidade)}\n\n` +
         
         `-----------------------------------\n` +
-        `❄️ *Top 5 Frios (Atrasados 1º Prêmio)*\n` + // <-- TÍTULO ATUALIZADO
-        `${top5BichosTexto}\n\n` + // <-- Variável renomeada
+        `❄️ *Top 5 Frios (Atrasados 1º Prêmio)*\n` +
+        `${top5BichosTexto}\n\n` +
         
         `🔥 *Top 5 Quentes (Frequentes 1º-5º)*\n` +
         `${top5BichosQuentesTexto}\n\n` +
