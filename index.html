@@ -14414,7 +14414,7 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         const dadosDosAtrasados = extrairDadosDoHTML(htmlTabela);
         if (dadosDosAtrasados.length === 0) {
             showToast("Não foi possível extrair os dados. O site de origem pode ter mudado.", "error");
-            // Mesmo se der erro aqui, o 'finally' vai limpar o botão
+            // (O 'finally' vai cuidar de resetar o botão)
         } else {
             // Se deu certo, formata a mensagem e mostra o popup
             let textoMensagem = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n*GRUPO APP VIP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
@@ -14448,9 +14448,11 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         console.error("Falha na operação:", error);
         showToast(`Falha na operação: ${error.message}`, "error", 7000); 
     } finally {
+        //
         // *** ESTA É A CORREÇÃO ***
-        // Este bloco 'finally' é executado SEMPRE
+        // Este bloco 'finally' é executado SEMPRE (após o 'try' ou 'catch')
         // e restaura o botão ao seu estado original.
+        //
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
     }
