@@ -4048,6 +4048,22 @@ body.dark-mode .ia-analysis-list {
     }
 }
 
+/* --- Estilos para a Tag do Método de Geração no Histórico --- */
+.history-method-tag {
+    display: inline-block;
+    font-size: 1.1rem;      /* Tamanho do ícone/emoji */
+    margin-right: 8px;      /* Espaço entre o ícone e o código */
+    padding: 2px 4px;
+    border-radius: 4px;
+    background-color: rgba(0,0,0,0.08);
+    line-height: 1;         /* Garante que não quebre o alinhamento */
+    vertical-align: middle; /* Alinha o ícone com o texto */
+}
+
+body.dark-mode .history-method-tag {
+    background-color: rgba(255,255,255,0.1);
+}
+
 </style>
 
 </head>
@@ -12754,20 +12770,37 @@ async function generateSelectedNumbers() {
     }
 
     const hasAnyResult = typeKeys.some(key => finalResults[key] && finalResults[key].length > 0);
-    if (hasAnyResult) {
-        const newCode = generateReceiptCode(); 
-        lastGeneratedCode = newCode; 
-        const historyEntry = {
-            id: Date.now(),
-            code: newCode,
-            date: new Date().toISOString(),
-            results: { 
-                milhar: finalResults.milhar || [],
-                centena: finalResults.centena || [],
-                dezena: finalResults.dezena || []
-            }
-        };
-        getData('generationHistory').then(history => {
+        if (hasAnyResult) {
+            const newCode = generateReceiptCode(); 
+            lastGeneratedCode = newCode; 
+
+            // --- INÍCIO DA MODIFICAÇÃO ---
+            
+            // Captura o método 'offline' (puxada, data, soma, etc.)
+            const checkedOfflineMethodRadio = document.querySelector('input[name="generationMethod"]:checked');
+            const offlineMethod = checkedOfflineMethodRadio ? checkedOfflineMethodRadio.value : 'padrao';
+
+            // Monta um objeto com todas as informações do método
+            const generationMethodInfo = {
+                mode: mode, // 'offline', 'bichos', 'ia_bichos'
+                bichoMethod: (mode === 'bichos') ? bichoMilharMethod : null,
+                offlineMethod: (mode === 'offline') ? offlineMethod : null
+            };
+            
+            const historyEntry = {
+                id: Date.now(),
+                code: newCode,
+                date: new Date().toISOString(),
+                method: generationMethodInfo, // <-- NOVO DADO SALVO AQUI
+                results: { 
+                    milhar: finalResults.milhar || [],
+                    centena: finalResults.centena || [],
+                    dezena: finalResults.dezena || []
+                }
+            };
+            // --- FIM DA MODIFICAÇÃO ---
+
+            getData('generationHistory').then(history => {
             const updatedHistory = history || [];
             updatedHistory.unshift(historyEntry);
             saveData('generationHistory', updatedHistory.slice(0, 50));
@@ -13112,15 +13145,74 @@ async function renderIntegratedHistory() {
         const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.date));
         const codeToShow = item.code || String(item.id).slice(-6);
 
+        // --- INÍCIO DA MODIFICAÇÃO ---
+        let methodIcon = '🎲';
+        let methodText = 'Aleatório';
+
+        if (item.method) { // Verifica se a informação existe
+            switch (item.method.mode) {
+                case 'ia_bichos':
+                    methodIcon = '🔮';
+                    methodText = 'I.A. Bichos';
+                    break;
+                case 'bichos':
+                    switch (item.method.bichoMethod) {
+                        case 'fechamento_mc':
+                            methodIcon = '🔒';
+                            methodText = 'Fechamento M-C';
+                            break;
+                        case 'cercar_completo':
+                            methodIcon = '🎯';
+                            methodText = 'Cercar Bicho';
+                            break;
+                        default: // 'padrao'
+                            methodIcon = '🐾';
+                            methodText = 'Bichos (Padrão)';
+                    }
+                    break;
+                case 'offline':
+                default:
+                    switch (item.method.offlineMethod) {
+                        case 'puxada':
+                            methodIcon = '⛓️'; // Emoji de corrente
+                            methodText = 'Puxada';
+                            break;
+                        case 'data':
+                            methodIcon = '📅';
+                            methodText = 'Data do Dia';
+                            break;
+                        case 'soma':
+                            methodIcon = '➕';
+                            methodText = 'Soma';
+                            break;
+                        case 'cruz':
+                            methodIcon = '✝️';
+                            methodText = 'Cruz do Dia';
+                            break;
+                        default: // 'padrao'
+                            methodIcon = '🎲';
+                            methodText = 'Aleatório';
+                    }
+            }
+        }
+        
+        // Cria o elemento HTML para o ícone e o texto
+        const methodTag = `<span class="history-method-tag" title="${methodText}">
+                            ${methodIcon}
+                          </span>`;
+        // --- FIM DA MODIFICAÇÃO ---
+
         let contentHTML = '';
         if (item.results.milhar.length > 0) contentHTML += `<strong>M:</strong> ${item.results.milhar.join(' ')}<br>`;
         if (item.results.centena.length > 0) contentHTML += `<strong>C:</strong> ${item.results.centena.join(' ')}<br>`;
         if (item.results.dezena.length > 0) contentHTML += `<strong>D:</strong> ${item.results.dezena.join(' ')}`;
 
-        // O HTML abaixo foi modificado para incluir o novo botão verde
+        // O HTML abaixo foi modificado para incluir o methodTag
         itemElement.innerHTML = `
             <div class="saved-item-header" role="button" tabindex="0">
-                <div class="saved-item-title" style="font-size: 0.85rem;"><strong>[Cód: ${codeToShow}]</strong> ${formattedDate}</div>
+                <div class="saved-item-title" style="font-size: 0.85rem;">
+                    ${methodTag} <strong>[Cód: ${codeToShow}]</strong> ${formattedDate}
+                </div>
                 <div class="header-actions">
                     <button class="header-btn resend-btn" title="Gerar Novo Recibo e Enviar" style="background-color: #25D366; color: white;">▶️</button>
                     <button class="header-btn copy-btn" title="Copiar">📋</button>
