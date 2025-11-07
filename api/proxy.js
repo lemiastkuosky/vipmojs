@@ -1,6 +1,6 @@
 //
-// CONTEÚDO CORRIGIDO (TENTATIVA 4) PARA /api/proxy.js
-// Baseado no feedback direto do usuário.
+// CONTEÚDO CORRIGIDO (TENTATIVA 5) PARA /api/proxy.js
+// Lógica final: Datas passadas só funcionam para a Loteria Federal.
 //
 
 import fetch from 'node-fetch';
@@ -29,12 +29,12 @@ export default async function handler(request, response) {
         let url_alvo = '';
         let options = {
             method: 'GET',
-            headers: baseHeaders, // Começa com o disfarce base
+            headers: baseHeaders,
         };
 
         if (tipo === 'atrasados') {
             // --- OPÇÕES PARA REQUISIÇÃO 'ATRASADOS' (POST) ---
-            // (Esta seção parece estar correta, mantida como está)
+            // (Esta seção está correta, mantida como está)
             const loterias_permitidas = ['fd', 'rj', 'lk', 'ln', 'ba'];
             if (!loterias_permitidas.includes(loteria)) {
                 response.status(400).send('Erro: Loteria inválida para atrasados.');
@@ -64,7 +64,7 @@ export default async function handler(request, response) {
             // --- OPÇÕES PARA REQUISIÇÃO 'RESULTADOS' (GET) ---
             
             // [CORREÇÃO 1: mapa_urls atualizado conforme seu feedback]
-            // Removi a barra final de propósito para evitar barras duplas (//)
+            // Removi a barra final para controlar manualmente.
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/para-todos',
                 'lk': 'https://bichocerto.com/resultados/lk/look',
@@ -80,25 +80,24 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
-            // --- [CORREÇÃO 2: Lógica de data com /DATA/ para TODOS] ---
-            if (data) {
-                if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-                    
-                    // A nova lógica: TODAS as loterias que pedem data
-                    // recebem a data como parte do caminho /DATA/
+            // --- [CORREÇÃO 2: Lógica de data (SÓ FUNCIONA PARA FEDERAL)] ---
+            if (data && /^\d{4}-\d{2}-\d{2}$/.test(data)) {
+                
+                if (loteria === 'fd') {
+                    // Federal é a ÚNICA que aceita data no caminho
                     url_alvo = url_alvo + '/' + data + '/';
-
                 } else {
-                    response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
-                    return;
+                    // Para RJ, LK, LN, BA: Ignora a data e busca a página principal (de hoje)
+                    // Adiciona a barra final que removemos do mapa.
+                    url_alvo = url_alvo + '/';
                 }
+
             } else {
-                // Lógica 'de-hoje' (só para Federal)
+                // Se não houver data (busca de hoje)
                 if (loteria === 'fd') {
                     url_alvo = url_alvo + '/de-hoje/';
                 } else {
-                    // Para as outras, a URL base já é a de "hoje",
-                    // então adicionamos a barra final que removemos do mapa.
+                    // Adiciona a barra final para RJ, LK, LN, BA
                     url_alvo = url_alvo + '/';
                 }
             }
