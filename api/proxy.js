@@ -1,14 +1,14 @@
 //
-// CONTEÚDO CORRIGIDO (TENTATIVA 5 / VERSÃO 5.0)
-// Lógica final: Datas passadas só funcionam para a Loteria Federal.
-// INCLUI UM VERIFICADOR DE VERSÃO: ?tipo=versao
+// CONTEÚDO CORRIGIDO (VERSÃO 6.0)
+// Lógica final: O proxy NUNCA mais tentará buscar datas passadas.
+// Ele só busca "hoje" (para RJ, LK, etc.) ou "/de-hoje/" (para Federal).
 //
 
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
 
 // --- ADICIONE ESTA LINHA ---
-const PROXY_VERSION = "V5.0";
+const PROXY_VERSION = "V6.0";
 
 // --- CABEÇALHOS PADRÃO (DISFARCE) ---
 const baseHeaders = {
@@ -33,16 +33,12 @@ export default async function handler(request, response) {
     try {
         const { tipo, loteria, data } = request.query;
 
-        // --- ADICIONE ESTE BLOCO ---
         // 2. Verificador de Versão
-        // Se a URL for /api/proxy?tipo=versao, ele para aqui.
         if (tipo === 'versao') {
             console.log(`[Proxy ${PROXY_VERSION}] Verificação de versão solicitada.`);
-            // Retorna a versão como texto simples
             response.status(200).send(`PROXY_VERSION_${PROXY_VERSION}`);
             return;
         }
-        // --- FIM DO BLOCO ADICIONADO ---
 
         let url_alvo = '';
         let options = {
@@ -96,26 +92,26 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
-            // [LÓGICA DA DATA CORRIGIDA (SÓ FUNCIONA PARA FD)]
-            if (data && /^\d{4}-\d{2}-\d{2}$/.test(data)) {
+            // --- [CORREÇÃO FINAL (V6.0): Lógica de data] ---
+            // Verifica se a data foi fornecida E se a loteria é a Federal
+            if (data && /^\d{4}-\d{2}-\d{2}$/.test(data) && loteria === 'fd') {
                 
-                if (loteria === 'fd') {
-                    // Federal é a ÚNICA que aceita data no caminho
-                    url_alvo = url_alvo + '/' + data + '/';
-                } else {
-                    // Para RJ, LK, LN, BA: Ignora a data e busca a página principal (de hoje)
-                    url_alvo = url_alvo + '/';
-                }
+                // Federal é a ÚNICA que aceita data no caminho
+                url_alvo = url_alvo + '/' + data + '/';
 
             } else {
-                // Se não houver data (busca de hoje)
+                // Para todas as outras loterias (RJ, LK, LN, BA)
+                // OU se a loteria for Federal mas a data não foi fornecida (busca de hoje)
+                
                 if (loteria === 'fd') {
+                    // Se for Federal (sem data ou com data ignorada), usa /de-hoje/
                     url_alvo = url_alvo + '/de-hoje/';
                 } else {
-                    // Adiciona a barra final para RJ, LK, LN, BA
+                    // Para RJ, LK, LN, BA (com ou sem data), sempre usa a página principal
                     url_alvo = url_alvo + '/';
                 }
             }
+            // --- FIM DA CORREÇÃO FINAL ---
             
             options.method = 'GET';
             options.headers = {
@@ -138,6 +134,14 @@ export default async function handler(request, response) {
         const fetchResponse = await fetch(url_alvo, options);
 
         if (!fetchResponse.ok) {
+            // Se o código for 404 (Não Encontrado), envia uma mensagem amigável
+            if (fetchResponse.status === 404) {
+                 console.warn(`[Proxy ${PROXY_VERSION}] URL não encontrada (404): ${url_alvo}. (Isso é normal se não houver sorteio da Federal)`);
+                 // Retorna um HTML "vazio" para o app não quebrar
+                 response.status(200).send('<html><head><title>Sem Resultados</title></head><body>Nenhum resultado encontrado.</body></html>');
+                 return;
+            }
+            
             console.error(`[Proxy ${PROXY_VERSION}] Erro ao buscar ${url_alvo}. Status: ${fetchResponse.status}`);
             response.status(502).send(`[Proxy ${PROXY_VERSION}] Erro ao buscar conteudo da URL: ${url_alvo}. Código: ${fetchResponse.status}`);
             return;
