@@ -4000,6 +4000,53 @@ body.dark-mode .ia-analysis-list {
 .ia-analysis-list li {
     margin-bottom: 5px;
 }
+/* ==================================================================== */
+/* === NOVO LAYOUT EM GRADE FIXA PARA SELEÇÃO DE BICHOS (CELULAR) === */
+/* ==================================================================== */
+
+/* 1. Estilos para a nova estrutura de texto dentro de cada "botão" */
+.bicho-grid-item {
+    display: flex;
+    flex-direction: column; /* Coloca o nome embaixo do número/emoji */
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.bicho-number {
+    /* Tamanho da fonte do número (Ex: 01 🦩) */
+    font-size: 0.9rem; /* Reduzido de 1rem */
+    font-weight: bold;
+}
+
+.bicho-name-grid {
+    /* Tamanho da fonte do nome (Ex: Avestruz) */
+    font-size: 0.7rem; /* Reduzido de 0.8rem */
+    margin-top: 1px; /* Reduzido de 2px */
+    color: #aaa;
+}
+
+/* 2. Regra principal para o layout em grade no celular */
+@media (max-width: 768px) {
+    #bichosSelectorContainer {
+        /* A mágica está aqui: grade fixa de 5 colunas */
+        grid-template-columns: repeat(5, 1fr); /* <-- ALTERADO DE 3 PARA 5 */
+        gap: 4px; /* Espaçamento menor entre os itens (reduzido de 6px) */
+        padding: 8px; /* Padding menor (reduzido de 10px) */
+    }
+
+    #bichosSelectorContainer label {
+        padding: 13px 13px; /* Padding interno reduzido (de 10px 5px) */
+        font-size: 1rem;  /* Mantido, pois os itens internos já diminuíram */
+        border-radius: 6px; /* Borda um pouco menor (reduzido de 8px) */
+        justify-content: center; /* Centraliza o conteúdo do label */
+    }
+
+    /* Ajuste de cor para o nome do bicho no modo claro */
+    body:not(.dark-mode) .bicho-name-grid {
+        color: #6c757d;
+    }
+}
 
 </style>
 
@@ -8884,15 +8931,17 @@ function generateReceiptText() {
                     if ((type === 'milhar' && num.length >= 4) ||
                         (type === 'centena' && num.length === 3) ||
                         (type === 'dezena' && num.length >= 2)) {
-                         // Pega a parte relevante do número para o tipo atual
-                         let relevantNum = num;
-                         if(type === 'centena' && num.length > 3) relevantNum = getCentenaPart(num);
-                         if(type === 'dezena' && num.length > 2) relevantNum = getDezenaPart(num);
+                        let relevantNum = num;
+                         
+                         // Esta lógica estava confusa e não era necessária daquela forma.
+                         // A lógica correta é: se o 'type' é 'milhar', só nos importa a milhar.
+                         // Se o 'type' é 'centena', só nos importa a centena, etc.
+                         // O 'relevantNum' já é o número correto (seja milhar, centena ou dezena)
+                         // vindo do loop principal.
 
-                         // Evita adicionar duplicatas se já foi adicionado por um tipo mais específico
-                         if(!bichoDetails[bichoData.animal][type].includes(relevantNum)) {
-                            bichoDetails[bichoData.animal][type].push(relevantNum);
-                         }
+                         // A correção é simplesmente remover o 'if' que checava duplicatas
+                         // e apenas adicionar o número.
+                         bichoDetails[bichoData.animal][type].push(relevantNum);
                     }
                 }
             });
