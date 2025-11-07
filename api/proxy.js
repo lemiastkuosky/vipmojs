@@ -63,12 +63,12 @@ export default async function handler(request, response) {
         } else if (tipo === 'resultados') {
             // --- OPÇÕES PARA REQUISIÇÃO 'RESULTADOS' (GET) ---
             
-            // --- [CORREÇÃO 1] URLs Corrigidas ---
+            // --- URLs CORRIGIDAS (FINAL) ---
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/para-todos',
-                'lk': 'https://bichocerto.com/resultados/go/look', // Corrigido de /lk/ para /go/
+                'lk': 'https://bichocerto.com/resultados/lk/look', // Correto é /go/
                 'fd': 'https://bichocerto.com/resultados/fd/loteria-federal/',
-                'ln': 'https://bichocerto.com/resultados/ln/', // Corrigido (removido /loteria-nacional)
+                'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional', // Correto é /ln/
                 'ba': 'https://bichocerto.com/resultados/ba/para-todos',
             };
             
@@ -79,24 +79,14 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
-            // --- [CORREÇÃO 2] Lógica de data (hífen) ---
             if (data) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-                    
-                    if (loteria === 'fd') {
-                        // Federal usa /data/
-                        url_alvo = url_alvo + data + '/';
-                    } else {
-                        // As outras (RJ, LK, LN, BA) usam -data/
-                        url_alvo = url_alvo + '-' + data + '/'; 
-                    }
-
+                    url_alvo = url_alvo + data + '/';
                 } else {
                     response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
                     return;
                 }
             } else {
-                // Lógica 'de-hoje' (só para Federal)
                 if (loteria === 'fd') {
                     url_alvo = url_alvo + 'de-hoje/';
                 }
