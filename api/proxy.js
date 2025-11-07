@@ -1,8 +1,3 @@
-//
-// CONTEÚDO CORRIGIDO PARA /api/proxy.js
-// (Disfarce de navegador completo e URLs corretas)
-//
-
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
 
@@ -63,12 +58,12 @@ export default async function handler(request, response) {
         } else if (tipo === 'resultados') {
             // --- OPÇÕES PARA REQUISIÇÃO 'RESULTADOS' (GET) ---
             
-            // --- URLs CORRIGIDAS (FINAL) ---
+            // [CORREÇÃO 1: Caminhos corretos para LK e LN]
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/para-todos',
-                'lk': 'https://bichocerto.com/resultados/lk/look', // Correto é /go/
+                'lk': 'https://bichocerto.com/resultados/go/look',
                 'fd': 'https://bichocerto.com/resultados/fd/loteria-federal/',
-                'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional', // Correto é /ln/
+                'ln': 'https://bichocerto.com/resultados/ln/',
                 'ba': 'https://bichocerto.com/resultados/ba/para-todos',
             };
             
@@ -79,18 +74,30 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
+            // --- [CORREÇÃO 3: Lógica de data com query parameter] ---
             if (data) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-                    url_alvo = url_alvo + data + '/';
+                    
+                    if (loteria === 'fd') {
+                        // Federal usa /data/ no caminho (path)
+                        url_alvo = url_alvo + data + '/';
+                    } else {
+                        // As outras usam ?data=... (query parameter)
+                        url_alvo = url_alvo + '/?data=' + data; 
+                    }
+
                 } else {
                     response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
                     return;
                 }
             } else {
+                // Lógica 'de-hoje' (só para Federal)
                 if (loteria === 'fd') {
                     url_alvo = url_alvo + 'de-hoje/';
                 }
+                // Para as outras, a URL base já é a de "hoje", não precisa adicionar nada.
             }
+            // --- FIM DA CORREÇÃO 3 ---
             
             options.method = 'GET';
             // Cabeçalhos específicos para uma navegação (GET)
