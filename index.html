@@ -14337,30 +14337,30 @@ function showAtrasadosRealTimeModal() {
 function closeAtrasadosRealTimeModal() {
     document.getElementById('atrasadosRealTimeModal').classList.remove('active');
     
-    // --- LÓGICA DE RESET CORRIGIDA ---
+    // --- LÓGICA DE RESET (para garantir) ---
     const atrasadosButtons = document.querySelectorAll('#atrasadosRealTimeModal .btn-share');
     
     atrasadosButtons.forEach(botao => {
-        botao.disabled = false;
-        
-        // Usamos o 'data-nome' para decidir qual texto restaurar
-        const nomeLoteria = botao.dataset.nome; 
-        
-        if (nomeLoteria === 'Federal') {
-            botao.innerHTML = 'Atrasados LOTERIA FEDERAL';
-        } else if (nomeLoteria === 'PT Rio') {
-            botao.innerHTML = 'Atrasados RIO DE JANEIRO';
-        } else if (nomeLoteria === 'Look Goiás') {
-            botao.innerHTML = 'Atrasados LOOK GOIÁS';
-        } else if (nomeLoteria === 'Loteria Nacional') {
-            botao.innerHTML = 'Atrasados NACIONAL';
-        } else if (nomeLoteria === 'PT Bahia') {
-            botao.innerHTML = 'Atrasados BAHIA';
+        // Só mexe no botão se ele ainda estiver mostrando "Buscando..."
+        if (botao.innerHTML === 'Buscando...') {
+            botao.disabled = false;
+            
+            // Restaura o texto original com base no data-nome
+            const nomeLoteria = botao.dataset.nome; 
+            
+            if (nomeLoteria === 'Federal') {
+                botao.innerHTML = 'Atrasados LOTERIA FEDERAL';
+            } else if (nomeLoteria === 'PT Rio') {
+                botao.innerHTML = 'Atrasados RIO DE JANEIRO';
+            } else if (nomeLoteria === 'Look Goiás') {
+                botao.innerHTML = 'Atrasados LOOK GOIÁS';
+            } else if (nomeLoteria === 'Loteria Nacional') {
+                botao.innerHTML = 'Atrasados NACIONAL';
+            } else if (nomeLoteria === 'PT Bahia') {
+                botao.innerHTML = 'Atrasados BAHIA';
+            }
         }
-        // (Se nenhum 'data-nome' bater, ele mantém o texto 'Buscando...',
-        // mas com base no seu HTML, todos os 5 botões serão corrigidos)
     });
-    // --- FIM DA LÓGICA DE RESET ---
 }
 
 function extrairDadosDoHTML(htmlString) {
@@ -14416,7 +14416,7 @@ function extrairDadosDoHTML(htmlString) {
 // 1. SUBSTITUA A FUNÇÃO 'gerarLinkWhatsapp' PELA VERSÃO ABAIXO:
 //
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
-    // *** CORREÇÃO AQUI: Captura o texto original ANTES de qualquer mudança ***
+    // *** CORREÇÃO 1: Captura o texto original ANTES de qualquer mudança ***
     const textoOriginal = botao.innerHTML; 
     
     botao.disabled = true;
@@ -14425,7 +14425,7 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     const urlProxy = '/api/proxy'; 
 
     try {
-        // O resto da função (bloco 'try') permanece exatamente o mesmo
+        // (O bloco 'try' inteiro permanece o mesmo, buscando os dados)
         const response = await fetch(`${urlProxy}?loteria=${loteria}&tipo=atrasados`);
         if (!response.ok) {
              let errorDetails = await response.text();
@@ -14473,9 +14473,7 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         console.error("Falha na operação:", error);
         showToast(`Falha na operação: ${error.message}`, "error", 7000); 
     } finally {
-        // *** CORREÇÃO AQUI ***
-        // Agora 'textoOriginal' tem o valor correto (ex: "Atrasados LOTERIA FEDERAL")
-        // e irá restaurar o botão corretamente.
+        // *** CORREÇÃO 2: O 'finally' agora restaura o texto original correto ***
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
     }
