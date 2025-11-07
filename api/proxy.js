@@ -1,7 +1,7 @@
 //
 // CONTEÚDO CORRIGIDO (VERSÃO 6.0)
-// Lógica final: O proxy NUNCA mais tentará buscar datas passadas.
-// Ele só busca "hoje" (para RJ, LK, etc.) ou "/de-hoje/" (para Federal).
+// Lógica final: O proxy agora VERIFICA o dia da semana
+// antes de buscar resultados passados da Federal.
 //
 
 import fetch from 'node-fetch';
@@ -13,7 +13,7 @@ const PROXY_VERSION = "V6.0";
 // --- CABEÇALHOS PADRÃO (DISFARCE) ---
 const baseHeaders = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
-    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q:0.8,en;q=0.7',
 };
 
 export default async function handler(request, response) {
@@ -27,7 +27,6 @@ export default async function handler(request, response) {
         return;
     }
 
-    // Adiciona a versão aos logs do servidor
     console.log(`[Proxy ${PROXY_VERSION}] Recebida requisição...`);
 
     try {
@@ -91,27 +90,53 @@ export default async function handler(request, response) {
             }
             
             url_alvo = mapa_urls[loteria];
+            let deveBuscar = true; // Flag para controlar a busca
 
-            // --- [CORREÇÃO FINAL (V6.0): Lógica de data] ---
-            // Verifica se a data foi fornecida E se a loteria é a Federal
-            if (data && /^\d{4}-\d{2}-\d{2}$/.test(data) && loteria === 'fd') {
-                
-                // Federal é a ÚNICA que aceita data no caminho
-                url_alvo = url_alvo + '/' + data + '/';
-
-            } else {
-                // Para todas as outras loterias (RJ, LK, LN, BA)
-                // OU se a loteria for Federal mas a data não foi fornecida (busca de hoje)
+            // --- [CORREÇÃO FINAL (V6.0): Lógica de data INTELIGENTE] ---
+            if (data && /^\d{4}-\d{2}-\d{2}$/.test(data)) {
                 
                 if (loteria === 'fd') {
-                    // Se for Federal (sem data ou com data ignorada), usa /de-hoje/
+                    // Se for Federal, vamos verificar o dia da semana
+                    // NOTA: O fuso horário do servidor Vercel é UTC (0). 
+                    // Precisamos ajustar para o fuso de Brasília (-3)
+                    const [ano, mes, dia] = data.split('-').map(Number);
+                    // Cria a data em UTC e ajusta para -3 (Brasília)
+                    const dataSorteio = new Date(Date.UTC(ano, mes - 1, dia, 12, 0, 0)); // Meio-dia UTC
+                    
+                    // getUTCDay() 0=Domingo, 3=Quarta, 6=Sábado
+                    const diaDaSemana = dataSorteio.getUTCDay();
+
+                    if (diaDaSemana === 3 || diaDaSemana === 6) {
+                        // É Quarta ou Sábado, busca a data
+                        url_alvo = url_alvo + '/' + data + '/';
+                    } else {
+                        // Não é dia de Federal, nem tenta buscar
+                        deveBuscar = false;
+                        console.log(`[Proxy ${PROXY_VERSION}] Ignorando busca da Federal para ${data} (Não é Quarta/Sábado).`);
+                    }
+
+                } else {
+                    // Para RJ, LK, LN, BA: Ignora a data e busca a página principal (de hoje)
+                    url_alvo = url_alvo + '/';
+                }
+
+            } else {
+                // Se não houver data (busca de hoje)
+                if (loteria === 'fd') {
                     url_alvo = url_alvo + '/de-hoje/';
                 } else {
-                    // Para RJ, LK, LN, BA (com ou sem data), sempre usa a página principal
+                    // Adiciona a barra final para RJ, LK, LN, BA
                     url_alvo = url_alvo + '/';
                 }
             }
             // --- FIM DA CORREÇÃO FINAL ---
+
+            // Se a flag 'deveBuscar' for falsa (ex: Federal num dia errado),
+            // pulamos a busca e retornamos um HTML vazio.
+            if (!deveBuscar) {
+                response.status(200).send('<html><head><title>Sem Sorteio</title></head><body>Nenhum sorteio programado para este dia.</body></html>');
+                return;
+            }
             
             options.method = 'GET';
             options.headers = {
@@ -136,7 +161,7 @@ export default async function handler(request, response) {
         if (!fetchResponse.ok) {
             // Se o código for 404 (Não Encontrado), envia uma mensagem amigável
             if (fetchResponse.status === 404) {
-                 console.warn(`[Proxy ${PROXY_VERSION}] URL não encontrada (404): ${url_alvo}. (Isso é normal se não houver sorteio da Federal)`);
+                 console.warn(`[Proxy ${PROXY_VERSION}] URL não encontrada (404): ${url_alvo}.`);
                  // Retorna um HTML "vazio" para o app não quebrar
                  response.status(200).send('<html><head><title>Sem Resultados</title></head><body>Nenhum resultado encontrado.</body></html>');
                  return;
