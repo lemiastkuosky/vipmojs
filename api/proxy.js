@@ -1,3 +1,8 @@
+//
+// CONTEÚDO CORRIGIDO (TENTATIVA 4) PARA /api/proxy.js
+// Baseado no feedback direto do usuário.
+//
+
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
 
@@ -29,6 +34,7 @@ export default async function handler(request, response) {
 
         if (tipo === 'atrasados') {
             // --- OPÇÕES PARA REQUISIÇÃO 'ATRASADOS' (POST) ---
+            // (Esta seção parece estar correta, mantida como está)
             const loterias_permitidas = ['fd', 'rj', 'lk', 'ln', 'ba'];
             if (!loterias_permitidas.includes(loteria)) {
                 response.status(400).send('Erro: Loteria inválida para atrasados.');
@@ -38,7 +44,6 @@ export default async function handler(request, response) {
             url_alvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/';
             options.method = 'POST';
             
-            // Cabeçalhos específicos para uma requisição POST (fetch)
             options.headers = {
                 ...baseHeaders,
                 'Accept': '*/*',
@@ -58,12 +63,13 @@ export default async function handler(request, response) {
         } else if (tipo === 'resultados') {
             // --- OPÇÕES PARA REQUISIÇÃO 'RESULTADOS' (GET) ---
             
-            // [CORREÇÃO 1: Caminhos corretos para LK e LN]
+            // [CORREÇÃO 1: mapa_urls atualizado conforme seu feedback]
+            // Removi a barra final de propósito para evitar barras duplas (//)
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/para-todos',
-                'lk': 'https://bichocerto.com/resultados/go/look',
-                'fd': 'https://bichocerto.com/resultados/fd/loteria-federal/',
-                'ln': 'https://bichocerto.com/resultados/ln/',
+                'lk': 'https://bichocerto.com/resultados/lk/look',
+                'fd': 'https://bichocerto.com/resultados/fd/loteria-federal',
+                'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional',
                 'ba': 'https://bichocerto.com/resultados/ba/para-todos',
             };
             
@@ -74,17 +80,13 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
-            // --- [CORREÇÃO 3: Lógica de data com query parameter] ---
+            // --- [CORREÇÃO 2: Lógica de data com /DATA/ para TODOS] ---
             if (data) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
                     
-                    if (loteria === 'fd') {
-                        // Federal usa /data/ no caminho (path)
-                        url_alvo = url_alvo + data + '/';
-                    } else {
-                        // As outras usam ?data=... (query parameter)
-                        url_alvo = url_alvo + '/?data=' + data; 
-                    }
+                    // A nova lógica: TODAS as loterias que pedem data
+                    // recebem a data como parte do caminho /DATA/
+                    url_alvo = url_alvo + '/' + data + '/';
 
                 } else {
                     response.status(400).send('Erro: Formato de data inválido. Use AAAA-MM-DD.');
@@ -93,18 +95,21 @@ export default async function handler(request, response) {
             } else {
                 // Lógica 'de-hoje' (só para Federal)
                 if (loteria === 'fd') {
-                    url_alvo = url_alvo + 'de-hoje/';
+                    url_alvo = url_alvo + '/de-hoje/';
+                } else {
+                    // Para as outras, a URL base já é a de "hoje",
+                    // então adicionamos a barra final que removemos do mapa.
+                    url_alvo = url_alvo + '/';
                 }
-                // Para as outras, a URL base já é a de "hoje", não precisa adicionar nada.
             }
-            // --- FIM DA CORREÇÃO 3 ---
+            // --- FIM DA CORREÇÃO 2 ---
             
             options.method = 'GET';
-            // Cabeçalhos específicos para uma navegação (GET)
+            // Cabeçalhos (disfarce)
             options.headers = {
                 ...baseHeaders,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                'Referer': url_alvo, // O Referer é a própria URL
+                'Referer': url_alvo, 
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'same-origin',
