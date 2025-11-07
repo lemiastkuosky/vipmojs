@@ -2999,85 +2999,6 @@ body.dark-mode .quick-value-btn.undo-btn {
     background-color: #e0a800;
 }
 
-/* ================================================================= */
-/* === BLOCO ÚNICO E CORRIGIDO PARA CABEÇALHO E BOTÃO DE ATUALIZAÇÃO === */
-/* ================================================================= */
-
-/* 1. Estilo do cabeçalho */
-header {
-  text-align: center;      /* Centraliza o título h1 */
-  position: relative;      /* Serve de referência para o botão */
-  margin-bottom: 10px;
-}
-
-/* 2. Garante que o título não sobreponha o botão */
-header h1 {
-  margin: 0;
-  padding: 0 40px; 
-}
-
-/* 3. Estilo do botão de atualização */
-#header-update-btn {
-  position: absolute;
-  top: 0.9%;
-  right: -35px; /* <-- Posição correta no canto direito */
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.6rem;
-  padding: 8px;
-  color: #007bff;
-  transition: all 0.2s; /* Transição para todas as propriedades */
-  border-radius: 50%; /* Deixa o fundo do clique mais bonito */
-  width: 44px;
-  height: 44px;
-  z-index: 1001; /* <-- ADICIONE ESTA LINHA */
-}
-
-/* 4. Efeitos de interação com o mouse/toque */
-#header-update-btn:hover {
-  opacity: 0.7;
-}
-#header-update-btn:active {
-  transform: translateY(-50%) scale(0.9); /* Ajusta a animação de clique */
-}
-
-/* 5. Estilo do botão QUANDO HÁ ATUALIZAÇÃO */
-#header-update-btn.update-available {
-  color: #dc3545; /* Apenas o ícone fica vermelho */
-}
-
-/* 6. Animação de pulsação (sem alterações) */
-@keyframes fade-attention {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* 7. Ajuste para o Modo Escuro */
-body.dark-mode #header-update-btn {
-    color: #4da3ff;
-}
-
-#header-update-btn:hover {
-  opacity: 0.7;
-}
-
-#header-update-btn:active {
-  transform: scale(0.9);
-}
-
-/* Ajuste para o Modo Escuro */
-body.dark-mode #header-update-btn {
-    color: #4da3ff;
-}
-
-/* COLE ESTE NOVO BLOCO DENTRO DA SUA TAG <style> */
-
 /* --- Estilo do Botão QUANDO HÁ ATUALIZAÇÃO --- */
 #header-update-btn.update-available {
   color: #dc3545;
@@ -3661,14 +3582,15 @@ body.dark-mode #db-connection-status.disconnected {
 #advancedFiltersModal,
 #searchHistoryModal,
 #fechamentoModal,
-#updateModal { z-index: 1150 !important; } /* <-- ADICIONAMOS O #updateModal AQUI */
+#updateModal,
+#tabelaBichosModal { z-index: 1150 !important; } /* <-- CORREÇÃO AQUI */
 
 /* Nível 3: Modal de Contagem (Por cima dos Nível 2) */
 #contagemModal { z-index: 1250 !important; }
 
 /* Garante que outros modais genéricos fiquem abaixo dos específicos */
 /* Também adicionamos o #updateModal na lista de exceções */
-.modal:not(#randomGeneratorModal):not(#checkWinnerModal):not(#consultasModal):not(#advancedFiltersModal):not(#searchHistoryModal):not(#fechamentoModal):not(#contagemModal):not(#customConfirmModal):not(#linkModal):not(#savedReceiptsModal):not(#avisosModal):not(#atrasadosRealTimeModal):not(#updateModal) {
+.modal:not(#randomGeneratorModal):not(#checkWinnerModal):not(#consultasModal):not(#advancedFiltersModal):not(#searchHistoryModal):not(#fechamentoModal):not(#contagemModal):not(#customConfirmModal):not(#linkModal):not(#savedReceiptsModal):not(#avisosModal):not(#atrasadosRealTimeModal):not(#updateModal):not(#tabelaBichosModal) { /* <-- CORREÇÃO AQUI */
     z-index: 1000;
 }
 
@@ -3859,7 +3781,7 @@ header h1 {
 #header-update-btn {
   position: absolute;
   top: 0.9%;
-  right: 10px; /* <-- Posição correta no canto direito */
+  right: 0px; /* <-- Posição correta no canto direito */
   transform: translateY(-50%);
   background: none;
   border: none;
@@ -5338,6 +5260,13 @@ async function generateIAPalpites() {
     
     showLoadingIndicator(`Analisando ${loteriaNome}...`);
     
+    // --- INÍCIO DA CORREÇÃO 1: Captura do Dia ---
+    // Puxa o dia da função que já calcula isso
+    const dataDoDiaArray = generateDateBasedDezenas(); // ex: ['07', '11', '25']
+    const diaDezena = dataDoDiaArray[0]; // ex: '07'
+    const diaFormatado = dataDoDiaArray.join('/'); // ex: '07/11/25'
+    // --- FIM DA CORREÇÃO 1 ---
+
     // 1. Roda todos os motores de análise em paralelo
     const [
         bichosAtrasados,
@@ -5355,8 +5284,6 @@ async function generateIAPalpites() {
         getPuxadaDoDiaIA(loteria)
     ]);
     
-    const dataDoDia = generateDateBasedDezenas().slice(0, 3);
-
     // 2. Agrupa os resultados das análises
     const analiseCompleta = {
         bichosAtrasados,
@@ -5365,13 +5292,30 @@ async function generateIAPalpites() {
         centenasAtrasadas,
         unidadesAtrasadas,
         puxada,
-        dataDoDia
+        dataDoDia: dataDoDiaArray // Passa o array da data
     };
 
-    // 3. Roda o Motor 4 para misturar tudo e criar os palpites finais
+    // --- INÍCIO DA CORREÇÃO 2: Encontra os Bichos da Data ---
+    // 1. Bicho pela Dezena (ex: Dia 07 -> Dezena 07 -> G02 Águia)
+    const bichoDaDezena = getBichoDataFromNumber(diaDezena);
+    let bichoDezenaTexto = "";
+    if (bichoDaDezena) {
+        bichoDezenaTexto = `• *Bicho da Dezena (${diaDezena}):* ${bichoDaDezena.emoji} ${bichoDaDezena.animal} (G${bichoDaDezena.grupo})\n`;
+    }
+
+    // 2. Bicho pelo Grupo (ex: Dia 07 -> Grupo 07 -> G07 Carneiro)
+    // (Só funciona se o dia for de 01 a 25)
+    const bichoDoGrupo = tabelaDeGrupos.find(b => b.grupo === diaDezena);
+    let bichoGrupoTexto = "";
+    if (bichoDoGrupo) {
+        bichoGrupoTexto = `• *Bicho do Grupo (${diaDezena}):* ${bichoDoGrupo.emoji} ${bichoDoGrupo.animal} (G${bichoDoGrupo.grupo})\n`;
+    }
+    // --- FIM DA CORREÇÃO 2 ---
+
+    // 3. Roda o Motor 4 para criar os palpites finais
     const { palpites, analiseFontes } = getPalpitesMisturadosIA(analiseCompleta);
 
-    // 4. Constrói o HTML para exibir os resultados (VISUAL ATUALIZADO)
+    // 4. Constrói o HTML (sem alterações aqui, já está correto)
     const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
     
     const criarListaPalpitesHTML = (lista) => {
@@ -5431,8 +5375,7 @@ async function generateIAPalpites() {
             <ul class="ia-analysis-list">
                 <li><strong>Dezena Fria (1º-5º):</strong> ${analiseFontes.dezena}</li>
                 <li><strong>Puxada do Dia:</strong> ${analiseFontes.puxada}</li>
-                <li><strong>Data Base:</strong> ${analiseFontes.data}</li>
-            </ul>
+                </ul>
         </div>
     `;
     
@@ -5450,9 +5393,9 @@ async function generateIAPalpites() {
         `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo})`
     ).join('\n');
 
-    // Monta a mensagem final
+    // --- INÍCIO DA CORREÇÃO 3: Montagem do Texto Final ---
     window.iaPalpiteShareText = `🔮 *Vip Palpites da I.A. para ${loteriaNome.toUpperCase()}* 🔮\n\n` +
-        `Olá! 🧠 Nossa I.A. processou os últimos resultados e identificou padrões! Aqui estão os palpites mais quentes para hoje:\n\n` +
+        `Olá! 🧠 Nossa I.A. processou os últimos resultados e identificou padrões! Aqui estão os palpites mais quentes para hoje (${diaFormatado}):\n\n` +
         
         `🎯 *Sugestões de Milhar (5)*\n${formatarListaWpp(palpites.milhar)}\n\n` +
         
@@ -5472,11 +5415,14 @@ async function generateIAPalpites() {
         `📊 *Fontes Adicionais da Análise*\n` +
         `• *Dezena Fria:* ${analiseFontes.dezena}\n` +
         `• *Puxada do Dia:* ${analiseFontes.puxada}\n` +
-        `• *Data Base:* ${analiseFontes.data}\n\n` +
+        `${bichoDezenaTexto}` + // <-- SUA SUGESTÃO (Bicho da Dezena)
+        `${bichoGrupoTexto}` +  // <-- SUA SUGESTÃO (Bicho do Grupo)
+        `\n` + // Adiciona uma quebra de linha final
         
         `Boa sorte e jogue com responsabilidade! 🍀`;
+    // --- FIM DA CORREÇÃO 3 ---
 
-    // 6. Exibe a área de resultados
+    // 6. Exibe a área de resultados (sem alterações)
     hideLoadingIndicator();
     document.getElementById('iaPalpiteForm').style.display = 'none';
     document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
