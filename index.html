@@ -4626,7 +4626,7 @@ body.dark-mode .ia-analysis-list {
             <span style="font-size: 1.5rem; line-height: 1;">⏱️</span>
             <div>
                 <strong>Bichos Atrasados</strong>
-                <small style="font-weight: normal;">(Análise ao vivo - site externo)</small>
+                <small style="font-weight: normal;">(Analise ao vivo)</small>
             </div>
         </button>
 
@@ -4634,7 +4634,7 @@ body.dark-mode .ia-analysis-list {
             <span style="font-size: 1.5rem; line-height: 1;">📲</span>
             <div>
                 <strong>Resultados Live</strong>
-                <small style="font-weight: normal;">(Compartilhar resultados do dia)</small>
+                <small style="font-weight: normal;">(Resultado da extração)</small>
             </div>
         </button>
 
@@ -5886,8 +5886,7 @@ const horariosLoterias = {
         { nome: 'NACIONAL 23:00', display: 'NACIONAL 23h', hora: 23, minuto: 5 }
     ],
     'fd': [
-        { nome: 'FEDERAL', display: 'FEDERAL (Qua/Sáb 19:00)', hora: 19, minuto: 5 }
-    ]
+{ nome: 'FEDERAL', display: 'FEDERAL (Qua/Sáb 20:00)', hora: 20, minuto: 5 }    ]
 };
 
 // Definição GLOBAL do mapaSorteios
@@ -5914,8 +5913,7 @@ const mapaSorteios = {
         'NACIONAL 02:00': 'div_display_02', 'NACIONAL 08:00': 'div_display_08', 'NACIONAL 10:00': 'div_display_10', 'NACIONAL 12:00': 'div_display_12', 'NACIONAL 15:00': 'div_display_15', 'NACIONAL 17:00': 'div_display_17', 'NACIONAL 20:00': 'div_display_20', 'NACIONAL 23:00': 'div_display_23',
         
         // Federal (FD) - JÁ ESTAVA CORRETO
-        'FEDERAL': 'div_display_19' 
-};
+'FEDERAL': 'div_display_20'};
 
 
 
@@ -12433,78 +12431,94 @@ async function generateSelectedNumbers() {
                     return; 
                 }
                 
-                // 1. Cria a assinatura (a "chave") para os bichos selecionados
-                const bichoSignature = selectedBichos.map(b => b.grupo).sort().join(',');
-                const bichoNames = selectedBichos.map(b=>b.animal).join(', ');
+                // --- INÍCIO DA NOVA LÓGICA DE DIVISÃO ---
                 
-                // 2. Verifica se um pool para esta assinatura JÁ EXISTE no mapa
-                if (!cercarBichoPools[bichoSignature]) {
-                    showToast(`Iniciando novo ciclo para: ${bichoNames}...`, 'info');
-                    
-                    // 3. Se não existe, cria um novo Set (pool)
-                    const newPool = new Set();
-                    
-                    // 4. Popula o novo pool com TODAS as milhares possíveis
-                    for (const bicho of selectedBichos) {
+                // 1. Calcula a divisão de quantidade (igual às outras)
+                const baseQuantityCercar = Math.floor(totalQuantity / selectedBichos.length);
+                const remainderCercar = totalQuantity % selectedBichos.length;
+
+                summaryParts.push(`\n<strong>- Modo:</strong> 🎯 Cercar Bicho (Dividido por Bicho)`);
+                summaryParts.push(`<strong>- Grupos Selecionados:</strong> ${selectedBichos.length}`);
+                summaryParts.push("\n<strong>- Detalhes da Geração:</strong>");
+
+                selectedBichos.forEach((bicho, index) => {
+                    const quantityForThisBicho = baseQuantityCercar + (index < remainderCercar ? 1 : 0);
+                    if(quantityForThisBicho > 0) {
+                         summaryParts.push(`  • ${quantityForThisBicho}x Milhares para G${bicho.grupo} ${bicho.animal} ${bicho.emoji}`);
+                    }
+                });
+                
+                // 2. Itera por cada bicho para gerar sua parte
+                selectedBichos.forEach((bicho, index) => {
+                    const quantityForThisBicho = baseQuantityCercar + (index < remainderCercar ? 1 : 0);
+                    if (quantityForThisBicho === 0) return; // Pula se a quantidade for 0
+
+                    // 3. Usa o GRUPO do bicho como a "assinatura" (chave) do pool
+                    const bichoSignature = bicho.grupo;
+                    const bichoName = bicho.animal;
+                
+                    // 4. Verifica se um pool para ESTE bicho já existe no mapa
+                    if (!cercarBichoPools[bichoSignature]) {
+                        showToast(`Iniciando novo ciclo para: ${bichoName}...`, 'info');
+                        const newPool = new Set();
                         const dezenasDoBicho = bicho.dezenas;
+
                         for (let i = 0; i < 100; i++) { // Todos os 100 prefixos
                             const prefixo = String(i).padStart(2, '0');
                             for (const dezena of dezenasDoBicho) {
                                 const milharCompleta = prefixo + dezena;
-                                // Adiciona ao pool APENAS se passar nos filtros avançados
                                 if (applyAdvancedFilters(milharCompleta, 'milhar')) {
                                     newPool.add(milharCompleta);
                                 }
                             }
                         }
+                        cercarBichoPools[bichoSignature] = newPool;
                     }
-                    // 5. Salva o pool recém-criado no mapa
-                    cercarBichoPools[bichoSignature] = newPool;
-                }
-                
-                // 6. Pega o pool CORRETO (para esta assinatura) do mapa
-                const currentPool = cercarBichoPools[bichoSignature];
-                const totalDisponivel = currentPool.size;
-                
-                if (totalDisponivel === 0) {
-                    showToast(`Nenhuma milhar restante para ${bichoNames}. Verifique filtros ou reinicie o ciclo.`, 'error');
-                    return;
-                }
-                
-                // 7. Ajusta a quantidade
-                let quantidadeParaGerar = totalQuantity;
-                if (totalQuantity > totalDisponivel) {
-                    showToast(`Você pediu ${totalQuantity}, mas restam apenas ${totalDisponivel} milhares únicas para ${bichoNames}. Gerando as restantes.`, 'warning', 4000);
-                    quantidadeParaGerar = totalDisponivel;
-                }
-                
-                // 8. Sorteia do pool
-                const shuffledPoolArray = Array.from(currentPool);
-                shuffleArray(shuffledPoolArray);
-                const milharesGeradas = shuffledPoolArray.slice(0, quantidadeParaGerar);
-                
-                // 9. Remove as milhares geradas do pool (ele é modificado "no lugar")
-                milharesGeradas.forEach(m => currentPool.delete(m));
-                
-                const restantes = currentPool.size;
-                showToast(`${milharesGeradas.length} milhares geradas. Restam ${restantes} únicas para ${bichoNames}.`, 'success');
 
-                // 10. Define o resultado final
-                finalResults.milhar = milharesGeradas;
+                    // 5. Pega o pool específico deste bicho
+                    const currentPool = cercarBichoPools[bichoSignature];
+                    const totalDisponivel = currentPool.size;
+
+                    if (totalDisponivel === 0) {
+                        showToast(`Nenhuma milhar restante para ${bichoName}. Verifique filtros ou reinicie o ciclo.`, 'error');
+                        return; // Pula para o próximo bicho
+                    }
+                    
+                    // 6. Ajusta a quantidade
+                    let quantidadeParaGerar = quantityForThisBicho;
+                    if (quantityForThisBicho > totalDisponivel) {
+                        showToast(`Você pediu ${quantityForThisBicho} para ${bichoName}, mas restam apenas ${totalDisponivel}. Gerando as restantes.`, 'warning', 4000);
+                        quantidadeParaGerar = totalDisponivel;
+                    }
+                    
+                    // 7. Sorteia do pool
+                    const shuffledPoolArray = Array.from(currentPool);
+                    shuffleArray(shuffledPoolArray);
+                    const milharesGeradas = shuffledPoolArray.slice(0, quantidadeParaGerar);
+                    
+                    // 8. Remove as milhares geradas do pool
+                    milharesGeradas.forEach(m => currentPool.delete(m));
+                    
+                    const restantes = currentPool.size;
+                    showToast(`${milharesGeradas.length} milhares geradas para ${bichoName}. Restam ${restantes} únicas.`, 'success');
+
+                    // 9. Adiciona ao resultado final
+                    finalResults.milhar.push(...milharesGeradas);
+
+                    // 10. Se o pool zerou, remove ele do mapa
+                    if (restantes === 0) {
+                        delete cercarBichoPools[bichoSignature];
+                        summaryParts.push(`\n⚠️ Ciclo para ${bichoName} foi concluído.`);
+                    }
+                });
+
+                // 11. Embaralha o resultado final
+                shuffleArray(finalResults.milhar);
                 finalResults.centena = [];
                 finalResults.dezena = [];
 
-                // 11. Configura o sumário
-                summaryParts.push(`\n<strong>- Modo:</strong> 🎯 Cercar Bicho (400)`);
-                summaryParts.push(`<strong>- Bichos Base:</strong> ${bichoNames}`);
-                summaryParts.push(`<strong>- Quantidade:</strong> ${milharesGeradas.length} (de ${totalDisponivel} restantes)`);
-                
-                // 12. Se o pool zerou, remove ele do mapa para recomeçar da próxima vez
-                if (restantes === 0) {
-                    delete cercarBichoPools[bichoSignature];
-                    summaryParts.push(`\n⚠️ Você gerou todas as milhares! O ciclo para ${bichoNames} será reiniciado na próxima vez.`);
-                }
-                
+                // --- FIM DA NOVA LÓGICA DE DIVISÃO ---
+
                 break; // Fim do 'cercar_completo'
             
             // =================================
@@ -12558,27 +12572,42 @@ async function generateSelectedNumbers() {
                         }
                     }
 
+                    //
+// COLE ESTE BLOCO CORRIGIDO NO LUGAR DO ANTIGO
+//
                     let finalThousandsArray = Array.from(allPossibleThousands);
                     const calculatedCombinations = finalThousandsArray.length;
                     if (calculatedCombinations === 0) return;
 
                     if (quantityForThisBicho > calculatedCombinations) {
+                        // 1. Adiciona todas as combinações únicas primeiro
                         finalResults.milhar.push(...finalThousandsArray);
+                        
                         const difference = quantityForThisBicho - calculatedCombinations;
-                        const randomResultSet = new Set();
+                        
+                        // 2. --- CORREÇÃO: Usa Array para gerar o restante ---
+                        const randomResultArray = []; // <--- CORRIGIDO
                         let attempts = 0;
-                        while (randomResultSet.size < difference && attempts < (difference * 50)) {
+                        // O loop de 'attempts' é uma segurança contra loops infinitos
+                        while (randomResultArray.length < difference && attempts < (difference * 50) + 100) { // <--- CORRIGIDO
                             attempts++;
-                            let generatedNumber = String(Math.floor(Math.random() * 100)).padStart(2, '0') + dezenasArray[Math.floor(Math.random() * dezenasArray.length)];
-                            if (applyAdvancedFilters(generatedNumber, 'milhar') && !allPossibleThousands.has(generatedNumber)) {
-                               randomResultSet.add(generatedNumber);
+                            // Gera um número aleatório (pode ser /00/ ou /prefixo de digito/)
+                            let randomPrefix = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+                            let generatedNumber = randomPrefix + dezenasArray[Math.floor(Math.random() * dezenasArray.length)];
+                            
+                            // Aplica filtros, mas NÃO verifica se já existe (permite duplicatas aleatórias)
+                            if (applyAdvancedFilters(generatedNumber, 'milhar')) {
+                               randomResultArray.push(generatedNumber); // <--- CORRIGIDO
                             }
                         }
-                        finalResults.milhar.push(...Array.from(randomResultSet));
+                        finalResults.milhar.push(...randomResultArray); // <--- CORRIGIDO
+                    
                     } else {
+                        // 3. Se a quantidade pedida for menor (ou igual), sorteia da lista única
                         shuffleArray(finalThousandsArray);
                         finalResults.milhar.push(...finalThousandsArray.slice(0, quantityForThisBicho));
                     }
+
                 });
                 shuffleArray(finalResults.milhar); 
                 finalResults.centena = [];
@@ -12609,9 +12638,12 @@ async function generateSelectedNumbers() {
                     if (quantityForThisBicho === 0) return;
                     const dezenasPool = bicho.dezenas;
                     for (const typeKey of typeKeys) {
-                        const resultSet = new Set();
+                        // --- CORREÇÃO: Usa Array em vez de Set para permitir duplicatas ---
+                        const resultArray = []; // <--- CORRIGIDO
                         let attempts = 0;
-                        while (resultSet.size < quantityForThisBicho && attempts < quantityForThisBicho * 50) {
+                        // O loop de 'attempts' agora é uma segurança extra para evitar loop infinito
+                        // se 'applyAdvancedFilters' sempre falhar.
+                        while (resultArray.length < quantityForThisBicho && attempts < (quantityForThisBicho * 50) + 100) { // <--- CORRIGIDO
                             attempts++;
                             let generatedNumber = '';
                             if (typeKey === 'milhar') {
@@ -12621,11 +12653,12 @@ async function generateSelectedNumbers() {
                             } else if (typeKey === 'dezena') {
                                 generatedNumber = dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
                             }
+                            
                             if (applyAdvancedFilters(generatedNumber, typeKey)) {
-                               resultSet.add(generatedNumber);
+                               resultArray.push(generatedNumber); // <--- CORRIGIDO
                             }
                         }
-                        finalResults[typeKey].push(...Array.from(resultSet));
+                        finalResults[typeKey].push(...resultArray); // <--- CORRIGIDO
                     }
                 });
                 typeKeys.forEach(typeKey => shuffleArray(finalResults[typeKey]));
@@ -13709,7 +13742,7 @@ const extractionSchedules = {
         { display: '23:00', corteMinutos: 1 }
     ],
     'Loteria Federal': [
-        { display: '19:00', corteMinutos: 1 }
+        { display: '20:00', corteMinutos: 1 }
     ],
     'Outra': [
         { display: 'Não especificado', corteMinutos: 0 } // Esta linha permanece com 0
