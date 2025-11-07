@@ -1,10 +1,14 @@
 //
-// CONTEÚDO CORRIGIDO (TENTATIVA 5) PARA /api/proxy.js
+// CONTEÚDO CORRIGIDO (TENTATIVA 5 / VERSÃO 5.0)
 // Lógica final: Datas passadas só funcionam para a Loteria Federal.
+// INCLUI UM VERIFICADOR DE VERSÃO: ?tipo=versao
 //
 
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
+
+// --- ADICIONE ESTA LINHA ---
+const PROXY_VERSION = "V5.0";
 
 // --- CABEÇALHOS PADRÃO (DISFARCE) ---
 const baseHeaders = {
@@ -23,8 +27,22 @@ export default async function handler(request, response) {
         return;
     }
 
+    // Adiciona a versão aos logs do servidor
+    console.log(`[Proxy ${PROXY_VERSION}] Recebida requisição...`);
+
     try {
         const { tipo, loteria, data } = request.query;
+
+        // --- ADICIONE ESTE BLOCO ---
+        // 2. Verificador de Versão
+        // Se a URL for /api/proxy?tipo=versao, ele para aqui.
+        if (tipo === 'versao') {
+            console.log(`[Proxy ${PROXY_VERSION}] Verificação de versão solicitada.`);
+            // Retorna a versão como texto simples
+            response.status(200).send(`PROXY_VERSION_${PROXY_VERSION}`);
+            return;
+        }
+        // --- FIM DO BLOCO ADICIONADO ---
 
         let url_alvo = '';
         let options = {
@@ -34,7 +52,6 @@ export default async function handler(request, response) {
 
         if (tipo === 'atrasados') {
             // --- OPÇÕES PARA REQUISIÇÃO 'ATRASADOS' (POST) ---
-            // (Esta seção está correta, mantida como está)
             const loterias_permitidas = ['fd', 'rj', 'lk', 'ln', 'ba'];
             if (!loterias_permitidas.includes(loteria)) {
                 response.status(400).send('Erro: Loteria inválida para atrasados.');
@@ -63,8 +80,7 @@ export default async function handler(request, response) {
         } else if (tipo === 'resultados') {
             // --- OPÇÕES PARA REQUISIÇÃO 'RESULTADOS' (GET) ---
             
-            // [CORREÇÃO 1: mapa_urls atualizado conforme seu feedback]
-            // Removi a barra final para controlar manualmente.
+            // [CAMINHOS CORRIGIDOS]
             const mapa_urls = {
                 'rj': 'https://bichocerto.com/resultados/rj/para-todos',
                 'lk': 'https://bichocerto.com/resultados/lk/look',
@@ -80,7 +96,7 @@ export default async function handler(request, response) {
             
             url_alvo = mapa_urls[loteria];
 
-            // --- [CORREÇÃO 2: Lógica de data (SÓ FUNCIONA PARA FEDERAL)] ---
+            // [LÓGICA DA DATA CORRIGIDA (SÓ FUNCIONA PARA FD)]
             if (data && /^\d{4}-\d{2}-\d{2}$/.test(data)) {
                 
                 if (loteria === 'fd') {
@@ -88,7 +104,6 @@ export default async function handler(request, response) {
                     url_alvo = url_alvo + '/' + data + '/';
                 } else {
                     // Para RJ, LK, LN, BA: Ignora a data e busca a página principal (de hoje)
-                    // Adiciona a barra final que removemos do mapa.
                     url_alvo = url_alvo + '/';
                 }
 
@@ -101,10 +116,8 @@ export default async function handler(request, response) {
                     url_alvo = url_alvo + '/';
                 }
             }
-            // --- FIM DA CORREÇÃO 2 ---
             
             options.method = 'GET';
-            // Cabeçalhos (disfarce)
             options.headers = {
                 ...baseHeaders,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -125,8 +138,8 @@ export default async function handler(request, response) {
         const fetchResponse = await fetch(url_alvo, options);
 
         if (!fetchResponse.ok) {
-            console.error(`Erro ao buscar ${url_alvo}. Status: ${fetchResponse.status}`);
-            response.status(502).send(`Erro ao buscar conteudo da URL: ${url_alvo}. Código: ${fetchResponse.status}`);
+            console.error(`[Proxy ${PROXY_VERSION}] Erro ao buscar ${url_alvo}. Status: ${fetchResponse.status}`);
+            response.status(502).send(`[Proxy ${PROXY_VERSION}] Erro ao buscar conteudo da URL: ${url_alvo}. Código: ${fetchResponse.status}`);
             return;
         }
 
@@ -136,7 +149,7 @@ export default async function handler(request, response) {
         response.status(200).send(html);
 
     } catch (error) {
-        console.error('Erro GERAL no proxy Vercel:', error);
-        response.status(500).send(`Erro interno no servidor proxy: ${error.message}`);
+        console.error(`[Proxy ${PROXY_VERSION}] Erro GERAL no proxy Vercel:`, error);
+        response.status(500).send(`[Proxy ${PROXY_VERSION}] Erro interno no servidor proxy: ${error.message}`);
     }
 }
