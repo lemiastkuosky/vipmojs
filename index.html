@@ -14337,22 +14337,30 @@ function showAtrasadosRealTimeModal() {
 function closeAtrasadosRealTimeModal() {
     document.getElementById('atrasadosRealTimeModal').classList.remove('active');
     
-    // --- INÍCIO DA CORREÇÃO ---
-    // Encontra todos os botões de compartilhamento dentro deste modal
+    // --- LÓGICA DE RESET CORRIGIDA ---
     const atrasadosButtons = document.querySelectorAll('#atrasadosRealTimeModal .btn-share');
     
     atrasadosButtons.forEach(botao => {
-        // 1. Garante que o botão seja re-habilitado
         botao.disabled = false;
         
-        // 2. Restaura o texto original usando o 'data-nome'
+        // Usamos o 'data-nome' para decidir qual texto restaurar
         const nomeLoteria = botao.dataset.nome; 
-        if (nomeLoteria) {
-             // Recria o texto original, ex: "Atrasados LOTERIA FEDERAL"
-             botao.innerHTML = `Atrasados ${nomeLoteria.toUpperCase()}`;
+        
+        if (nomeLoteria === 'Federal') {
+            botao.innerHTML = 'Atrasados LOTERIA FEDERAL';
+        } else if (nomeLoteria === 'PT Rio') {
+            botao.innerHTML = 'Atrasados RIO DE JANEIRO';
+        } else if (nomeLoteria === 'Look Goiás') {
+            botao.innerHTML = 'Atrasados LOOK GOIÁS';
+        } else if (nomeLoteria === 'Loteria Nacional') {
+            botao.innerHTML = 'Atrasados NACIONAL';
+        } else if (nomeLoteria === 'PT Bahia') {
+            botao.innerHTML = 'Atrasados BAHIA';
         }
+        // (Se nenhum 'data-nome' bater, ele mantém o texto 'Buscando...',
+        // mas com base no seu HTML, todos os 5 botões serão corrigidos)
     });
-    // --- FIM DA CORREÇÃO ---
+    // --- FIM DA LÓGICA DE RESET ---
 }
 
 function extrairDadosDoHTML(htmlString) {
@@ -14408,14 +14416,16 @@ function extrairDadosDoHTML(htmlString) {
 // 1. SUBSTITUA A FUNÇÃO 'gerarLinkWhatsapp' PELA VERSÃO ABAIXO:
 //
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
-    const textoOriginal = botao.innerHTML; // Guarda o texto original (ex: "Atrasados RIO DE JANEIRO")
+    // *** CORREÇÃO AQUI: Captura o texto original ANTES de qualquer mudança ***
+    const textoOriginal = botao.innerHTML; 
+    
     botao.disabled = true;
     botao.innerHTML = 'Buscando...';
 
     const urlProxy = '/api/proxy'; 
 
     try {
-        // A busca é feita aqui, dentro do 'try'
+        // O resto da função (bloco 'try') permanece exatamente o mesmo
         const response = await fetch(`${urlProxy}?loteria=${loteria}&tipo=atrasados`);
         if (!response.ok) {
              let errorDetails = await response.text();
@@ -14431,9 +14441,7 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         const dadosDosAtrasados = extrairDadosDoHTML(htmlTabela);
         if (dadosDosAtrasados.length === 0) {
             showToast("Não foi possível extrair os dados. O site de origem pode ter mudado.", "error");
-            // (O 'finally' vai cuidar de resetar o botão)
         } else {
-            // Se deu certo, formata a mensagem e mostra o popup
             let textoMensagem = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n*GRUPO APP VIP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
             dadosDosAtrasados.forEach(bicho => {
                 textoMensagem += `*${bicho.posicao}*: ${bicho.emoji} *${bicho.nome}* ${bicho.status}\n`;
@@ -14458,19 +14466,16 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
                 showToast('Abrindo WhatsApp...', 'success');
             } else {
                 showToast('Envio cancelado.', 'info');
-                // (O 'finally' vai cuidar de resetar o botão)
             }
         }
 
-    } catch (error) { // Se der qualquer erro (ex: 403, 404, 502)
+    } catch (error) { 
         console.error("Falha na operação:", error);
         showToast(`Falha na operação: ${error.message}`, "error", 7000); 
     } finally {
-        //
-        // *** ESTA É A CORREÇÃO ***
-        // Este bloco 'finally' é executado SEMPRE (após o 'try' ou 'catch')
-        // e restaura o botão ao seu estado original.
-        //
+        // *** CORREÇÃO AQUI ***
+        // Agora 'textoOriginal' tem o valor correto (ex: "Atrasados LOTERIA FEDERAL")
+        // e irá restaurar o botão corretamente.
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
     }
