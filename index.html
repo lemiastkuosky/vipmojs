@@ -5298,12 +5298,9 @@ async function generateIAPalpites() {
     
     showLoadingIndicator(`Analisando ${loteriaNome}...`);
     
-    // --- INÍCIO DA CORREÇÃO 1: Captura do Dia ---
-    // Puxa o dia da função que já calcula isso
-    const dataDoDiaArray = generateDateBasedDezenas(); // ex: ['07', '11', '25']
-    const diaDezena = dataDoDiaArray[0]; // ex: '07'
-    const diaFormatado = dataDoDiaArray.join('/'); // ex: '07/11/25'
-    // --- FIM DA CORREÇÃO 1 ---
+    const dataDoDiaArray = generateDateBasedDezenas(); 
+    const diaDezena = dataDoDiaArray[0]; 
+    const diaFormatado = dataDoDiaArray.join('/'); 
 
     // 1. Roda todos os motores de análise em paralelo
     const [
@@ -5330,30 +5327,25 @@ async function generateIAPalpites() {
         centenasAtrasadas,
         unidadesAtrasadas,
         puxada,
-        dataDoDia: dataDoDiaArray // Passa o array da data
+        dataDoDia: dataDoDiaArray
     };
 
-    // --- INÍCIO DA CORREÇÃO 2: Encontra os Bichos da Data ---
-    // 1. Bicho pela Dezena (ex: Dia 07 -> Dezena 07 -> G02 Águia)
     const bichoDaDezena = getBichoDataFromNumber(diaDezena);
     let bichoDezenaTexto = "";
     if (bichoDaDezena) {
         bichoDezenaTexto = `• *Bicho da Dezena (${diaDezena}):* ${bichoDaDezena.emoji} ${bichoDaDezena.animal} (G${bichoDaDezena.grupo})\n`;
     }
 
-    // 2. Bicho pelo Grupo (ex: Dia 07 -> Grupo 07 -> G07 Carneiro)
-    // (Só funciona se o dia for de 01 a 25)
     const bichoDoGrupo = tabelaDeGrupos.find(b => b.grupo === diaDezena);
     let bichoGrupoTexto = "";
     if (bichoDoGrupo) {
         bichoGrupoTexto = `• *Bicho do Grupo (${diaDezena}):* ${bichoDoGrupo.emoji} ${bichoDoGrupo.animal} (G${bichoDoGrupo.grupo})\n`;
     }
-    // --- FIM DA CORREÇÃO 2 ---
-
-    // 3. Roda o Motor 4 para criar os palpites finais
+    
+    // 3. Roda o Motor 4 (A NOVA VERSÃO) para criar os palpites finais
     const { palpites, analiseFontes } = getPalpitesMisturadosIA(analiseCompleta);
 
-    // 4. Constrói o HTML (sem alterações aqui, já está correto)
+    // 4. Constrói o HTML (ATUALIZADO PARA 4/3/3)
     const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
     
     const criarListaPalpitesHTML = (lista) => {
@@ -5368,29 +5360,24 @@ async function generateIAPalpites() {
         return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo})</li>`).join('');
     };
 
+    // --- HTML ATUALIZADO (REMOVENDO UNIDADE, AJUSTANDO CONTAGENS) ---
     resultsOutput.innerHTML = `
         <div class="ia-result-card">
-            <h4>🎯 Sugestões de Milhar (5)</h4>
+            <h4>🎯 Sugestões de Milhar (4)</h4>
             <ul class="ia-palpite-list">
                 ${criarListaPalpitesHTML(palpites.milhar)}
             </ul>
         </div>
         <div class="ia-result-card">
-            <h4>🎯 Sugestões de Centena (5)</h4>
+            <h4>🎯 Sugestões de Centena (3)</h4>
             <ul class="ia-palpite-list">
                 ${criarListaPalpitesHTML(palpites.centena)}
             </ul>
         </div>
         <div class="ia-result-card">
-            <h4>🎯 Sugestões de Dezena (2)</h4>
+            <h4>🎯 Sugestões de Dezena (3)</h4>
             <ul class="ia-palpite-list">
                 ${criarListaPalpitesHTML(palpites.dezena)}
-            </ul>
-        </div>
-        <div class="ia-result-card">
-            <h4>🎯 Sugestões de Unidade (2)</h4>
-            <ul class="ia-palpite-list">
-                ${criarListaPalpitesHTML(palpites.unidade)}
             </ul>
         </div>
         
@@ -5419,42 +5406,36 @@ async function generateIAPalpites() {
     
     // 5. Salva o texto de compartilhamento globalmente (MENSAGEM ATUALIZADA)
     
-    // ... (o restante da sua função generateIAPalpites continua o mesmo até aqui) ...
-
-    // 5. Salva o texto de compartilhamento globalmente (MENSAGEM ATUALIZADA)
-    
-    // NOVA FUNÇÃO DE FORMATAÇÃO (mais limpa)
+    // Formata a lista, mas agora incluindo a fonte (o tipo)
     const formatarListaSimples = (lista) => {
-        return lista.map(p => `• \`${p.palpite}\``).join('\n');
+        return lista.map(p => `• \`${p.palpite}\` _(${p.tipo})_`).join('\n');
     };
     
-    // Pega apenas a primeira linha (o bicho #1) das listas de Frios e Quentes
+    // Pega o Top 1 Frio
     const top1Frio = analiseCompleta.bichosAtrasados.length > 0 
         ? `${analiseCompleta.bichosAtrasados[0].emoji} ${analiseCompleta.bichosAtrasados[0].animal} (G${analiseCompleta.bichosAtrasados[0].grupo})`
         : "N/A";
-        
-    const top1Quente = analiseCompleta.bichosFrequentes.length > 0
-        ? `${analiseCompleta.bichosFrequentes[0].emoji} ${analiseCompleta.bichosFrequentes[0].animal} (G${analiseCompleta.bichosFrequentes[0].grupo})`
+    
+    // Pega o Top 1 Quente (usando a nova 'analiseFontes.bichoQuente')
+    const top1Quente = analiseFontes.bichoQuente !== "(N/A)"
+        ? analiseFontes.bichoQuente
         : "N/A";
 
-    // --- INÍCIO DO NOVO BLOCO DE MENSAGEM ---
+    // --- INÍCIO DO NOVO BLOCO DE MENSAGEM (10 palpites) ---
     window.iaPalpiteShareText = `🔮 *Palpites da I.A. - ${loteriaNome.toUpperCase()}* 🔮\n` +
         `*Data:* ${diaFormatado}\n\n` +
         
-        `🧠 A I.A. analisou os dados! Aqui estão as *sugestões*:\n\n` +
+        `🧠 A I.A. analisou os dados! Aqui estão *10 sugestões* misturando Frios, Quentes e Data:\n\n` +
         
-        `🎯 *Sugestões Principais:*\n` +
-        `*(Milhar)*\n${formatarListaSimples(palpites.milhar.slice(0, 3))}\n` + // <-- Reduzido para 3
-        `*(Centena)*\n${formatarListaSimples(palpites.centena.slice(0, 3))}\n` + // <-- Reduzido para 3
+        `🎯 *Milhares (4)*\n${formatarListaSimples(palpites.milhar)}\n\n` +
+        `🎯 *Centenas (3)*\n${formatarListaSimples(palpites.centena)}\n\n` +
+        `🎯 *Dezenas (3)*\n${formatarListaSimples(palpites.dezena)}\n\n` +
         
-        `\n` +
         `💡 *Dicas da Análise:*\n` +
-        `❄️ *Bicho Frio (Atrasado):*\n• ${top1Frio} (Bom para cercar!)\n\n` +
-        `🔥 *Bicho Quente (Frequente):*\n• ${top1Quente} (Pode repetir!)\n\n` +
-        
-        `📊 *Outras Fontes (Pode Ajudar):*\n` +
-        `• *Dezena Fria:* ${analiseFontes.dezena}\n` +
-        `• *Puxada do Dia:* ${analiseFontes.puxada}\n` +
+        `❄️ *Frio (Atrasado):* ${top1Frio}\n` +
+        `🔥 *Quente (Frequente):* ${top1Quente}\n` +
+        `📊 *Dezena Fria:* ${analiseFontes.dezena}\n` +
+        `🔗 *Puxada do Dia:* ${analiseFontes.puxada}\n` +
         `${bichoDezenaTexto}` + 
         `${bichoGrupoTexto}` +
         `\n` + 
@@ -6702,104 +6683,108 @@ function getPalpitesMisturadosIA(analise) {
     const palpites = {
         milhar: [],
         centena: [],
-        dezena: [],
-        unidade: []
+        dezena: []
+        // Unidade removida para focar nos 10 palpites principais
     };
     
     const analiseFontes = {
         bichoFrio: "(N/A)",
-        // A linha 'bichoQuente' foi removida daqui
+        bichoQuente: "(N/A)", // <-- Adicionamos esta fonte
         dezena: "(N/A)",
         data: "(N/A)",
         puxada: "(N/A)"
     };
+
+    // Usamos um Set para evitar palpites duplicados DENTRO de uma categoria
+    const milharSet = new Set();
+    const centenaSet = new Set();
+    const dezenaSet = new Set();
 
     // --- Estratégia 1: Bicho Mais Atrasado (FRIO) ---
     if (analise.bichosAtrasados.length > 0) {
         const bicho1 = analise.bichosAtrasados[0];
         const dezenas = bicho1.dezenas;
         
-        palpites.milhar.push({ palpite: `${dezenas[0]}${dezenas[1]}`, tipo: 'Bicho Frio' });
-        palpites.dezena.push({ palpite: dezenas[0], tipo: 'Do Bicho Frio' });
+        milharSet.add(JSON.stringify({ palpite: `${dezenas[0]}${dezenas[1]}`, tipo: 'Bicho Frio' }));
+        centenaSet.add(JSON.stringify({ palpite: `${dezenas[0][0]}${dezenas[2]}`, tipo: 'Bicho Frio' }));
+        dezenaSet.add(JSON.stringify({ palpite: dezenas[0], tipo: 'Do Bicho Frio' }));
         
         analiseFontes.bichoFrio = `${bicho1.emoji} ${bicho1.animal} (G${bicho1.grupo})`;
     }
 
-    // --- ESTRATÉGIA NOVA: Bicho Mais Frequente (QUENTE) ---
+    // --- Estratégia 2: Bicho Mais Frequente (QUENTE) ---
     if (analise.bichosFrequentes.length > 0) {
         const bichoQuente1 = analise.bichosFrequentes[0];
         const dezenas = bichoQuente1.dezenas;
-        // Gera a centena baseada no bicho "quente"
-        palpites.centena.push({ palpite: `${dezenas[0][0]}${dezenas[1]}`, tipo: 'Bicho Quente' });
         
-        // A linha 'analiseFontes.bichoQuente = ...' foi removida daqui
+        milharSet.add(JSON.stringify({ palpite: `${dezenas[0]}${dezenas[1]}`, tipo: 'Bicho Quente' }));
+        // centenaSet.add(JSON.stringify({ palpite: `${dezenas[0][0]}${dezenas[1]}`, tipo: 'Bicho Quente' })); // Centena opcional
+        dezenaSet.add(JSON.stringify({ palpite: dezenas[0], tipo: 'Do Bicho Quente' }));
+        
+        analiseFontes.bichoQuente = `${bichoQuente1.emoji} ${bichoQuente1.animal} (G${bichoQuente1.grupo})`;
     }
 
     // --- Estratégia 3: Dezena Mais Atrasada (FRIA) ---
     if (analise.dezenasAtrasadas.length > 0) {
         const dezena1 = analise.dezenasAtrasadas[0].numero;
-        palpites.milhar.push({ palpite: `${dezena1}${dezena1}`, tipo: 'Dezena Fria' });
-        palpites.dezena.push({ palpite: dezena1, tipo: 'A mais Fria' });
-        palpites.unidade.push({ palpite: dezena1[1], tipo: 'Da Dezena Fria' });
+        centenaSet.add(JSON.stringify({ palpite: `${dezena1.slice(-1)}${dezena1}`, tipo: 'Dezena Fria' }));
+        dezenaSet.add(JSON.stringify({ palpite: dezena1, tipo: 'A mais Fria' }));
         
         analiseFontes.dezena = dezena1;
     }
-
-    // ... (O resto da função continua exatamente igual) ...
     
-    // --- Estratégia 4: Dezena Nº 2 Atrasada (FRIA) ---
-    if (analise.dezenasAtrasadas.length > 1) {
-        const dezena2 = analise.dezenasAtrasadas[1].numero;
-        palpites.centena.push({ palpite: `${dezena2.slice(-1)}${dezena2}`, tipo: 'Dezena Fria 2' });
-    }
-
-    // --- Estratégia 5: Centena Mais Atrasada (FRIA) ---
+    // --- Estratégia 4: Centena Mais Atrasada (FRIA) ---
     if (analise.centenasAtrasadas.length > 0) {
         const centena1 = analise.centenasAtrasadas[0].numero;
-        palpites.milhar.push({ palpite: `${Math.floor(Math.random() * 10)}${centena1}`, tipo: 'Centena Fria' });
-        palpites.centena.push({ palpite: centena1, tipo: 'A mais Fria' });
+        milharSet.add(JSON.stringify({ palpite: `${Math.floor(Math.random() * 10)}${centena1}`, tipo: 'Centena Fria' }));
     }
 
-    // --- Estratégia 6: Unidade Mais Atrasada (FRIA) ---
-    if (analise.unidadesAtrasadas.length > 0) {
-        const unidade1 = analise.unidadesAtrasadas[0].numero;
-        palpites.unidade.push({ palpite: unidade1, tipo: 'A mais Fria' });
-    }
-
-    // --- Estratégia 7: Data do Dia (NEUTRA) ---
+    // --- Estratégia 5: Data do Dia (NEUTRA) ---
     if (analise.dataDoDia.length >= 3) {
         const [dia, mes, ano] = analise.dataDoDia;
-        palpites.milhar.push({ palpite: `${dia}${ano}`, tipo: 'Data do Dia' });
-        palpites.centena.push({ palpite: `0${mes}`, tipo: 'Data do Dia' });
+        milharSet.add(JSON.stringify({ palpite: `${dia}${ano}`, tipo: 'Data do Dia' }));
         
         analiseFontes.data = `${dia}/${mes}/${ano}`;
     }
 
-    // --- Estratégia 8: Puxada do Dia (QUENTE) ---
+    // --- Estratégia 6: Puxada do Dia (QUENTE/RELACIONADO) ---
     if (analise.puxada) {
         const bichoPuxado = analise.puxada.bichoPuxado;
         const dezenasPuxadas = bichoPuxado.dezenas;
         
-        palpites.milhar.push({ palpite: `${Math.floor(Math.random() * 90 + 10)}${dezenasPuxadas[0]}`, tipo: 'Puxada do Dia' });
-        palpites.centena.push({ palpite: `${Math.floor(Math.random() * 10)}${dezenasPuxadas[0]}`, tipo: 'Puxada do Dia' });
+        centenaSet.add(JSON.stringify({ palpite: `${Math.floor(Math.random() * 10)}${dezenasPuxadas[0]}`, tipo: 'Puxada' }));
         
         const bSaiu = analise.puxada.bichoSaiu;
         analiseFontes.puxada = `${bSaiu.emoji} ${bSaiu.animal} (Saiu) ⇢ ${bichoPuxado.emoji} ${bichoPuxado.animal}`;
     }
 
-    // --- Limpeza Final (Preenchimento) ---
+    // Converte os Sets de volta para arrays de objetos
+    palpites.milhar = Array.from(milharSet).map(JSON.parse);
+    palpites.centena = Array.from(centenaSet).map(JSON.parse);
+    palpites.dezena = Array.from(dezenaSet).map(JSON.parse);
+
+    // --- Limpeza Final (Preenchimento Aleatório) ---
+    // Esta função garante que tenhamos 4 Milhares, 3 Centenas e 3 Dezenas
     const preencherPalpites = (tipo, alvo, len) => {
+        // Pega os palpites únicos já gerados
+        let palpitesUnicos = new Set(palpites[tipo].map(p => p.palpite));
+
         while (palpites[tipo].length < alvo) {
             let num = String(Math.floor(Math.random() * Math.pow(10, len))).padStart(len, '0');
-            palpites[tipo].push({ palpite: num, tipo: 'Aleatório' });
+            // Garante que o aleatório também seja único
+            if (!palpitesUnicos.has(num)) {
+                palpites[tipo].push({ palpite: num, tipo: 'Aleatório' });
+                palpitesUnicos.add(num); // Adiciona ao set para não repetir
+            }
         }
-        palpites[tipo] = palpites[tipo].slice(0, alvo); // Garante o limite
+        // Embaralha e corta para o alvo exato
+        shuffleArray(palpites[tipo]);
+        palpites[tipo] = palpites[tipo].slice(0, alvo);
     };
 
-    preencherPalpites('milhar', 5, 4);
-    preencherPalpites('centena', 5, 3);
-    preencherPalpites('dezena', 2, 2);
-    preencherPalpites('unidade', 2, 1);
+    preencherPalpites('milhar', 4, 4);
+    preencherPalpites('centena', 3, 3);
+    preencherPalpites('dezena', 3, 2);
 
     return { palpites, analiseFontes };
 }
