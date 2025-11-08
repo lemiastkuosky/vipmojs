@@ -5419,46 +5419,48 @@ async function generateIAPalpites() {
     
     // 5. Salva o texto de compartilhamento globalmente (MENSAGEM ATUALIZADA)
     
-    const formatarListaWpp = (lista) => {
-        return lista.map(p => `• \`${p.palpite}\` _(Base: ${p.tipo})_`).join('\n');
+    // ... (o restante da sua função generateIAPalpites continua o mesmo até aqui) ...
+
+    // 5. Salva o texto de compartilhamento globalmente (MENSAGEM ATUALIZADA)
+    
+    // NOVA FUNÇÃO DE FORMATAÇÃO (mais limpa)
+    const formatarListaSimples = (lista) => {
+        return lista.map(p => `• \`${p.palpite}\``).join('\n');
     };
     
-    const top5BichosTexto = analiseCompleta.bichosAtrasados.map((b, index) => 
-        `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo})`
-    ).join('\n');
+    // Pega apenas a primeira linha (o bicho #1) das listas de Frios e Quentes
+    const top1Frio = analiseCompleta.bichosAtrasados.length > 0 
+        ? `${analiseCompleta.bichosAtrasados[0].emoji} ${analiseCompleta.bichosAtrasados[0].animal} (G${analiseCompleta.bichosAtrasados[0].grupo})`
+        : "N/A";
+        
+    const top1Quente = analiseCompleta.bichosFrequentes.length > 0
+        ? `${analiseCompleta.bichosFrequentes[0].emoji} ${analiseCompleta.bichosFrequentes[0].animal} (G${analiseCompleta.bichosFrequentes[0].grupo})`
+        : "N/A";
 
-    const top5BichosQuentesTexto = analiseCompleta.bichosFrequentes.map((b, index) => 
-        `*${index + 1}º:* ${b.emoji} ${b.animal} (G${b.grupo})`
-    ).join('\n');
-
-    // --- INÍCIO DA CORREÇÃO 3: Montagem do Texto Final ---
-    window.iaPalpiteShareText = `🔮 *Vip Palpites da I.A. para ${loteriaNome.toUpperCase()}* 🔮\n\n` +
-        `Olá! 🧠 Nossa I.A. processou os últimos resultados e identificou padrões! Aqui estão os palpites mais quentes para hoje (${diaFormatado}):\n\n` +
+    // --- INÍCIO DO NOVO BLOCO DE MENSAGEM ---
+    window.iaPalpiteShareText = `🔮 *Palpites da I.A. - ${loteriaNome.toUpperCase()}* 🔮\n` +
+        `*Data:* ${diaFormatado}\n\n` +
         
-        `🎯 *Sugestões de Milhar (5)*\n${formatarListaWpp(palpites.milhar)}\n\n` +
+        `🧠 A I.A. analisou os dados! Aqui estão as *sugestões*:\n\n` +
         
-        `🎯 *Sugestões de Centena (5)*\n${formatarListaWpp(palpites.centena)}\n\n` +
+        `🎯 *Sugestões Principais:*\n` +
+        `*(Milhar)*\n${formatarListaSimples(palpites.milhar.slice(0, 3))}\n` + // <-- Reduzido para 3
+        `*(Centena)*\n${formatarListaSimples(palpites.centena.slice(0, 3))}\n` + // <-- Reduzido para 3
         
-        `🎯 *Sugestões de Dezena (2)*\n${formatarListaWpp(palpites.dezena)}\n\n` +
+        `\n` +
+        `💡 *Dicas da Análise:*\n` +
+        `❄️ *Bicho Frio (Atrasado):*\n• ${top1Frio} (Bom para cercar!)\n\n` +
+        `🔥 *Bicho Quente (Frequente):*\n• ${top1Quente} (Pode repetir!)\n\n` +
         
-        `🎯 *Sugestões de Unidade (2)*\n${formatarListaWpp(palpites.unidade)}\n\n` +
-        
-        `-----------------------------------\n` +
-        `❄️ *Top 5 Frios (Atrasados 1º Prêmio)*\n` +
-        `${top5BichosTexto}\n\n` +
-        
-        `🔥 *Top 5 Quentes (Frequentes 1º-5º)*\n` +
-        `${top5BichosQuentesTexto}\n\n` +
-
-        `📊 *Fontes Adicionais da Análise*\n` +
+        `📊 *Outras Fontes (Pode Ajudar):*\n` +
         `• *Dezena Fria:* ${analiseFontes.dezena}\n` +
         `• *Puxada do Dia:* ${analiseFontes.puxada}\n` +
-        `${bichoDezenaTexto}` + // <-- SUA SUGESTÃO (Bicho da Dezena)
-        `${bichoGrupoTexto}` +  // <-- SUA SUGESTÃO (Bicho do Grupo)
-        `\n` + // Adiciona uma quebra de linha final
+        `${bichoDezenaTexto}` + 
+        `${bichoGrupoTexto}` +
+        `\n` + 
         
-        `Boa sorte e jogue com responsabilidade! 🍀`;
-    // --- FIM DA CORREÇÃO 3 ---
+        `⚠️ *Atenção:* São apenas palpites estatísticos! Não há garantia de resultado. Jogue com responsabilidade. 🍀`;
+    // --- FIM DO NOVO BLOCO DE MENSAGEM ---
 
     // 6. Exibe a área de resultados (sem alterações)
     hideLoadingIndicator();
