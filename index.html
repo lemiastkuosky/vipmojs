@@ -3307,14 +3307,16 @@ body.dark-mode #sortResultsBtn:active {
     z-index: 1000;
 }
 
-/* --- ESTILOS PARA O NOVO MODAL DE COMPARTILHAMENTO --- */
 #shareResultsModalBody .lottery-selection-grid {
-    display: grid;
-    /* ALTERAÇÃO: Agora o padrão é 2 colunas */
-    grid-template-columns: 1fr 1fr; 
-    /* ALTERAÇÃO: Espaçamento um pouco menor para telas pequenas */
+    display: flex;          /* <-- MUDADO DE 'grid' */
+    flex-direction: column; /* <-- ADICIONADO */
     gap: 10px; 
     margin-top: 10px;
+}
+
+/* Centraliza o texto dos botões no modo coluna */
+#shareResultsModalBody .lottery-card-button {
+    justify-content: center;
 }
 
 .lottery-card-button {
@@ -3360,22 +3362,6 @@ body.dark-mode .lottery-card-text strong {
 
 body.dark-mode .lottery-card-text small {
     color: #adb5bd;
-}
-
-/* REMOVIDO: A media query abaixo não é mais necessária, 
-   pois a grade 2x2 agora é o padrão.
-@media (min-width: 500px) {
-    #shareResultsModalBody .lottery-selection-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-*/
-
-/* Layout em grade para telas maiores */
-@media (min-width: 500px) {
-    #shareResultsModalBody .lottery-selection-grid {
-        grid-template-columns: 1fr 1fr; /* Duas colunas */
-    }
 }
 
 /* Estilo para os botões de horário (segunda tela) */
@@ -3939,6 +3925,48 @@ body.dark-mode .ia-analysis-list {
     margin-bottom: 5px;
 }
 
+/* --- NOVOS ESTILOS PARA OS CARTÕES DA I.A. --- */
+
+/* 1. Define a grade de 2 colunas no modal da I.A. */
+#iaLotteryGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 colunas */
+    gap: 12px; /* Espaçamento entre os cartões */
+    margin-top: 10px;
+}
+
+/* 2. Ajusta o botão para alinhar o emoji e o texto */
+#iaLotteryGrid .lottery-card-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Alinha à esquerda */
+    padding: 15px 20px; /* Mais preenchimento interno */
+    gap: 15px; /* Espaço entre o emoji e o texto */
+}
+
+/* 3. Estilo do Emoji */
+.lottery-card-emoji {
+    font-size: 2.2rem; /* Tamanho grande para o emoji */
+    line-height: 1;
+}
+
+/* 4. Alinha o bloco de texto (Nome e Sigla) */
+#iaLotteryGrid .lottery-card-text {
+    text-align: left;
+}
+
+/* 5. MÁGICA: Centraliza o último botão se for ímpar */
+/* (Isso faz o botão "Bahia" ocupar a largura total e se centralizar) */
+#iaLotteryGrid .lottery-card-button:last-child:nth-child(odd) {
+    grid-column: 1 / -1; /* Ocupa as 2 colunas */
+    justify-content: center; /* Centraliza o conteúdo (emoji + texto) */
+}
+
+/* 6. Alinha o texto do botão de largura total */
+#iaLotteryGrid .lottery-card-button:last-child:nth-child(odd) .lottery-card-text {
+    text-align: center; 
+}
+
 /* ==================================================================== */
 /* === LAYOUT EM GRADE FIXA PARA SELEÇÃO DE BICHOS (PADRÃO GLOBAL) === */
 /* ==================================================================== */
@@ -4039,6 +4067,55 @@ body.dark-mode #bichosSelectorContainer {
     overflow-y: auto;   /* <-- Adiciona a barra de rolagem vertical */
     z-index: 10;        /* Garante que ele fique sobre outros itens */
 }
+
+/* --- ATUALIZAÇÃO: Layout Vertical para Cartões da I.A. --- */
+
+/* 1. Muda a grade para um layout de coluna flexível */
+#iaLotteryGrid {
+    display: flex;
+    flex-direction: column; /* Empilha os botões verticalmente */
+    grid-template-columns: 1fr; /* Remove a regra de 2 colunas */
+    gap: 10px; /* Um espaçamento vertical */
+}
+
+/* 2. Centraliza o texto do botão */
+#iaLotteryGrid .lottery-card-button {
+    justify-content: center; /* Centraliza o texto */
+    padding: 16px 15px; /* Padding vertical para botões mais altos */
+}
+
+/* 3. Centraliza o bloco de texto */
+#iaLotteryGrid .lottery-card-text {
+    text-align: center;
+}
+
+/* 4. Remove as regras de centralização do último item (não são mais necessárias) */
+#iaLotteryGrid .lottery-card-button:last-child:nth-child(odd) {
+    grid-column: auto; /* Reseta a regra da grade */
+    justify-content: center; /* Mantém a centralização padrão */
+}
+
+/* 5. Remove o alinhamento específico do último item */
+#iaLotteryGrid .lottery-card-button:last-child:nth-child(odd) .lottery-card-text {
+    text-align: center; /* Mantém a centralização padrão */
+}
+
+/* --- ESTILO DEFINITIVO: Layout Vertical para Cartões I.A. --- */
+
+#iaLotteryGrid {
+    display: flex;          /* Ativa o layout flexível */
+    flex-direction: column; /* Empilha os botões verticalmente */
+    gap: 10px;              /* Espaço vertical entre os botões */
+    margin-top: 10px;
+}
+
+/* Centraliza o texto dentro dos botões.
+   (A classe .lottery-card-button já cuida do resto) 
+*/
+#iaLotteryGrid .lottery-card-button {
+    justify-content: center; /* Centraliza o conteúdo do botão */
+}
+
 </style>
 
 </head>
@@ -4527,7 +4604,7 @@ body.dark-mode #bichosSelectorContainer {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V1.88</strong>
+            <strong>V1.99</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -4609,19 +4686,36 @@ body.dark-mode #bichosSelectorContainer {
       <h3 id="palpitesIAModalTitle" class="modal-title">🧠 Palpites da I.A.</h3>
       
       <div id="iaPalpiteForm" class="generator-step-card" style="padding: 15px; margin-bottom: 20px;">
-          <div class="form-group" style="margin-top: 10px; margin-bottom: 0;">
-              <div class="form-group-title">1. Selecione a Loteria</div>
-              <select id="iaPalpiteLoteriaSelect" class="save-dialog-input" style="text-align: center; text-align-last: center;">
-                  <option value="rj">PT Rio (RJ)</option>
-                  <option value="lk">Look Goiás (LK)</option>
-                  <option value="ln">Loteria Nacional (LN)</option>
-                  <option value="fd">Federal (FD)</option>
-                  <option value="ba">Bahia (BA)</option>
-              </select>
-          </div>
-          <button onclick="generateIAPalpites()" class="bolao-button" style="width: 100%; margin-top: 15px; padding: 12px; font-size: 1rem;">
-              ⚡ Gerar Palpites
-          </button>
+        <p style="text-align: center; margin-top: -5px; margin-bottom: 15px;">
+            Selecione a loteria para a análise da I.A.:
+        </p>
+        <div class="lottery-selection-grid" id="iaLotteryGrid">
+            <button class="lottery-card-button" onclick="generateIAPalpites('rj', 'PT Rio (RJ)')">
+                <div class="lottery-card-text">
+                    <strong>PT Rio</strong><small>(RJ)</small>
+                </div>
+            </button>
+            <button class="lottery-card-button" onclick="generateIAPalpites('lk', 'Look Goiás (LK)')">
+                <div class="lottery-card-text">
+                    <strong>Look Goiás</strong><small>(LK)</small>
+                </div>
+            </button>
+            <button class="lottery-card-button" onclick="generateIAPalpites('ln', 'Loteria Nacional (LN)')">
+                <div class="lottery-card-text">
+                    <strong>Loteria Nacional</strong><small>(LN)</small>
+                </div>
+            </button>
+            <button class="lottery-card-button" onclick="generateIAPalpites('fd', 'Federal (FD)')">
+                <div class="lottery-card-text">
+                    <strong>Federal</strong><small>(FD)</small>
+                </div>
+            </button>
+            <button class="lottery-card-button" onclick="generateIAPalpites('ba', 'Bahia (BA)')">
+                <div class="lottery-card-text">
+                    <strong>Bahia</strong><small>(BA)</small>
+                </div>
+            </button>
+        </div>
       </div>
 
       <div id="iaPalpiteResultsContainer" style="display: none;">
@@ -4629,9 +4723,7 @@ body.dark-mode #bichosSelectorContainer {
               <div class="step-title" style="margin-bottom: 15px;">
                   🔮 Análise I.A. para <span id="iaPalpiteLoteriaNome"></span>
               </div>
-              
               <div id="iaPalpiteResultsOutput"></div>
-
           </div>
           <button id="iaPalpiteShareBtn" onclick="shareIAPalpites()" class="save-button" style="background-color: #25D366; width: 100%; margin-top: 15px; padding: 12px; font-size: 1rem;">
               📲 Compartilhar no WhatsApp
@@ -5276,9 +5368,9 @@ function showPalpitesIAModal() {
     const modal = document.getElementById('palpitesIAModal');
     
     // Reseta o modal para o estado inicial
-    document.getElementById('iaPalpiteForm').style.display = 'block';
-    document.getElementById('iaPalpiteResultsContainer').style.display = 'none';
-    document.getElementById('iaPalpiteResultsOutput').innerHTML = ''; // Limpa resultados antigos
+    document.getElementById('iaPalpiteForm').style.display = 'block'; 
+    document.getElementById('iaPalpiteResultsContainer').style.display = 'none'; // <-- Esta linha corrige o "vazamento"
+    document.getElementById('iaPalpiteResultsOutput').innerHTML = ''; // Limpa results
     
     modal.classList.add('active');
 }
@@ -5287,22 +5379,28 @@ function closePalpitesIAModal() {
     document.getElementById('palpitesIAModal').classList.remove('active');
 }
 
-/**
- * Esta é a função principal que o botão "Gerar Palpites" vai chamar.
- * Ela ainda não vai rodar a I.A., mas podemos testar o fluxo.
- */
-async function generateIAPalpites() {
-    const loteriaSelect = document.getElementById('iaPalpiteLoteriaSelect');
-    const loteria = loteriaSelect.value;
-    const loteriaNome = loteriaSelect.options[loteriaSelect.selectedIndex].text;
+async function generateIAPalpites(loteria, loteriaNome) { // <-- MUDANÇA AQUI
+    
+    // 1. Verifica se os argumentos foram passados
+    if (!loteria || !loteriaNome) {
+        console.error("generateIAPalpites chamada sem argumentos.");
+        showToast("Erro: Nenhuma loteria selecionada.", "error");
+        return;
+    }
     
     showLoadingIndicator(`Analisando ${loteriaNome}...`);
     
+    const agora = new Date();
+    const horaFormatada = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const diaSimples = String(agora.getDate()).padStart(2, '0');
+    const mesSimples = String(agora.getMonth() + 1).padStart(2, '0');
+    const anoSimples = String(agora.getFullYear()).slice(-2);
+    const dataSimplesFormatada = `${diaSimples}/${mesSimples}/${anoSimples}`;
+    
     const dataDoDiaArray = generateDateBasedDezenas(); 
     const diaDezena = dataDoDiaArray[0]; 
-    const diaFormatado = dataDoDiaArray.join('/'); 
 
-    // 1. Roda todos os motores de análise em paralelo
+    // 2. Roda todos os motores de análise em paralelo
     const [
         bichosAtrasados,
         bichosFrequentes,
@@ -5319,7 +5417,7 @@ async function generateIAPalpites() {
         getPuxadaDoDiaIA(loteria)
     ]);
     
-    // 2. Agrupa os resultados das análises
+    // 3. Agrupa os resultados das análises
     const analiseCompleta = {
         bichosAtrasados,
         bichosFrequentes,
@@ -5330,10 +5428,10 @@ async function generateIAPalpites() {
         dataDoDia: dataDoDiaArray
     };
 
-    // 3. Roda o Motor 4 (5/5/5/5)
+    // 4. Roda o Motor 4 (5/5/5/5)
     const { palpites, analiseFontes } = getPalpitesMisturadosIA(analiseCompleta);
 
-    // 4. Constrói o HTML (Sem alterações)
+    // 5. Constrói o HTML (Sem alterações)
     const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
     
     const criarListaPalpitesHTML = (lista) => {
@@ -5394,9 +5492,7 @@ async function generateIAPalpites() {
         </div>
     `;
     
-    // 5. Salva o texto de compartilhamento globalmente (MENSAGEM ATUALIZADA)
-    
-    const horaFormatada = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    // 6. Salva o texto de compartilhamento globalmente (MENSAGEM ATUALIZADA)
     
     const formatarListaHorizontal = (lista) => {
         return '• ' + lista.map(p => `\`${p.palpite}\``).join(' • ');
@@ -5407,21 +5503,19 @@ async function generateIAPalpites() {
     
     let puxadaTexto = "N/A";
     if (analiseFontes.puxada !== "N/A" && analiseCompleta.puxada) { 
-         // MODIFICADO: Formato "Urso (Saiu) ⇢ 🦋 Borboleta"
          puxadaTexto = `${analiseCompleta.puxada.bichoSaiu.animal} (Saiu) ⇢ ${analiseCompleta.puxada.bichoPuxado.emoji} ${analiseCompleta.puxada.bichoPuxado.animal}`;
     }
 
     let sugestaoGrupoTexto = "";
     const bichoDoGrupo = tabelaDeGrupos.find(b => b.grupo === diaDezena);
     if (bichoDoGrupo) {
-        // MODIFICADO: Formato "Bicho da Data (08): 🐫 Camelo (G08)"
         sugestaoGrupoTexto = `• *Bicho da Data (${diaDezena}):* ${bichoDoGrupo.emoji} ${bichoDoGrupo.animal} (G${bichoDoGrupo.grupo})\n`;
     }
 
-    // --- ESTE É O BLOCO FINAL, COM O FORMATO EXATO SOLICITADO ---
+    // --- BLOCO DE MENSAGEM (Sem alteração) ---
     window.iaPalpiteShareText = `🔮 *VIP Palpites da I.A. - ${loteriaNome.toUpperCase()}* 🔮\n\n` +
         
-        `_Gerado dia ${diaFormatado} às: ${horaFormatada}_\n\n` +
+        `_${"Gerado dia"} ${dataSimplesFormatada} ${"às:"} ${horaFormatada}_\n\n` +
         
         `🎯 *Sugestões Principais:*\n\n` +
         
@@ -5438,22 +5532,24 @@ async function generateIAPalpites() {
         `🔥 *Bicho Quente (Frequente):*\n\n` +
         `• ${top1Quente} (Pode repetir!)\n\n` +
         
+        `\n` + // Linha em branco
+        
         `🧐 *Radar da I.A. (Fique de Olho):*\n\n` +
         `• *Unidade na geladeira:* ${analiseFontes.unidadeFria}\n` +
         `• *Dezena sumida:* ${analiseFontes.dezena}\n` +
         `• *Centena empoeirada:* ${analiseFontes.centenaFria}\n` +
         `• *Amigo do dia (Puxada):* ${puxadaTexto}\n` +
-        `${sugestaoGrupoTexto}` + // A quebra de linha já está incluída na variável
+        `${sugestaoGrupoTexto}` +
         
         `\n` + 
         `⚠️ *Atenção:* São apenas palpites, Jogue com responsabilidade. 🍀`;
     // --- FIM DO BLOCO DE MENSAGEM ---
 
-    // 6. Exibe a área de resultados (sem alterações)
+    // 7. Exibe a área de resultados (sem alterações)
     hideLoadingIndicator();
-    document.getElementById('iaPalpiteForm').style.display = 'none';
+    document.getElementById('iaPalpiteForm').style.display = 'none'; // <-- Esconde os botões
     document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
-    document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+    document.getElementById('iaPalpiteResultsContainer').style.display = 'block'; // <-- Mostra os resultados
 }
 
 async function getPalpitesIA(loteria, posicaoPremio = 1) {
