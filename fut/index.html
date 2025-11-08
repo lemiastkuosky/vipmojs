@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Meu Scanner de Jogos</title>
+</head>
+<body>
+    <h1>Jogos Filtrados</h1>
+    <button id="btnBuscar">Buscar Oportunidades</button>
+    <div id="resultados"></div>
+
+    <script>
+        document.getElementById('btnBuscar').addEventListener('click', function() {
+            // 1. O JavaScript chama o SEU servidor, não o RapidAPI
+            fetch('/api/buscar-jogos.php') // Ou .js, .py, etc.
+                .then(response => response.json())
+                .then(jogosFiltrados => {
+                    // 5. Exibe os resultados que o SEU servidor enviou
+                    let html = '';
+                    if (jogosFiltrados.length === 0) {
+                        html = '<p>Nenhum jogo encontrado nos critérios.</p>';
+                    } else {
+                        jogosFiltrados.forEach(jogo => {
+                            html += `<p><b>ALERTA:</b> ${jogo.casa} vs ${jogo.fora} (${jogo.placar}) - ${jogo.minuto}'</p>`;
+                        });
+                    }
+                    document.getElementById('resultados').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar jogos:', error);
+                    document.getElementById('resultados').innerHTML = '<p>Erro ao buscar jogos.</p>';
+                });
+        });
+    </script>
+</body>
+</html>
