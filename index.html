@@ -5330,25 +5330,22 @@ async function generateIAPalpites() {
         dataDoDia: dataDoDiaArray
     };
 
-    // 3. Roda o Motor 4 (A NOVA VERSÃO 5/5/5/5)
+    // 3. Roda o Motor 4 (5/5/5/5)
     const { palpites, analiseFontes } = getPalpitesMisturadosIA(analiseCompleta);
 
-    // 4. Constrói o HTML (ATUALIZADO PARA 5/5/5/5)
+    // 4. Constrói o HTML (Sem alterações)
     const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
     
     const criarListaPalpitesHTML = (lista) => {
         return lista.map(p => `<li title="Base: ${p.tipo}">${p.palpite}</li>`).join('');
     };
-    
     const criarTopBichosHTML = (lista) => {
         return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo})</li>`).join('');
     };
-
     const criarTop5QuentesHTML = (lista) => {
         return lista.map((b, i) => `<li><strong>${i + 1}º:</strong> ${b.emoji} ${b.animal} (G${b.grupo})</li>`).join('');
     };
 
-    // --- HTML ATUALIZADO (ADICIONANDO UNIDADE) ---
     resultsOutput.innerHTML = `
         <div class="ia-result-card">
             <h4>🎯 Sugestões de Milhar (5)</h4>
@@ -5374,21 +5371,18 @@ async function generateIAPalpites() {
                 ${criarListaPalpitesHTML(palpites.unidade)}
             </ul>
         </div>
-        
         <div class="ia-result-card" style="border-left-color: #ffc107;">
             <h4>❄️ Top 5 Frios (Atrasados 1º Prêmio)</h4>
             <ul class="ia-analysis-list">
                 ${criarTopBichosHTML(analiseCompleta.bichosAtrasados)}
             </ul>
         </div>
-
         <div class="ia-result-card" style="border-left-color: #dc3545;">
             <h4>🔥 Top 5 Quentes (Frequentes 1º-5º)</h4>
             <ul class="ia-analysis-list">
                 ${criarTop5QuentesHTML(analiseCompleta.bichosFrequentes)}
             </ul>
         </div>
-        
         <div class="ia-result-card" style="border-left-color: #6c757d;">
             <h4>📊 Outras Fontes da Análise</h4>
             <ul class="ia-analysis-list">
@@ -5396,11 +5390,13 @@ async function generateIAPalpites() {
                 <li><strong>Dezena Fria (1º-5º):</strong> ${analiseFontes.dezena}</li>
                 <li><strong>Centena Fria (1º-5º):</strong> ${analiseFontes.centenaFria}</li>
                 <li><strong>Puxada do Dia:</strong> ${analiseFontes.puxada}</li>
-                </ul>
+            </ul>
         </div>
     `;
     
     // 5. Salva o texto de compartilhamento globalmente (MENSAGEM ATUALIZADA)
+    
+    const horaFormatada = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
     const formatarListaHorizontal = (lista) => {
         return '• ' + lista.map(p => `\`${p.palpite}\``).join(' • ');
@@ -5420,8 +5416,13 @@ async function generateIAPalpites() {
         sugestaoGrupoTexto = `• *Bicho da Data (${diaDezena}):* ${bichoDoGrupo.emoji} ${bichoDoGrupo.animal} (G${bichoDoGrupo.grupo})\n`;
     }
 
-    // --- INÍCIO DO NOVO BLOCO DE MENSAGEM (Com Unidade) ---
-    window.iaPalpiteShareText = `🔮 *Palpites da I.A. - ${loteriaNome.toUpperCase()}* 🔮\n\n` +
+    // --- BLOCO DE MENSAGEM ATUALIZADO (Com a quebra de linha Data/Hora) ---
+    window.iaPalpiteShareText = `🔮 *Palpites da I.A. - ${loteriaNome.toUpperCase()}* 🔮\n` +
+        // --- ESTA É A PARTE MODIFICADA ---
+        `*Análise de:* ${diaFormatado}\n` +
+        `(*Gerado às:* ${horaFormatada})\n\n` +
+        // --- FIM DA MODIFICAÇÃO ---
+        
         `🧠 A Vip I.A. analisou os dados! Aqui estão as sugestões:\n\n` +
         
         `🎯 *Sugestões Principais:*\n\n` +
@@ -5429,12 +5430,14 @@ async function generateIAPalpites() {
         `*(Milhar)*\n${formatarListaHorizontal(palpites.milhar)}\n\n` +
         `*(Centena)*\n${formatarListaHorizontal(palpites.centena)}\n\n` +
         `*(Dezena)*\n${formatarListaHorizontal(palpites.dezena)}\n\n` +
-        `*(Unidade)*\n${formatarListaHorizontal(palpites.unidade)}\n\n` + // <-- 6. LINHA DA UNIDADE ADICIONADA
+        `*(Unidade)*\n${formatarListaHorizontal(palpites.unidade)}\n\n` +
         
         `💡 *Dicas da Análise:*\n\n` +
         
         `❄️ *Bicho Frio (Atrasado):*\n• ${top1Frio} (Bom para cercar!)\n\n` +
         `🔥 *Bicho Quente (Frequente):*\n• ${top1Quente} (Pode repetir!)\n\n` +
+        
+        `\n` + // Linha em branco
         
         `🧐 *Radar da I.A. (Fique de Olho):*\n` +
         `• *Unidade na geladeira:* ${analiseFontes.unidadeFria}\n` +
@@ -5445,7 +5448,7 @@ async function generateIAPalpites() {
         
         `\n` + 
         `⚠️ *Atenção:* São apenas palpites, Jogue com responsabilidade. 🍀`;
-    // --- FIM DO NOVO BLOCO DE MENSAGEM ---
+    // --- FIM DO BLOCO DE MENSAGEM ---
 
     // 6. Exibe a área de resultados (sem alterações)
     hideLoadingIndicator();
