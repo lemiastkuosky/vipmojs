@@ -3,14 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v6</title>
+    <title>Calculadora de Bolão v7</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         
         .form-group { margin-bottom: 15px; }
-        .form-group input[type="number"] { width: 95%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1.1em; }
+        /* Estilo para o <select> e <input> */
+        .form-group input[type="number"],
+        .form-group select { 
+            width: 100%; /* Ocupa 100% da largura */
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            font-size: 1.1em;
+            box-sizing: border-box; /* Garante que o padding não estoure a largura */
+        }
 
         .botoes-grid {
             display: grid;
@@ -18,10 +27,10 @@
             gap: 10px;
             margin-top: 10px;
         }
-        .botao-selecao, .botao-premio {
-            border: 1px solid #007bff;
+        .botao-premio {
+            border: 1px solid #28a745;
             background: #fff;
-            color: #007bff;
+            color: #28a745;
             padding: 12px 10px;
             border-radius: 4px;
             cursor: pointer;
@@ -30,9 +39,6 @@
             text-align: center;
             transition: background 0.2s, color 0.2s;
         }
-        .botao-selecao:hover { background: #e6f2ff; }
-        .botao-selecao.active { background: #007bff; color: white; }
-        .botao-premio { border-color: #28a745; color: #28a745; }
         .botao-premio:hover { background: #e9f7ef; }
 
         .botao-wpp { display: block; text-align: center; background: #25D366; color: white; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-size: 16px; margin-top: 20px; }
@@ -52,14 +58,11 @@
     <div class="container">
         <h2>Calculadora de Bolão (Divisão por Pessoas)</h2>
         
-        <label>1. Escolha a Taxa de Administração (%):</label>
-        <div id="admin_botoes" class="botoes-grid">
-            <button class="botao-selecao active" data-pct="0">0%</button>
-            <button class="botao-selecao" data-pct="5">5%</button>
-            <button class="botao-selecao" data-pct="10">10%</button>
-            <button class="botao-selecao" data-pct="15">15%</button>
-            <button class="botao-selecao" data-pct="20">20%</button>
-            </div>
+        <div class="form-group">
+            <label for="select_taxa_admin">1. Escolha a Taxa de Administração (%):</label>
+            <select id="select_taxa_admin">
+                </select>
+        </div>
 
         <div class="divisao-box">
             <div class="form-group">
@@ -101,35 +104,33 @@
         // --- CONSTANTES DO BOLÃO ---
         const MULTIPLICADOR = 80; // 1200 (prêmio) / 15 (aposta) = 80
         
-        // --- VARIÁVEIS DE ESTADO ---
-        let taxa_admin_atual = 0; // Começa com 0%
-
         // --- ELEMENTOS ---
-        const containerAdmin = document.getElementById('admin_botoes');
+        const selectTaxaAdmin = document.getElementById('select_taxa_admin');
         const containerPremio = document.getElementById('premio_botoes');
         const areaResultado = document.getElementById('resultadoArea');
-        const botoesAdmin = containerAdmin.querySelectorAll('.botao-selecao');
         
-        // Novos Inputs
         const inputPct1Lugar = document.getElementById('pct_1_lugar');
         const inputNumParticipantes = document.getElementById('num_participantes');
 
-        // --- 1. FUNÇÃO DE FORMATAR MOEDA ---
+        // --- 1. FUNÇÃO DE PREENCHER O SELECT (0-100) ---
+        function popularSelectAdmin() {
+            for (let i = 0; i <= 100; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i + '%';
+                selectTaxaAdmin.appendChild(option);
+            }
+            // Pode definir um valor padrão se quiser, ex:
+             selectTaxaAdmin.value = "10"; // Deixa 10% selecionado por padrão
+        }
+        
+        // --- 2. FUNÇÃO DE FORMATAR MOEDA ---
         function formatar_brl(valor) {
             return new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL'
             }).format(valor);
         }
-
-        // --- 2. LÓGICA DE SELEÇÃO DA TAXA ADMIN ---
-        containerAdmin.addEventListener('click', function(e) {
-            if (e.target.classList.contains('botao-selecao')) {
-                taxa_admin_atual = parseFloat(e.target.dataset.pct);
-                botoesAdmin.forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-            }
-        });
 
         // --- 3. LÓGICA PRINCIPAL DO CÁLCULO (Atualizada) ---
         containerPremio.addEventListener('click', function(e) {
@@ -138,8 +139,8 @@
                 // --- 1. COLETAR VALORES ---
                 const valor_aposta = parseFloat(e.target.dataset.valor);
                 
-                // Pega os valores dos novos campos
-                const pct_admin = taxa_admin_atual;
+                // Pega os valores dos inputs e do NOVO SELECT
+                const pct_admin = parseFloat(selectTaxaAdmin.value) || 0;
                 const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
                 const num_participantes = parseInt(inputNumParticipantes.value) || 0;
 
@@ -154,7 +155,6 @@
                 const premio_bruto = valor_aposta * MULTIPLICADOR; // Ex: 15 * 80 = 1200
                 
                 // --- 3. CÁLCULO 2 (DESCONTOS) ---
-                // ATENÇÃO: Os descontos são baseados no PRÊMIO BRUTO
                 const valor_1_lugar = premio_bruto * (pct_1_lugar / 100); // Ex: 1200 * 0.55 = 660
                 const valor_taxa_admin = premio_bruto * (pct_admin / 100); // Ex: 1200 * 0.10 = 120
 
@@ -190,6 +190,10 @@
                 areaResultado.style.display = 'block';
             }
         });
+
+        // --- INICIALIZAÇÃO ---
+        // Roda a função para criar as opções 0-100 assim que a página carrega
+        popularSelectAdmin();
 
     </script>
 
