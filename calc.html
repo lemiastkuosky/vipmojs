@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Premiação v2</title>
+    <title>Calculadora de Premiação v3</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input[type="number"] { width: 95%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1.2em; }
+        .form-group input[type="number"] { width: 95%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1.1em; }
         
         #botoes_container {
             display: grid;
@@ -31,13 +31,23 @@
         .botao-premio:hover { background: #0056b3; }
 
         .botao-wpp { display: block; text-align: center; background: #25D366; color: white; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-size: 16px; margin-top: 20px; }
-        .resultado { margin-top: 20px; padding: 15px; background: #e9f7ef; border: 1px solid #b6dccb; border-radius: 4px; display: none; /* Começa escondido */ }
+        .resultado { margin-top: 20px; padding: 15px; background: #e9f7ef; border: 1px solid #b6dccb; border-radius: 4px; display: none; }
+        
+        .divisao-box {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .form-group input[type="radio"] { margin-right: 5px; }
+        .form-group .radio-label { font-weight: normal; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Calculadora de Premiação (Multiplicador)</h2>
+        <h2>Calculadora de Premiação</h2>
         
         <div class="form-group">
             <label for="valor_base">Valor de Referência (Prêmio para "15")</label>
@@ -45,8 +55,33 @@
         </div>
 
         <hr>
-        <label>Clique no botão para calcular o prêmio:</label>
 
+        <div class="divisao-box">
+            <h4>Regras da Divisão</h4>
+            
+            <div class="form-group">
+                <label for="num_participantes">Nº de Participantes</label>
+                <input type="number" id="num_participantes" placeholder="Ex: 10">
+            </div>
+
+            <div class="form-group">
+                <label>Modo de Divisão:</label>
+                <input type="radio" id="modo_pct" name="modo_divisao" value="porcentagem" checked>
+                <label for="modo_pct" class="radio-label">Porcentagem (%)</label><br>
+                
+                <input type="radio" id="modo_fixo" name="modo_divisao" value="fixo">
+                <label for="modo_fixo" class="radio-label">Valor Fixo (R$)</label>
+            </div>
+            
+            <div class="form-group">
+                <label for="valor_regra_divisao">Valor da Regra (R$ ou %)</label>
+                <input type="number" step="0.01" id="valor_regra_divisao" placeholder="Ex: 40 (para %) ou 500 (para R$)">
+            </div>
+        </div>
+
+        <hr>
+
+        <label style="font-weight: bold;">Clique no botão para calcular TUDO:</label>
         <div id="botoes_container">
             <button class="botao-premio" data-valor="15">15</button>
             <button class="botao-premio" data-valor="30">30</button>
@@ -82,49 +117,71 @@
         const inputValorBase = document.getElementById('valor_base');
         const containerBotoes = document.getElementById('botoes_container');
         const areaResultado = document.getElementById('resultadoArea');
+        
+        // Inputs da "Parte 2"
+        const inputParticipantes = document.getElementById('num_participantes');
+        const inputValorRegra = document.getElementById('valor_regra_divisao');
 
-        // Usamos "Event Delegation"
-        // Ouvimos o clique no 'container'
         containerBotoes.addEventListener('click', function(e) {
             
-            // Verificamos se o que foi clicado foi um 'botao-premio'
+            // Verifica se o que foi clicado foi um 'botao-premio'
             if (e.target.classList.contains('botao-premio')) {
                 
-                // 1. Coletar Valores
+                // --- 1. COLETAR VALORES DO FORMULÁRIO ---
                 const valor_base = parseFloat(inputValorBase.value) || 0;
-                
-                // Pega o valor do atributo 'data-valor' do botão clicado
                 const valor_botao = parseInt(e.target.dataset.valor); 
+                
+                const num_participantes = parseInt(inputParticipantes.value) || 0;
+                const modo_divisao = document.querySelector('input[name="modo_divisao"]:checked').value;
+                const valor_regra_divisao = parseFloat(inputValorRegra.value) || 0;
 
-                // Validação
+                // --- VALIDAÇÃO ---
                 if (valor_base <= 0) {
                     alert('Por favor, insira um Valor de Referência válido.');
                     inputValorBase.focus();
                     return;
                 }
+                if (num_participantes <= 0) {
+                    alert('Por favor, insira um Número de Participantes válido.');
+                    inputParticipantes.focus();
+                    return;
+                }
 
-                // 2. Fazer o Cálculo
-                // A 'taxa' é o valor base dividido por 15
+                // --- 2. CÁLCULO 1 (PRÊMIO TOTAL) ---
                 const taxa = valor_base / 15;
                 const premio_total = taxa * valor_botao;
 
-                // 3. Preparar o texto e o link do WhatsApp
-                const texto_calculo = `Valor de Referência (p/ 15): ${formatar_brl(valor_base)}\n` +
-                                     `Taxa por Ponto: ${formatar_brl(taxa)}\n` +
-                                     `Cálculo: ${valor_botao} x ${formatar_brl(taxa)}\n` +
-                                     "--------------------\n" +
-                                     `🏆 Prêmio Total: ${formatar_brl(premio_total)}`;
+                // --- 3. CÁLCULO 2 (VALOR DA DIVISÃO) ---
+                let valor_a_dividir = 0;
+                let texto_modo = "";
 
-                // Texto para o WhatsApp (com * e quebras de linha \n)
+                if (modo_divisao === 'porcentagem') {
+                    valor_a_dividir = premio_total * (valor_regra_divisao / 100);
+                    texto_modo = `(${valor_regra_divisao}% do total)`;
+                } else { // modo 'fixo'
+                    valor_a_dividir = valor_regra_divisao;
+                    texto_modo = `(Valor Fixo)`;
+                }
+
+                let valor_por_participante = 0;
+                if (num_participantes > 0) {
+                    valor_por_participante = valor_a_dividir / num_participantes;
+                }
+                
+                // --- 4. PREPARAR O TEXTO ---
+                const texto_calculo = 
+                    `Prêmio Total (Ref. ${valor_botao}): ${formatar_brl(premio_total)}\n` +
+                    `--------------------\n` +
+                    `VALOR DA DIVISÃO\n` +
+                    `Valor a Dividir: ${formatar_brl(valor_a_dividir)} ${texto_modo}\n` +
+                    `Nº de Participantes: ${num_participantes}\n\n` +
+                    `🏆 Valor p/ Cada: ${formatar_brl(valor_por_participante)}`;
+
+                // --- 5. GERAR LINK E EXIBIR ---
                 const texto_whatsapp = `🎉 *PREMIAÇÃO CALCULADA* 🎉\n\n` + texto_calculo;
-                
-                // Texto para o HTML (troca \n por <br>)
                 const texto_html = texto_whatsapp.replace(/\n/g, '<br>');
-                
-                // Link codificado para URL
                 const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_whatsapp);
 
-                // 4. Exibir o resultado na página
                 areaResultado.innerHTML = `
                     <h3>Resumo do Cálculo:</h3>
                     <p>${texto_html}</p>
