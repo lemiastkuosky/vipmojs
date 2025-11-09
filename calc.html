@@ -1,108 +1,3 @@
-<?php
-// --- INÍCIO DA LÓGICA PHP ---
-
-// Definir variáveis iniciais
-$resultado_texto = "";
-$link_whatsapp = "";
-
-// number_format para formatar como moeda BRL
-function formatar_brl($valor) {
-    return "R$ " . number_format($valor, 2, ',', '.');
-}
-
-// Verifica se o formulário foi enviado
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    // 1. Coletar dados do formulário
-    $valor_total = (float)$_POST['valor_total'];
-    $modo_calculo = $_POST['modo_calculo'];
-    
-    // O 'valor_regra' pode ser R$ ou %
-    $valor_regra = (float)$_POST['valor_regra']; 
-    
-    // Quantas pessoas vão dividir o "resto"
-    $numero_demais = (int)$_POST['numero_demais']; 
-
-    $premio_1_lugar = 0;
-    $premio_demais = 0;
-    $valor_restante = 0;
-    
-    $texto_calculo = ""; // Texto para o resumo
-
-    // 2. Fazer o cálculo baseado no MODO
-    switch ($modo_calculo) {
-        
-        // --- MODO FIXO ---
-        case 'fixo':
-            $premio_1_lugar = $valor_regra;
-            $valor_restante = $valor_total - $premio_1_lugar;
-            
-            if ($numero_demais > 0) {
-                $premio_demais = $valor_restante / $numero_demais;
-            }
-            
-            $texto_calculo = "Modo: Valor Fixo\n" .
-                             "Prêmio Total: " . formatar_brl($valor_total) . "\n" .
-                             "1º Lugar (Fixo): " . formatar_brl($premio_1_lugar) . "\n" .
-                             "Restante: " . formatar_brl($valor_restante) . " (dividido por $numero_demais pessoas)\n\n" .
-                             "--------------------\n" .
-                             "Resultado:\n" .
-                             "🏆 1º Lugar: " . formatar_brl($premio_1_lugar) . "\n" .
-                             "👥 Demais: " . formatar_brl($premio_demais) . " (para cada)";
-            break;
-
-        // --- MODO PORCENTAGEM ---
-        case 'porcentagem':
-            $premio_1_lugar = $valor_total * ($valor_regra / 100);
-            $valor_restante = $valor_total - $premio_1_lugar;
-
-            if ($numero_demais > 0) {
-                $premio_demais = $valor_restante / $numero_demais;
-            }
-            
-            $texto_calculo = "Modo: Porcentagem\n" .
-                             "Prêmio Total: " . formatar_brl($valor_total) . "\n" .
-                             "1º Lugar ($valor_regra%): " . formatar_brl($premio_1_lugar) . "\n" .
-                             "Restante: " . formatar_brl($valor_restante) . " (dividido por $numero_demais pessoas)\n\n" .
-                             "--------------------\n" .
-                             "Resultado:\n" .
-                             "🏆 1º Lugar: " . formatar_brl($premio_1_lugar) . "\n" .
-                             "👥 Demais: " . formatar_brl($premio_demais) . " (para cada)";
-            break;
-
-        // --- MODO DIVIDIDO (Simples) ---
-        case 'dividido':
-            // Ignora o "valor_regra" e "numero_demais"
-            // Pega o número total de pessoas para dividir
-            $total_pessoas = (int)$_POST['total_pessoas_dividido'];
-            
-            if ($total_pessoas > 0) {
-                $premio_demais = $valor_total / $total_pessoas;
-            }
-            
-            $texto_calculo = "Modo: Divisão Simples\n" .
-                             "Prêmio Total: " . formatar_brl($valor_total) . "\n" .
-                             "Dividido por: $total_pessoas pessoas\n\n" .
-                             "--------------------\n" .
-                             "Resultado:\n" .
-                             "💰 Valor p/ cada: " . formatar_brl($premio_demais);
-            break;
-    }
-
-    // 3. Preparar o texto e o link do WhatsApp
-    // A var $texto_calculo já está formatada
-    
-    // O PHP_EOL (End of Line) garante a quebra de linha no WhatsApp
-    $texto_whatsapp_formatado = "🎉 *PREMIAÇÃO CALCULADA* 🎉" . PHP_EOL . PHP_EOL;
-    $texto_whatsapp_formatado .= str_replace("\n", PHP_EOL, $texto_calculo);
-
-    $resultado_texto = nl2br($texto_whatsapp_formatado); // Converte quebras de linha para <br> para exibir no HTML
-    
-    // Codifica o texto para uma URL
-    $link_whatsapp = "https://api.whatsapp.com/send?text=" . urlencode($texto_whatsapp_formatado);
-}
-?>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -119,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .form-group .radio-label { font-weight: normal; }
         .botao { background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
         .botao-wpp { display: block; text-align: center; background: #25D366; color: white; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-size: 16px; margin-top: 20px; }
-        .resultado { margin-top: 20px; padding: 15px; background: #e9f7ef; border: 1px solid #b6dccb; border-radius: 4px; }
+        .resultado { margin-top: 20px; padding: 15px; background: #e9f7ef; border: 1px solid #b6dccb; border-radius: 4px; display: none; /* Começa escondido */ }
     </style>
 </head>
 <body>
@@ -127,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="container">
         <h2>Calculadora de Premiação</h2>
         
-        <form action="" method="POST">
+        <form id="calcForm">
             
             <div class="form-group">
                 <label for="valor_total">Valor Total do Prêmio (R$)</label>
@@ -169,30 +64,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
             </div>
 
-            <button type="submit" class="botao">Calcular</button>
+            <button type="button" id="calcButton" class="botao">Calcular</button>
         </form>
 
-        <?php if (!empty($resultado_texto)): ?>
-            <div class="resultado">
-                <h3>Resumo do Cálculo:</h3>
-                <p><?php echo $resultado_texto; ?></p>
-                
-                <a href="<?php echo $link_whatsapp; ?>" target="_blank" class="botao-wpp">
-                    🚀 Enviar para o Grupo do WhatsApp
-                </a>
+        <div id="resultadoArea" class="resultado">
             </div>
-        <?php endif; ?>
     </div>
 
     <script>
-        // Seleciona os inputs de rádio
-        const radios = document.querySelectorAll('input[name="modo_calculo"]');
         
-        // Seleciona os 'blocos' de inputs
+        // --- 1. LÓGICA PARA MOSTRAR/ESCONDER CAMPOS ---
+
+        const radios = document.querySelectorAll('input[name="modo_calculo"]');
         const campos1Lugar = document.getElementById('campos_1_lugar');
         const camposDividido = document.getElementById('campos_dividido');
 
-        // Função para checar qual rádio está marcado
         function checarModo() {
             const modo = document.querySelector('input[name="modo_calculo"]:checked').value;
             
@@ -204,14 +90,119 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 camposDividido.style.display = 'none';
             }
         }
-
-        // Adiciona o 'ouvinte' para cada botão de rádio
+        
         radios.forEach(radio => {
             radio.addEventListener('change', checarModo);
         });
+        checarModo(); // Roda uma vez no início
 
-        // Roda a função uma vez no início para acertar os campos
-        checarModo();
+        
+        // --- 2. LÓGICA PRINCIPAL DA CALCULADORA ---
+
+        // Função para formatar como R$
+        function formatar_brl(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        }
+
+        // Pega o clique do botão
+        document.getElementById('calcButton').addEventListener('click', function() {
+            
+            // 1. Coletar dados do formulário
+            const valor_total = parseFloat(document.getElementById('valor_total').value) || 0;
+            const modo_calculo = document.querySelector('input[name="modo_calculo"]:checked').value;
+            const valor_regra = parseFloat(document.getElementById('valor_regra').value) || 0;
+            const numero_demais = parseInt(document.getElementById('numero_demais').value) || 0;
+            const total_pessoas_dividido = parseInt(document.getElementById('total_pessoas_dividido').value) || 0;
+
+            let premio_1_lugar = 0;
+            let premio_demais = 0;
+            let valor_restante = 0;
+            let texto_calculo = ""; // Texto para o resumo (usará \n para quebra de linha)
+
+            // 2. Fazer o cálculo baseado no MODO
+            switch (modo_calculo) {
+                
+                // --- MODO FIXO ---
+                case 'fixo':
+                    premio_1_lugar = valor_regra;
+                    valor_restante = valor_total - premio_1_lugar;
+                    
+                    if (numero_demais > 0) {
+                        premio_demais = valor_restante / numero_demais;
+                    }
+                    
+                    texto_calculo = "Modo: Valor Fixo\n" +
+                                     "Prêmio Total: " + formatar_brl(valor_total) + "\n" +
+                                     "1º Lugar (Fixo): " + formatar_brl(premio_1_lugar) + "\n" +
+                                     "Restante: " + formatar_brl(valor_restante) + " (dividido por " + numero_demais + " pessoas)\n\n" +
+                                     "--------------------\n" +
+                                     "Resultado:\n" +
+                                     "🏆 1º Lugar: " + formatar_brl(premio_1_lugar) + "\n" +
+                                     "👥 Demais: " + formatar_brl(premio_demais) + " (para cada)";
+                    break;
+
+                // --- MODO PORCENTAGEM ---
+                case 'porcentagem':
+                    premio_1_lugar = valor_total * (valor_regra / 100);
+                    valor_restante = valor_total - premio_1_lugar;
+
+                    if (numero_demais > 0) {
+                        premio_demais = valor_restante / numero_demais;
+                    }
+                    
+                    texto_calculo = "Modo: Porcentagem\n" +
+                                     "Prêmio Total: " + formatar_brl(valor_total) + "\n" +
+                                     "1º Lugar (" + valor_regra + "%): " + formatar_brl(premio_1_lugar) + "\n" +
+                                     "Restante: " + formatar_brl(valor_restante) + " (dividido por " + numero_demais + " pessoas)\n\n" +
+                                     "--------------------\n" +
+                                     "Resultado:\n" +
+                                     "🏆 1º Lugar: " + formatar_brl(premio_1_lugar) + "\n" +
+                                     "👥 Demais: " + formatar_brl(premio_demais) + " (para cada)";
+                    break;
+
+                // --- MODO DIVIDIDO (Simples) ---
+                case 'dividido':
+                    if (total_pessoas_dividido > 0) {
+                        premio_demais = valor_total / total_pessoas_dividido;
+                    }
+                    
+                    texto_calculo = "Modo: Divisão Simples\n" +
+                                     "Prêmio Total: " + formatar_brl(valor_total) + "\n" +
+                                     "Dividido por: " + total_pessoas_dividido + " pessoas\n\n" +
+                                     "--------------------\n" +
+                                     "Resultado:\n" +
+                                     "💰 Valor p/ cada: " + formatar_brl(premio_demais);
+                    break;
+            }
+
+            // 3. Preparar o texto e o link do WhatsApp
+            
+            // Texto para o WhatsApp (com * e quebras de linha \n)
+            const texto_whatsapp = "🎉 *PREMIAÇÃO CALCULADA* 🎉\n\n" + texto_calculo;
+            
+            // Texto para o HTML (troca \n por <br>)
+            const texto_html = texto_whatsapp.replace(/\n/g, '<br>');
+            
+            // Link codificado para URL
+            const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_whatsapp);
+
+            // 4. Exibir o resultado na página
+            const areaResultado = document.getElementById('resultadoArea');
+            
+            areaResultado.innerHTML = `
+                <h3>Resumo do Cálculo:</h3>
+                <p>${texto_html}</p>
+                <a href="${link_whatsapp}" target="_blank" class="botao-wpp">
+                    🚀 Enviar para o Grupo do WhatsApp
+                </a>
+            `;
+            
+            areaResultado.style.display = 'block'; // Mostra o resultado
+        });
+
     </script>
 
 </body>
