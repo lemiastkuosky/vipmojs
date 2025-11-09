@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v14 (Config)</title>
+    <title>Calculadora de Bolão v16 (Modal Config)</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -41,19 +41,47 @@
             border-radius: 5px; margin-top: 20px;
         }
         
-        /* NOVO BOTÃO DE CONFIGURAÇÃO */
         .botao-config {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            width: 100%;
-            margin-top: 10px;
+            background: #6c757d; color: white; border: none; padding: 10px 15px;
+            border-radius: 4px; cursor: pointer; font-size: 14px; width: 100%; margin-top: 10px;
         }
         .botao-config:hover { background: #5a6268; }
+        
+        /* --- NOVO: ESTILOS DO MODAL DE CONFIGURAÇÃO --- */
+        .modal-overlay {
+            display: none; /* Começa escondido */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .modal-content h2 { margin-top: 0; }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-buttons button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #saveConfig { background: #007bff; color: white; }
+        #cancelConfig { background: #6c757d; color: white; }
+        /* --- FIM DOS ESTILOS DO MODAL --- */
+        
     </style>
 </head>
 <body>
@@ -63,8 +91,7 @@
         
         <div class="form-group">
             <label for="select_taxa_admin">1. Taxa de Administração (%):</label>
-            <select id="select_taxa_admin">
-                </select>
+            <select id="select_taxa_admin"></select>
         </div>
 
         <div class="divisao-box">
@@ -75,9 +102,10 @@
             
             <div class="form-group">
                 <label for="num_participantes">Nº de Participantes *Reais* (p/ dividir):</label>
-                <input type="number" id="num_participantes" value="24"> </div>
+                <input type="number" id="num_participantes" value="24">
+            </div>
             
-            <button id="configButton" class="botao-config">⚙️ Alterar Total de Cotas (Base)</button>
+            <button id="configButton" class="botao-config">⚙️ Configurar Regras de Bônus</button>
         </div>
 
         <hr style="margin: 20px 0;">
@@ -100,27 +128,62 @@
             <button class="botao-premio" data-valor="300">300</button>
         </div>
 
-        <div id="resultadoArea" class="resultado">
-            </div>
+        <div id="resultadoArea" class="resultado"></div>
     </div>
 
+    <div id="configModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Configurar Regras de Bônus</h2>
+            <p>Defina os valores usados para calcular o bônus de participantes faltantes.</p>
+            
+            <div class="form-group">
+                <label for="inputBaseParticipantesModal">Total de Cotas (Base p/ Bônus):</label>
+                <input type="number" id="inputBaseParticipantesModal">
+            </div>
+            
+            <div class="form-group">
+                <label for="inputBonus1Lugar">Bônus p/ 1º Lugar (R$ por faltante):</label>
+                <input type="number" id="inputBonus1Lugar">
+            </div>
+            
+            <div class="form-group">
+                <label for="inputBonusAdmin">Bônus p/ Admin (R$ por faltante):</label>
+                <input type="number" id="inputBonusAdmin">
+            </div>
+            
+            <div class="form-group">
+                <label for="inputBonusPote">Bônus p/ Pote (R$ por faltante):</label>
+                <input type="number" id="inputBonusPote">
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="cancelConfig">Cancelar</button>
+                <button id="saveConfig">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
     <script>
         
-        // --- CONSTANTES DO BOLÃO ---
+        // --- CONSTANTES ---
         const MULTIPLICADOR = 80;
-        const BONUS_1_LUGAR_POR_FALTANTE = 5;
-        const BONUS_ADMIN_POR_FALTANTE = 5;
-        const BONUS_POTE_POR_FALTANTE = 5;
         
-        // --- CONSTANTES DE ARMAZENAMENTO ---
-        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v14';
-        const STORAGE_KEY_1ST = 'bolao1stPct_v14';
-        const STORAGE_KEY_BASE = 'bolaoBase_v14';
+        // Chaves do LocalStorage
+        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v16';
+        const STORAGE_KEY_1ST = 'bolao1stPct_v16';
+        const STORAGE_KEY_BASE = 'bolaoBase_v16';
+        const STORAGE_KEY_BONUS_1ST = 'bolaoBonus1st_v16';
+        const STORAGE_KEY_BONUS_ADMIN = 'bolaoBonusAdmin_v16';
+        const STORAGE_KEY_BONUS_POTE = 'bolaoBonusPote_v16';
 
-        // --- VARIÁVEIS DE ESTADO ---
+        // --- VARIÁVEIS DE ESTADO (Carregadas ao iniciar) ---
         let apostaAtual = 0;
         let valor1LugarOriginal = "50";
-        let valorBaseParticipantes = 24; // <-- NOVO (guarda o valor da base)
+        
+        // Variáveis de Bônus (agora são 'let' e não 'const')
+        let valorBaseParticipantes = 24;
+        let bonus1Lugar = 12;
+        let bonusAdmin = 6;
+        let bonusPote = 3;
 
         // --- ELEMENTOS ---
         const selectTaxaAdmin = document.getElementById('select_taxa_admin');
@@ -129,9 +192,18 @@
         const areaResultado = document.getElementById('resultadoArea');
         
         const inputPct1Lugar = document.getElementById('pct_1_lugar');
-        // inputBaseParticipantes foi removido
         const inputNumParticipantes = document.getElementById('num_participantes');
-        const configButton = document.getElementById('configButton'); // <-- NOVO
+        
+        // Elementos do Modal
+        const configButton = document.getElementById('configButton');
+        const configModal = document.getElementById('configModal');
+        const saveConfig = document.getElementById('saveConfig');
+        const cancelConfig = document.getElementById('cancelConfig');
+        const inputBaseParticipantesModal = document.getElementById('inputBaseParticipantesModal');
+        const inputBonus1Lugar = document.getElementById('inputBonus1Lugar');
+        const inputBonusAdmin = document.getElementById('inputBonusAdmin');
+        const inputBonusPote = document.getElementById('inputBonusPote');
+
 
         // --- 1. FUNÇÃO DE PREENCHER O SELECT (5 em 5) ---
         function popularSelectAdmin() {
@@ -158,7 +230,7 @@
             const valor_aposta = apostaAtual;
             const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0;
             const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
-            const base_participantes = valorBaseParticipantes; // <-- MUDANÇA (lê da variável)
+            const base_participantes = valorBaseParticipantes; // Lê da variável global
             const num_participantes_atual = parseInt(inputNumParticipantes.value) || 0;
 
             if (num_participantes_atual < 0) return;
@@ -169,37 +241,37 @@
 
             const participantes_faltantes = Math.max(0, base_participantes - num_participantes_atual); 
             
-            let bonus_1_lugar = 0;
-            let bonus_admin = 0;
-            let bonus_pote = 0;
+            let bns_1_lugar_calc = 0;
+            let bns_admin_calc = 0;
+            let bns_pote_calc = 0;
 
             if (participantes_faltantes > 0) {
-                bonus_1_lugar = participantes_faltantes * BONUS_1_LUGAR_POR_FALTANTE;
-                bonus_admin = participantes_faltantes * BONUS_ADMIN_POR_FALTANTE;
-                bonus_pote = participantes_faltantes * BONUS_POTE_POR_FALTANTE;
+                // Lê das variáveis globais de bônus
+                bns_1_lugar_calc = participantes_faltantes * bonus1Lugar; 
+                bns_admin_calc = participantes_faltantes * bonusAdmin;
+                bns_pote_calc = participantes_faltantes * bonusPote;
             }
 
-            const total_1_lugar = valor_1_lugar_base + bonus_1_lugar;
-            const total_admin = valor_admin_base + bonus_admin;
+            const total_1_lugar = valor_1_lugar_base + bns_1_lugar_calc;
+            const total_admin = valor_admin_base + bns_admin_calc;
             
             const premio_restante_base = premio_bruto - total_1_lugar - total_admin;
-            const pote_final_divisao = premio_restante_base + bonus_pote; 
+            const pote_final_divisao = premio_restante_base + bns_pote_calc; 
 
             let valor_por_participante = 0;
             let texto_calculo = "";
 
             if (num_participantes_atual === 0 && base_participantes > 0) {
                 const total_1_lugar_final = total_1_lugar + pote_final_divisao;
-                
                 texto_calculo = 
                     `Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}\n` +
                     `--------------------\n` +
                     `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
-                    `🔩 Bônus Admin (${participantes_faltantes} faltantes): -${formatar_brl(bonus_admin)}\n` +
+                    `🔩 Bônus Admin (${participantes_faltantes} faltantes): -${formatar_brl(bns_admin_calc)}\n` +
                     `Total Admin: ${formatar_brl(total_admin)}\n` +
                     `--------------------\n` +
                     `🏆 1º Lugar (Leva TUDO restante): ${formatar_brl(total_1_lugar_final)}\n\n` +
-                    `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bonus_1_lugar)}, Resto: ${formatar_brl(pote_final_divisao)})`;
+                    `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bns_1_lugar_calc)}, Resto: ${formatar_brl(pote_final_divisao)})`;
             } else {
                 if (num_participantes_atual > 0) {
                     valor_por_participante = pote_final_divisao / num_participantes_atual;
@@ -211,9 +283,9 @@
                     `🏆 1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar_base)}\n` +
                     `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
                     `🔩 Bônus (${participantes_faltantes} faltantes):\n` +
-                    `   (1º Lugar: +${formatar_brl(bonus_1_lugar)})\n` +
-                    `   (Admin: +${formatar_brl(bonus_admin)})\n` +
-                    `   (Pote: +${formatar_brl(bonus_pote)})\n` +
+                    `   (1º Lugar: +${formatar_brl(bns_1_lugar_calc)})\n` +
+                    `   (Admin: +${formatar_brl(bns_admin_calc)})\n` +
+                    `   (Pote: +${formatar_brl(bns_pote_calc)})\n` +
                     `--------------------\n` +
                     `Totais Finais:\n` +
                     `🏆 1º Lugar (Total): ${formatar_brl(total_1_lugar)}\n` +
@@ -241,36 +313,21 @@
 
         // --- 4. FUNÇÃO PARA CARREGAR VALORES (ATUALIZADA) ---
         function carregarValoresSalvos() {
-            const adminSalvo = localStorage.getItem(STORAGE_KEY_ADMIN);
-            const primeiroLugarSalvo = localStorage.getItem(STORAGE_KEY_1ST);
-            const baseSalva = localStorage.getItem(STORAGE_KEY_BASE);
-
-            // Padrão Admin: 20%
-            if (adminSalvo !== null) {
-                selectTaxaAdmin.value = adminSalvo;
-            } else {
-                 selectTaxaAdmin.value = "20";
-            }
-
-            // Padrão 1º Lugar: 50%
-            if (primeiroLugarSalvo !== null) {
-                inputPct1Lugar.value = primeiroLugarSalvo;
-            } else {
-                inputPct1Lugar.value = "50";
-            }
+            // Padrões
+            selectTaxaAdmin.value = localStorage.getItem(STORAGE_KEY_ADMIN) || "20";
+            inputPct1Lugar.value = localStorage.getItem(STORAGE_KEY_1ST) || "50";
             valor1LugarOriginal = inputPct1Lugar.value;
 
-            // Padrão Base: 24 (lido para a variável)
-            if (baseSalva !== null) {
-                valorBaseParticipantes = parseInt(baseSalva, 10); // <-- MUDANÇA
-            } else {
-                valorBaseParticipantes = 24; // <-- MUDANÇA
-            }
+            // Padrões de Bônus (agora lidos para as variáveis)
+            valorBaseParticipantes = parseInt(localStorage.getItem(STORAGE_KEY_BASE), 10) || 24;
+            bonus1Lugar = parseInt(localStorage.getItem(STORAGE_KEY_BONUS_1ST), 10) || 12;
+            bonusAdmin = parseInt(localStorage.getItem(STORAGE_KEY_BONUS_ADMIN), 10) || 6;
+            bonusPote = parseInt(localStorage.getItem(STORAGE_KEY_BONUS_POTE), 10) || 3;
         }
 
         // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS ---
         
-        // A. Clique no Botão de Aposta (Gatilho inicial)
+        // A. Clique no Botão de Aposta
         containerPremio.addEventListener('click', function(e) {
             if (e.target.classList.contains('botao-premio')) {
                 apostaAtual = parseFloat(e.target.dataset.valor);
@@ -280,7 +337,7 @@
             }
         });
 
-        // B. Mudança na Taxa Admin (Salva e Calcula)
+        // B. Mudança na Taxa Admin
         selectTaxaAdmin.addEventListener('change', function() {
             localStorage.setItem(STORAGE_KEY_ADMIN, selectTaxaAdmin.value);
             calcularEAtualizar();
@@ -290,52 +347,63 @@
         inputPct1Lugar.addEventListener('focus', function() {
             valor1LugarOriginal = inputPct1Lugar.value;
         });
-        
         inputPct1Lugar.addEventListener('change', function() {
             if (inputPct1Lugar.value !== valor1LugarOriginal) {
                 const confirmou = confirm("Tem certeza que quer mudar a '% do 1º Lugar'?\n\nIsso afetará a regra de divisão.");
-                
                 if (confirmou) {
                     localStorage.setItem(STORAGE_KEY_1ST, inputPct1Lugar.value);
                     valor1LugarOriginal = inputPct1Lugar.value;
                     calcularEAtualizar();
                 } else {
-                    inputPct1Lgarm.value = valor1LugarOriginal;
+                    inputPct1Lugar.value = valor1LugarOriginal;
                 }
             }
         });
 
-        // D. LÓGICA DE CONFIRMAÇÃO BOTÃO CONFIG (NOVO)
+        // D. LÓGICA DO MODAL DE CONFIGURAÇÃO (NOVO)
         configButton.addEventListener('click', function() {
-            const valorAntigo = valorBaseParticipantes;
-            const novoValor = prompt("Alterar Total de Cotas (Base p/ Bônus):\n\nEste valor é a base para calcular os bônus.\n(Valor atual: " + valorAntigo + ")", valorAntigo);
+            // 1. Preenche o modal com os valores atuais (das variáveis)
+            inputBaseParticipantesModal.value = valorBaseParticipantes;
+            inputBonus1Lugar.value = bonus1Lugar;
+            inputBonusAdmin.value = bonusAdmin;
+            inputBonusPote.value = bonusPote;
             
-            // Se o usuário clicar "Cancelar" ou "OK" sem nada
-            if (novoValor === null || novoValor === "") {
-                return; // Não faz nada
-            }
+            // 2. Mostra o modal
+            configModal.style.display = 'flex';
+        });
 
-            const novoValorInt = parseInt(novoValor, 10);
+        cancelConfig.addEventListener('click', function() {
+            configModal.style.display = 'none';
+        });
 
-            // Se o valor for inválido
-            if (isNaN(novoValorInt) || novoValorInt < 0) {
-                alert("Valor inválido! Por favor, insira um número.");
+        saveConfig.addEventListener('click', function() {
+            // 1. Lê os novos valores do modal
+            const novaBase = parseInt(inputBaseParticipantesModal.value, 10);
+            const novoBonus1 = parseInt(inputBonus1Lugar.value, 10);
+            const novoBonusAdmin = parseInt(inputBonusAdmin.value, 10);
+            const novoBonusPote = parseInt(inputBonusPote.value, 10);
+
+            // 2. Validação simples
+            if (isNaN(novaBase) || isNaN(novoBonus1) || isNaN(novoBonusAdmin) || isNaN(novoBonusPote)) {
+                alert("Por favor, preencha todos os campos com números válidos.");
                 return;
             }
 
-            // Se o valor não mudou
-            if (novoValorInt === valorAntigo) {
-                return;
-            }
+            // 3. Atualiza as variáveis globais
+            valorBaseParticipantes = novaBase;
+            bonus1Lugar = novoBonus1;
+            bonusAdmin = novoBonusAdmin;
+            bonusPote = novoBonusPote;
 
-            // Pop-up de confirmação final
-            const confirmou = confirm("Tem certeza que quer mudar o 'Total de Cotas' de " + valorAntigo + " para " + novoValorInt + "?\n\nIsso afetará a regra de bônus.");
+            // 4. Salva no localStorage
+            localStorage.setItem(STORAGE_KEY_BASE, valorBaseParticipantes);
+            localStorage.setItem(STORAGE_KEY_BONUS_1ST, bonus1Lugar);
+            localStorage.setItem(STORAGE_KEY_BONUS_ADMIN, bonusAdmin);
+            localStorage.setItem(STORAGE_KEY_BONUS_POTE, bonusPote);
 
-            if (confirmou) {
-                valorBaseParticipantes = novoValorInt; // Atualiza a variável
-                localStorage.setItem(STORAGE_KEY_BASE, valorBaseParticipantes); // Salva
-                calcularEAtualizar(); // Recalcula
-            }
+            // 5. Esconde o modal e recalcula
+            configModal.style.display = 'none';
+            calcularEAtualizar();
         });
 
         // E. Nº de Participantes Reais (Apenas calcula)
