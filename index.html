@@ -12133,17 +12133,28 @@ function toggleHistoryPanel() {
 
     async function closeRandomGeneratorModal() {
     console.log("--- DEBUG: 'closeRandomGeneratorModal' foi chamada ---");
+
+    // ==========================================
+    // === CORREÇÃO DO BUG (BOTÃO "X" / "Cancelar") ===
+    // ==========================================
+    // Reseta o pool de "Cercar Bicho" para 0.
+    // Isso garante que, se o usuário fechar o modal (via 'X' ou 'Cancelar')
+    // após uma geração, a contagem de milhares disponíveis recomece
+    // do zero na próxima vez que ele abrir o gerador.
+    cercarBichoPools = {}; 
+    console.log("Pool 'cercarBichoPools' foi resetado ao fechar o modal.");
+    // ==========================================
+    // === FIM DA CORREÇÃO ===
+    // ==========================================
     
     // 1. Salva a última seleção de tipo (Milhar/Centena/Dezena)
-    //    (Esta é a função que você adicionou acima)
     await saveGameTypeSelection(); 
     
     // 2. Fecha (esconde) o modal do gerador
     document.getElementById('randomGeneratorModal').classList.remove('active');
     
     // 3. Garante que o estado visual dos botões de MODO (Aleatório/Bichos/IA)
-    //    seja redefinido para o que está salvo, corrigindo qualquer
-    //    estado visual "preso" que possa ter ocorrido.
+    //    seja redefinido para o que está salvo.
     ensureCorrectGenModeVisualState();
 }
 
@@ -12592,19 +12603,12 @@ async function generateSelectedNumbers() {
         switch (bichoMilharMethod) {
             
             // --- CASO 1: CERCAR BICHO (400) ---
-            // =================================
-            // === LÓGICA ATUALIZADA AQUI ===
-            // =================================
-            // =================================
-            // === INÍCIO DA CORREÇÃO: Cercar Bicho (com divisão) ===
-            // =================================
             case 'cercar_completo':
                 if (!typeKeys.includes('milhar')) {
                     showToast('O modo "Cercar Bicho" só gera Milhares. Por favor, selecione o tipo "Milhar".', 'error');
                     return; 
                 }
 
-                // --- INÍCIO DA LÓGICA DE DIVISÃO (copiada de 'padrao') ---
                 const baseQuantityCercar = Math.floor(totalQuantity / selectedBichos.length);
                 const remainderCercar = totalQuantity % selectedBichos.length;
 
@@ -12614,47 +12618,40 @@ async function generateSelectedNumbers() {
                 summaryParts.push("\n<strong>- Detalhes da Geração:</strong>");
 
                 let totalGeradasCercar = 0;
-                let finalMilharesCercar = [];
+                let finalMilharesCercar = []; // <- Usando variável local
 
                 selectedBichos.forEach((bicho, index) => {
-                    // 1. Calcula a quantidade exata para este bicho
                     const quantityForThisBicho = baseQuantityCercar + (index < remainderCercar ? 1 : 0);
                     if (quantityForThisBicho === 0) return;
 
                     const bichoGrupo = bicho.grupo;
 
-                    // 2. Verifica se o pool para ESTE BICHAR JÁ EXISTE no mapa (usando o grupo como chave)
                     if (!cercarBichoPools[bichoGrupo]) {
                         showToast(`Iniciando novo ciclo para: ${bicho.animal}...`, 'info');
                         
-                        // 3. Se não existe, cria um novo Set (pool) SÓ PARA ELE
                         const newPool = new Set();
                         const dezenasDoBicho = bicho.dezenas;
-                        for (let i = 0; i < 100; i++) { // Todos os 100 prefixos
+                        for (let i = 0; i < 100; i++) {
                             const prefixo = String(i).padStart(2, '0');
                             for (const dezena of dezenasDoBicho) {
                                 const milharCompleta = prefixo + dezena;
-                                // Adiciona ao pool APENAS se passar nos filtros avançados
                                 if (applyAdvancedFilters(milharCompleta, 'milhar')) {
                                     newPool.add(milharCompleta);
                                 }
                             }
                         }
-                        // 4. Salva o pool deste bicho no mapa
                         cercarBichoPools[bichoGrupo] = newPool;
                     }
 
-                    // 5. Pega o pool CORRETO (para este bicho) do mapa
                     const currentPool = cercarBichoPools[bichoGrupo];
                     const totalDisponivel = currentPool.size;
 
                     if (totalDisponivel === 0) {
                         summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: 0x (Pool esgotado!)`);
                         showToast(`Pool de ${bicho.animal} esgotado. Limpe o formulário para reiniciar o ciclo.`, 'warning');
-                        return; // Pula para o próximo bicho
+                        return;
                     }
                     
-                    // 6. Ajusta a quantidade a ser gerada
                     let quantidadeParaGerar = quantityForThisBicho;
                     if (quantityForThisBicho > totalDisponivel) {
                         summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: ${totalDisponivel}x (Pool esgotado!)`);
@@ -12664,42 +12661,31 @@ async function generateSelectedNumbers() {
                          summaryParts.push(`  • G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: ${quantidadeParaGerar}x (de ${totalDisponivel} restantes)`);
                     }
                     
-                    // 7. Sorteia do pool
                     const shuffledPoolArray = Array.from(currentPool);
                     shuffleArray(shuffledPoolArray);
                     const milharesGeradas = shuffledPoolArray.slice(0, quantidadeParaGerar);
                     
-                    // 8. Remove as milhares geradas do pool
-                    milharesGeradas.forEach(m => currentPool.delete(m));
+                    // --- INÍCIO DA CORREÇÃO (REMOÇÃO) ---
+                    // A linha que "gastava" os números foi REMOVIDA daqui
+                    // milharesGeradas.forEach(m => currentPool.delete(m)); // <-- BUG REMOVIDO
+                    // --- FIM DA CORREÇÃO (REMOÇÃO) ---
                     
-                    // 9. Adiciona ao resultado final
-                    finalMilharesCercar.push(...milharesGeradas);
+                    finalMilharesCercar.push(...milharesGeradas); // Adiciona ao array local
                     totalGeradasCercar += milharesGeradas.length;
 
-                    // 10. Se o pool zerou, remove ele do mapa
-                    if (currentPool.size === 0) {
-                        delete cercarBichoPools[bichoGrupo];
-                        summaryParts.push(`  • 🎉 Pool de ${bicho.animal} esgotado!`);
+                    // Esta lógica agora é apenas uma "previsão" do que vai acontecer
+                    if (quantidadeParaGerar >= totalDisponivel) {
+                        summaryParts.push(`  • 🎉 Pool de ${bicho.animal} esgotará!`);
                     }
-                }); // Fim do loop forEach
+                }); 
 
-                showToast(`${totalGeradasCercar} milhares geradas no total.`, 'success');
-
-                // 11. Define o resultado final
+                // Salva os resultados temporários para o pop-up
                 finalResults.milhar = finalMilharesCercar;
-                shuffleArray(finalResults.milhar); // Embaralha o resultado final
                 finalResults.centena = [];
                 finalResults.dezena = [];
 
                 break; 
-            // =================================
-            // === FIM DA CORREÇÃO ===
-            // =================================
             
-            // =================================
-            // === FIM DA LÓGICA ATUALIZADA ===
-            // =================================
-
             // --- CASO 2: FECHAMENTO M-C (Sem alterações) ---
             case 'fechamento_mc':
                 if (!typeKeys.includes('milhar')) {
@@ -12824,11 +12810,9 @@ async function generateSelectedNumbers() {
         // ---- FIM DO NOVO BLOCO SWITCH ----
     }
     else { // mode === 'offline'
-// --- INÍCIO DA CORREÇÃO ---
-const checkedGenerationMethodRadio = document.querySelector('input[name="generationMethod"]:checked');
-// Verifica se encontrou um botão marcado. Se não, usa 'padrao' como fallback.
-const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodRadio.value : 'padrao';
-// --- FIM DA CORREÇÃO ---        if (checkedTypes.length > 0) summaryParts.push(`<strong>- Tipos:</strong> ${checkedTypes.join(', ')}`);
+        const checkedGenerationMethodRadio = document.querySelector('input[name="generationMethod"]:checked');
+        const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodRadio.value : 'padrao';
+        if (checkedTypes.length > 0) summaryParts.push(`<strong>- Tipos:</strong> ${checkedTypes.join(', ')}`);
         summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity} (para cada tipo)`);
 
         let methodDetails = '';
@@ -12853,7 +12837,7 @@ const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodR
         for (const typeKey of typeKeys) {
             const resultSet = new Set();
             let attempts = 0;
-            const maxAttempts = totalQuantity * 1000 + 100; // Aumentado para métodos mais restritivos
+            const maxAttempts = totalQuantity * 1000 + 100;
             while (resultSet.size < totalQuantity && attempts < maxAttempts) {
                 attempts++;
                  let generatedNumber = '';
@@ -12870,19 +12854,14 @@ const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodR
             }
              finalResults[typeKey] = Array.from(resultSet);
              
-             // --- INÍCIO DA CORREÇÃO ---
-             // Adiciona a contagem ao sumário do pop-up (Ex: "Milhares: 100/100")
              const typeNameCapitalized = typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
              const generatedCount = finalResults[typeKey].length;
              
              if (generatedCount < totalQuantity) {
-                 // Caso de AVISO (o que estava indo para o toast)
                  summaryParts.push(`\n<strong>⚠️ ${typeNameCapitalized}:</strong> Gerados ${generatedCount}/${totalQuantity} (limite atingido)`);
              } else {
-                 // Caso de SUCESSO (o "100/100" que você mencionou)
                  summaryParts.push(`\n<strong>✅ ${typeNameCapitalized}:</strong> Gerados ${generatedCount}/${totalQuantity}`);
              }
-             // --- FIM DA CORREÇÃO ---
         }
     }
 
@@ -12890,10 +12869,51 @@ const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodR
     const generationSummary = summaryParts.join('\n');
 
     const userConfirmed = await showCustomConfirm(generationSummary, "Sim, Gerar", 'Cancelar', 'randomGeneratorModal');
+
+    // ==========================================
+    // === INÍCIO DA CORREÇÃO (Botão Cancelar) ===
+    // ==========================================
     if (!userConfirmed) {
+        // Se o usuário cancelou, não fazemos NADA com o pool.
+        // O pool global (cercarBichoPools) não foi modificado,
+        // então está pronto para a próxima tentativa.
+        
+        // Apenas mostramos o toast de cancelamento.
         showToast('Geração cancelada.', 'info');
-        return;
+        return; // Interrompe a geração
     }
+    // ==========================================
+    // === FIM DA CORREÇÃO (Botão Cancelar) ===
+    // ==========================================
+
+
+    // =======================================================
+    // === INÍCIO DA CORREÇÃO (Gastar o Pool SÓ AGORA) ===
+    // =======================================================
+    // Se o usuário CONFIRMOU, agora vamos "gastar" os números do pool global
+    if (mode === 'bichos' && bichoMilharMethod === 'cercar_completo') {
+        const milharesGeradas = finalResults.milhar; // Pega os números que planejamos gerar
+        
+        console.log(`Confirmado! Removendo ${milharesGeradas.length} milhares do pool global.`);
+        
+        milharesGeradas.forEach(milhar => {
+            const bichoData = getBichoDataFromNumber(milhar);
+            if (bichoData && cercarBichoPools[bichoData.grupo]) {
+                // Deleta a milhar do pool do seu bicho correspondente
+                cercarBichoPools[bichoData.grupo].delete(milhar);
+                
+                // Se o pool daquele bicho ficou vazio, remove o bicho do map
+                if (cercarBichoPools[bichoData.grupo].size === 0) {
+                    console.log(`Pool do ${bichoData.animal} esgotado.`);
+                    delete cercarBichoPools[bichoData.grupo];
+                }
+            }
+        });
+    }
+    // =======================================================
+    // === FIM DA CORREÇÃO (Gastar o Pool SÓ AGORA) ===
+    // =======================================================
+
 
     logQuantityUsage(totalQuantity);
 
@@ -12929,15 +12949,11 @@ const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodR
             const newCode = generateReceiptCode(); 
             lastGeneratedCode = newCode; 
 
-            // --- INÍCIO DA MODIFICAÇÃO ---
-            
-            // Captura o método 'offline' (puxada, data, soma, etc.)
             const checkedOfflineMethodRadio = document.querySelector('input[name="generationMethod"]:checked');
             const offlineMethod = checkedOfflineMethodRadio ? checkedOfflineMethodRadio.value : 'padrao';
 
-            // Monta um objeto com todas as informações do método
             const generationMethodInfo = {
-                mode: mode, // 'offline', 'bichos', 'ia_bichos'
+                mode: mode,
                 bichoMethod: (mode === 'bichos') ? bichoMilharMethod : null,
                 offlineMethod: (mode === 'offline') ? offlineMethod : null
             };
@@ -12946,14 +12962,13 @@ const generationMethod = checkedGenerationMethodRadio ? checkedGenerationMethodR
                 id: Date.now(),
                 code: newCode,
                 date: new Date().toISOString(),
-                method: generationMethodInfo, // <-- NOVO DADO SALVO AQUI
+                method: generationMethodInfo,
                 results: { 
                     milhar: finalResults.milhar || [],
                     centena: finalResults.centena || [],
                     dezena: finalResults.dezena || []
                 }
             };
-            // --- FIM DA MODIFICAÇÃO ---
 
             getData('generationHistory').then(history => {
             const updatedHistory = history || [];
