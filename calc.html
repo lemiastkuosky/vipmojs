@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Premiação v3</title>
+    <title>Calculadora de Premiação v4</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -54,10 +54,15 @@
             <input type="number" step="0.01" id="valor_base" placeholder="Ex: 600" required>
         </div>
 
+        <div class="form-group">
+            <label for="taxa_admin_pct">Taxa de Administração (%)</label>
+            <input type="number" step="0.01" id="taxa_admin_pct" placeholder="Ex: 10 (para 10%)" value="0">
+        </div>
+
         <hr>
 
         <div class="divisao-box">
-            <h4>Regras da Divisão</h4>
+            <h4>Regras da Divisão (Baseado no valor líquido)</h4>
             
             <div class="form-group">
                 <label for="num_participantes">Nº de Participantes</label>
@@ -119,6 +124,7 @@
         const areaResultado = document.getElementById('resultadoArea');
         
         // Inputs da "Parte 2"
+        const inputTaxaAdmin = document.getElementById('taxa_admin_pct');
         const inputParticipantes = document.getElementById('num_participantes');
         const inputValorRegra = document.getElementById('valor_regra_divisao');
 
@@ -130,6 +136,9 @@
                 // --- 1. COLETAR VALORES DO FORMULÁRIO ---
                 const valor_base = parseFloat(inputValorBase.value) || 0;
                 const valor_botao = parseInt(e.target.dataset.valor); 
+                
+                // Novo campo
+                const taxa_admin_pct = parseFloat(inputTaxaAdmin.value) || 0;
                 
                 const num_participantes = parseInt(inputParticipantes.value) || 0;
                 const modo_divisao = document.querySelector('input[name="modo_divisao"]:checked').value;
@@ -149,15 +158,20 @@
 
                 // --- 2. CÁLCULO 1 (PRÊMIO TOTAL) ---
                 const taxa = valor_base / 15;
-                const premio_total = taxa * valor_botao;
+                const premio_bruto = taxa * valor_botao;
 
-                // --- 3. CÁLCULO 2 (VALOR DA DIVISÃO) ---
+                // --- 3. CÁLCULO DA ADMINISTRAÇÃO ---
+                const valor_taxa_admin = premio_bruto * (taxa_admin_pct / 100);
+                const premio_liquido = premio_bruto - valor_taxa_admin;
+
+                // --- 4. CÁLCULO DA DIVISÃO (baseado no PRÊMIO LÍQUIDO) ---
                 let valor_a_dividir = 0;
                 let texto_modo = "";
 
                 if (modo_divisao === 'porcentagem') {
-                    valor_a_dividir = premio_total * (valor_regra_divisao / 100);
-                    texto_modo = `(${valor_regra_divisao}% do total)`;
+                    // Agora a % é sobre o prêmio líquido
+                    valor_a_dividir = premio_liquido * (valor_regra_divisao / 100);
+                    texto_modo = `(${valor_regra_divisao}% do líquido)`;
                 } else { // modo 'fixo'
                     valor_a_dividir = valor_regra_divisao;
                     texto_modo = `(Valor Fixo)`;
@@ -168,16 +182,18 @@
                     valor_por_participante = valor_a_dividir / num_participantes;
                 }
                 
-                // --- 4. PREPARAR O TEXTO ---
+                // --- 5. PREPARAR O TEXTO ---
                 const texto_calculo = 
-                    `Prêmio Total (Ref. ${valor_botao}): ${formatar_brl(premio_total)}\n` +
+                    `Prêmio Bruto (Ref. ${valor_botao}): ${formatar_brl(premio_bruto)}\n` +
+                    `Taxa Admin (${taxa_admin_pct}%): -${formatar_brl(valor_taxa_admin)}\n` +
+                    `Prêmio Líquido: ${formatar_brl(premio_liquido)}\n` +
                     `--------------------\n` +
                     `VALOR DA DIVISÃO\n` +
                     `Valor a Dividir: ${formatar_brl(valor_a_dividir)} ${texto_modo}\n` +
                     `Nº de Participantes: ${num_participantes}\n\n` +
                     `🏆 Valor p/ Cada: ${formatar_brl(valor_por_participante)}`;
 
-                // --- 5. GERAR LINK E EXIBIR ---
+                // --- 6. GERAR LINK E EXIBIR ---
                 const texto_whatsapp = `🎉 *PREMIAÇÃO CALCULADA* 🎉\n\n` + texto_calculo;
                 const texto_html = texto_whatsapp.replace(/\n/g, '<br>');
                 const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_whatsapp);
