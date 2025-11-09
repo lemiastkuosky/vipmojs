@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v5</title>
+    <title>Calculadora de Bolão v6</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         
-        /* Estilo dos Botões de Seleção */
+        .form-group { margin-bottom: 15px; }
+        .form-group input[type="number"] { width: 95%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1.1em; }
+
         .botoes-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -29,42 +31,50 @@
             transition: background 0.2s, color 0.2s;
         }
         .botao-selecao:hover { background: #e6f2ff; }
-        
-        /* Estilo do botão ATIVO */
-        .botao-selecao.active {
-            background: #007bff;
-            color: white;
-        }
-
-        /* Cor diferente para os botões de prêmio */
-        .botao-premio {
-            border-color: #28a745;
-            color: #28a745;
-        }
+        .botao-selecao.active { background: #007bff; color: white; }
+        .botao-premio { border-color: #28a745; color: #28a745; }
         .botao-premio:hover { background: #e9f7ef; }
 
         .botao-wpp { display: block; text-align: center; background: #25D366; color: white; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-size: 16px; margin-top: 20px; }
         .resultado { margin-top: 20px; padding: 15px; background: #e9f7ef; border: 1px solid #b6dccb; border-radius: 4px; display: none; }
+        
+        .divisao-box {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Calculadora de Bolão (25 Cotas)</h2>
+        <h2>Calculadora de Bolão (Divisão por Pessoas)</h2>
         
-        <label>1. Escolha a Taxa de Administração:</label>
+        <label>1. Escolha a Taxa de Administração (%):</label>
         <div id="admin_botoes" class="botoes-grid">
             <button class="botao-selecao active" data-pct="0">0%</button>
             <button class="botao-selecao" data-pct="5">5%</button>
             <button class="botao-selecao" data-pct="10">10%</button>
             <button class="botao-selecao" data-pct="15">15%</button>
             <button class="botao-selecao" data-pct="20">20%</button>
-            <button class="botao-selecao" data-pct="25">25%</button>
             </div>
+
+        <div class="divisao-box">
+            <div class="form-group">
+                <label for="pct_1_lugar">Porcentagem 1º Lugar (%):</label>
+                <input type="number" id="pct_1_lugar" value="55">
+            </div>
+            <div class="form-group">
+                <label for="num_participantes">Nº de Participantes (para dividir o resto):</label>
+                <input type="number" id="num_participantes" value="24">
+            </div>
+        </div>
 
         <hr style="margin: 20px 0;">
 
-        <label>2. Clique no valor da Aposta para Calcular:</label>
+        <label>3. Clique no valor da Aposta para Calcular:</label>
         <div id="premio_botoes" class="botoes-grid">
             <button class="botao-premio" data-valor="15">15</button>
             <button class="botao-premio" data-valor="30">30</button>
@@ -79,12 +89,6 @@
             <button class="botao-premio" data-valor="165">165</button>
             <button class="botao-premio" data-valor="180">180</button>
             <button class="botao-premio" data-valor="195">195</button>
-            <button class="botao-premio" data-valor="210">210</button>
-            <button class="botao-premio" data-valor="225">225</button>
-            <button class="botao-premio" data-valor="240">240</button>
-            <button class="botao-premio" data-valor="255">255</button>
-            <button class="botao-premio" data-valor="270">270</button>
-            <button class="botao-premio" data-valor="285">285</button>
             <button class="botao-premio" data-valor="300">300</button>
         </div>
 
@@ -96,7 +100,6 @@
         
         // --- CONSTANTES DO BOLÃO ---
         const MULTIPLICADOR = 80; // 1200 (prêmio) / 15 (aposta) = 80
-        const COTAS_DIVISAO = 25; // 25 bichos
         
         // --- VARIÁVEIS DE ESTADO ---
         let taxa_admin_atual = 0; // Começa com 0%
@@ -106,6 +109,10 @@
         const containerPremio = document.getElementById('premio_botoes');
         const areaResultado = document.getElementById('resultadoArea');
         const botoesAdmin = containerAdmin.querySelectorAll('.botao-selecao');
+        
+        // Novos Inputs
+        const inputPct1Lugar = document.getElementById('pct_1_lugar');
+        const inputNumParticipantes = document.getElementById('num_participantes');
 
         // --- 1. FUNÇÃO DE FORMATAR MOEDA ---
         function formatar_brl(valor) {
@@ -118,44 +125,56 @@
         // --- 2. LÓGICA DE SELEÇÃO DA TAXA ADMIN ---
         containerAdmin.addEventListener('click', function(e) {
             if (e.target.classList.contains('botao-selecao')) {
-                // Pega o valor do botão clicado
                 taxa_admin_atual = parseFloat(e.target.dataset.pct);
-                
-                // Atualiza o visual (remove 'active' de todos, adiciona no clicado)
                 botoesAdmin.forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
             }
         });
 
-        // --- 3. LÓGICA PRINCIPAL DO CÁLCULO ---
+        // --- 3. LÓGICA PRINCIPAL DO CÁLCULO (Atualizada) ---
         containerPremio.addEventListener('click', function(e) {
             if (e.target.classList.contains('botao-premio')) {
                 
                 // --- 1. COLETAR VALORES ---
-                const valor_aposta = parseFloat(e.target.dataset.valor); // Ex: 60
-                const pct_admin = taxa_admin_atual; // Ex: 10
+                const valor_aposta = parseFloat(e.target.dataset.valor);
+                
+                // Pega os valores dos novos campos
+                const pct_admin = taxa_admin_atual;
+                const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
+                const num_participantes = parseInt(inputNumParticipantes.value) || 0;
+
+                // Validação
+                if (num_participantes <= 0) {
+                    alert('Por favor, insira um Nº de Participantes válido.');
+                    inputNumParticipantes.focus();
+                    return;
+                }
                 
                 // --- 2. CÁLCULO 1 (PRÊMIO BRUTO) ---
-                const premio_bruto = valor_aposta * MULTIPLICADOR; // Ex: 60 * 80 = 4800
+                const premio_bruto = valor_aposta * MULTIPLICADOR; // Ex: 15 * 80 = 1200
                 
-                // --- 3. CÁLCULO 2 (LÍQUIDO) ---
-                const valor_taxa_admin = premio_bruto * (pct_admin / 100); // Ex: 4800 * 0.10 = 480
-                const premio_liquido = premio_bruto - valor_taxa_admin; // Ex: 4800 - 480 = 4320
+                // --- 3. CÁLCULO 2 (DESCONTOS) ---
+                // ATENÇÃO: Os descontos são baseados no PRÊMIO BRUTO
+                const valor_1_lugar = premio_bruto * (pct_1_lugar / 100); // Ex: 1200 * 0.55 = 660
+                const valor_taxa_admin = premio_bruto * (pct_admin / 100); // Ex: 1200 * 0.10 = 120
 
-                // --- 4. CÁLCULO 3 (DIVISÃO POR COTA) ---
-                const valor_por_cota = premio_liquido / COTAS_DIVISAO; // Ex: 4320 / 25 = 172.80
+                // --- 4. CÁLCULO 3 (SOBRA) ---
+                const premio_restante = premio_bruto - valor_1_lugar - valor_taxa_admin; // Ex: 1200 - 660 - 120 = 420
 
-                // --- 5. PREPARAR O TEXTO ---
+                // --- 5. CÁLCULO 4 (DIVISÃO FINAL) ---
+                const valor_por_participante = premio_restante / num_participantes; // Ex: 420 / 24 = 17.50
+
+                // --- 6. PREPARAR O TEXTO ---
                 const texto_calculo = 
-                    `Aposta Referência: ${valor_aposta}\n` +
-                    `Prêmio Bruto: ${formatar_brl(premio_bruto)}\n` +
+                    `Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}\n` +
                     `--------------------\n` +
-                    `Taxa Admin (${pct_admin}%): -${formatar_brl(valor_taxa_admin)}\n` +
-                    `Prêmio Líquido: ${formatar_brl(premio_liquido)}\n` +
-                    `Divisão por ${COTAS_DIVISAO} cotas\n\n` +
-                    `🏆 Valor p/ Cota: ${formatar_brl(valor_por_cota)}`;
+                    `🏆 1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar)}\n` +
+                    `⚙️ Admin (${pct_admin}%): -${formatar_brl(valor_taxa_admin)}\n` +
+                    `Restante (a dividir): ${formatar_brl(premio_restante)}\n` +
+                    `Divisão por ${num_participantes} participantes\n\n` +
+                    `💰 Valor p/ Participante: ${formatar_brl(valor_por_participante)}`;
 
-                // --- 6. GERAR LINK E EXIBIR ---
+                // --- 7. GERAR LINK E EXIBIR ---
                 const texto_whatsapp = `🎉 *BOLÃO PREMIADO (Ref. ${valor_aposta})* 🎉\n\n` + texto_calculo;
                 const texto_html = texto_whatsapp.replace(/\n/g, '<br>');
                 const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_whatsapp);
@@ -168,7 +187,7 @@
                     </a>
                 `;
                 
-                areaResultado.style.display = 'block'; // Mostra o resultado
+                areaResultado.style.display = 'block';
             }
         });
 
