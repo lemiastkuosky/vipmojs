@@ -3,22 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v7</title>
+    <title>Calculadora de Bolão v9 (Live)</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         
         .form-group { margin-bottom: 15px; }
-        /* Estilo para o <select> e <input> */
         .form-group input[type="number"],
         .form-group select { 
-            width: 100%; /* Ocupa 100% da largura */
-            padding: 10px; 
-            border: 1px solid #ddd; 
-            border-radius: 4px; 
-            font-size: 1.1em;
-            box-sizing: border-box; /* Garante que o padding não estoure a largura */
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1.1em;
+            box-sizing: border-box; 
         }
 
         .botoes-grid {
@@ -28,38 +23,34 @@
             margin-top: 10px;
         }
         .botao-premio {
-            border: 1px solid #28a745;
-            background: #fff;
-            color: #28a745;
-            padding: 12px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-            transition: background 0.2s, color 0.2s;
+            border: 1px solid #28a745; background: #fff; color: #28a745;
+            padding: 12px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 16px; font-weight: bold; text-align: center; transition: background 0.2s, color 0.2s;
         }
         .botao-premio:hover { background: #e9f7ef; }
+        
+        /* NOVO: Estilo do botão de aposta ativo */
+        .botao-premio.active {
+            background: #28a745;
+            color: white;
+        }
 
         .botao-wpp { display: block; text-align: center; background: #25D366; color: white; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-size: 16px; margin-top: 20px; }
         .resultado { margin-top: 20px; padding: 15px; background: #e9f7ef; border: 1px solid #b6dccb; border-radius: 4px; display: none; }
         
         .divisao-box {
-            background: #f9f9f9;
-            border: 1px solid #eee;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
+            background: #f9f9f9; border: 1px solid #eee; padding: 15px;
+            border-radius: 5px; margin-top: 20px;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Calculadora de Bolão (Divisão por Pessoas)</h2>
+        <h2>Calculadora de Bolão (Live)</h2>
         
         <div class="form-group">
-            <label for="select_taxa_admin">1. Escolha a Taxa de Administração (%):</label>
+            <label for="select_taxa_admin">1. Taxa de Administração (%):</label>
             <select id="select_taxa_admin">
                 </select>
         </div>
@@ -69,15 +60,21 @@
                 <label for="pct_1_lugar">Porcentagem 1º Lugar (%):</label>
                 <input type="number" id="pct_1_lugar" value="55">
             </div>
+            
             <div class="form-group">
-                <label for="num_participantes">Nº de Participantes (para dividir o resto):</label>
+                <label for="base_participantes">Base de Participantes (para o "bônus"):</label>
+                <input type="number" id="base_participantes" value="24">
+            </div>
+
+            <div class="form-group">
+                <label for="num_participantes">Nº de Participantes *Reais* (p/ dividir):</label>
                 <input type="number" id="num_participantes" value="24">
             </div>
         </div>
 
         <hr style="margin: 20px 0;">
 
-        <label>3. Clique no valor da Aposta para Calcular:</label>
+        <label>3. Clique na Aposta para Calcular:</label>
         <div id="premio_botoes" class="botoes-grid">
             <button class="botao-premio" data-valor="15">15</button>
             <button class="botao-premio" data-valor="30">30</button>
@@ -103,13 +100,20 @@
         
         // --- CONSTANTES DO BOLÃO ---
         const MULTIPLICADOR = 80; // 1200 (prêmio) / 15 (aposta) = 80
+        const BONUS_1_LUGAR_POR_FALTANTE = 10; // R$ 10
+        const BONUS_ADMIN_POR_FALTANTE = 5;  // R$ 5
         
+        // --- VARIÁVEL DE ESTADO ---
+        let apostaAtual = 0; // Guarda a última aposta clicada
+
         // --- ELEMENTOS ---
         const selectTaxaAdmin = document.getElementById('select_taxa_admin');
         const containerPremio = document.getElementById('premio_botoes');
+        const premioBotoes = containerPremio.querySelectorAll('.botao-premio'); // Pega todos os botões de aposta
         const areaResultado = document.getElementById('resultadoArea');
         
         const inputPct1Lugar = document.getElementById('pct_1_lugar');
+        const inputBaseParticipantes = document.getElementById('base_participantes');
         const inputNumParticipantes = document.getElementById('num_participantes');
 
         // --- 1. FUNÇÃO DE PREENCHER O SELECT (0-100) ---
@@ -120,8 +124,7 @@
                 option.textContent = i + '%';
                 selectTaxaAdmin.appendChild(option);
             }
-            // Pode definir um valor padrão se quiser, ex:
-             selectTaxaAdmin.value = "10"; // Deixa 10% selecionado por padrão
+             selectTaxaAdmin.value = "10"; // Padrão 10%
         }
         
         // --- 2. FUNÇÃO DE FORMATAR MOEDA ---
@@ -132,67 +135,140 @@
             }).format(valor);
         }
 
-        // --- 3. LÓGICA PRINCIPAL DO CÁLCULO (Atualizada) ---
-        containerPremio.addEventListener('click', function(e) {
-            if (e.target.classList.contains('botao-premio')) {
-                
-                // --- 1. COLETAR VALORES ---
-                const valor_aposta = parseFloat(e.target.dataset.valor);
-                
-                // Pega os valores dos inputs e do NOVO SELECT
-                const pct_admin = parseFloat(selectTaxaAdmin.value) || 0;
-                const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
-                const num_participantes = parseInt(inputNumParticipantes.value) || 0;
+        // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO ---
+        // Esta função agora LÊ todos os valores e ATUALIZA a tela
+        function calcularEAtualizar() {
+            
+            // "Guarda": Se nenhuma aposta foi clicada ainda, não faz nada
+            if (apostaAtual === 0) {
+                return;
+            }
 
-                // Validação
-                if (num_participantes <= 0) {
-                    alert('Por favor, insira um Nº de Participantes válido.');
-                    inputNumParticipantes.focus();
-                    return;
-                }
+            // --- 1. COLETAR VALORES ---
+            const valor_aposta = apostaAtual; // Pega o valor da aposta "guardada"
+            
+            const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0;
+            const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
+            const base_participantes = parseInt(inputBaseParticipantes.value) || 0;
+            const num_participantes_atual = parseInt(inputNumParticipantes.value) || 0;
+
+            // --- VALIDAÇÃO (Silenciosa, apenas para o cálculo) ---
+            if (num_participantes_atual < 0) {
+                return; // Não calcula se for negativo
+            }
+            if (num_participantes_atual > base_participantes) {
+                // Se os participantes reais forem maiores, não há faltantes
+                // (Não precisa de alerta, apenas o cálculo muda)
+            }
+            
+            // --- 2. CÁLCULO 1 (PRÊMIO BRUTO) ---
+            const premio_bruto = valor_aposta * MULTIPLICADOR;
+            
+            // --- 3. CÁLCULO 2 (VALORES BASE) ---
+            const valor_1_lugar_base = premio_bruto * (pct_1_lugar / 100);
+            const valor_admin_base = premio_bruto * (pct_admin_base / 100);
+
+            // --- 4. CÁLCULO 3 (BÔNUS RETROATIVO) ---
+            // Garante que faltantes não seja negativo
+            const participantes_faltantes = Math.max(0, base_participantes - num_participantes_atual); 
+            
+            let bonus_1_lugar = 0;
+            let bonus_admin = 0;
+
+            if (participantes_faltantes > 0) {
+                bonus_1_lugar = participantes_faltantes * BONUS_1_LUGAR_POR_FALTANTE;
+                bonus_admin = participantes_faltantes * BONUS_ADMIN_POR_FALTANTE;
+            }
+
+            // --- 5. CÁLCULO 4 (TOTAIS) ---
+            const total_1_lugar = valor_1_lugar_base + bonus_1_lugar;
+            const total_admin = valor_admin_base + bonus_admin;
+            
+            // --- 6. CÁLCULO 5 (SOBRA E DIVISÃO) ---
+            let premio_restante = premio_bruto - total_1_lugar - total_admin;
+            let valor_por_participante = 0;
+            let texto_calculo = "";
+
+            // --- 7. CÁLCULO 6 (LÓGICA DE 0 PARTICIPANTES) ---
+            if (num_participantes_atual === 0 && base_participantes > 0) {
+                // Se 0 participantes, 1º lugar leva o que sobrou (o prêmio restante)
+                const total_1_lugar_final = total_1_lugar + premio_restante;
                 
-                // --- 2. CÁLCULO 1 (PRÊMIO BRUTO) ---
-                const premio_bruto = valor_aposta * MULTIPLICADOR; // Ex: 15 * 80 = 1200
-                
-                // --- 3. CÁLCULO 2 (DESCONTOS) ---
-                const valor_1_lugar = premio_bruto * (pct_1_lugar / 100); // Ex: 1200 * 0.55 = 660
-                const valor_taxa_admin = premio_bruto * (pct_admin / 100); // Ex: 1200 * 0.10 = 120
-
-                // --- 4. CÁLCULO 3 (SOBRA) ---
-                const premio_restante = premio_bruto - valor_1_lugar - valor_taxa_admin; // Ex: 1200 - 660 - 120 = 420
-
-                // --- 5. CÁLCULO 4 (DIVISÃO FINAL) ---
-                const valor_por_participante = premio_restante / num_participantes; // Ex: 420 / 24 = 17.50
-
-                // --- 6. PREPARAR O TEXTO ---
-                const texto_calculo = 
+                texto_calculo = 
                     `Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}\n` +
                     `--------------------\n` +
-                    `🏆 1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar)}\n` +
-                    `⚙️ Admin (${pct_admin}%): -${formatar_brl(valor_taxa_admin)}\n` +
-                    `Restante (a dividir): ${formatar_brl(premio_restante)}\n` +
-                    `Divisão por ${num_participantes} participantes\n\n` +
-                    `💰 Valor p/ Participante: ${formatar_brl(valor_por_participante)}`;
+                    `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
+                    `🔩 Bônus Admin (${participantes_faltantes} faltantes): -${formatar_brl(bonus_admin)}\n` +
+                    `Total Admin: ${formatar_brl(total_admin)}\n` +
+                    `--------------------\n` +
+                    `🏆 1º Lugar (Leva TUDO restante): ${formatar_brl(total_1_lugar_final)}\n\n` +
+                    `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bonus_1_lugar)}, Resto: ${formatar_brl(premio_restante)})`;
 
-                // --- 7. GERAR LINK E EXIBIR ---
-                const texto_whatsapp = `🎉 *BOLÃO PREMIADO (Ref. ${valor_aposta})* 🎉\n\n` + texto_calculo;
-                const texto_html = texto_whatsapp.replace(/\n/g, '<br>');
-                const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_whatsapp);
-
-                areaResultado.innerHTML = `
-                    <h3>Resumo do Cálculo:</h3>
-                    <p>${texto_html}</p>
-                    <a href="${link_whatsapp}" target="_blank" class="botao-wpp">
-                        🚀 Enviar para o Grupo do WhatsApp
-                    </a>
-                `;
+            } else {
+                // Lógica normal de divisão
+                if (num_participantes_atual > 0) {
+                    valor_por_participante = premio_restante / num_participantes_atual;
+                }
                 
-                areaResultado.style.display = 'block';
+                texto_calculo = 
+                    `Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}\n` +
+                    `--------------------\n` +
+                    `🏆 1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar_base)}\n` +
+                    `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
+                    `🔩 Bônus (${participantes_faltantes} faltantes):\n` +
+                    `   (1º Lugar: +${formatar_brl(bonus_1_lugar)}, Admin: +${formatar_brl(bonus_admin)})\n` +
+                    `--------------------\n` +
+                    `Totais Finais:\n` +
+                    `🏆 1º Lugar (Total): ${formatar_brl(total_1_lugar)}\n` +
+                    `⚙️ Admin (Total): ${formatar_brl(total_admin)}\n` +
+                    `--------------------\n` +
+                    `Restante (a dividir): ${formatar_brl(premio_restante)}\n` +
+                    `Divisão por ${num_participantes_atual} participantes\n\n` +
+                    `💰 Valor p/ Participante: ${formatar_brl(valor_por_participante)}`;
+            }
+
+            // --- 8. GERAR LINK E EXIBIR ---
+            const texto_whatsapp = `🎉 *BOLÃO PREMIADO (Ref. ${valor_aposta})* 🎉\n\n` + texto_calculo;
+            const texto_html = texto_calculo.replace(/\n/g, '<br>');
+            const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_whatsapp);
+
+            areaResultado.innerHTML = `
+                <h3>Resumo do Cálculo:</h3>
+                <p>${texto_html}</p>
+                <a href="${link_whatsapp}" target="_blank" class="botao-wpp">
+                    🚀 Enviar para o Grupo do WhatsApp
+                </a>
+            `;
+            
+            areaResultado.style.display = 'block';
+        }
+
+        // --- 4. CONFIGURAÇÃO DOS EVENT LISTENERS ---
+
+        // A. Ouve o clique nos botões de APOSTA
+        containerPremio.addEventListener('click', function(e) {
+            if (e.target.classList.contains('botao-premio')) {
+                // 1. Guarda o valor da aposta clicada
+                apostaAtual = parseFloat(e.target.dataset.valor);
+                
+                // 2. Atualiza o visual (ativa o botão clicado)
+                premioBotoes.forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // 3. Roda o cálculo pela primeira vez
+                calcularEAtualizar();
             }
         });
 
+        // B. Ouve mudanças em TODOS os outros inputs
+        // 'change' para o select, 'input' para os campos de número
+        
+        selectTaxaAdmin.addEventListener('change', calcularEAtualizar);
+        inputPct1Lugar.addEventListener('input', calcularEAtualizar);
+        inputBaseParticipantes.addEventListener('input', calcularEAtualizar);
+        inputNumParticipantes.addEventListener('input', calcularEAtualizar);
+
         // --- INICIALIZAÇÃO ---
-        // Roda a função para criar as opções 0-100 assim que a página carrega
         popularSelectAdmin();
 
     </script>
