@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v19 (Resumo)</title>
+    <title>Calculadora de Bolão v20 (Resumo)</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -16,12 +16,10 @@
             box-sizing: border-box; 
         }
 
-        /* NOVO: Estilo do texto de ajuda */
+        /* Estilo do texto de ajuda */
         .help-text {
-            font-size: 0.85em;
-            color: #555;
-            margin-top: -10px; /* Puxa para perto do campo */
-            margin-bottom: 15px;
+            font-size: 0.85em; color: #555;
+            margin-top: -10px; margin-bottom: 15px;
             font-style: italic;
         }
 
@@ -174,12 +172,12 @@
         const MULTIPLICADOR = 80;
         
         // Chaves do LocalStorage
-        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v19'; // Versão atualizada
-        const STORAGE_KEY_1ST = 'bolao1stPct_v19';
-        const STORAGE_KEY_BASE = 'bolaoBase_v19';
-        const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v19';
-        const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v19';
-        const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v19';
+        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v20';
+        const STORAGE_KEY_1ST = 'bolao1stPct_v20';
+        const STORAGE_KEY_BASE = 'bolaoBase_v20';
+        const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v20';
+        const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v20';
+        const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v20';
 
         // --- VARIÁVEIS DE ESTADO (Carregadas ao iniciar) ---
         let apostaAtual = 0;
@@ -232,6 +230,7 @@
         function calcularEAtualizar() {
             if (apostaAtual === 0) return;
 
+            // --- 1. COLETAR DADOS ---
             const valor_aposta = apostaAtual;
             const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0;
             const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
@@ -240,87 +239,141 @@
 
             if (num_participantes_atual < 0) return;
             
-            // --- CÁLCULOS INICIAIS (com centavos) ---
+            // --- 2. CÁLCULOS BASE ---
             const premio_bruto = valor_aposta * MULTIPLICADOR;
             const valor_1_lugar_base = premio_bruto * (pct_1_lugar / 100);
             const valor_admin_base = premio_bruto * (pct_admin_base / 100);
             const premio_restante_base = premio_bruto - valor_1_lugar_base - valor_admin_base;
             const cota_base = (base_participantes > 0) ? (premio_restante_base / base_participantes) : 0;
+
+            // --- 3. CÁLCULOS BÔNUS ---
             const participantes_faltantes = Math.max(0, base_participantes - num_participantes_atual); 
             const valor_total_cotas_faltantes = participantes_faltantes * cota_base;
-
             let bns_1_lugar_calc = 0;
             let bns_admin_calc = 0;
             let bns_pote_calc = 0;
-
             if (participantes_faltantes > 0) {
                 bns_1_lugar_calc = valor_total_cotas_faltantes * (bonus1LugarPct / 100);
                 bns_admin_calc = valor_total_cotas_faltantes * (bonusAdminPct / 100);
                 bns_pote_calc = valor_total_cotas_faltantes * (bonusPotePct / 100);
             }
 
+            // --- 4. TOTAIS (sem arredondamento ainda) ---
             const total_1_lugar = valor_1_lugar_base + bns_1_lugar_calc;
             const total_admin = valor_admin_base + bns_admin_calc;
             const pote_base_restante = premio_restante_base - valor_total_cotas_faltantes;
             const pote_final_divisao = pote_base_restante + bns_pote_calc; 
 
-            // --- LÓGICA DE ARREDONDAMENTO ---
+            // --- 5. LÓGICA DE ARREDONDAMENTO E TEXTO (ATUALIZADO) ---
             let valor_por_participante_arredondado = 0;
             let sobra_dos_centavos = 0;
-            let total_admin_final = total_admin;
-            let texto_sobra = "";
-            let texto_calculo = "";
+            let total_admin_final = total_admin; // Admin (Total)
+            
+            let texto_calculo_detalhado = ""; // Para o bloco de matemática
+            let texto_resumo_1lugar = "";
+            let texto_resumo_admin = "";
+            let texto_resumo_participante = "";
 
-            if (num_participantes_atual > 0) {
-                const valor_exato = pote_final_divisao / num_participantes_atual;
-                valor_por_participante_arredondado = Math.floor(valor_exato);
-                const total_pago_participantes = valor_por_participante_arredondado * num_participantes_atual;
-                sobra_dos_centavos = pote_final_divisao - total_pago_participantes;
-                total_admin_final = total_admin + sobra_dos_centavos;
-                
-                if (sobra_dos_centavos > 0.01) {
-                    texto_sobra = `Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n`;
-                }
-            }
-            // --- FIM DO ARREDONDAMENTO ---
 
             if (num_participantes_atual === 0 && base_participantes > 0) {
+                // --- Caso 0 Participantes ---
                 const total_1_lugar_final = total_1_lugar + pote_final_divisao;
-                texto_calculo = 
-                    `Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}\n` +
-                    `--------------------\n` +
-                    `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
-                    `🔩 Bônus Admin (${participantes_faltantes} faltantes): -${formatar_brl(bns_admin_calc)}\n` +
-                    `Total Admin: ${formatar_brl(total_admin_final)}\n` +
-                    `--------------------\n` +
-                    `🏆 1º Lugar (Leva TUDO restante): ${formatar_brl(total_1_lugar_final)}\n\n` +
-                    `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bns_1_lugar_calc)}, Resto: ${formatar_brl(pote_final_divisao)})`;
-            } else {
                 
-                texto_calculo = 
-                    `Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}\n` +
-                    `--------------------\n` +
-                    `🏆 1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar_base)}\n` +
-                    `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
-                    `🔩 Bônus (${participantes_faltantes} faltantes):\n` +
-                    `   (1º Lugar: +${formatar_brl(bns_1_lugar_calc)})\n` +
-                    `   (Admin: +${formatar_brl(bns_admin_calc)})\n` +
-                    `   (Pote: +${formatar_brl(bns_pote_calc)})\n` +
-                    `--------------------\n` +
-                    `Totais Finais (sem sobra):\n` +
-                    `🏆 1º Lugar (Total): ${formatar_brl(total_1_lugar)}\n` +
-                    `⚙️ Admin (Total): ${formatar_brl(total_admin)}\n` +
-                    `--------------------\n` +
-                    `Pote Final (a dividir): ${formatar_brl(pote_final_divisao)}\n` +
-                    `${texto_sobra}` +
-                    `Divisão por ${num_participantes_atual} participantes\n\n` +
-                    `💰 Valor p/ Participante: ${formatar_brl(valor_por_participante_arredondado)} (Redondo)\n` +
-                    `⚙️ Admin (Total Final c/ Sobra): ${formatar_brl(total_admin_final)}`;
+                // Resumo 1º Lugar
+                texto_resumo_1lugar = 
+                    `🏆 *RESUMO 1º LUGAR*\n` +
+                    `Prêmio Base (${pct_1_lugar}%): ${formatar_brl(valor_1_lugar_base)}\n` +
+                    `Bônus Faltantes: +${formatar_brl(bns_1_lugar_calc)}\n` +
+                    `Pote Restante: +${formatar_brl(pote_final_divisao)}\n` +
+                    `*Total a Receber: ${formatar_brl(total_1_lugar_final)}*\n`;
+                
+                // Resumo Admin
+                texto_resumo_admin = 
+                    `⚙️ *RESUMO ADMIN*\n` +
+                    `Taxa Base (${pct_admin_base}%): ${formatar_brl(valor_admin_base)}\n` +
+                    `Bônus Faltantes: +${formatar_brl(bns_admin_calc)}\n` +
+                    `*Total a Receber: ${formatar_brl(total_admin_final)}*\n`;
+                    
+                // Resumo Participante
+                texto_resumo_participante = 
+                    `👥 *RESUMO PARTICIPANTES*\n` +
+                    `*Nenhum participante para divisão.*\n`;
+
+                // Cálculo Detalhado
+                texto_calculo_detalhado = 
+                    `Prêmio Base (%): -${formatar_brl(valor_1_lugar_base)}\n` +
+                    `Taxa Base (%): -${formatar_brl(valor_admin_base)}\n` +
+                    `Bônus 1º (${participantes_faltantes} faltantes): +${formatar_brl(bns_1_lugar_calc)}\n` +
+                    `Bônus Admin (${participantes_faltantes} faltantes): +${formatar_brl(bns_admin_calc)}\n` +
+                    `Pote Final (p/ 1º): ${formatar_brl(pote_final_divisao)}\n`;
+                
+            } else {
+                // --- Caso Normal (>= 1 Participante) ---
+                
+                const valor_exato = (num_participantes_atual > 0) ? (pote_final_divisao / num_participantes_atual) : 0;
+                valor_por_participante_arredondado = Math.floor(valor_exato);
+                
+                const total_pago_participantes = valor_por_participante_arredondado * num_participantes_atual;
+                sobra_dos_centavos = pote_final_divisao - total_pago_participantes;
+                total_admin_final = total_admin + sobra_dos_centavos; // Adiciona sobra ao admin
+                
+                // Resumo 1º Lugar
+                texto_resumo_1lugar = 
+                    `🏆 *RESUMO 1º LUGAR*\n` +
+                    `Prêmio Base (${pct_1_lugar}%): ${formatar_brl(valor_1_lugar_base)}\n` +
+                    `Bônus Faltantes: +${formatar_brl(bns_1_lugar_calc)}\n` +
+                    `*Total a Receber: ${formatar_brl(total_1_lugar)}*\n`;
+                
+                // Resumo Admin
+                texto_resumo_admin = 
+                    `⚙️ *RESUMO ADMIN*\n` +
+                    `Taxa Base (${pct_admin_base}%): ${formatar_brl(valor_admin_base)}\n` +
+                    `Bônus Faltantes: +${formatar_brl(bns_admin_calc)}\n` +
+                    `Sobra (Centavos): +${formatar_brl(sobra_dos_centavos)}\n` +
+                    `*Total a Receber: ${formatar_brl(total_admin_final)}*\n`;
+                    
+                // Resumo Participante
+                texto_resumo_participante = 
+                    `👥 *RESUMO PARTICIPANTES*\n` +
+                    `Pote Final p/ Divisão: ${formatar_brl(pote_final_divisao)}\n` +
+                    `Nº de Participantes: ${num_participantes_atual}\n` +
+                    `*Valor por Pessoa (Redondo): ${formatar_brl(valor_por_participante_arredondado)}*\n`;
+                
+                // Cálculo Detalhado
+                texto_calculo_detalhado = 
+                    `1. Prêmios Base:\n` +
+                    `   1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar_base)}\n` +
+                    `   Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
+                    `   = Pote Base: ${formatar_brl(premio_restante_base)}\n` +
+                    `2. Valor Cota: (${formatar_brl(premio_restante_base)} / ${base_participantes}) = *${formatar_brl(cota_base)}*\n` +
+                    `3. Bônus (${participantes_faltantes} faltantes):\n` +
+                    `   Total Liberado: ${formatar_brl(valor_total_cotas_faltantes)}\n` +
+                    `   -> Bônus 1º Lugar: +${formatar_brl(bns_1_lugar_calc)}\n` +
+                    `   -> Bônus Admin: +${formatar_brl(bns_admin_calc)}\n` +
+                    `   -> Bônus Pote: +${formatar_brl(bns_pote_calc)}\n` +
+                    `4. Pote Final: (${formatar_brl(premio_restante_base)} - ${formatar_brl(valor_total_cotas_faltantes)} + ${formatar_brl(bns_pote_calc)}) = *${formatar_brl(pote_final_divisao)}*\n` +
+                    `5. Divisão:\n` +
+                    `   (${formatar_brl(pote_final_divisao)} / ${num_participantes_atual}) = ${formatar_brl(valor_exato)}\n` +
+                    `   Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n`;
             }
 
-            const texto_whatsapp = `🎉 *BOLÃO PREMIADO (Ref. ${valor_aposta})* 🎉\n\n` + texto_calculo;
-            const texto_html = texto_calculo.replace(/\n/g, '<br>');
-            const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_whatsapp);
+            // --- 6. MONTAR SAÍDA FINAL ---
+            const texto_final_whatsapp = 
+                `🎉 *BOLÃO PREMIADO (Ref. ${valor_aposta})* 🎉\n\n` +
+                `*Prêmio Bruto Total: ${formatar_brl(premio_bruto)}*\n` +
+                `--------------------\n\n` +
+                `${texto_resumo_1lugar}\n` +
+                `--------------------\n\n` +
+                `${texto_resumo_admin}\n` +
+                `--------------------\n\n` +
+                `${texto_resumo_participante}\n\n` +
+                `--------------------\n` +
+                `🧾 *CÁLCULO DETALHADO*\n` +
+                `--------------------\n` +
+                `${texto_calculo_detalhado}`;
+
+            const texto_html = texto_final_whatsapp.replace(/\n/g, '<br>'); // Versão para tela
+            const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_final_whatsapp);
 
             areaResultado.innerHTML = `
                 <h3>Resumo do Cálculo:</h3>
