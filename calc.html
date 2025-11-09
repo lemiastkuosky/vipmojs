@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v11 (Salva Estado)</title>
+    <title>Calculadora de Bolão v12 (Confirma)</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -60,7 +60,7 @@
             </div>
             
             <div class="form-group">
-                <label for="base_participantes">Base de Participantes (para o "bônus"):</label>
+                <label for="base_participantes">Total de Cotas (Base p/ Bônus):</label>
                 <input type="number" id="base_participantes" value="24">
             </div>
 
@@ -103,11 +103,13 @@
         const BONUS_POTE_POR_FALTANTE = 5;
         
         // --- CONSTANTES DE ARMAZENAMENTO (NOVO) ---
-        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v11';
-        const STORAGE_KEY_1ST = 'bolao1stPct_v11';
+        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v12';
+        const STORAGE_KEY_1ST = 'bolao1stPct_v12';
+        const STORAGE_KEY_BASE = 'bolaoBase_v12'; // <-- NOVO
 
         // --- VARIÁVEL DE ESTADO ---
         let apostaAtual = 0;
+        let valorBaseOriginal = "24"; // <-- NOVO (para a confirmação)
 
         // --- ELEMENTOS ---
         const selectTaxaAdmin = document.getElementById('select_taxa_admin');
@@ -119,9 +121,9 @@
         const inputBaseParticipantes = document.getElementById('base_participantes');
         const inputNumParticipantes = document.getElementById('num_participantes');
 
-        // --- 1. FUNÇÃO DE PREENCHER O SELECT (Atualizado: 5 em 5) ---
+        // --- 1. FUNÇÃO DE PREENCHER O SELECT (5 em 5) ---
         function popularSelectAdmin() {
-            for (let i = 0; i <= 100; i += 5) { // <-- MUDANÇA AQUI
+            for (let i = 0; i <= 100; i += 5) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i + '%';
@@ -225,25 +227,32 @@
             areaResultado.style.display = 'block';
         }
 
-        // --- 4. FUNÇÃO PARA CARREGAR VALORES (NOVO) ---
+        // --- 4. FUNÇÃO PARA CARREGAR VALORES (Atualizado) ---
         function carregarValoresSalvos() {
             const adminSalvo = localStorage.getItem(STORAGE_KEY_ADMIN);
             const primeiroLugarSalvo = localStorage.getItem(STORAGE_KEY_1ST);
+            const baseSalva = localStorage.getItem(STORAGE_KEY_BASE); // <-- NOVO
 
-            // Se encontrou um valor salvo, usa ele
             if (adminSalvo !== null) {
                 selectTaxaAdmin.value = adminSalvo;
             } else {
-                // Senão, usa um padrão
                  selectTaxaAdmin.value = "10";
             }
 
             if (primeiroLugarSalvo !== null) {
                 inputPct1Lugar.value = primeiroLugarSalvo;
             } else {
-                // Senão, usa o padrão 55
                 inputPct1Lugar.value = "55";
             }
+
+            if (baseSalva !== null) { // <-- NOVO
+                inputBaseParticipantes.value = baseSalva;
+            } else {
+                inputBaseParticipantes.value = "24";
+            }
+            
+            // Define o valor original para a lógica de confirmação
+            valorBaseOriginal = inputBaseParticipantes.value;
         }
 
         // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS (Atualizado) ---
@@ -258,23 +267,46 @@
 
         // Ouve, Salva no localStorage E Calcula
         selectTaxaAdmin.addEventListener('change', function() {
-            localStorage.setItem(STORAGE_KEY_ADMIN, selectTaxaAdmin.value); // <-- SALVA
+            localStorage.setItem(STORAGE_KEY_ADMIN, selectTaxaAdmin.value);
             calcularEAtualizar();
         });
         
         // Ouve, Salva no localStorage E Calcula
         inputPct1Lugar.addEventListener('input', function() {
-            localStorage.setItem(STORAGE_KEY_1ST, inputPct1Lugar.value); // <-- SALVA
+            localStorage.setItem(STORAGE_KEY_1ST, inputPct1Lugar.value);
             calcularEAtualizar();
         });
 
-        // Os outros inputs não precisam salvar, só calcular
-        inputBaseParticipantes.addEventListener('input', calcularEAtualizar);
+        // --- LÓGICA DE CONFIRMAÇÃO (NOVO) ---
+        // 1. Guarda o valor quando o usuário clica no campo
+        inputBaseParticipantes.addEventListener('focus', function() {
+            valorBaseOriginal = inputBaseParticipantes.value;
+        });
+
+        // 2. Compara e pede confirmação quando o usuário sai do campo
+        inputBaseParticipantes.addEventListener('change', function() {
+            if (inputBaseParticipantes.value !== valorBaseOriginal) {
+                const confirmou = confirm("Tem certeza que quer mudar o 'Total de Cotas'?\n\nIsso afetará a regra de bônus para todos os cálculos.");
+                
+                if (confirmou) {
+                    // OK: Salva o novo valor e recalcula
+                    localStorage.setItem(STORAGE_KEY_BASE, inputBaseParticipantes.value);
+                    valorBaseOriginal = inputBaseParticipantes.value; // Atualiza o valor original
+                    calcularEAtualizar();
+                } else {
+                    // Cancelar: Reverte para o valor antigo
+                    inputBaseParticipantes.value = valorBaseOriginal;
+                }
+            }
+        });
+        // --- FIM DA LÓGICA DE CONFIRMAÇÃO ---
+
+        // O 'num_participantes' só recalcula
         inputNumParticipantes.addEventListener('input', calcularEAtualizar);
 
-        // --- INICIALIZAÇÃO (Atualizado) ---
-        popularSelectAdmin();     // 1. Cria a lista (0, 5, 10...)
-        carregarValoresSalvos(); // 2. Tenta carregar os valores salvos
+        // --- INICIALIZAÇÃO ---
+        popularSelectAdmin();
+        carregarValoresSalvos();
 
     </script>
 
