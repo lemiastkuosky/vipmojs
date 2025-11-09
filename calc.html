@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v12 (Confirma)</title>
+    <title>Calculadora de Bolão v14 (Config)</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -40,6 +40,20 @@
             background: #f9f9f9; border: 1px solid #eee; padding: 15px;
             border-radius: 5px; margin-top: 20px;
         }
+        
+        /* NOVO BOTÃO DE CONFIGURAÇÃO */
+        .botao-config {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .botao-config:hover { background: #5a6268; }
     </style>
 </head>
 <body>
@@ -56,18 +70,14 @@
         <div class="divisao-box">
             <div class="form-group">
                 <label for="pct_1_lugar">Porcentagem 1º Lugar (%):</label>
-                <input type="number" id="pct_1_lugar" value="55">
+                <input type="number" id="pct_1_lugar">
             </div>
             
             <div class="form-group">
-                <label for="base_participantes">Total de Cotas (Base p/ Bônus):</label>
-                <input type="number" id="base_participantes" value="24">
-            </div>
-
-            <div class="form-group">
                 <label for="num_participantes">Nº de Participantes *Reais* (p/ dividir):</label>
-                <input type="number" id="num_participantes" value="24">
-            </div>
+                <input type="number" id="num_participantes" value="24"> </div>
+            
+            <button id="configButton" class="botao-config">⚙️ Alterar Total de Cotas (Base)</button>
         </div>
 
         <hr style="margin: 20px 0;">
@@ -102,14 +112,15 @@
         const BONUS_ADMIN_POR_FALTANTE = 5;
         const BONUS_POTE_POR_FALTANTE = 5;
         
-        // --- CONSTANTES DE ARMAZENAMENTO (NOVO) ---
-        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v12';
-        const STORAGE_KEY_1ST = 'bolao1stPct_v12';
-        const STORAGE_KEY_BASE = 'bolaoBase_v12'; // <-- NOVO
+        // --- CONSTANTES DE ARMAZENAMENTO ---
+        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v14';
+        const STORAGE_KEY_1ST = 'bolao1stPct_v14';
+        const STORAGE_KEY_BASE = 'bolaoBase_v14';
 
-        // --- VARIÁVEL DE ESTADO ---
+        // --- VARIÁVEIS DE ESTADO ---
         let apostaAtual = 0;
-        let valorBaseOriginal = "24"; // <-- NOVO (para a confirmação)
+        let valor1LugarOriginal = "50";
+        let valorBaseParticipantes = 24; // <-- NOVO (guarda o valor da base)
 
         // --- ELEMENTOS ---
         const selectTaxaAdmin = document.getElementById('select_taxa_admin');
@@ -118,8 +129,9 @@
         const areaResultado = document.getElementById('resultadoArea');
         
         const inputPct1Lugar = document.getElementById('pct_1_lugar');
-        const inputBaseParticipantes = document.getElementById('base_participantes');
+        // inputBaseParticipantes foi removido
         const inputNumParticipantes = document.getElementById('num_participantes');
+        const configButton = document.getElementById('configButton'); // <-- NOVO
 
         // --- 1. FUNÇÃO DE PREENCHER O SELECT (5 em 5) ---
         function popularSelectAdmin() {
@@ -139,14 +151,14 @@
             }).format(valor);
         }
 
-        // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (sem alteração) ---
+        // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (Atualizada) ---
         function calcularEAtualizar() {
             if (apostaAtual === 0) return;
 
             const valor_aposta = apostaAtual;
             const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0;
             const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
-            const base_participantes = parseInt(inputBaseParticipantes.value) || 0;
+            const base_participantes = valorBaseParticipantes; // <-- MUDANÇA (lê da variável)
             const num_participantes_atual = parseInt(inputNumParticipantes.value) || 0;
 
             if (num_participantes_atual < 0) return;
@@ -227,35 +239,38 @@
             areaResultado.style.display = 'block';
         }
 
-        // --- 4. FUNÇÃO PARA CARREGAR VALORES (Atualizado) ---
+        // --- 4. FUNÇÃO PARA CARREGAR VALORES (ATUALIZADA) ---
         function carregarValoresSalvos() {
             const adminSalvo = localStorage.getItem(STORAGE_KEY_ADMIN);
             const primeiroLugarSalvo = localStorage.getItem(STORAGE_KEY_1ST);
-            const baseSalva = localStorage.getItem(STORAGE_KEY_BASE); // <-- NOVO
+            const baseSalva = localStorage.getItem(STORAGE_KEY_BASE);
 
+            // Padrão Admin: 20%
             if (adminSalvo !== null) {
                 selectTaxaAdmin.value = adminSalvo;
             } else {
-                 selectTaxaAdmin.value = "10";
+                 selectTaxaAdmin.value = "20";
             }
 
+            // Padrão 1º Lugar: 50%
             if (primeiroLugarSalvo !== null) {
                 inputPct1Lugar.value = primeiroLugarSalvo;
             } else {
-                inputPct1Lugar.value = "55";
+                inputPct1Lugar.value = "50";
             }
+            valor1LugarOriginal = inputPct1Lugar.value;
 
-            if (baseSalva !== null) { // <-- NOVO
-                inputBaseParticipantes.value = baseSalva;
+            // Padrão Base: 24 (lido para a variável)
+            if (baseSalva !== null) {
+                valorBaseParticipantes = parseInt(baseSalva, 10); // <-- MUDANÇA
             } else {
-                inputBaseParticipantes.value = "24";
+                valorBaseParticipantes = 24; // <-- MUDANÇA
             }
-            
-            // Define o valor original para a lógica de confirmação
-            valorBaseOriginal = inputBaseParticipantes.value;
         }
 
-        // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS (Atualizado) ---
+        // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS ---
+        
+        // A. Clique no Botão de Aposta (Gatilho inicial)
         containerPremio.addEventListener('click', function(e) {
             if (e.target.classList.contains('botao-premio')) {
                 apostaAtual = parseFloat(e.target.dataset.valor);
@@ -265,43 +280,65 @@
             }
         });
 
-        // Ouve, Salva no localStorage E Calcula
+        // B. Mudança na Taxa Admin (Salva e Calcula)
         selectTaxaAdmin.addEventListener('change', function() {
             localStorage.setItem(STORAGE_KEY_ADMIN, selectTaxaAdmin.value);
             calcularEAtualizar();
         });
         
-        // Ouve, Salva no localStorage E Calcula
-        inputPct1Lugar.addEventListener('input', function() {
-            localStorage.setItem(STORAGE_KEY_1ST, inputPct1Lugar.value);
-            calcularEAtualizar();
+        // C. LÓGICA DE CONFIRMAÇÃO 1º LUGAR
+        inputPct1Lugar.addEventListener('focus', function() {
+            valor1LugarOriginal = inputPct1Lugar.value;
         });
-
-        // --- LÓGICA DE CONFIRMAÇÃO (NOVO) ---
-        // 1. Guarda o valor quando o usuário clica no campo
-        inputBaseParticipantes.addEventListener('focus', function() {
-            valorBaseOriginal = inputBaseParticipantes.value;
-        });
-
-        // 2. Compara e pede confirmação quando o usuário sai do campo
-        inputBaseParticipantes.addEventListener('change', function() {
-            if (inputBaseParticipantes.value !== valorBaseOriginal) {
-                const confirmou = confirm("Tem certeza que quer mudar o 'Total de Cotas'?\n\nIsso afetará a regra de bônus para todos os cálculos.");
+        
+        inputPct1Lugar.addEventListener('change', function() {
+            if (inputPct1Lugar.value !== valor1LugarOriginal) {
+                const confirmou = confirm("Tem certeza que quer mudar a '% do 1º Lugar'?\n\nIsso afetará a regra de divisão.");
                 
                 if (confirmou) {
-                    // OK: Salva o novo valor e recalcula
-                    localStorage.setItem(STORAGE_KEY_BASE, inputBaseParticipantes.value);
-                    valorBaseOriginal = inputBaseParticipantes.value; // Atualiza o valor original
+                    localStorage.setItem(STORAGE_KEY_1ST, inputPct1Lugar.value);
+                    valor1LugarOriginal = inputPct1Lugar.value;
                     calcularEAtualizar();
                 } else {
-                    // Cancelar: Reverte para o valor antigo
-                    inputBaseParticipantes.value = valorBaseOriginal;
+                    inputPct1Lgarm.value = valor1LugarOriginal;
                 }
             }
         });
-        // --- FIM DA LÓGICA DE CONFIRMAÇÃO ---
 
-        // O 'num_participantes' só recalcula
+        // D. LÓGICA DE CONFIRMAÇÃO BOTÃO CONFIG (NOVO)
+        configButton.addEventListener('click', function() {
+            const valorAntigo = valorBaseParticipantes;
+            const novoValor = prompt("Alterar Total de Cotas (Base p/ Bônus):\n\nEste valor é a base para calcular os bônus.\n(Valor atual: " + valorAntigo + ")", valorAntigo);
+            
+            // Se o usuário clicar "Cancelar" ou "OK" sem nada
+            if (novoValor === null || novoValor === "") {
+                return; // Não faz nada
+            }
+
+            const novoValorInt = parseInt(novoValor, 10);
+
+            // Se o valor for inválido
+            if (isNaN(novoValorInt) || novoValorInt < 0) {
+                alert("Valor inválido! Por favor, insira um número.");
+                return;
+            }
+
+            // Se o valor não mudou
+            if (novoValorInt === valorAntigo) {
+                return;
+            }
+
+            // Pop-up de confirmação final
+            const confirmou = confirm("Tem certeza que quer mudar o 'Total de Cotas' de " + valorAntigo + " para " + novoValorInt + "?\n\nIsso afetará a regra de bônus.");
+
+            if (confirmou) {
+                valorBaseParticipantes = novoValorInt; // Atualiza a variável
+                localStorage.setItem(STORAGE_KEY_BASE, valorBaseParticipantes); // Salva
+                calcularEAtualizar(); // Recalcula
+            }
+        });
+
+        // E. Nº de Participantes Reais (Apenas calcula)
         inputNumParticipantes.addEventListener('input', calcularEAtualizar);
 
         // --- INICIALIZAÇÃO ---
