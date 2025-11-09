@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v17 (% Bônus)</title>
+    <title>Calculadora de Bolão v18 (Sobra)</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -87,7 +87,7 @@
         <div class="divisao-box">
             <div class="form-group">
                 <label for="pct_1_lugar">Porcentagem 1º Lugar (%):</label>
-                <input type="number" id="pct_1_lugar">
+                <input type="number" id="pct_1_lugar" step="0.1">
             </div>
             
             <div class="form-group">
@@ -135,17 +135,17 @@
             
             <div class="form-group">
                 <label for="inputBonus1LugarPct">% da Cota p/ 1º Lugar:</label>
-                <input type="number" id="inputBonus1LugarPct">
+                <input type="number" id="inputBonus1LugarPct" step="0.1">
             </div>
             
             <div class="form-group">
                 <label for="inputBonusAdminPct">% da Cota p/ Admin:</label>
-                <input type="number" id="inputBonusAdminPct">
+                <input type="number" id="inputBonusAdminPct" step="0.1">
             </div>
             
             <div class="form-group">
                 <label for="inputBonusPotePct">% da Cota p/ Pote:</label>
-                <input type="number" id="inputBonusPotePct">
+                <input type="number" id="inputBonusPotePct" step="0.1">
             </div>
             
             <div class="modal-buttons">
@@ -160,22 +160,21 @@
         const MULTIPLICADOR = 80;
         
         // Chaves do LocalStorage
-        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v17';
-        const STORAGE_KEY_1ST = 'bolao1stPct_v17';
-        const STORAGE_KEY_BASE = 'bolaoBase_v17';
-        const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v17';
-        const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v17';
-        const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v17';
+        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v18';
+        const STORAGE_KEY_1ST = 'bolao1stPct_v18';
+        const STORAGE_KEY_BASE = 'bolaoBase_v18';
+        const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v18';
+        const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v18';
+        const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v18';
 
         // --- VARIÁVEIS DE ESTADO (Carregadas ao iniciar) ---
         let apostaAtual = 0;
         let valor1LugarOriginal = "50";
         
-        // Variáveis de Bônus (agora são % e não R$)
         let valorBaseParticipantes = 24;
-        let bonus1LugarPct = 60;  // Padrão 60%
-        let bonusAdminPct = 20;   // Padrão 20%
-        let bonusPotePct = 20;    // Padrão 20%
+        let bonus1LugarPct = 60;
+        let bonusAdminPct = 20;
+        let bonusPotePct = 20;
 
         // --- ELEMENTOS ---
         const selectTaxaAdmin = document.getElementById('select_taxa_admin');
@@ -192,9 +191,9 @@
         const saveConfig = document.getElementById('saveConfig');
         const cancelConfig = document.getElementById('cancelConfig');
         const inputBaseParticipantesModal = document.getElementById('inputBaseParticipantesModal');
-        const inputBonus1LugarPct = document.getElementById('inputBonus1LugarPct'); // Atualizado
-        const inputBonusAdminPct = document.getElementById('inputBonusAdminPct');   // Atualizado
-        const inputBonusPotePct = document.getElementById('inputBonusPotePct');     // Atualizado
+        const inputBonus1LugarPct = document.getElementById('inputBonus1LugarPct');
+        const inputBonusAdminPct = document.getElementById('inputBonusAdminPct');
+        const inputBonusPotePct = document.getElementById('inputBonusPotePct');
 
 
         // --- 1. FUNÇÃO DE PREENCHER O SELECT (5 em 5) ---
@@ -215,10 +214,11 @@
             }).format(valor);
         }
 
-        // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (LÓGICA ATUALIZADA) ---
+        // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (LÓGICA DO ARREDONDAMENTO) ---
         function calcularEAtualizar() {
             if (apostaAtual === 0) return;
 
+            // Use parseFloat para aceitar decimais (ex: 50.5)
             const valor_aposta = apostaAtual;
             const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0;
             const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
@@ -227,21 +227,13 @@
 
             if (num_participantes_atual < 0) return;
             
-            // --- CÁLCULOS INICIAIS ---
+            // --- CÁLCULOS INICIAIS (com centavos) ---
             const premio_bruto = valor_aposta * MULTIPLICADOR;
             const valor_1_lugar_base = premio_bruto * (pct_1_lugar / 100);
             const valor_admin_base = premio_bruto * (pct_admin_base / 100);
-            
-            // Este é o "pote" original, antes de qualquer bônus
             const premio_restante_base = premio_bruto - valor_1_lugar_base - valor_admin_base;
-            
-            // Este é o valor de 1 cota (Ex: R$ 360 / 24 = R$ 15)
             const cota_base = (base_participantes > 0) ? (premio_restante_base / base_participantes) : 0;
-
-            // --- CÁLCULO DE BÔNUS (BASEADO NA % DA COTA) ---
             const participantes_faltantes = Math.max(0, base_participantes - num_participantes_atual); 
-            
-            // O valor total liberado pelos faltantes (Ex: 4 * R$ 15 = R$ 60)
             const valor_total_cotas_faltantes = participantes_faltantes * cota_base;
 
             let bns_1_lugar_calc = 0;
@@ -249,23 +241,44 @@
             let bns_pote_calc = 0;
 
             if (participantes_faltantes > 0) {
-                // Divide o valor total (R$ 60) pelas porcentagens
-                bns_1_lugar_calc = valor_total_cotas_faltantes * (bonus1LugarPct / 100); // Ex: 60 * 60% = 36
-                bns_admin_calc = valor_total_cotas_faltantes * (bonusAdminPct / 100); // Ex: 60 * 20% = 12
-                bns_pote_calc = valor_total_cotas_faltantes * (bonusPotePct / 100);   // Ex: 60 * 20% = 12
+                bns_1_lugar_calc = valor_total_cotas_faltantes * (bonus1LugarPct / 100);
+                bns_admin_calc = valor_total_cotas_faltantes * (bonusAdminPct / 100);
+                bns_pote_calc = valor_total_cotas_faltantes * (bonusPotePct / 100);
             }
 
-            // --- TOTAIS E DIVISÃO FINAL ---
             const total_1_lugar = valor_1_lugar_base + bns_1_lugar_calc;
             const total_admin = valor_admin_base + bns_admin_calc;
             
-            // O pote p/ dividir é o pote original - o que foi redistribuído + o bônus do pote
-            // Ex: (360 - 60) + 12 = 312
             const pote_base_restante = premio_restante_base - valor_total_cotas_faltantes;
             const pote_final_divisao = pote_base_restante + bns_pote_calc; 
 
-            let valor_por_participante = 0;
+            // --- LÓGICA DE ARREDONDAMENTO (NOVO) ---
+            let valor_por_participante_arredondado = 0;
+            let sobra_dos_centavos = 0;
+            let total_admin_final = total_admin; // Começa com o total do admin
+            let texto_sobra = "";
             let texto_calculo = "";
+
+            if (num_participantes_atual > 0) {
+                const valor_exato = pote_final_divisao / num_participantes_atual; // Ex: 15.60
+                
+                // 1. Arredonda para baixo (Ex: 15)
+                valor_por_participante_arredondado = Math.floor(valor_exato);
+                
+                // 2. Calcula o total pago (Ex: 15 * 20 = 300)
+                const total_pago_participantes = valor_por_participante_arredondado * num_participantes_atual;
+                
+                // 3. Calcula a sobra (Ex: 312 - 300 = 12)
+                sobra_dos_centavos = pote_final_divisao - total_pago_participantes;
+                
+                // 4. Adiciona a sobra ao Admin
+                total_admin_final = total_admin + sobra_dos_centavos;
+                
+                if (sobra_dos_centavos > 0.01) { // Mostra só se for relevante
+                    texto_sobra = `Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n`;
+                }
+            }
+            // --- FIM DO ARREDONDAMENTO ---
 
             if (num_participantes_atual === 0 && base_participantes > 0) {
                 const total_1_lugar_final = total_1_lugar + pote_final_divisao;
@@ -274,14 +287,11 @@
                     `--------------------\n` +
                     `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
                     `🔩 Bônus Admin (${participantes_faltantes} faltantes): -${formatar_brl(bns_admin_calc)}\n` +
-                    `Total Admin: ${formatar_brl(total_admin)}\n` +
+                    `Total Admin: ${formatar_brl(total_admin_final)}\n` + // Usa final
                     `--------------------\n` +
                     `🏆 1º Lugar (Leva TUDO restante): ${formatar_brl(total_1_lugar_final)}\n\n` +
                     `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bns_1_lugar_calc)}, Resto: ${formatar_brl(pote_final_divisao)})`;
             } else {
-                if (num_participantes_atual > 0) {
-                    valor_por_participante = pote_final_divisao / num_participantes_atual; // Ex: 312 / 20 = 15.60
-                }
                 
                 texto_calculo = 
                     `Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}\n` +
@@ -293,13 +303,15 @@
                     `   (Admin: +${formatar_brl(bns_admin_calc)})\n` +
                     `   (Pote: +${formatar_brl(bns_pote_calc)})\n` +
                     `--------------------\n` +
-                    `Totais Finais:\n` +
+                    `Totais Finais (sem sobra):\n` +
                     `🏆 1º Lugar (Total): ${formatar_brl(total_1_lugar)}\n` +
                     `⚙️ Admin (Total): ${formatar_brl(total_admin)}\n` +
                     `--------------------\n` +
                     `Pote Final (a dividir): ${formatar_brl(pote_final_divisao)}\n` +
+                    `${texto_sobra}` + // Mostra a sobra (ex: +R$ 12)
                     `Divisão por ${num_participantes_atual} participantes\n\n` +
-                    `💰 Valor p/ Participante: ${formatar_brl(valor_por_participante)}`;
+                    `💰 Valor p/ Participante: ${formatar_brl(valor_por_participante_arredondado)} (Redondo)\n` +
+                    `⚙️ Admin (Total Final c/ Sobra): ${formatar_brl(total_admin_final)}`; // Mostra total final do admin
             }
 
             const texto_whatsapp = `🎉 *BOLÃO PREMIADO (Ref. ${valor_aposta})* 🎉\n\n` + texto_calculo;
@@ -325,10 +337,11 @@
             valor1LugarOriginal = inputPct1Lugar.value;
 
             // Padrões de Bônus (agora lidos para as variáveis de %)
-            valorBaseParticipantes = parseInt(localStorage.getItem(STORAGE_KEY_BASE), 10) || 24;
-            bonus1LugarPct = parseInt(localStorage.getItem(STORAGE_KEY_BONUS_1ST_PCT), 10) || 60;
-            bonusAdminPct = parseInt(localStorage.getItem(STORAGE_KEY_BONUS_ADMIN_PCT), 10) || 20;
-            bonusPotePct = parseInt(localStorage.getItem(STORAGE_KEY_BONUS_POTE_PCT), 10) || 20;
+            // Use parseFloat para carregar os decimais salvos
+            valorBaseParticipantes = parseFloat(localStorage.getItem(STORAGE_KEY_BASE)) || 24;
+            bonus1LugarPct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_1ST_PCT)) || 60;
+            bonusAdminPct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_ADMIN_PCT)) || 20;
+            bonusPotePct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_POTE_PCT)) || 20;
         }
 
         // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS ---
@@ -354,7 +367,8 @@
             valor1LugarOriginal = inputPct1Lugar.value;
         });
         inputPct1Lugar.addEventListener('change', function() {
-            if (inputPct1Lugar.value !== valor1LugarOriginal) {
+            // Use parseFloat para comparar (ex: 50.5 vs 50)
+            if (parseFloat(inputPct1Lugar.value) !== parseFloat(valor1LugarOriginal)) {
                 const confirmou = confirm("Tem certeza que quer mudar a '% do 1º Lugar'?\n\nIsso afetará a regra de divisão.");
                 if (confirmou) {
                     localStorage.setItem(STORAGE_KEY_1ST, inputPct1Lugar.value);
@@ -382,21 +396,21 @@
         });
 
         saveConfig.addEventListener('click', function() {
-            // Lê os novos valores do modal
-            const novaBase = parseInt(inputBaseParticipantesModal.value, 10);
-            const novoBonus1 = parseInt(inputBonus1LugarPct.value, 10);
-            const novoBonusAdmin = parseInt(inputBonusAdminPct.value, 10);
-            const novoBonusPote = parseInt(inputBonusPotePct.value, 10);
+            // Lê os novos valores do modal (agora com parseFloat)
+            const novaBase = parseInt(inputBaseParticipantesModal.value, 10); // Base é inteiro
+            const novoBonus1 = parseFloat(inputBonus1LugarPct.value);
+            const novoBonusAdmin = parseFloat(inputBonusAdminPct.value);
+            const novoBonusPote = parseFloat(inputBonusPotePct.value);
 
-            // Validação (checa se são números)
             if (isNaN(novaBase) || isNaN(novoBonus1) || isNaN(novoBonusAdmin) || isNaN(novoBonusPote)) {
                 alert("Por favor, preencha todos os campos com números válidos.");
                 return;
             }
             
-            // Validação (checa se a soma é 100%)
-            if ((novoBonus1 + novoBonusAdmin + novoBonusPote) !== 100) {
-                alert("Erro: A soma das porcentagens do bônus (1º Lugar, Admin, Pote) deve ser exatamente 100%.");
+            // Soma (arredondada para evitar problemas de float)
+            const soma = Math.round((novoBonus1 + novoBonusAdmin + novoBonusPote) * 100) / 100;
+            if (soma !== 100) {
+                alert("Erro: A soma das porcentagens do bônus (1º Lugar, Admin, Pote) deve ser exatamente 100%.\n\nSua soma atual: " + soma + "%");
                 return;
             }
 
