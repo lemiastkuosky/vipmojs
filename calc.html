@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão v9 (Live)</title>
+    <title>Calculadora de Bolão v11 (Salva Estado)</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -28,8 +28,6 @@
             font-size: 16px; font-weight: bold; text-align: center; transition: background 0.2s, color 0.2s;
         }
         .botao-premio:hover { background: #e9f7ef; }
-        
-        /* NOVO: Estilo do botão de aposta ativo */
         .botao-premio.active {
             background: #28a745;
             color: white;
@@ -47,7 +45,7 @@
 <body>
 
     <div class="container">
-        <h2>Calculadora de Bolão (Live)</h2>
+        <h2>Calculadora de Bolão (Salva Estado)</h2>
         
         <div class="form-group">
             <label for="select_taxa_admin">1. Taxa de Administração (%):</label>
@@ -99,32 +97,36 @@
     <script>
         
         // --- CONSTANTES DO BOLÃO ---
-        const MULTIPLICADOR = 80; // 1200 (prêmio) / 15 (aposta) = 80
-        const BONUS_1_LUGAR_POR_FALTANTE = 10; // R$ 10
-        const BONUS_ADMIN_POR_FALTANTE = 5;  // R$ 5
+        const MULTIPLICADOR = 80;
+        const BONUS_1_LUGAR_POR_FALTANTE = 5;
+        const BONUS_ADMIN_POR_FALTANTE = 5;
+        const BONUS_POTE_POR_FALTANTE = 5;
         
+        // --- CONSTANTES DE ARMAZENAMENTO (NOVO) ---
+        const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v11';
+        const STORAGE_KEY_1ST = 'bolao1stPct_v11';
+
         // --- VARIÁVEL DE ESTADO ---
-        let apostaAtual = 0; // Guarda a última aposta clicada
+        let apostaAtual = 0;
 
         // --- ELEMENTOS ---
         const selectTaxaAdmin = document.getElementById('select_taxa_admin');
         const containerPremio = document.getElementById('premio_botoes');
-        const premioBotoes = containerPremio.querySelectorAll('.botao-premio'); // Pega todos os botões de aposta
+        const premioBotoes = containerPremio.querySelectorAll('.botao-premio');
         const areaResultado = document.getElementById('resultadoArea');
         
         const inputPct1Lugar = document.getElementById('pct_1_lugar');
         const inputBaseParticipantes = document.getElementById('base_participantes');
         const inputNumParticipantes = document.getElementById('num_participantes');
 
-        // --- 1. FUNÇÃO DE PREENCHER O SELECT (0-100) ---
+        // --- 1. FUNÇÃO DE PREENCHER O SELECT (Atualizado: 5 em 5) ---
         function popularSelectAdmin() {
-            for (let i = 0; i <= 100; i++) {
+            for (let i = 0; i <= 100; i += 5) { // <-- MUDANÇA AQUI
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i + '%';
                 selectTaxaAdmin.appendChild(option);
             }
-             selectTaxaAdmin.value = "10"; // Padrão 10%
         }
         
         // --- 2. FUNÇÃO DE FORMATAR MOEDA ---
@@ -135,64 +137,45 @@
             }).format(valor);
         }
 
-        // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO ---
-        // Esta função agora LÊ todos os valores e ATUALIZA a tela
+        // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (sem alteração) ---
         function calcularEAtualizar() {
-            
-            // "Guarda": Se nenhuma aposta foi clicada ainda, não faz nada
-            if (apostaAtual === 0) {
-                return;
-            }
+            if (apostaAtual === 0) return;
 
-            // --- 1. COLETAR VALORES ---
-            const valor_aposta = apostaAtual; // Pega o valor da aposta "guardada"
-            
+            const valor_aposta = apostaAtual;
             const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0;
             const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
             const base_participantes = parseInt(inputBaseParticipantes.value) || 0;
             const num_participantes_atual = parseInt(inputNumParticipantes.value) || 0;
 
-            // --- VALIDAÇÃO (Silenciosa, apenas para o cálculo) ---
-            if (num_participantes_atual < 0) {
-                return; // Não calcula se for negativo
-            }
-            if (num_participantes_atual > base_participantes) {
-                // Se os participantes reais forem maiores, não há faltantes
-                // (Não precisa de alerta, apenas o cálculo muda)
-            }
+            if (num_participantes_atual < 0) return;
             
-            // --- 2. CÁLCULO 1 (PRÊMIO BRUTO) ---
             const premio_bruto = valor_aposta * MULTIPLICADOR;
-            
-            // --- 3. CÁLCULO 2 (VALORES BASE) ---
             const valor_1_lugar_base = premio_bruto * (pct_1_lugar / 100);
             const valor_admin_base = premio_bruto * (pct_admin_base / 100);
 
-            // --- 4. CÁLCULO 3 (BÔNUS RETROATIVO) ---
-            // Garante que faltantes não seja negativo
             const participantes_faltantes = Math.max(0, base_participantes - num_participantes_atual); 
             
             let bonus_1_lugar = 0;
             let bonus_admin = 0;
+            let bonus_pote = 0;
 
             if (participantes_faltantes > 0) {
                 bonus_1_lugar = participantes_faltantes * BONUS_1_LUGAR_POR_FALTANTE;
                 bonus_admin = participantes_faltantes * BONUS_ADMIN_POR_FALTANTE;
+                bonus_pote = participantes_faltantes * BONUS_POTE_POR_FALTANTE;
             }
 
-            // --- 5. CÁLCULO 4 (TOTAIS) ---
             const total_1_lugar = valor_1_lugar_base + bonus_1_lugar;
             const total_admin = valor_admin_base + bonus_admin;
             
-            // --- 6. CÁLCULO 5 (SOBRA E DIVISÃO) ---
-            let premio_restante = premio_bruto - total_1_lugar - total_admin;
+            const premio_restante_base = premio_bruto - total_1_lugar - total_admin;
+            const pote_final_divisao = premio_restante_base + bonus_pote; 
+
             let valor_por_participante = 0;
             let texto_calculo = "";
 
-            // --- 7. CÁLCULO 6 (LÓGICA DE 0 PARTICIPANTES) ---
             if (num_participantes_atual === 0 && base_participantes > 0) {
-                // Se 0 participantes, 1º lugar leva o que sobrou (o prêmio restante)
-                const total_1_lugar_final = total_1_lugar + premio_restante;
+                const total_1_lugar_final = total_1_lugar + pote_final_divisao;
                 
                 texto_calculo = 
                     `Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}\n` +
@@ -202,12 +185,10 @@
                     `Total Admin: ${formatar_brl(total_admin)}\n` +
                     `--------------------\n` +
                     `🏆 1º Lugar (Leva TUDO restante): ${formatar_brl(total_1_lugar_final)}\n\n` +
-                    `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bonus_1_lugar)}, Resto: ${formatar_brl(premio_restante)})`;
-
+                    `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bonus_1_lugar)}, Resto: ${formatar_brl(pote_final_divisao)})`;
             } else {
-                // Lógica normal de divisão
                 if (num_participantes_atual > 0) {
-                    valor_por_participante = premio_restante / num_participantes_atual;
+                    valor_por_participante = pote_final_divisao / num_participantes_atual;
                 }
                 
                 texto_calculo = 
@@ -216,18 +197,19 @@
                     `🏆 1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar_base)}\n` +
                     `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
                     `🔩 Bônus (${participantes_faltantes} faltantes):\n` +
-                    `   (1º Lugar: +${formatar_brl(bonus_1_lugar)}, Admin: +${formatar_brl(bonus_admin)})\n` +
+                    `   (1º Lugar: +${formatar_brl(bonus_1_lugar)})\n` +
+                    `   (Admin: +${formatar_brl(bonus_admin)})\n` +
+                    `   (Pote: +${formatar_brl(bonus_pote)})\n` +
                     `--------------------\n` +
                     `Totais Finais:\n` +
                     `🏆 1º Lugar (Total): ${formatar_brl(total_1_lugar)}\n` +
                     `⚙️ Admin (Total): ${formatar_brl(total_admin)}\n` +
                     `--------------------\n` +
-                    `Restante (a dividir): ${formatar_brl(premio_restante)}\n` +
+                    `Pote Final (a dividir): ${formatar_brl(pote_final_divisao)}\n` +
                     `Divisão por ${num_participantes_atual} participantes\n\n` +
                     `💰 Valor p/ Participante: ${formatar_brl(valor_por_participante)}`;
             }
 
-            // --- 8. GERAR LINK E EXIBIR ---
             const texto_whatsapp = `🎉 *BOLÃO PREMIADO (Ref. ${valor_aposta})* 🎉\n\n` + texto_calculo;
             const texto_html = texto_calculo.replace(/\n/g, '<br>');
             const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_whatsapp);
@@ -243,33 +225,56 @@
             areaResultado.style.display = 'block';
         }
 
-        // --- 4. CONFIGURAÇÃO DOS EVENT LISTENERS ---
+        // --- 4. FUNÇÃO PARA CARREGAR VALORES (NOVO) ---
+        function carregarValoresSalvos() {
+            const adminSalvo = localStorage.getItem(STORAGE_KEY_ADMIN);
+            const primeiroLugarSalvo = localStorage.getItem(STORAGE_KEY_1ST);
 
-        // A. Ouve o clique nos botões de APOSTA
+            // Se encontrou um valor salvo, usa ele
+            if (adminSalvo !== null) {
+                selectTaxaAdmin.value = adminSalvo;
+            } else {
+                // Senão, usa um padrão
+                 selectTaxaAdmin.value = "10";
+            }
+
+            if (primeiroLugarSalvo !== null) {
+                inputPct1Lugar.value = primeiroLugarSalvo;
+            } else {
+                // Senão, usa o padrão 55
+                inputPct1Lugar.value = "55";
+            }
+        }
+
+        // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS (Atualizado) ---
         containerPremio.addEventListener('click', function(e) {
             if (e.target.classList.contains('botao-premio')) {
-                // 1. Guarda o valor da aposta clicada
                 apostaAtual = parseFloat(e.target.dataset.valor);
-                
-                // 2. Atualiza o visual (ativa o botão clicado)
                 premioBotoes.forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
-                
-                // 3. Roda o cálculo pela primeira vez
                 calcularEAtualizar();
             }
         });
 
-        // B. Ouve mudanças em TODOS os outros inputs
-        // 'change' para o select, 'input' para os campos de número
+        // Ouve, Salva no localStorage E Calcula
+        selectTaxaAdmin.addEventListener('change', function() {
+            localStorage.setItem(STORAGE_KEY_ADMIN, selectTaxaAdmin.value); // <-- SALVA
+            calcularEAtualizar();
+        });
         
-        selectTaxaAdmin.addEventListener('change', calcularEAtualizar);
-        inputPct1Lugar.addEventListener('input', calcularEAtualizar);
+        // Ouve, Salva no localStorage E Calcula
+        inputPct1Lugar.addEventListener('input', function() {
+            localStorage.setItem(STORAGE_KEY_1ST, inputPct1Lugar.value); // <-- SALVA
+            calcularEAtualizar();
+        });
+
+        // Os outros inputs não precisam salvar, só calcular
         inputBaseParticipantes.addEventListener('input', calcularEAtualizar);
         inputNumParticipantes.addEventListener('input', calcularEAtualizar);
 
-        // --- INICIALIZAÇÃO ---
-        popularSelectAdmin();
+        // --- INICIALIZAÇÃO (Atualizado) ---
+        popularSelectAdmin();     // 1. Cria a lista (0, 5, 10...)
+        carregarValoresSalvos(); // 2. Tenta carregar os valores salvos
 
     </script>
 
