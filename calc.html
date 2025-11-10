@@ -193,6 +193,26 @@
         #saveConfig { background: #25D366; color: #111; }
         #cancelConfig { background: #555; color: #fff; }
         
+        /* --- ESTILO PARA O RESUMO COLAPSÁVEL (NOVO) --- */
+        #resultadoHeader {
+            cursor: pointer;
+            user-select: none; /* Para não selecionar o texto ao clicar */
+            position: relative;
+        }
+        
+        #resultadoHeader span {
+            /* Posição do ícone [+] / [-] */
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            
+            color: #25D366; /* Cor do WhatsApp */
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 1.5em; /* Tamanho do ícone */
+        }
+        
     </style>
 </head>
 <body>
@@ -292,6 +312,7 @@
         const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v25';
         const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v25';
         const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v25';
+        const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v25'; // NOVO
 
         // --- VARIÁVEIS DE ESTADO ---
         let apostaAtual = 0;
@@ -301,6 +322,8 @@
         let bonus1LugarPct = 60;
         let bonusAdminPct = 20;
         let bonusPotePct = 20;
+        
+        let isResultadoMinimizado = false; // NOVO
 
         // --- ELEMENTOS ---
         const selectTaxaAdmin = document.getElementById('select_taxa_admin');
@@ -339,6 +362,23 @@
                 currency: 'BRL'
             }).format(valor);
         }
+        
+        // --- 2.1. NOVA FUNÇÃO DE DISPLAY (NOVO) ---
+        function atualizarDisplayResultado() {
+            const conteudo = document.getElementById('resultadoConteudo');
+            const icon = document.getElementById('toggleIcon');
+            
+            if (!conteudo || !icon) return; // Sai se os elementos não existirem
+
+            if (isResultadoMinimizado) {
+                conteudo.style.display = 'none';
+                icon.textContent = '[+]';
+            } else {
+                conteudo.style.display = 'block';
+                icon.textContent = '[-]';
+            }
+        }
+
 
         // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v21) ---
         function calcularEAtualizar() {
@@ -393,7 +433,7 @@
 
             // --- 6. GERAÇÃO DE TEXTO (v21) ---
             
-            // --- A. TEXTO PARA O WHATSAPP (Formato Limpo) ---
+            // --- A. TEXTO PARA O WHATSAPP (Formato Limpo) - (MODIFICADO) ---
             const now = new Date();
             const date = now.toLocaleDateString('pt-BR');
             const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -405,38 +445,42 @@
             if (num_participantes_atual === 0 && base_participantes > 0) {
                 const total_1_lugar_final = total_1_lugar + pote_final_divisao;
                 
+                // ATUALIZADO
                 texto_resumo_1lugar_wa = 
-                    `🏆 *RESUMO 1º LUGAR*\n` +
+                    `🏆 RESUMO GANHADOR.\n` +
                     `Prêmio: ${formatar_brl(valor_1_lugar_base)}\n` +
                     `Bônus Partipantes: +${formatar_brl(bns_1_lugar_calc)}\n` +
                     `Pote Restante: +${formatar_brl(pote_final_divisao)}\n` +
-                    `Total a Receber: *${formatar_brl(total_1_lugar_final)}*\n`;
+                    `Total a Receber: ${formatar_brl(total_1_lugar_final)}\n`;
                 
+                // ATUALIZADO
                 texto_resumo_participante_wa = 
-                    `👥 *RESUMO PARTICIPANTES*\n` +
-                    `*Nenhum participante para divisão.*\n`;
+                    `👥 RESUMO PARTICIPANTES\n\n` +
+                    `Nenhum participante para divisão.\n`;
 
             } else {
+                // ATUALIZADO
                 texto_resumo_1lugar_wa = 
-                    `🏆 *RESUMO 1º LUGAR*\n` +
+                    `🏆 RESUMO GANHADOR.\n` +
                     `Prêmio: ${formatar_brl(valor_1_lugar_base)}\n` +
                     `Bônus Partipantes: +${formatar_brl(bns_1_lugar_calc)}\n` +
-                    `Total a Receber: *${formatar_brl(total_1_lugar)}*\n`;
+                    `Total a Receber: ${formatar_brl(total_1_lugar)}\n`;
                 
+                // ATUALIZADO
                 texto_resumo_participante_wa = 
-                    `👥 *RESUMO PARTICIPANTES*\n` +
-                    `Pote Final p/ Divisão: ${formatar_brl(pote_final_divisao)}\n` +
+                    `👥 RESUMO PARTICIPANTES\n\n` +
                     `Nº de Participantes: ${num_participantes_atual}\n` +
-                    `Valor por Pessoa (Redondo): *${formatar_brl(valor_por_participante_arredondado)}*\n`;
+                    `Valor por Pessoa: ${formatar_brl(valor_por_participante_arredondado)}\n`;
             }
 
+            // ATUALIZADO
             const texto_final_whatsapp = 
-                `🎉 *VIP BOLÃO* 🎉\n\n` +
+                `🎉 RESUMO DE GANHOS VIP BOLÃO 🎉\n\n` +
                 `Gerado: ${timestamp}\n` +
                 `--------------------\n\n` +
                 `${texto_resumo_1lugar_wa}\n` +
                 `--------------------\n\n` +
-                `${texto_resumo_participante_wa}\n` +
+                `${texto_resumo_participante_wa}` +
                 `--------------------\n\n` +
                 `Muito obrigado a todos!`;
 
@@ -478,19 +522,32 @@
                     `*⚙️ Admin (Total Final c/ Sobra): ${formatar_brl(total_admin_final)}*`;
             }
 
-            // --- 7. ATUALIZAR TELA E LINK ---
+            // --- 7. ATUALIZAR TELA E LINK (v2 - Colapsável) - (MODIFICADO) ---
             const texto_html = texto_html_para_tela.replace(/\n/g, '<br>');
             const link_whatsapp = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto_final_whatsapp);
 
-            areaResultado.innerHTML = `
-                <h3>Resumo do Cálculo (Admin)</h3>
-                <p>${texto_html}</p>
-                <a href="${link_whatsapp}" target="_blank" class="botao-wpp">
-                    🚀 Enviar Resumo p/ Grupo (WhatsApp)
-                </a>
-            `;
+            // Apenas atualiza o HTML se ele ainda não foi criado
+            if (!document.getElementById('resultadoHeader')) {
+                areaResultado.innerHTML = `
+                    <h3 id="resultadoHeader">Resumo do Cálculo (Admin) <span id="toggleIcon"></span></h3>
+                    <div id="resultadoConteudo">
+                        <p id="textoHtmlResultado"></p>
+                        <a id="linkWhatsappResultado" href="#" target="_blank" class="botao-wpp">
+                            🚀 Enviar Resumo p/ Grupo (WhatsApp)
+                        </a>
+                    </div>
+                `;
+            }
             
+            // Atualiza apenas os valores dinâmicos
+            document.getElementById('textoHtmlResultado').innerHTML = texto_html;
+            document.getElementById('linkWhatsappResultado').href = link_whatsapp;
+            
+            // Mostra a área inteira
             areaResultado.style.display = 'block';
+            
+            // Aplica o estado (minimizado ou não)
+            atualizarDisplayResultado();
         }
 
         // --- 4. FUNÇÃO PARA CARREGAR VALORES ---
@@ -502,6 +559,8 @@
             bonus1LugarPct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_1ST_PCT)) || 60;
             bonusAdminPct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_ADMIN_PCT)) || 20;
             bonusPotePct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_POTE_PCT)) || 20;
+            
+            isResultadoMinimizado = localStorage.getItem(STORAGE_KEY_MINIMIZADO) === 'true'; // NOVO
         }
 
         // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS ---
@@ -586,6 +645,22 @@
 
         // E. Nº de Participantes Reais (Apenas calcula)
         inputNumParticipantes.addEventListener('input', calcularEAtualizar);
+
+        // F. LÓGICA DE MINIMIZAR O RESULTADO (NOVO)
+        areaResultado.addEventListener('click', function(e) {
+            // Verifica se o clique foi no header ou no ícone span dentro dele
+            if (e.target.id === 'resultadoHeader' || e.target.closest('#resultadoHeader')) {
+                // Inverte o estado
+                isResultadoMinimizado = !isResultadoMinimizado;
+                
+                // Salva o novo estado
+                localStorage.setItem(STORAGE_KEY_MINIMIZADO, isResultadoMinimizado);
+                
+                // Aplica a mudança visual
+                atualizarDisplayResultado();
+            }
+        });
+
 
         // --- INICIALIZAÇÃO ---
         popularSelectAdmin();
