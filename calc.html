@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v51 (Bug Layout Título)</title>
+    <title>Calculadora de Bolão (VIP) - v53 (Múltiplos Ganhadores)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -51,10 +51,9 @@
             align-items: center;
             border-bottom: 1px solid #4a4a4a;
             padding-bottom: 15px;
-            overflow: hidden; /* Garante que nada vaze */
+            overflow: hidden;
         }
         
-        /* Círculo do passo */
         .card h2 span {
             display: inline-flex;
             align-items: center;
@@ -67,28 +66,18 @@
             font-weight: 700;
             border-radius: 50%;
             margin-right: 12px;
-            flex-shrink: 0; /* NOVO (v51): Não deixa o círculo diminuir */
+            flex-shrink: 0; 
         }
         
-        /* NOVO (v51): Classe para o texto do título */
         .card-title {
-            flex-grow: 1; /* Ocupa o espaço */
-            flex-shrink: 1; /* Permite diminuir */
-            overflow: hidden; /* Esconde o que transbordar */
-            text-overflow: ellipsis; /* Adiciona "..." */
-            white-space: nowrap; /* Não quebra linha */
+            flex-grow: 1;
+            flex-shrink: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         
-        .live-counter {
-            font-size: 0.8em;
-            font-weight: 500;
-            color: #aaa;
-            margin-left: auto; 
-            padding-left: 10px;
-            font-style: italic;
-            white-space: nowrap; 
-            flex-shrink: 0; /* NOVO (v51): Não deixa o contador diminuir */
-        }
+        /* Removido (v53): .live-counter */
         
         .grid-2-col {
             display: grid;
@@ -131,10 +120,18 @@
         .help-text { 
             font-size: 0.85em; 
             color: #ccc; 
-            margin-top: 5px; 
+            margin-top: -15px; /* (v53) Puxa para perto do título */
             font-style: italic; 
             margin-bottom: 10px;
         }
+        
+        /* NOVO (v53): Estilo para o contador no help-text */
+        .help-text .live-counter {
+            font-weight: bold;
+            color: #fff;
+            font-style: normal;
+        }
+
         
         /* --- ESTILOS DOS BOTÕES --- */
         .botoes-grid { 
@@ -181,12 +178,17 @@
         .botao-ganhador:hover {
             background: #4a8ff7;
         }
-        #ganhador_botoes .botao-premio.active {
-             background: #00d2ff;
-             color: #111;
-             transform: scale(1.05); 
-             box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+        /* NOVO (v53): Botões rápidos do ganhador */
+        .botao-ganhador-rapido {
+            background: #2a5a9e;
+            color: #fff;
+            padding: 14px;
+            border-radius: 8px;
         }
+        .botao-ganhador-rapido:hover {
+            background: #3a7bd5;
+        }
+        
         
         .botao-pote {
             background: #1f9c54;
@@ -294,7 +296,6 @@
             display: flex;
             align-items: center;
         }
-        /* NOVO (v51): Garante que o ícone do modal não encolha */
         .modal-content h2 .card-title {
             padding-left: 10px;
         }
@@ -367,7 +368,7 @@
                 padding: 14px 10px; 
             }
 
-            .botao-pote-rapido {
+            .botao-pote-rapido, .botao-ganhador-rapido { /* v53 */
                 font-size: 15px;
                 font-weight: bold;
                 padding: 15px;
@@ -416,7 +417,7 @@
         
         <div class="card">
             <h2><span>2</span><span class="card-title">Selecione a Aposta (Prêmio Bruto)</span></h2>
-            <p class="help-text" id="apostaHelpText" style="margin: -10px 0 10px 0;">(Selecione um botão para definir o prêmio total)</p>
+            <p class="help-text" id="apostaHelpText">(Selecione um botão para definir o prêmio total)</p>
             <div id="premio_botoes" class="botoes-grid">
                 <button class="botao-premio" data-valor="15">15</button>
                 <button class="botao-premio" data-valor="30">30</button>
@@ -437,50 +438,53 @@
         </div>
 
         <div class="card">
-            <h2><span>3</span><span class="card-title">Selecionar o Ganhador</span></h2>
-            <p class="help-text" style="margin: -10px 0 10px 0;">(Selecione a aposta do vencedor. Isso define as 'Cotas do Ganhador')</p>
+            <h2><span>3</span><span class="card-title">Somar Cotas do Ganhador</span></h2>
+            <p class="help-text" id="ganhadorHelpText">(Clique para somar as cotas do(s) ganhador(es) do 1º lugar)</p>
+            <div class="botoes-grid-rapida">
+                <button class="botao-premio botao-ganhador-rapido" data-add-ganhador="1" data-count="10">G: +10x (de 15)</button>
+            </div>
             <div id="ganhador_botoes" class="botoes-grid">
-                <button class="botao-premio botao-ganhador" data-add-ganhador="1">1 Cota (15)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="2">2 Cotas (30)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="3">3 Cotas (45)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="4">4 Cotas (60)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="5">5 Cotas (75)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="6">6 Cotas (90)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="7">7 Cotas (105)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="8">8 Cotas (120)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="9">9 Cotas (135)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="10">10 Cotas (150)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="11">11 Cotas (165)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="12">12 Cotas (180)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="13">13 Cotas (195)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="14">14 Cotas (210)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="20">20 Cotas (300)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="1">+1x (Aposta R$ 15)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="2">+1x (Aposta R$ 30)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="3">+1x (Aposta R$ 45)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="4">+1x (Aposta R$ 60)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="5">+1x (Aposta R$ 75)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="6">+1x (Aposta R$ 90)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="7">+1x (Aposta R$ 105)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="8">+1x (Aposta R$ 120)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="9">+1x (Aposta R$ 135)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="10">+1x (Aposta R$ 150)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="11">+1x (Aposta R$ 165)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="12">+1x (Aposta R$ 180)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="13">+1x (Aposta R$ 195)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="14">+1x (Aposta R$ 210)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="20">+1x (Aposta R$ 300)</button>
             </div>
         </div>
         
         <div class="card">
-            <h2><span>4</span><span class="card-title">Somar Cotas do Pote</span> <span id="contadorPoteLive" class="live-counter"></span></h2>
-            <p class="help-text" style="margin: -10px 0 10px 0;">(Some todos os outros que vão dividir)</p>
+            <h2><span>4</span><span class="card-title">Somar Cotas do Pote</span></h2>
+            <p class="help-text" id="poteHelpText">(Some todos os outros que vão dividir)</p>
             <div class="botoes-grid-rapida">
                 <button class="botao-premio botao-pote-rapido" data-add-pote="1" data-count="10">P: +10x (de 15)</button>
                 <button class="botao-premio botao-pote-rapido" data-add-pote="1" data-count="20">P: +20x (de 15)</button>
             </div>
             <div id="pote_botoes" class="botoes-grid">
-                <button class="botao-premio botao-pote" data-add-pote="1">P: +1 (15)</button>
-                <button class="botao-premio botao-pote" data-add-pote="2">P: +2 (30)</button>
-                <button class="botao-premio botao-pote" data-add-pote="3">P: +3 (45)</button>
-                <button class="botao-premio botao-pote" data-add-pote="4">P: +4 (60)</button>
-                <button class="botao-premio botao-pote" data-add-pote="5">P: +5 (75)</button>
-                <button class="botao-premio botao-pote" data-add-pote="6">P: +6 (90)</button>
-                <button class="botao-premio botao-pote" data-add-pote="7">P: +7 (105)</button>
-                <button class="botao-premio botao-pote" data-add-pote="8">P: +8 (120)</button>
-                <button class="botao-premio botao-pote" data-add-pote="9">P: +9 (135)</button>
-                <button class="botao-premio botao-pote" data-add-pote="10">P: +10 (150)</button>
-                <button class="botao-premio botao-pote" data-add-pote="11">P: +11 (165)</button>
-                <button class="botao-premio botao-pote" data-add-pote="12">P: +12 (180)</button>
-                <button class="botao-premio botao-pote" data-add-pote="13">P: +13 (195)</button>
-                <button class="botao-premio botao-pote" data-add-pote="14">P: +14 (210)</button>
-                <button class="botao-premio botao-pote" data-add-pote="20">P: +20 (300)</button>
+                <button class="botao-premio botao-pote" data-add-pote="1">+1x (Aposta R$ 15)</button>
+                <button class="botao-premio botao-pote" data-add-pote="2">+1x (Aposta R$ 30)</button>
+                <button class="botao-premio botao-pote" data-add-pote="3">+1x (Aposta R$ 45)</button>
+                <button class="botao-premio botao-pote" data-add-pote="4">+1x (Aposta R$ 60)</button>
+                <button class="botao-premio botao-pote" data-add-pote="5">+1x (Aposta R$ 75)</button>
+                <button class="botao-premio botao-pote" data-add-pote="6">+1x (Aposta R$ 90)</button>
+                <button class="botao-premio botao-pote" data-add-pote="7">+1x (Aposta R$ 105)</button>
+                <button class="botao-premio botao-pote" data-add-pote="8">+1x (Aposta R$ 120)</button>
+                <button class="botao-premio botao-pote" data-add-pote="9">+1x (Aposta R$ 135)</button>
+                <button class="botao-premio botao-pote" data-add-pote="10">+1x (Aposta R$ 150)</button>
+                <button class="botao-premio botao-pote" data-add-pote="11">+1x (Aposta R$ 165)</button>
+                <button class="botao-premio botao-pote" data-add-pote="12">+1x (Aposta R$ 180)</button>
+                <button class="botao-premio botao-pote" data-add-pote="13">+1x (Aposta R$ 195)</button>
+                <button class="botao-premio botao-pote" data-add-pote="14">+1x (Aposta R$ 210)</button>
+                <button class="botao-premio botao-pote" data-add-pote="20">+1x (Aposta R$ 300)</button>
             </div>
         </div>
 
@@ -488,15 +492,19 @@
              <h2><span>5</span><span class="card-title">Resumo da Contagem</span></h2>
              <div class="grid-2-col">
                  <div class="form-group">
-                    <label for="num_cotas_presentes">Total de Cotas Presentes:</label>
-                    <input type="number" id="num_cotas_presentes" value="0" readonly>
-                    <p class="help-text" style="text-align: center;">(Usado para o Bônus)</p>
+                    <label for="num_cotas_ganhador">Total de Cotas do Ganhador:</label> <input type="number" id="num_cotas_ganhador" value="0" readonly>
+                    <p class="help-text" style="text-align: center;">(Usado para dividir o 1º Lugar)</p>
                  </div>
                  <div class="form-group">
                     <label for="num_cotas_do_pote">Total de Cotas do Pote:</label>
                     <input type="number" id="num_cotas_do_pote" value="0" readonly>
-                    <p class="help-text" style="text-align: center;">(Usado para a Divisão)</p>
+                    <p class="help-text" style="text-align: center;">(Usado para a Divisão do Pote)</p>
                  </div>
+             </div>
+             <div class="form-group" style="margin-top: 15px;">
+                <label for="num_cotas_presentes" style="text-align: center;">Total de Cotas Presentes (Ganhador + Pote):</label>
+                <input type="number" id="num_cotas_presentes" value="0" readonly>
+                <p class="help-text" style="text-align: center;">(Usado para o Bônus de Faltantes)</p>
              </div>
         </div>
         
@@ -537,22 +545,25 @@
     </div>
     
     <script>
-        // (v51): Espera todo o HTML carregar
+        // (v53): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
             const MULTIPLICADOR = 80;
             const VALOR_COTA_BASE_REAIS = 15;
             const defaultApostaHelpText = '(Selecione um botão para definir o prêmio total)';
+            // NOVO (v53): Textos padrão dos contadores
+            const defaultGanhadorHelpText = "(Clique para somar as cotas do(s) ganhador(es) do 1º lugar)";
+            const defaultPoteHelpText = "(Some todos os outros que vão dividir)";
             
-            // Chaves do LocalStorage (v51)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v51';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v51';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v51'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v51';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v51';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v51';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v51';
+            // Chaves do LocalStorage (v53)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v53';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v53';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v53'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v53';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v53';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v53';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v53';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
@@ -563,7 +574,8 @@
             let bonusPotePct = 5;
             let isResultadoMinimizado = false;
 
-            let cotasGanhador = 0;
+            // NOVO (v53): Contagem separada
+            let contagemGanhador = {}; 
             let contagemPote = {}; 
 
             // --- ELEMENTOS ---
@@ -574,23 +586,22 @@
             const inputPct1Lugar = document.getElementById('pct_1_lugar');
             
             const apostaHelpText = document.getElementById('apostaHelpText');
-            const contadorPoteLive = document.getElementById('contadorPoteLive'); 
+            // NOVO (v53): Elementos de texto de ajuda
+            const ganhadorHelpText = document.getElementById('ganhadorHelpText');
+            const poteHelpText = document.getElementById('poteHelpText');
             
             const inputNumCotasPresentes = document.getElementById('num_cotas_presentes'); 
             const inputNumCotasDoPote = document.getElementById('num_cotas_do_pote');
-            const ganhadorBotoesContainer = document.getElementById('ganhador_botoes');
+            const inputNumCotasGanhador = document.getElementById('num_cotas_ganhador'); // NOVO (v53)
+            
+            const todosOsBotoesGanhador = document.querySelectorAll('.botao-ganhador, .botao-ganhador-rapido'); // NOVO (v53)
             const todosOsBotoesPote = document.querySelectorAll('.botao-pote, .botao-pote-rapido');
             const resetContagemButton = document.getElementById('resetContagem');
             
             // Modal
             const configButton = document.getElementById('configButton');
             const configModal = document.getElementById('configModal');
-            const saveConfig = document.getElementById('saveConfig');
-            const cancelConfig = document.getElementById('cancelConfig');
-            const inputBaseCotasModal = document.getElementById('inputBaseCotasModal');
-            const inputBonus1LugarPct = document.getElementById('inputBonus1LugarPct');
-            const inputBonusAdminPct = document.getElementById('inputBonusAdminPct');
-            const inputBonusPotePct = document.getElementById('inputBonusPotePct');
+            // ... (resto dos elementos do modal)
             
             const bodyElement = document.body;
 
@@ -627,24 +638,28 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v51 - Lógica v49) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v53) ---
             function calcularEAtualizar() {
-                const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
-                if (apostaAtual === 0 || (cotasGanhador === 0 && num_cotas_presentes_atual === 0)) {
+                const totalCotasGanhador = parseInt(inputNumCotasGanhador.value) || 0;
+                const totalCotasPote = parseInt(inputNumCotasDoPote.value) || 0;
+                
+                // Só calcula se os 3 passos estiverem prontos
+                if (apostaAtual === 0 || (totalCotasGanhador === 0 && totalCotasPote === 0)) {
                     areaResultado.style.display = 'none';
                     if (resetContagemButton) resetContagemButton.style.display = 'none'; 
                     return;
                 }
 
-                let valor_por_cota_arredondado = 0; 
+                let valor_por_cota_ganhador_arredondado = 0; // v53
+                let valor_por_cota_pote_arredondado = 0; // v53
                 
                 const valor_aposta = apostaAtual;
                 const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0; 
                 const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
                 const base_cotas = valorBaseCotas; 
-                const num_cotas_do_pote_atual = parseInt(inputNumCotasDoPote.value) || 0;
+                const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
                 
-                if (num_cotas_presentes_atual < 0 || num_cotas_do_pote_atual < 0) return;
+                if (num_cotas_presentes_atual < 0) return;
                 
                 const premio_bruto = valor_aposta * MULTIPLICADOR;
                 const valor_1_lugar_base = premio_bruto * (pct_1_lugar / 100);
@@ -671,136 +686,139 @@
                 const pote_base_restante = premio_restante_base - valor_total_cotas_faltantes;
                 const pote_final_divisao = pote_base_restante + bns_pote_calc; 
 
-                let sobra_dos_centavos = 0;
+                // --- 5. LÓGICA DE ARREDONDAMENTO (v53) ---
+                let sobra_ganhador = 0;
+                let sobra_pote = 0;
                 let total_admin_final = total_admin;
                 
-                if (num_cotas_do_pote_atual > 0) {
-                    const valor_exato_por_cota = pote_final_divisao / num_cotas_do_pote_atual;
-                    valor_por_cota_arredondado = Math.floor(valor_exato_por_cota);
-                    
-                    const total_pago_participantes = valor_por_cota_arredondado * num_cotas_do_pote_atual;
-                    sobra_dos_centavos = pote_final_divisao - total_pago_participantes;
-                    total_admin_final = total_admin + sobra_dos_centavos;
-                } else {
-                    sobra_dos_centavos = pote_final_divisao;
-                    total_admin_final = total_admin + sobra_dos_centavos;
+                // Divide o prêmio do 1º Lugar
+                if (totalCotasGanhador > 0) {
+                    const valor_exato = total_1_lugar / totalCotasGanhador;
+                    valor_por_cota_ganhador_arredondado = Math.floor(valor_exato);
+                    const total_pago = valor_por_cota_ganhador_arredondado * totalCotasGanhador;
+                    sobra_ganhador = total_1_lugar - total_pago;
                 }
+                
+                // Divide o Pote
+                if (totalCotasPote > 0) {
+                    const valor_exato = pote_final_divisao / totalCotasPote;
+                    valor_por_cota_pote_arredondado = Math.floor(valor_exato);
+                    const total_pago = valor_por_cota_pote_arredondado * totalCotasPote;
+                    sobra_pote = pote_final_divisao - total_pago;
+                }
+                
+                // Admin fica com toda a sobra
+                total_admin_final = total_admin + sobra_ganhador + sobra_pote;
 
-                // --- 6. GERAÇÃO DE TEXTO (v49) ---
+                // --- 6. GERAÇÃO DE TEXTO (v53) ---
                 
                 const now = new Date();
                 const date = now.toLocaleDateString('pt-BR');
                 const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const timestamp = `${date} às ${time}`;
 
-                const valorApostadoGanhador = formatar_brl(cotasGanhador * VALOR_COTA_BASE_REAIS);
-
                 let texto_resumo_1lugar_wa = "";
                 let texto_resumo_participante_wa = "";
-                let texto_html_para_tela = ""; // Este não muda
-                let texto_sobra_tela = (sobra_dos_centavos > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n` : "";
+                let texto_html_para_tela = "";
+                let texto_sobra_tela_ganhador = (sobra_ganhador > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_ganhador)}\n` : "";
+                let texto_sobra_tela_pote = (sobra_pote > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_pote)}\n` : "";
 
-                function gerarResumoHTML() {
-                    let textoHTML = "--------------------\n*Resumo do Pote:*\n";
-                    const chavesOrdenadas = Object.keys(contagemPote).sort((a, b) => parseInt(a) - parseInt(b));
+                // --- Geradores de Resumo Dinâmico (v53) ---
+                function gerarResumoDinamico(tipo, contagem, valorPorCota) {
+                    let textoWA = `*Detalhes do ${tipo}:*\n`;
+                    let textoHTML = `--------------------\n*Resumo do ${tipo}:*\n`;
+                    
+                    const chavesOrdenadas = Object.keys(contagem).sort((a, b) => parseInt(a) - parseInt(b));
+                    
                     for (const cotaKey of chavesOrdenadas) {
-                        const count = contagemPote[cotaKey]; 
+                        const count = contagem[cotaKey]; 
                         if (count > 0) {
                             const cotaTipo = parseInt(cotaKey); 
-                            const valorPago = formatar_brl(valor_por_cota_arredondado * cotaTipo);
+                            const valorPago = formatar_brl(valorPorCota * cotaTipo);
                             const valorMonetario = formatar_brl(cotaTipo * VALOR_COTA_BASE_REAIS);
                             const descAposta = `Aposta de ${valorMonetario}`;
+                            
+                            textoWA += `• ${count}x (${descAposta})\n   ↳ Recebe: *${valorPago}*\n`;
                             textoHTML += `• ${count}x (${descAposta}): Recebe *${valorPago}*\n`;
                         }
                     }
-                    return textoHTML;
+                    return { wa: textoWA, html: textoHTML };
                 }
+                // --- Fim do Gerador ---
+
+
+                // --- GERAÇÃO DE TEXTO (v53) ---
                 
-                function gerarResumoWhatsApp() {
-                    let textoWA = "*Detalhes do Pagamento:*\n";
-                    const chavesOrdenadas = Object.keys(contagemPote).sort((a, b) => parseInt(a) - parseInt(b));
-                    for (const cotaKey of chavesOrdenadas) {
-                        const count = contagemPote[cotaKey]; 
-                        if (count > 0) {
-                            const cotaTipo = parseInt(cotaKey); 
-                            const valorPago = formatar_brl(valor_por_cota_arredondado * cotaTipo);
-                            const valorMonetario = formatar_brl(cotaTipo * VALOR_COTA_BASE_REAIS);
-                            const descAposta = `Aposta de ${valorMonetario}`;
-                            textoWA += `• ${count}x (${descAposta})\n   ↳ Recebe: *${valorPago}*\n`;
-                        }
-                    }
-                    return textoWA;
-                }
-
-
-                if (num_cotas_do_pote_atual === 0 && cotasGanhador > 0) {
-                    const total_1_lugar_final = total_1_lugar + pote_final_divisao;
-                    const valor_acumulado = bns_1_lugar_calc + pote_final_divisao;
-                    
+                // Resumo Ganhador (WA)
+                if (totalCotasGanhador > 0) {
+                    const resumoWA = gerarResumoDinamico("Ganhador", contagemGanhador, valor_por_cota_ganhador_arredondado);
                     texto_resumo_1lugar_wa = 
                         `🏆 *GANHADOR (1º LUGAR)*\n` +
-                        `Prêmio: ${formatar_brl(valor_1_lugar_base)}\n` +
-                        `Bônus: +${formatar_brl(bns_1_lugar_calc)}\n` +
-                        `Pote Acumulado: +${formatar_brl(pote_final_divisao)}\n` +
-                        `*Total a Receber: ${formatar_brl(total_1_lugar_final)}*`;
-                    
+                        `Total do Prêmio: ${formatar_brl(total_1_lugar)}\n` +
+                        `Total de Cotas: ${totalCotasGanhador}\n` +
+                        `*Valor por Cota: ${formatar_brl(valor_por_cota_ganhador_arredondado)}*\n\n` +
+                        `${resumoWA.wa}`;
+                } else {
+                    texto_resumo_1lugar_wa = 
+                        `🏆 *GANHADOR (1º LUGAR)*\n` +
+                        `Nenhum ganhador selecionado.`;
+                }
+
+                // Resumo Pote (WA)
+                if (totalCotasPote > 0) {
+                    const resumoWA = gerarResumoDinamico("Pote", contagemPote, valor_por_cota_pote_arredondado);
                     texto_resumo_participante_wa = 
+                        `👥 *RATEIO DO POTE*\n` +
+                        `Total do Pote: ${formatar_brl(pote_final_divisao)}\n` +
+                        `Total de Cotas: ${totalCotasPote}\n` +
+                        `*Valor por Cota: ${formatar_brl(valor_por_cota_pote_arredondado)}*\n\n` +
+                        `${resumoWA.wa}`;
+                } else {
+                     texto_resumo_participante_wa = 
                         `👥 *RATEIO DO POTE*\n\n` +
                         `Nenhuma cota para divisão do pote.`; 
-                    
-                    texto_html_para_tela = 
-                        `*Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}*\n` +
-                        `--------------------\n` +
-                        `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
-                        `🔩 Bônus Admin (${cotas_faltantes} faltantes): -${formatar_brl(bns_admin_calc)}\n` +
-                        `*Total Admin: ${formatar_brl(total_admin_final)}*\n` +
-                        `--------------------\n` +
-                        `🏆 1º Lugar (Leva TUDO restante): *${formatar_brl(total_1_lugar_final)}*\n` +
-                        `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bns_1_lugar_calc)}, Resto: ${formatar_brl(pote_final_divisao)})`;
-
-                } else { 
-                    const resumoHTML = gerarResumoHTML();
-                    const resumoWA = gerarResumoWhatsApp();
-                    
-                    texto_resumo_1lugar_wa = 
-                        `🏆 *GANHADOR (1º LUGAR)*\n` +
-                        `Prêmio: ${formatar_brl(valor_1_lugar_base)}\n` +
-                        `Bônus: +${formatar_brl(bns_1_lugar_calc)}\n` +
-                        `*Total a Receber: ${formatar_brl(total_1_lugar)}*`;
-                    
-                    texto_resumo_participante_wa = 
-                        `👥 *RATEIO DO POTE*\n\n` +
-                        `${resumoWA}`;
-                    
-                    texto_html_para_tela = 
-                        `*Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}*\n` +
-                        `--------------------\n` +
-                        `🏆 1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar_base)}\n` +
-                        `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
-                        `🔩 Bônus (${cotas_faltantes} faltantes de ${base_cotas} plan.):\n` +
-                        `   (1º Lugar: +${formatar_brl(bns_1_lugar_calc)})\n` +
-                        `   (Admin: +${formatar_brl(bns_admin_calc)})\n` +
-                        `   (Pote: +${formatar_brl(bns_pote_calc)})\n` +
-                        `--------------------\n` +
-                        `Totais Finais (sem sobra):\n` +
-                        `🏆 1º Lugar (Total): ${formatar_brl(total_1_lugar)}\n` +
-                        `⚙️ Admin (Total): ${formatar_brl(total_admin)}\n` +
-                        `--------------------\n` +
-                        `Pote Final (a dividir): ${formatar_brl(pote_final_divisao)}\n` +
-                        `${texto_sobra_tela}` +
-                        `Divisão por ${num_cotas_do_pote_atual} cotas do pote\n\n` +
-                        `*💰 Valor base p/ Cota: ${formatar_brl(valor_por_cota_arredondado)} (Redondo)*\n` +
-                        `*⚙️ Admin (Total Final c/ Sobra): ${formatar_brl(total_admin_final)}*\n` +
-                        `${resumoHTML}`;
                 }
+                
+                // Resumo Admin (HTML)
+                const resumoHTML_Ganhador = (totalCotasGanhador > 0) ? 
+                    gerarResumoDinamico("Ganhador", contagemGanhador, valor_por_cota_ganhador_arredondado).html : 
+                    "--------------------\n*Nenhum ganhador selecionado.*";
+                    
+                const resumoHTML_Pote = (totalCotasPote > 0) ?
+                    gerarResumoDinamico("Pote", contagemPote, valor_por_cota_pote_arredondado).html :
+                    "--------------------\n*Nenhuma cota no pote.*";
 
+                texto_html_para_tela = 
+                    `*Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}*\n` +
+                    `🔩 Bônus (${cotas_faltantes} faltantes de ${base_cotas} plan.):\n` +
+                    `   (1º Lugar: +${formatar_brl(bns_1_lugar_calc)})\n` +
+                    `   (Admin: +${formatar_brl(bns_admin_calc)})\n` +
+                    `   (Pote: +${formatar_brl(bns_pote_calc)})\n` +
+                    `--------------------\n` +
+                    `🏆 *Divisão 1º Lugar (Total: ${formatar_brl(total_1_lugar)})*\n` +
+                    `Divisão por ${totalCotasGanhador} cotas de ganhador\n` +
+                    `${texto_sobra_tela_ganhador}` +
+                    `*💰 Valor p/ Cota Ganhador: ${formatar_brl(valor_por_cota_ganhador_arredondado)} (Redondo)*\n` +
+                    `${resumoHTML_Ganhador}\n` +
+                    `--------------------\n` +
+                    `👥 *Divisão Pote (Total: ${formatar_brl(pote_final_divisao)})*\n` +
+                    `Divisão por ${totalCotasPote} cotas do pote\n` +
+                    `${texto_sobra_tela_pote}` +
+                    `*💰 Valor p/ Cota Pote: ${formatar_brl(valor_por_cota_pote_arredondado)} (Redondo)*\n` +
+                    `${resumoHTML_Pote}\n` +
+                    `--------------------\n` +
+                    `*⚙️ Admin (Base: ${formatar_brl(valor_admin_base)} + Sobras: ${formatar_brl(sobra_ganhador + sobra_pote)})*\n` +
+                    `*Total Admin: ${formatar_brl(total_admin_final)}*`;
+                
+                // Mensagem Final WhatsApp
                 const texto_final_whatsapp = 
                     `✨ *BOLÃO VIP - PREMIAÇÃO* ✨\n` +
                     `--------------------\n` +
                     `*Data:* ${timestamp}\n` +
-                    `*Valor* Apostado: ${valorApostadoGanhador}\n` +
+                    `*Aposta Referência:* ${valor_aposta}\n` +
+                    `*Prêmio Bruto Total:* ${formatar_brl(premio_bruto)}\n` +
                     `--------------------\n\n` +
-                    `${texto_resumo_1lugar_wa}\n\n` +
+                    `${texto_resumo_1lugar_wa}\n` +
                     `--------------------\n\n` +
                     `${texto_resumo_participante_wa}` +
                     `--------------------\n` +
@@ -850,32 +868,46 @@
                 resetarContagem();
             }
             
-            // --- FUNÇÃO DE ATUALIZAR CONTADORES (v46) ---
+            // --- FUNÇÃO DE ATUALIZAR CONTADORES (v53) ---
             function atualizarInputsDeCotas() {
                 let totalCotasPote = 0;
+                let totalCotasGanhador = 0;
+                
                 for (const [cotaKey, count] of Object.entries(contagemPote)) {
                     totalCotasPote += (parseInt(cotaKey) * count);
                 }
+                for (const [cotaKey, count] of Object.entries(contagemGanhador)) {
+                    totalCotasGanhador += (parseInt(cotaKey) * count);
+                }
                 
                 inputNumCotasDoPote.value = totalCotasPote;
+                inputNumCotasGanhador.value = totalCotasGanhador;
                 
-                const totalPresentes = cotasGanhador + totalCotasPote;
+                const totalPresentes = totalCotasGanhador + totalCotasPote;
                 inputNumCotasPresentes.value = totalPresentes;
                 
-                if (contadorPoteLive) {
+                if (poteHelpText) {
                     if (totalCotasPote > 0) {
-                        contadorPoteLive.textContent = `(Total: ${totalCotasPote} cotas)`;
+                        poteHelpText.innerHTML = `(Somando <span class="live-counter">${totalCotasPote} cotas</span> no Pote)`;
                     } else {
-                        contadorPoteLive.textContent = ''; 
+                        poteHelpText.innerHTML = defaultPoteHelpText; 
+                    }
+                }
+                
+                if (ganhadorHelpText) {
+                    if (totalCotasGanhador > 0) {
+                        ganhadorHelpText.innerHTML = `(Somando <span class="live-counter">${totalCotasGanhador} cotas</span> de Ganhador)`;
+                    } else {
+                        ganhadorHelpText.innerHTML = defaultGanhadorHelpText; 
                     }
                 }
                 
                 calcularEAtualizar();
             }
 
-            // --- FUNÇÃO DE RESETAR (v42) ---
+            // --- FUNÇÃO DE RESETAR (v53) ---
             function resetarContagem() {
-                cotasGanhador = 0;
+                contagemGanhador = {}; // v53
                 contagemPote = {};
                 apostaAtual = 0;
                 
@@ -884,6 +916,8 @@
                 document.querySelectorAll('.botao-premio').forEach(btn => btn.classList.remove('active'));
                 
                 if (apostaHelpText) apostaHelpText.innerHTML = defaultApostaHelpText;
+                if (ganhadorHelpText) ganhadorHelpText.innerHTML = defaultGanhadorHelpText; // v53
+                if (poteHelpText) poteHelpText.innerHTML = defaultPoteHelpText; // v53
                 
                 atualizarInputsDeCotas();
             }
@@ -983,19 +1017,24 @@
             
             // --- Listeners do Contador Inteligente ---
             
-            // G. Clique nos Botões do GANHADOR
-            if (ganhadorBotoesContainer) {
-                ganhadorBotoesContainer.addEventListener('click', function(e) {
+            // G. Clique nos Botões do GANHADOR (v53)
+            todosOsBotoesGanhador.forEach(container => {
+                 container.addEventListener('click', function(e) {
                     const target = e.target.closest('[data-add-ganhador]');
                     if (target) {
-                        ganhadorBotoesContainer.querySelectorAll('.botao-ganhador').forEach(btn => btn.classList.remove('active'));
-                        target.classList.add('active');
+                        const cotaKey = target.dataset.addGanhador; 
+                        const countToAdd = parseInt(target.dataset.count || '1', 10); 
                         
-                        cotasGanhador = parseInt(target.dataset.addGanhador, 10);
+                        if (!contagemGanhador[cotaKey]) {
+                            contagemGanhador[cotaKey] = 0;
+                        }
+                        contagemGanhador[cotaKey] += countToAdd;
+                        
                         atualizarInputsDeCotas();
                     }
                 });
-            }
+            });
+
 
             // H. Clique nos Botões do POTE
             todosOsBotoesPote.forEach(container => {
