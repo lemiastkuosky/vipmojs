@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v31 (Resumo Dinâmico)</title>
+    <title>Calculadora de Bolão (VIP) - v32 (Resumo Mastigado)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -349,20 +349,21 @@
     </div>
     
     <script>
-        // (v31): Espera todo o HTML carregar
+        // (v32): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
             const MULTIPLICADOR = 80;
+            const VALOR_COTA_BASE_REAIS = 15; // Define R$ 15,00 como a base
             
-            // Chaves do LocalStorage (v31)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v31';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v31';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v31'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v31';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v31';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v31';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v31';
+            // Chaves do LocalStorage (v32)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v32';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v32';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v32'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v32';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v32';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v32';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v32';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
@@ -373,7 +374,7 @@
             let bonusPotePct = 20;
             let isResultadoMinimizado = false;
 
-            // --- NOVO (v31): Estado de Contagem ---
+            // --- Estado de Contagem (v31) ---
             let cotasGanhador = 0;
             let contagemPote = {}; // Objeto para Rastrear: {'1': 23, '4': 1}
 
@@ -433,7 +434,7 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v31) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v32) ---
             function calcularEAtualizar() {
                 if (apostaAtual === 0) {
                     areaResultado.style.display = 'none';
@@ -495,7 +496,7 @@
                     total_admin_final = total_admin + sobra_dos_centavos;
                 }
 
-                // --- 6. GERAÇÃO DE TEXTO (v31 - MUDANÇA AQUI) ---
+                // --- 6. GERAÇÃO DE TEXTO (v32 - MUDANÇA AQUI) ---
                 
                 const now = new Date();
                 const date = now.toLocaleDateString('pt-BR');
@@ -507,7 +508,7 @@
                 let texto_html_para_tela = "";
                 let texto_sobra_tela = (sobra_dos_centavos > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n` : "";
 
-                // --- NOVO (v31): Gerador de Resumo Dinâmico ---
+                // --- NOVO (v32): Gerador de Resumo Dinâmico "Mastigado" ---
                 function gerarResumoPoteDinamico() {
                     let textoWA = "\nResumo do Pote:\n";
                     let textoHTML = "--------------------\n*Resumo do Pote:*\n";
@@ -516,15 +517,22 @@
                     const chavesOrdenadas = Object.keys(contagemPote).sort((a, b) => parseInt(a) - parseInt(b));
                     
                     for (const cotaKey of chavesOrdenadas) {
-                        const count = contagemPote[cotaKey];
+                        const count = contagemPote[cotaKey]; // Quantas vezes clicou (ex: 23)
                         if (count > 0) {
-                            const cotaTipo = parseInt(cotaKey);
+                            const cotaTipo = parseInt(cotaKey); // Tipo da cota (ex: 1 ou 4)
                             const valorPago = formatar_brl(valor_por_cota_arredondado * cotaTipo);
                             
-                            const s = cotaTipo > 1 ? "s" : ""; // "cota/s"
+                            // Plural "cota" ou "cotas"
+                            const s_cota = cotaTipo > 1 ? "s" : ""; 
+                            // Valor em R$ da cota (ex: "15,00" ou "60,00")
+                            const valorMonetario = (cotaTipo * VALOR_COTA_BASE_REAIS).toFixed(2).replace('.', ','); 
                             
-                            textoWA += `• ${count}x (${cotaTipo} cota${s}): Recebe ${valorPago}\n`;
-                            textoHTML += `• ${count}x (${cotaTipo} cota${s}): Recebe *${valorPago}*\n`;
+                            // Monta a descrição: "1 cota de 15,00 reais" ou "4 cotas de 60,00 reais"
+                            const descCota = `${cotaTipo} cota${s_cota} de ${valorMonetario} reais`;
+                            
+                            // Monta a linha final
+                            textoWA += `• ${count}x (${descCota}): Recebe ${valorPago}\n`;
+                            textoHTML += `• ${count}x (${descCota}): Recebe *${valorPago}*\n`;
                         }
                     }
                     return { wa: textoWA, html: textoHTML };
@@ -559,7 +567,7 @@
 
                 } else { 
                     // --- Caso Normal (Pelo menos 1 no pote) ---
-                    const resumoDinamico = gerarResumoPoteDinamico(); // <-- NOVO (v31)
+                    const resumoDinamico = gerarResumoPoteDinamico(); // <-- NOVO (v32)
                     
                     texto_resumo_1lugar_wa = 
                         `🏆 RESUMO GANHADOR.\n` +
@@ -571,7 +579,7 @@
                         `👥 RESUMO PARTICIPANTES\n\n` +
                         `Nº de Cotas (do Pote): ${num_cotas_do_pote_atual}\n` +
                         `Valor base por Cota: ${formatar_brl(valor_por_cota_arredondado)}\n` +
-                        `${resumoDinamico.wa}`; // <-- NOVO (v31)
+                        `${resumoDinamico.wa}`; // <-- NOVO (v32)
                     
                     texto_html_para_tela = 
                         `*Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}*\n` +
@@ -592,7 +600,7 @@
                         `Divisão por ${num_cotas_do_pote_atual} cotas do pote\n\n` +
                         `*💰 Valor base p/ Cota: ${formatar_brl(valor_por_cota_arredondado)} (Redondo)*\n` +
                         `*⚙️ Admin (Total Final c/ Sobra): ${formatar_brl(total_admin_final)}*\n` +
-                        `${resumoDinamico.html}`; // <-- NOVO (v31)
+                        `${resumoDinamico.html}`; // <-- NOVO (v32)
                 }
 
                 const texto_final_whatsapp = 
