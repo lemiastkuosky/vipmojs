@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v44 (UI Ganhador Corrigida)</title>
+    <title>Calculadora de Bolão (VIP) - v45 (Padrões de Bônus)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -506,7 +506,7 @@
     </div>
     
     <script>
-        // (v44): Espera todo o HTML carregar
+        // (v45): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
@@ -514,22 +514,25 @@
             const VALOR_COTA_BASE_REAIS = 15;
             const defaultApostaHelpText = '(Selecione um botão para definir o prêmio total)';
             
-            // Chaves do LocalStorage (v44)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v44';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v44';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v44'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v44';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v44';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v44';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v44';
+            // Chaves do LocalStorage (v45)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v45';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v45';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v45'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v45';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v45';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v45';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v45';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
             let valor1LugarOriginal = "50";
             let valorBaseCotas = 24;
+            
+            // NOVO (v45): Padrões de bônus atualizados
             let bonus1LugarPct = 60;
-            let bonusAdminPct = 20;
-            let bonusPotePct = 20;
+            let bonusAdminPct = 35;
+            let bonusPotePct = 5;
+            
             let isResultadoMinimizado = false;
 
             let cotasGanhador = 0;
@@ -595,10 +598,10 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v44 - Lógica v34) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v45 - Lógica v34) ---
             function calcularEAtualizar() {
                 const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
-                if (apostaAtual === 0 || (cotasGanhador === 0 && num_cotas_presentes_atual === 0)) { // Modificado para não calcular se tudo for zero
+                if (apostaAtual === 0 || (cotasGanhador === 0 && num_cotas_presentes_atual === 0)) {
                     areaResultado.style.display = 'none';
                     if (resetContagemButton) resetContagemButton.style.display = 'none'; 
                     return;
@@ -787,15 +790,18 @@
                 atualizarDisplayResultado();
             }
 
-            // --- 4. FUNÇÃO PARA CARREGAR VALORES ---
+            // --- 4. FUNÇÃO PARA CARREGAR VALORES (v45) ---
             function carregarValoresSalvos() {
                 selectTaxaAdmin.value = localStorage.getItem(STORAGE_KEY_ADMIN) || "20"; 
                 inputPct1Lugar.value = localStorage.getItem(STORAGE_KEY_1ST) || "50";
                 valor1LugarOriginal = inputPct1Lugar.value;
                 valorBaseCotas = parseFloat(localStorage.getItem(STORAGE_KEY_BASE)) || 24; 
+                
+                // NOVO (v45): Carrega os novos padrões
                 bonus1LugarPct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_1ST_PCT)) || 60;
-                bonusAdminPct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_ADMIN_PCT)) || 20;
-                bonusPotePct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_POTE_PCT)) || 20;
+                bonusAdminPct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_ADMIN_PCT)) || 35;
+                bonusPotePct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_POTE_PCT)) || 5;
+                
                 isResultadoMinimizado = localStorage.getItem(STORAGE_KEY_MINIMIZADO) === 'true';
                 
                 resetarContagem();
@@ -869,8 +875,9 @@
             });
 
 
-            // D. LÓGICA DO MODAL DE CONFIGURAÇÃO (v36)
+            // D. LÓGICA DO MODAL DE CONFIGURAÇÃO (v45)
             configButton.addEventListener('click', function() {
+                // Carrega os valores atuais (ou os padrões v45) nos inputs
                 inputBaseCotasModal.value = valorBaseCotas;
                 inputBonus1LugarPct.value = bonus1LugarPct;
                 inputBonusAdminPct.value = bonusAdminPct;
@@ -899,10 +906,13 @@
                     alert("Erro: A soma das porcentagens do bônus (1º Lugar, Admin, Pote) deve ser exatamente 100%.\n\Sua soma atual: " + soma + "%");
                     return;
                 }
+                // Salva os novos valores nas variáveis de estado
                 valorBaseCotas = novaBaseCotas;
                 bonus1LugarPct = novoBonus1;
                 bonusAdminPct = novoBonusAdmin;
                 bonusPotePct = novoBonusPote;
+                
+                // Salva no LocalStorage
                 localStorage.setItem(STORAGE_KEY_BASE, valorBaseCotas);
                 localStorage.setItem(STORAGE_KEY_BONUS_1ST_PCT, bonus1LugarPct);
                 localStorage.setItem(STORAGE_KEY_BONUS_ADMIN_PCT, bonusAdminPct);
