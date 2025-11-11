@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v49 (Msg Limpa)</title>
+    <title>Calculadora de Bolão (VIP) - v50 (Layout Corrigido)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -67,6 +67,7 @@
             margin-right: 12px;
         }
         
+        /* NOVO (v50): Correção do bug de quebra de linha */
         .live-counter {
             font-size: 0.8em;
             font-weight: 500;
@@ -74,6 +75,7 @@
             margin-left: auto; /* Alinha à direita */
             padding-left: 10px;
             font-style: italic;
+            white-space: nowrap; /* Impede a quebra de linha */
         }
         
         .grid-2-col {
@@ -515,7 +517,7 @@
     </div>
     
     <script>
-        // (v49): Espera todo o HTML carregar
+        // (v50): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
@@ -523,14 +525,14 @@
             const VALOR_COTA_BASE_REAIS = 15;
             const defaultApostaHelpText = '(Selecione um botão para definir o prêmio total)';
             
-            // Chaves do LocalStorage (v49)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v49';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v49';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v49'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v49';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v49';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v49';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v49';
+            // Chaves do LocalStorage (v50)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v50';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v50';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v50'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v50';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v50';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v50';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v50';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
@@ -605,7 +607,7 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v49) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v50 - Lógica v49) ---
             function calcularEAtualizar() {
                 const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
                 if (apostaAtual === 0 || (cotasGanhador === 0 && num_cotas_presentes_atual === 0)) {
@@ -664,14 +666,13 @@
                     total_admin_final = total_admin + sobra_dos_centavos;
                 }
 
-                // --- 6. GERAÇÃO DE TEXTO (v49 - MUDANÇA AQUI) ---
+                // --- 6. GERAÇÃO DE TEXTO (v49) ---
                 
                 const now = new Date();
                 const date = now.toLocaleDateString('pt-BR');
                 const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const timestamp = `${date} às ${time}`;
 
-                // (v49): Valor apostado pelo ganhador
                 const valorApostadoGanhador = formatar_brl(cotasGanhador * VALOR_COTA_BASE_REAIS);
 
                 let texto_resumo_1lugar_wa = "";
@@ -679,7 +680,6 @@
                 let texto_html_para_tela = ""; // Este não muda
                 let texto_sobra_tela = (sobra_dos_centavos > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n` : "";
 
-                // --- Gerador de Resumo (HTML - v34) ---
                 function gerarResumoHTML() {
                     let textoHTML = "--------------------\n*Resumo do Pote:*\n";
                     const chavesOrdenadas = Object.keys(contagemPote).sort((a, b) => parseInt(a) - parseInt(b));
@@ -696,9 +696,8 @@
                     return textoHTML;
                 }
                 
-                // --- Gerador de Resumo (WHATSAPP - v49) ---
                 function gerarResumoWhatsApp() {
-                    let textoWA = "*Detalhes do Pagamento:*\n"; // Texto inicial mudou
+                    let textoWA = "*Detalhes do Pagamento:*\n";
                     const chavesOrdenadas = Object.keys(contagemPote).sort((a, b) => parseInt(a) - parseInt(b));
                     for (const cotaKey of chavesOrdenadas) {
                         const count = contagemPote[cotaKey]; 
@@ -715,11 +714,9 @@
 
 
                 if (num_cotas_do_pote_atual === 0 && cotasGanhador > 0) {
-                    // --- Caso Ninguém no Pote ---
                     const total_1_lugar_final = total_1_lugar + pote_final_divisao;
                     const valor_acumulado = bns_1_lugar_calc + pote_final_divisao;
                     
-                    // WA (v49)
                     texto_resumo_1lugar_wa = 
                         `🏆 *GANHADOR (1º LUGAR)*\n` +
                         `Prêmio: ${formatar_brl(valor_1_lugar_base)}\n` +
@@ -731,7 +728,6 @@
                         `👥 *RATEIO DO POTE*\n\n` +
                         `Nenhuma cota para divisão do pote.`; 
                     
-                    // HTML (Sem mudança)
                     texto_html_para_tela = 
                         `*Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}*\n` +
                         `--------------------\n` +
@@ -743,11 +739,9 @@
                         `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bns_1_lugar_calc)}, Resto: ${formatar_brl(pote_final_divisao)})`;
 
                 } else { 
-                    // --- Caso Normal (Pelo menos 1 no pote) ---
                     const resumoHTML = gerarResumoHTML();
                     const resumoWA = gerarResumoWhatsApp();
                     
-                    // WA (v49)
                     texto_resumo_1lugar_wa = 
                         `🏆 *GANHADOR (1º LUGAR)*\n` +
                         `Prêmio: ${formatar_brl(valor_1_lugar_base)}\n` +
@@ -758,7 +752,6 @@
                         `👥 *RATEIO DO POTE*\n\n` +
                         `${resumoWA}`;
                     
-                    // HTML (Sem mudança)
                     texto_html_para_tela = 
                         `*Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}*\n` +
                         `--------------------\n` +
@@ -781,12 +774,11 @@
                         `${resumoHTML}`;
                 }
 
-                // NOVO (v49): Montagem da Mensagem Final do WhatsApp
                 const texto_final_whatsapp = 
                     `✨ *BOLÃO VIP - PREMIAÇÃO* ✨\n` +
                     `--------------------\n` +
                     `*Data:* ${timestamp}\n` +
-                    `*Valor* Apostado: ${valorApostadoGanhador}\n` + // <-- MUDANÇA
+                    `*Valor* Apostado: ${valorApostadoGanhador}\n` +
                     `--------------------\n\n` +
                     `${texto_resumo_1lugar_wa}\n\n` +
                     `--------------------\n\n` +
