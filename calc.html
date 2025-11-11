@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v50 (Layout Corrigido)</title>
+    <title>Calculadora de Bolão (VIP) - v51 (Bug Layout Título)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -51,8 +51,10 @@
             align-items: center;
             border-bottom: 1px solid #4a4a4a;
             padding-bottom: 15px;
+            overflow: hidden; /* Garante que nada vaze */
         }
         
+        /* Círculo do passo */
         .card h2 span {
             display: inline-flex;
             align-items: center;
@@ -65,17 +67,27 @@
             font-weight: 700;
             border-radius: 50%;
             margin-right: 12px;
+            flex-shrink: 0; /* NOVO (v51): Não deixa o círculo diminuir */
         }
         
-        /* NOVO (v50): Correção do bug de quebra de linha */
+        /* NOVO (v51): Classe para o texto do título */
+        .card-title {
+            flex-grow: 1; /* Ocupa o espaço */
+            flex-shrink: 1; /* Permite diminuir */
+            overflow: hidden; /* Esconde o que transbordar */
+            text-overflow: ellipsis; /* Adiciona "..." */
+            white-space: nowrap; /* Não quebra linha */
+        }
+        
         .live-counter {
             font-size: 0.8em;
             font-weight: 500;
             color: #aaa;
-            margin-left: auto; /* Alinha à direita */
+            margin-left: auto; 
             padding-left: 10px;
             font-style: italic;
-            white-space: nowrap; /* Impede a quebra de linha */
+            white-space: nowrap; 
+            flex-shrink: 0; /* NOVO (v51): Não deixa o contador diminuir */
         }
         
         .grid-2-col {
@@ -282,6 +294,14 @@
             display: flex;
             align-items: center;
         }
+        /* NOVO (v51): Garante que o ícone do modal não encolha */
+        .modal-content h2 .card-title {
+            padding-left: 10px;
+        }
+        .modal-content h2 svg, .modal-content h2 img {
+             flex-shrink: 0;
+        }
+
         .modal-content p { color: #ccc; }
         .modal-buttons { 
             display: flex; 
@@ -380,7 +400,7 @@
         <img src="seu-logo.png" alt="Logo do Bolão" class="logo">
         
         <div class="card">
-            <h2><span>1</span> Configurações Principais</h2>
+            <h2><span>1</span><span class="card-title">Configurações Principais</span></h2>
             <div class="grid-2-col">
                 <div class="form-group">
                     <label for="select_taxa_admin">Taxa de Administração (%):</label>
@@ -395,7 +415,7 @@
         </div>
         
         <div class="card">
-            <h2><span>2</span> Selecione a Aposta (Prêmio Bruto)</h2>
+            <h2><span>2</span><span class="card-title">Selecione a Aposta (Prêmio Bruto)</span></h2>
             <p class="help-text" id="apostaHelpText" style="margin: -10px 0 10px 0;">(Selecione um botão para definir o prêmio total)</p>
             <div id="premio_botoes" class="botoes-grid">
                 <button class="botao-premio" data-valor="15">15</button>
@@ -417,7 +437,7 @@
         </div>
 
         <div class="card">
-            <h2><span>3</span> Selecionar o Ganhador</h2>
+            <h2><span>3</span><span class="card-title">Selecionar o Ganhador</span></h2>
             <p class="help-text" style="margin: -10px 0 10px 0;">(Selecione a aposta do vencedor. Isso define as 'Cotas do Ganhador')</p>
             <div id="ganhador_botoes" class="botoes-grid">
                 <button class="botao-premio botao-ganhador" data-add-ganhador="1">1 Cota (15)</button>
@@ -439,7 +459,7 @@
         </div>
         
         <div class="card">
-            <h2><span>4</span> Somar Cotas do Pote <span id="contadorPoteLive" class="live-counter"></span></h2>
+            <h2><span>4</span><span class="card-title">Somar Cotas do Pote</span> <span id="contadorPoteLive" class="live-counter"></span></h2>
             <p class="help-text" style="margin: -10px 0 10px 0;">(Some todos os outros que vão dividir)</p>
             <div class="botoes-grid-rapida">
                 <button class="botao-premio botao-pote-rapido" data-add-pote="1" data-count="10">P: +10x (de 15)</button>
@@ -465,7 +485,7 @@
         </div>
 
         <div class="card card-resumo-contagem">
-             <h2><span>5</span> Resumo da Contagem</h2>
+             <h2><span>5</span><span class="card-title">Resumo da Contagem</span></h2>
              <div class="grid-2-col">
                  <div class="form-group">
                     <label for="num_cotas_presentes">Total de Cotas Presentes:</label>
@@ -489,7 +509,7 @@
 
     <div id="configModal" class="modal-overlay">
         <div class="modal-content">
-            <h2>⚙️ Configurar Bônus de Faltantes</h2>
+            <h2>⚙️<span class="card-title"> Configurar Bônus de Faltantes</span></h2>
             <p>Defina como a cota de um participante faltante será dividida (a soma deve ser 100%).</p>
             <div class="form-group">
                 <label for="inputBaseCotasModal">Total de Cotas *Planejado* (Base p/ Bônus):</label>
@@ -517,7 +537,7 @@
     </div>
     
     <script>
-        // (v50): Espera todo o HTML carregar
+        // (v51): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
@@ -525,14 +545,14 @@
             const VALOR_COTA_BASE_REAIS = 15;
             const defaultApostaHelpText = '(Selecione um botão para definir o prêmio total)';
             
-            // Chaves do LocalStorage (v50)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v50';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v50';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v50'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v50';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v50';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v50';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v50';
+            // Chaves do LocalStorage (v51)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v51';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v51';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v51'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v51';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v51';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v51';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v51';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
@@ -607,7 +627,7 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v50 - Lógica v49) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v51 - Lógica v49) ---
             function calcularEAtualizar() {
                 const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
                 if (apostaAtual === 0 || (cotasGanhador === 0 && num_cotas_presentes_atual === 0)) {
@@ -782,7 +802,7 @@
                     `--------------------\n\n` +
                     `${texto_resumo_1lugar_wa}\n\n` +
                     `--------------------\n\n` +
-                    `${texto_resumo_participante_wa}\n` +
+                    `${texto_resumo_participante_wa}` +
                     `--------------------\n` +
                     `Agradecemos a participação de todos! 🍀`;
 
