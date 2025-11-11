@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v54 (Lógica de Prêmios Individuais)</title>
+    <title>Calculadora de Bolão (VIP) - v55 (Layout Profissional)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -54,14 +54,15 @@
             overflow: hidden;
         }
         
+        /* NOVO (v55): Círculo do passo com fundo neutro */
         .card h2 span {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: 28px;
             height: 28px;
-            background: #25D366;
-            color: #111;
+            background: #555; /* Corrigido */
+            color: #f0f0f0; /* Corrigido */
             font-size: 0.85em;
             font-weight: 700;
             border-radius: 50%;
@@ -511,7 +512,7 @@
     </div>
     
     <script>
-        // (v54): Espera todo o HTML carregar
+        // (v55): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
@@ -520,14 +521,14 @@
             const defaultGanhadorHelpText = "(Clique para somar as cotas do(s) ganhador(es) do 1º lugar)";
             const defaultPoteHelpText = "(Some todos os outros que vão dividir)";
             
-            // Chaves do LocalStorage (v54)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v54';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v54';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v54'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v54';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v54';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v54';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v54';
+            // Chaves do LocalStorage (v55)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v55';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v55';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v55'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v55';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v55';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v55';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v55';
 
             // --- VARIÁVEIS DE ESTADO ---
             let valor1LugarOriginal = "50";
@@ -596,20 +597,18 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v54 - LÓGICA NOVA) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v55) ---
             function calcularEAtualizar() {
                 const totalCotasGanhador = parseInt(inputNumCotasGanhador.value) || 0;
                 const totalCotasPote = parseInt(inputNumCotasDoPote.value) || 0;
                 const num_cotas_presentes_atual = totalCotasGanhador + totalCotasPote;
                 
-                // Só calcula se houver cotas
                 if (num_cotas_presentes_atual === 0) {
                     areaResultado.style.display = 'none';
                     if (resetContagemButton) resetContagemButton.style.display = 'none'; 
                     return;
                 }
 
-                let valor_por_cota_ganhador_arredondado = 0; 
                 let valor_por_cota_pote_arredondado = 0; 
                 
                 const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0; 
@@ -620,25 +619,24 @@
                 
                 // --- 2. CÁLCULOS BASE (v54) ---
                 let premio_bruto_total = 0;
-                let valor_1_lugar_base = 0;
+                let valor_1_lugar_base_total = 0; // Total para todos os ganhadores
                 let valor_admin_base = 0;
-                let premio_restante_base_total = 0;
+                let premio_restante_base_total = 0; // Total para o POTE
 
-                // Loop pelos Ganhadores
+                // Loop pelos Ganhadores (v55 - Lógica Individual)
                 for (const [cotaKey, count] of Object.entries(contagemGanhador)) {
                     const cotaTipo = parseInt(cotaKey); // 1, 2, 4...
                     const numPessoas = parseInt(count); // 1, 2, 10...
                     const valorAposta = cotaTipo * VALOR_COTA_BASE_REAIS; 
                     
-                    const premioBrutoAposta = (valorAposta * MULTIPLICADOR) * numPessoas;
+                    const premioBrutoAposta = (valorAposta * MULTIPLICADOR); // Prêmio de 1
                     
-                    premio_bruto_total += premioBrutoAposta;
-                    valor_1_lugar_base += premioBrutoAposta * (pct_1_lugar / 100);
-                    valor_admin_base += premioBrutoAposta * (pct_admin_base / 100);
-                    premio_restante_base_total += premioBrutoAposta * (pct_para_pote / 100);
+                    premio_bruto_total += (premioBrutoAposta * numPessoas);
+                    valor_1_lugar_base_total += (premioBrutoAposta * (pct_1_lugar / 100)) * numPessoas;
+                    valor_admin_base += (premioBrutoAposta * (pct_admin_base / 100)) * numPessoas;
+                    premio_restante_base_total += (premioBrutoAposta * (pct_para_pote / 100)) * numPessoas;
                 }
 
-                // O que sobra dos Ganhadores vira o POTE
                 let pote_final_divisao = premio_restante_base_total;
                 
                 // --- 3. CÁLCULOS BÔNUS (v54) ---
@@ -658,20 +656,22 @@
                 }
 
                 // --- 4. TOTAIS ---
-                const total_1_lugar = valor_1_lugar_base + bns_1_lugar_calc;
+                const total_1_lugar = valor_1_lugar_base_total + bns_1_lugar_calc;
                 const total_admin = valor_admin_base + bns_admin_calc;
-                pote_final_divisao += bns_pote_calc; // Adiciona bônus ao pote
+                pote_final_divisao += bns_pote_calc;
 
-                // --- 5. LÓGICA DE ARREDONDAMENTO (v54) ---
-                let sobra_ganhador = 0;
+                // --- 5. LÓGICA DE ARREDONDAMENTO (v55) ---
+                let sobra_ganhador_total = 0;
                 let sobra_pote = 0;
                 let total_admin_final = total_admin;
                 
+                // v55: O bônus é dividido pelas cotas do ganhador
+                let bonus_por_cota_ganhador = 0;
                 if (totalCotasGanhador > 0) {
-                    const valor_exato = total_1_lugar / totalCotasGanhador;
-                    valor_por_cota_ganhador_arredondado = Math.floor(valor_exato);
-                    const total_pago = valor_por_cota_ganhador_arredondado * totalCotasGanhador;
-                    sobra_ganhador = total_1_lugar - total_pago;
+                     const valor_exato_bonus = bns_1_lugar_calc / totalCotasGanhador;
+                     bonus_por_cota_ganhador = Math.floor(valor_exato_bonus);
+                     const total_bonus_pago = bonus_por_cota_ganhador * totalCotasGanhador;
+                     sobra_ganhador_total = bns_1_lugar_calc - total_bonus_pago;
                 }
                 
                 if (totalCotasPote > 0) {
@@ -683,9 +683,9 @@
                     sobra_pote = pote_final_divisao;
                 }
                 
-                total_admin_final = total_admin + sobra_ganhador + sobra_pote;
+                total_admin_final = total_admin + sobra_ganhador_total + sobra_pote;
 
-                // --- 6. GERAÇÃO DE TEXTO (v54) ---
+                // --- 6. GERAÇÃO DE TEXTO (v55) ---
                 
                 const now = new Date();
                 const date = now.toLocaleDateString('pt-BR');
@@ -695,11 +695,11 @@
                 let texto_resumo_1lugar_wa = "";
                 let texto_resumo_participante_wa = "";
                 let texto_html_para_tela = "";
-                let texto_sobra_tela_ganhador = (sobra_ganhador > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_ganhador)}\n` : "";
+                let texto_sobra_tela_ganhador = (sobra_ganhador_total > 0.01) ? `Sobra Bônus (p/ Admin): +${formatar_brl(sobra_ganhador_total)}\n` : "";
                 let texto_sobra_tela_pote = (sobra_pote > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_pote)}\n` : "";
 
-                // --- Geradores de Resumo Dinâmico (v54) ---
-                function gerarResumoDinamico(tipo, contagem, valorPorCota) {
+                // --- Geradores de Resumo Dinâmico (v55) ---
+                function gerarResumoDinamico(tipo, contagem) {
                     let textoWA = `*Detalhes do Pagamento (${tipo}):*\n`;
                     let textoHTML = `--------------------\n*Resumo do ${tipo}:*\n`;
                     
@@ -708,8 +708,19 @@
                     for (const cotaKey of chavesOrdenadas) {
                         const count = contagem[cotaKey]; 
                         if (count > 0) {
-                            const cotaTipo = parseInt(cotaKey); 
-                            const valorPago = formatar_brl(valorPorCota * cotaTipo);
+                            const cotaTipo = parseInt(cotaKey);
+                            let valorPago;
+                            
+                            if (tipo === "Ganhador") {
+                                const apostaBase = cotaTipo * VALOR_COTA_BASE_REAIS;
+                                const premioBruto = apostaBase * MULTIPLICADOR;
+                                const premioBase = premioBruto * (pct_1_lugar / 100);
+                                const bonusCalculado = bonus_por_cota_ganhador * cotaTipo;
+                                valorPago = formatar_brl(premioBase + bonusCalculado);
+                            } else {
+                                valorPago = formatar_brl(valor_por_cota_pote_arredondado * cotaTipo);
+                            }
+
                             const valorMonetario = formatar_brl(cotaTipo * VALOR_COTA_BASE_REAIS);
                             const descAposta = `Aposta de ${valorMonetario}`;
                             
@@ -722,27 +733,21 @@
                 
                 // Resumo Ganhador (WA)
                 if (totalCotasGanhador > 0) {
-                    const resumoWA = gerarResumoDinamico("Ganhador", contagemGanhador, valor_por_cota_ganhador_arredondado);
+                    const resumoWA = gerarResumoDinamico("Ganhador", contagemGanhador);
                     texto_resumo_1lugar_wa = 
-                        `🏆 *GANHADOR(ES) (1º LUGAR)*\n` +
-                        `Total do Prêmio: ${formatar_brl(total_1_lugar)}\n` +
-                        `Total de Cotas: ${totalCotasGanhador}\n` +
-                        `*Valor por Cota: ${formatar_brl(valor_por_cota_ganhador_arredondado)}*\n\n` +
+                        `🏆 *GANHADOR(ES)*\n\n` +
                         `${resumoWA.wa}`;
                 } else {
                     texto_resumo_1lugar_wa = 
-                        `🏆 *GANHADOR(ES) (1º LUGAR)*\n` +
+                        `🏆 *GANHADOR(ES)*\n` +
                         `Nenhum ganhador selecionado.`;
                 }
 
                 // Resumo Pote (WA)
                 if (totalCotasPote > 0) {
-                    const resumoWA = gerarResumoDinamico("Pote", contagemPote, valor_por_cota_pote_arredondado);
+                    const resumoWA = gerarResumoDinamico("Pote", contagemPote);
                     texto_resumo_participante_wa = 
-                        `👥 *RATEIO DO POTE*\n` +
-                        `Total do Pote: ${formatar_brl(pote_final_divisao)}\n` +
-                        `Total de Cotas: ${totalCotasPote}\n` +
-                        `*Valor por Cota: ${formatar_brl(valor_por_cota_pote_arredondado)}*\n\n` +
+                        `👥 *RATEIO DO POTE*\n\n` +
                         `${resumoWA.wa}`;
                 } else {
                      texto_resumo_participante_wa = 
@@ -752,11 +757,11 @@
                 
                 // Resumo Admin (HTML)
                 const resumoHTML_Ganhador = (totalCotasGanhador > 0) ? 
-                    gerarResumoDinamico("Ganhador", contagemGanhador, valor_por_cota_ganhador_arredondado).html : 
+                    gerarResumoDinamico("Ganhador", contagemGanhador).html : 
                     "--------------------\n*Nenhum ganhador selecionado.*";
                     
                 const resumoHTML_Pote = (totalCotasPote > 0) ?
-                    gerarResumoDinamico("Pote", contagemPote, valor_por_cota_pote_arredondado).html :
+                    gerarResumoDinamico("Pote", contagemPote).html :
                     "--------------------\n*Nenhuma cota no pote.*";
 
                 texto_html_para_tela = 
@@ -766,10 +771,9 @@
                     `   (Admin: +${formatar_brl(bns_admin_calc)})\n` +
                     `   (Pote: +${formatar_brl(bns_pote_calc)})\n` +
                     `--------------------\n` +
-                    `🏆 *Divisão 1º Lugar (Total: ${formatar_brl(total_1_lugar)})*\n` +
-                    `Divisão por ${totalCotasGanhador} cotas de ganhador\n` +
+                    `🏆 *Divisão 1º Lugar (Total Base: ${formatar_brl(valor_1_lugar_base_total)})*\n` +
+                    `Bônus: ${formatar_brl(bns_1_lugar_calc)} (dividido por ${totalCotasGanhador} cotas)\n` +
                     `${texto_sobra_tela_ganhador}` +
-                    `*💰 Valor p/ Cota Ganhador: ${formatar_brl(valor_por_cota_ganhador_arredondado)} (Redondo)*\n` +
                     `${resumoHTML_Ganhador}\n` +
                     `--------------------\n` +
                     `👥 *Divisão Pote (Total: ${formatar_brl(pote_final_divisao)})*\n` +
@@ -778,7 +782,7 @@
                     `*💰 Valor p/ Cota Pote: ${formatar_brl(valor_por_cota_pote_arredondado)} (Redondo)*\n` +
                     `${resumoHTML_Pote}\n` +
                     `--------------------\n` +
-                    `*⚙️ Admin (Base: ${formatar_brl(valor_admin_base)} + Sobras: ${formatar_brl(sobra_ganhador + sobra_pote)})*\n` +
+                    `*⚙️ Admin (Base: ${formatar_brl(valor_admin_base)} + Sobras: ${formatar_brl(sobra_ganhador_total + sobra_pote)})*\n` +
                     `*Total Admin: ${formatar_brl(total_admin_final)}*`;
                 
                 // Mensagem Final WhatsApp
@@ -874,23 +878,22 @@
                 calcularEAtualizar();
             }
 
-            // --- FUNÇÃO DE RESETAR (v53) ---
+            // --- FUNÇÃO DE RESETAR (v54) ---
             function resetarContagem() {
-                contagemGanhador = {}; // v53
+                contagemGanhador = {};
                 contagemPote = {};
                 
                 if (resetContagemButton) resetContagemButton.style.display = 'none';
                 
-                document.querySelectorAll('.botao-premio').forEach(btn => btn.classList.remove('active'));
-                
-                if (ganhadorHelpText) ganhadorHelpText.innerHTML = defaultGanhadorHelpText; // v53
-                if (poteHelpText) poteHelpText.innerHTML = defaultPoteHelpText; // v53
+                if (ganhadorHelpText) ganhadorHelpText.innerHTML = defaultGanhadorHelpText;
+                if (poteHelpText) poteHelpText.innerHTML = defaultPoteHelpText;
                 
                 atualizarInputsDeCotas();
             }
 
             // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS ---
             
+            // A. Clique no Botão de Aposta (REMOVIDO - v54)
             // B. Mudança na Taxa Admin
             selectTaxaAdmin.addEventListener('change', function() {
                 localStorage.setItem(STORAGE_KEY_ADMIN, selectTaxaAdmin.value);
