@@ -559,7 +559,7 @@
             // Modal
             const configButton = document.getElementById('configButton');
             const configModal = document.getElementById('configModal');
-            // ... (resto dos elementos do modal)
+            // ... (resto dos elementos)
             
             const bodyElement = document.body;
 
@@ -614,6 +614,8 @@
                 
                 const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0; 
                 const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
+                const pct_para_pote = 100 - pct_admin_base - pct_1_lugar; // O que sobra vira pote
+                
                 const base_cotas = valorBaseCotas; 
                 
                 // --- 2. CÁLCULOS BASE (v54) ---
@@ -626,25 +628,21 @@
                 for (const [cotaKey, count] of Object.entries(contagemGanhador)) {
                     const cotaTipo = parseInt(cotaKey); // 1, 2, 4...
                     const numPessoas = parseInt(count); // 1, 2, 10...
-                    
-                    // Aposta (15, 30, 60...)
                     const valorAposta = cotaTipo * VALOR_COTA_BASE_REAIS; 
                     
-                    // Calcula o Bruto SÓ DESSA APOSTA
                     const premioBrutoAposta = (valorAposta * MULTIPLICADOR) * numPessoas;
                     
                     premio_bruto_total += premioBrutoAposta;
                     valor_1_lugar_base += premioBrutoAposta * (pct_1_lugar / 100);
                     valor_admin_base += premioBrutoAposta * (pct_admin_base / 100);
-                    premio_restante_base_total += premioBrutoAposta * (1 - (pct_1_lugar / 100) - (pct_admin_base / 100));
+                    premio_restante_base_total += premioBrutoAposta * (pct_para_pote / 100);
                 }
 
                 // O que sobra dos Ganhadores vira o POTE
                 let pote_final_divisao = premio_restante_base_total;
                 
                 // --- 3. CÁLCULOS BÔNUS (v54) ---
-                // O valor de uma cota faltante é a "sobra" de uma aposta base (R$ 15)
-                const valor_base_pote_por_cota = (VALOR_COTA_BASE_REAIS * MULTIPLICADOR) * (1 - (pct_1_lugar / 100) - (pct_admin_base / 100));
+                const valor_base_pote_por_cota = (VALOR_COTA_BASE_REAIS * MULTIPLICADOR) * (pct_para_pote / 100);
                 
                 const cotas_faltantes = Math.max(0, base_cotas - num_cotas_presentes_atual); 
                 const valor_total_cotas_faltantes = cotas_faltantes * valor_base_pote_por_cota;
@@ -664,7 +662,7 @@
                 const total_admin = valor_admin_base + bns_admin_calc;
                 pote_final_divisao += bns_pote_calc; // Adiciona bônus ao pote
 
-                // --- 5. LÓGICA DE ARREDONDAMENTO (v53) ---
+                // --- 5. LÓGICA DE ARREDONDAMENTO (v54) ---
                 let sobra_ganhador = 0;
                 let sobra_pote = 0;
                 let total_admin_final = total_admin;
@@ -682,7 +680,6 @@
                     const total_pago = valor_por_cota_pote_arredondado * totalCotasPote;
                     sobra_pote = pote_final_divisao - total_pago;
                 } else {
-                    // Se não houver pote, a sobra do pote vai para o admin
                     sobra_pote = pote_final_divisao;
                 }
                 
@@ -722,8 +719,6 @@
                     }
                     return { wa: textoWA, html: textoHTML };
                 }
-
-                // --- GERAÇÃO DE TEXTO (v54) ---
                 
                 // Resumo Ganhador (WA)
                 if (totalCotasGanhador > 0) {
@@ -896,7 +891,6 @@
 
             // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS ---
             
-            // A. Clique no Botão de Aposta (REMOVIDO - v54)
             // B. Mudança na Taxa Admin
             selectTaxaAdmin.addEventListener('change', function() {
                 localStorage.setItem(STORAGE_KEY_ADMIN, selectTaxaAdmin.value);
