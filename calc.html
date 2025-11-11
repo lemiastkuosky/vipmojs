@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v33 (Botões Rápidos)</title>
+    <title>Calculadora de Bolão (VIP) - v34 (Resumo Final)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -76,7 +76,6 @@
             gap: 10px; 
             margin-top: 10px; 
         }
-        /* NOVO (v33): Grid de 6 colunas para botões rápidos */
         .botoes-grid-rapida {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -126,7 +125,6 @@
         .botao-pote:hover {
             background: #25D366;
         }
-        /* NOVO (v33): Cor para botão rápido */
         .botao-pote-rapido {
             background: #1a7e45;
             color: #fff;
@@ -375,21 +373,21 @@
     </div>
     
     <script>
-        // (v33): Espera todo o HTML carregar
+        // (v34): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
             const MULTIPLICADOR = 80;
             const VALOR_COTA_BASE_REAIS = 15; // Define R$ 15,00 como a base
             
-            // Chaves do LocalStorage (v33)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v33';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v33';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v33'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v33';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v33';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v33';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v33';
+            // Chaves do LocalStorage (v34)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v34';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v34';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v34'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v34';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v34';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v34';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v34';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
@@ -405,7 +403,7 @@
             let contagemPote = {}; // Objeto para Rastrear: {'1': 23, '4': 1}
 
             // --- ELEMENTOS ---
-            const selectTaxaAdmin = document.getElementById('select_taxa_admin'); // <- VOLTOU A SER USADO
+            const selectTaxaAdmin = document.getElementById('select_taxa_admin'); 
             const containerPremio = document.getElementById('premio_botoes');
             const premioBotoes = containerPremio.querySelectorAll('.botao-premio[data-valor]');
             const areaResultado = document.getElementById('resultadoArea');
@@ -414,11 +412,8 @@
             const inputNumCotasPresentes = document.getElementById('num_cotas_presentes'); 
             const inputNumCotasDoPote = document.getElementById('num_cotas_do_pote');
             const ganhadorBotoesContainer = document.getElementById('ganhador_botoes');
-            const poteBotoesContainer = document.getElementById('pote_botoes');
-            const resetContagemButton = document.getElementById('resetContagem');
-            // NOVO (v33): Botões rápidos precisam ser parte do "Pote"
             const todosOsBotoesPote = document.querySelectorAll('.botao-pote, .botao-pote-rapido');
-
+            const resetContagemButton = document.getElementById('resetContagem');
             
             // Modal
             const configButton = document.getElementById('configButton');
@@ -463,7 +458,7 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v33 - Lógica v32) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v34) ---
             function calcularEAtualizar() {
                 if (apostaAtual === 0) {
                     areaResultado.style.display = 'none';
@@ -474,7 +469,7 @@
                 
                 // --- 1. COLETAR DADOS ---
                 const valor_aposta = apostaAtual;
-                const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0; // <- Lógica antiga (correta)
+                const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0; 
                 const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
                 const base_cotas = valorBaseCotas; 
                 const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
@@ -485,8 +480,8 @@
                 // --- 2. CÁLCULOS BASE ---
                 const premio_bruto = valor_aposta * MULTIPLICADOR;
                 const valor_1_lugar_base = premio_bruto * (pct_1_lugar / 100);
-                const valor_admin_base = premio_bruto * (pct_admin_base / 100); // <- Lógica antiga (correta)
-                const premio_restante_base = premio_bruto - valor_1_lugar_base - valor_admin_base; // <- Lógica antiga (correta)
+                const valor_admin_base = premio_bruto * (pct_admin_base / 100); 
+                const premio_restante_base = premio_bruto - valor_1_lugar_base - valor_admin_base; 
                 
                 const valor_por_cota_base = (base_cotas > 0) ? (premio_restante_base / base_cotas) : 0;
 
@@ -526,7 +521,7 @@
                     total_admin_final = total_admin + sobra_dos_centavos;
                 }
 
-                // --- 6. GERAÇÃO DE TEXTO (v32 - "Mastigado") ---
+                // --- 6. GERAÇÃO DE TEXTO (v34 - MUDANÇA AQUI) ---
                 
                 const now = new Date();
                 const date = now.toLocaleDateString('pt-BR');
@@ -538,7 +533,7 @@
                 let texto_html_para_tela = "";
                 let texto_sobra_tela = (sobra_dos_centavos > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n` : "";
 
-                // --- Gerador de Resumo Dinâmico "Mastigado" ---
+                // --- NOVO (v34): Gerador de Resumo "Mastigado V2" ---
                 function gerarResumoPoteDinamico() {
                     let textoWA = "\nResumo do Pote:\n";
                     let textoHTML = "--------------------\n*Resumo do Pote:*\n";
@@ -546,17 +541,20 @@
                     const chavesOrdenadas = Object.keys(contagemPote).sort((a, b) => parseInt(a) - parseInt(b));
                     
                     for (const cotaKey of chavesOrdenadas) {
-                        const count = contagemPote[cotaKey];
+                        const count = contagemPote[cotaKey]; // Quantas vezes clicou (ex: 23)
                         if (count > 0) {
-                            const cotaTipo = parseInt(cotaKey);
+                            const cotaTipo = parseInt(cotaKey); // Tipo da cota (ex: 1 ou 4)
                             const valorPago = formatar_brl(valor_por_cota_arredondado * cotaTipo);
                             
-                            const s_cota = cotaTipo > 1 ? "s" : ""; 
-                            const valorMonetario = (cotaTipo * VALOR_COTA_BASE_REAIS).toFixed(2).replace('.', ','); 
-                            const descCota = `${cotaTipo} cota${s_cota} de ${valorMonetario} reais`;
+                            // Valor em R$ da aposta (ex: "R$ 15,00" ou "R$ 60,00")
+                            const valorMonetario = formatar_brl(cotaTipo * VALOR_COTA_BASE_REAIS);
                             
-                            textoWA += `• ${count}x (${descCota}): Recebe ${valorPago}\n`;
-                            textoHTML += `• ${count}x (${descCota}): Recebe *${valorPago}*\n`;
+                            // Monta a descrição: "Aposta de R$ 15,00" ou "Aposta de R$ 60,00"
+                            const descAposta = `Aposta de ${valorMonetario}`;
+                            
+                            // Monta a linha final
+                            textoWA += `• ${count}x (${descAposta}): Recebe ${valorPago}\n`;
+                            textoHTML += `• ${count}x (${descAposta}): Recebe *${valorPago}*\n`;
                         }
                     }
                     return { wa: textoWA, html: textoHTML };
@@ -591,7 +589,7 @@
 
                 } else { 
                     // --- Caso Normal (Pelo menos 1 no pote) ---
-                    const resumoDinamico = gerarResumoPoteDinamico();
+                    const resumoDinamico = gerarResumoPoteDinamico(); // <-- NOVO (v34)
                     
                     texto_resumo_1lugar_wa = 
                         `🏆 RESUMO GANHADOR.\n` +
@@ -603,7 +601,7 @@
                         `👥 RESUMO PARTICIPANTES\n\n` +
                         `Nº de Cotas (do Pote): ${num_cotas_do_pote_atual}\n` +
                         `Valor base por Cota: ${formatar_brl(valor_por_cota_arredondado)}\n` +
-                        `${resumoDinamico.wa}`;
+                        `${resumoDinamico.wa}`; // <-- NOVO (v34)
                     
                     texto_html_para_tela = 
                         `*Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}*\n` +
@@ -624,7 +622,7 @@
                         `Divisão por ${num_cotas_do_pote_atual} cotas do pote\n\n` +
                         `*💰 Valor base p/ Cota: ${formatar_brl(valor_por_cota_arredondado)} (Redondo)*\n` +
                         `*⚙️ Admin (Total Final c/ Sobra): ${formatar_brl(total_admin_final)}*\n` +
-                        `${resumoDinamico.html}`;
+                        `${resumoDinamico.html}`; // <-- NOVO (v34)
                 }
 
                 const texto_final_whatsapp = 
@@ -664,7 +662,7 @@
 
             // --- 4. FUNÇÃO PARA CARREGAR VALORES ---
             function carregarValoresSalvos() {
-                selectTaxaAdmin.value = localStorage.getItem(STORAGE_KEY_ADMIN) || "20"; // <- VOLTOU
+                selectTaxaAdmin.value = localStorage.getItem(STORAGE_KEY_ADMIN) || "20"; 
                 inputPct1Lugar.value = localStorage.getItem(STORAGE_KEY_1ST) || "50";
                 valor1LugarOriginal = inputPct1Lugar.value;
                 valorBaseCotas = parseFloat(localStorage.getItem(STORAGE_KEY_BASE)) || 24; 
@@ -714,7 +712,7 @@
                 }
             });
 
-            // B. Mudança na Taxa Admin (VOLTOU)
+            // B. Mudança na Taxa Admin
             selectTaxaAdmin.addEventListener('change', function() {
                 localStorage.setItem(STORAGE_KEY_ADMIN, selectTaxaAdmin.value);
                 calcularEAtualizar();
@@ -800,19 +798,16 @@
             }
 
             // H. Clique nos Botões do POTE (Soma o valor)
-            // NOVO (v33): Adicionado loop para pegar os botões rápidos E os normais
             todosOsBotoesPote.forEach(container => {
                 container.addEventListener('click', function(e) {
                     const target = e.target.closest('[data-add-pote]');
                     if (target) {
-                        const cotaKey = target.dataset.addPote; // "1", "2", "4" etc.
-                        // Pega 'count' (para +10, +20) ou usa '1' como padrão
+                        const cotaKey = target.dataset.addPote; 
                         const countToAdd = parseInt(target.dataset.count || '1', 10); 
                         
                         if (!contagemPote[cotaKey]) {
                             contagemPote[cotaKey] = 0;
                         }
-                        // Soma o valor (1, 10, ou 20)
                         contagemPote[cotaKey] += countToAdd;
                         
                         atualizarInputsDeCotas();
