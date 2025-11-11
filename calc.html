@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v34 (Resumo Final)</title>
+    <title>Calculadora de Bolão (VIP) - v37 (Layout Mobile)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -14,6 +14,10 @@
             background: #2a2a2a; 
             color: #f0f0f0; 
         }
+        body.modal-open {
+            overflow: hidden;
+        }
+
         .container { 
             max-width: 600px; 
             margin: 10px auto; 
@@ -135,7 +139,6 @@
             background: #1f9c54;
         }
 
-
         .botao-config { 
             background: #555; 
             color: #ddd; 
@@ -193,6 +196,7 @@
             z-index: 1000; 
             justify-content: center; 
             align-items: center; 
+            overflow-y: auto;
         }
         .modal-content { 
             background: #333; 
@@ -201,6 +205,7 @@
             width: 90%; 
             max-width: 500px; 
             border: 1px solid #555; 
+            margin: 40px auto; 
         }
         .modal-content h2 { 
             margin-top: 0; 
@@ -251,6 +256,37 @@
         #resetContagem:hover {
             background: #e06c6c;
         }
+        
+        /* --- NOVO (v37): Media Query para Celular --- */
+        @media (max-width: 480px) {
+            /* Força 3 colunas em telas pequenas para botões maiores */
+            .botoes-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px; /* Aumenta um pouco o espaço */
+            }
+            
+            .botao-premio {
+                font-size: 15px; /* Texto um pouco maior */
+                padding: 14px 10px; /* Botão mais alto */
+                border-radius: 12px; /* Menos arredondado */
+            }
+
+            /* Garante que os botões rápidos fiquem grandes */
+            .botao-pote-rapido {
+                font-size: 15px;
+                font-weight: bold;
+                padding: 15px;
+            }
+            
+            /* Ajusta o texto principal */
+            body {
+                padding: 5px;
+            }
+            .container {
+                padding: 15px;
+            }
+        }
+        
     </style>
 </head>
 <body>
@@ -276,9 +312,7 @@
             
             <hr style="margin: 20px 0; border-color: #555;">
             
-            <button id="resetContagem" class="botao-config">Zerar Contagem (Ganhador e Pote)</button>
-
-            <label style="font-weight: 600; margin-top: 20px;">2. Adicionar Ganhador (1º Lugar):</label>
+            <label style="font-weight: 600; margin-top: 10px;">2. Adicionar Ganhador (1º Lugar):</label>
             <p class="help-text" style="margin-top: -5px; margin-bottom: 10px;">(Clique 1x no botão do ganhador)</p>
             <div id="ganhador_botoes" class="botoes-grid">
                 <button class="botao-premio botao-ganhador" data-add-ganhador="1">G: +1 (15)</button>
@@ -322,7 +356,9 @@
 
         <hr style="margin: 20px 0; border-color: #444;">
 
-        <label>4. Clique na Aposta para Calcular:</label>
+        <label>4. Selecione a Aposta (Define o Prêmio Bruto):</label>
+        <p class="help-text" style="margin-top: -5px; margin-bottom: 10px;">(Ex: Botão 30 x Multiplicador 80 = R$ 2.400,00 de Prêmio Bruto)</p>
+        
         <div id="premio_botoes" class="botoes-grid">
             <button class="botao-premio" data-valor="15">15</button>
             <button class="botao-premio" data-valor="30">30</button>
@@ -341,6 +377,9 @@
         </div>
 
         <div id="resultadoArea" class="resultado"></div>
+        
+        <button id="resetContagem" class="botao-config" style="margin-top: 15px; display: none;">Zerar Contagem (Ganhador e Pote)</button>
+
     </div>
 
     <div id="configModal" class="modal-overlay">
@@ -373,21 +412,21 @@
     </div>
     
     <script>
-        // (v34): Espera todo o HTML carregar
+        // (v37): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
             const MULTIPLICADOR = 80;
             const VALOR_COTA_BASE_REAIS = 15; // Define R$ 15,00 como a base
             
-            // Chaves do LocalStorage (v34)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v34';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v34';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v34'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v34';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v34';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v34';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v34';
+            // Chaves do LocalStorage (v37)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v37';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v37';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v37'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v37';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v37';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v37';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v37';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
@@ -398,9 +437,8 @@
             let bonusPotePct = 20;
             let isResultadoMinimizado = false;
 
-            // --- Estado de Contagem (v31) ---
             let cotasGanhador = 0;
-            let contagemPote = {}; // Objeto para Rastrear: {'1': 23, '4': 1}
+            let contagemPote = {}; 
 
             // --- ELEMENTOS ---
             const selectTaxaAdmin = document.getElementById('select_taxa_admin'); 
@@ -424,6 +462,8 @@
             const inputBonus1LugarPct = document.getElementById('inputBonus1LugarPct');
             const inputBonusAdminPct = document.getElementById('inputBonusAdminPct');
             const inputBonusPotePct = document.getElementById('inputBonusPotePct');
+            
+            const bodyElement = document.body;
 
 
             // --- 1. FUNÇÃO DE PREENCHER O SELECT ---
@@ -458,10 +498,12 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v34) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v37 - Lógica v34) ---
             function calcularEAtualizar() {
                 if (apostaAtual === 0) {
                     areaResultado.style.display = 'none';
+                    // NOVO (v37): Esconde o botão zerar se não houver aposta
+                    if (resetContagemButton) resetContagemButton.style.display = 'none'; 
                     return;
                 }
 
@@ -521,7 +563,7 @@
                     total_admin_final = total_admin + sobra_dos_centavos;
                 }
 
-                // --- 6. GERAÇÃO DE TEXTO (v34 - MUDANÇA AQUI) ---
+                // --- 6. GERAÇÃO DE TEXTO (v34) ---
                 
                 const now = new Date();
                 const date = now.toLocaleDateString('pt-BR');
@@ -533,7 +575,6 @@
                 let texto_html_para_tela = "";
                 let texto_sobra_tela = (sobra_dos_centavos > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n` : "";
 
-                // --- NOVO (v34): Gerador de Resumo "Mastigado V2" ---
                 function gerarResumoPoteDinamico() {
                     let textoWA = "\nResumo do Pote:\n";
                     let textoHTML = "--------------------\n*Resumo do Pote:*\n";
@@ -541,29 +582,22 @@
                     const chavesOrdenadas = Object.keys(contagemPote).sort((a, b) => parseInt(a) - parseInt(b));
                     
                     for (const cotaKey of chavesOrdenadas) {
-                        const count = contagemPote[cotaKey]; // Quantas vezes clicou (ex: 23)
+                        const count = contagemPote[cotaKey]; 
                         if (count > 0) {
-                            const cotaTipo = parseInt(cotaKey); // Tipo da cota (ex: 1 ou 4)
+                            const cotaTipo = parseInt(cotaKey); 
                             const valorPago = formatar_brl(valor_por_cota_arredondado * cotaTipo);
                             
-                            // Valor em R$ da aposta (ex: "R$ 15,00" ou "R$ 60,00")
                             const valorMonetario = formatar_brl(cotaTipo * VALOR_COTA_BASE_REAIS);
-                            
-                            // Monta a descrição: "Aposta de R$ 15,00" ou "Aposta de R$ 60,00"
                             const descAposta = `Aposta de ${valorMonetario}`;
                             
-                            // Monta a linha final
                             textoWA += `• ${count}x (${descAposta}): Recebe ${valorPago}\n`;
                             textoHTML += `• ${count}x (${descAposta}): Recebe *${valorPago}*\n`;
                         }
                     }
                     return { wa: textoWA, html: textoHTML };
                 }
-                // --- Fim do Gerador ---
-
 
                 if (num_cotas_do_pote_atual === 0) {
-                    // --- Caso Ninguém no Pote ---
                     const total_1_lugar_final = total_1_lugar + pote_final_divisao;
                     const valor_acumulado = bns_1_lugar_calc + pote_final_divisao;
                     
@@ -588,8 +622,7 @@
                         `(Base: ${formatar_brl(valor_1_lugar_base)}, Bônus: ${formatar_brl(bns_1_lugar_calc)}, Resto: ${formatar_brl(pote_final_divisao)})`;
 
                 } else { 
-                    // --- Caso Normal (Pelo menos 1 no pote) ---
-                    const resumoDinamico = gerarResumoPoteDinamico(); // <-- NOVO (v34)
+                    const resumoDinamico = gerarResumoPoteDinamico();
                     
                     texto_resumo_1lugar_wa = 
                         `🏆 RESUMO GANHADOR.\n` +
@@ -601,7 +634,7 @@
                         `👥 RESUMO PARTICIPANTES\n\n` +
                         `Nº de Cotas (do Pote): ${num_cotas_do_pote_atual}\n` +
                         `Valor base por Cota: ${formatar_brl(valor_por_cota_arredondado)}\n` +
-                        `${resumoDinamico.wa}`; // <-- NOVO (v34)
+                        `${resumoDinamico.wa}`;
                     
                     texto_html_para_tela = 
                         `*Prêmio Bruto (Ref. ${valor_aposta}): ${formatar_brl(premio_bruto)}*\n` +
@@ -622,7 +655,7 @@
                         `Divisão por ${num_cotas_do_pote_atual} cotas do pote\n\n` +
                         `*💰 Valor base p/ Cota: ${formatar_brl(valor_por_cota_arredondado)} (Redondo)*\n` +
                         `*⚙️ Admin (Total Final c/ Sobra): ${formatar_brl(total_admin_final)}*\n` +
-                        `${resumoDinamico.html}`; // <-- NOVO (v34)
+                        `${resumoDinamico.html}`;
                 }
 
                 const texto_final_whatsapp = 
@@ -656,7 +689,11 @@
                 
                 document.getElementById('textoHtmlResultado').innerHTML = texto_html;
                 document.getElementById('linkWhatsappResultado').href = link_whatsapp;
+                
+                // NOVO (v37): Mostra o resultado E o botão zerar
                 areaResultado.style.display = 'block';
+                if (resetContagemButton) resetContagemButton.style.display = 'block';
+                
                 atualizarDisplayResultado();
             }
 
@@ -689,11 +726,14 @@
                 calcularEAtualizar();
             }
 
-            // --- FUNÇÃO DE RESETAR ---
+            // --- FUNÇÃO DE RESETAR (v37) ---
             function resetarContagem() {
                 cotasGanhador = 0;
                 contagemPote = {};
                 apostaAtual = 0;
+                
+                // NOVO (v37): Esconde o botão zerar ao resetar
+                if (resetContagemButton) resetContagemButton.style.display = 'none';
                 
                 document.querySelectorAll('.botao-premio').forEach(btn => btn.classList.remove('active'));
                 
@@ -734,17 +774,21 @@
             });
 
 
-            // D. LÓGICA DO MODAL DE CONFIGURAÇÃO
+            // D. LÓGICA DO MODAL DE CONFIGURAÇÃO (v36)
             configButton.addEventListener('click', function() {
                 inputBaseCotasModal.value = valorBaseCotas;
                 inputBonus1LugarPct.value = bonus1LugarPct;
                 inputBonusAdminPct.value = bonusAdminPct;
                 inputBonusPotePct.value = bonusPotePct;
                 configModal.style.display = 'flex';
+                bodyElement.classList.add('modal-open'); 
             });
+
             cancelConfig.addEventListener('click', function() {
                 configModal.style.display = 'none';
+                bodyElement.classList.remove('modal-open'); 
             });
+            
             saveConfig.addEventListener('click', function() {
                 const novaBaseCotas = parseInt(inputBaseCotasModal.value, 10);
                 const novoBonus1 = parseFloat(inputBonus1LugarPct.value);
@@ -768,7 +812,10 @@
                 localStorage.setItem(STORAGE_KEY_BONUS_1ST_PCT, bonus1LugarPct);
                 localStorage.setItem(STORAGE_KEY_BONUS_ADMIN_PCT, bonusAdminPct);
                 localStorage.setItem(STORAGE_KEY_BONUS_POTE_PCT, bonusPotePct);
+                
                 configModal.style.display = 'none';
+                bodyElement.classList.remove('modal-open'); 
+                
                 calcularEAtualizar();
             });
 
@@ -781,9 +828,9 @@
                 }
             });
             
-            // --- Listeners do Contador Inteligente (v33) ---
+            // --- Listeners do Contador Inteligente ---
             
-            // G. Clique nos Botões do GANHADOR (Define o valor)
+            // G. Clique nos Botões do GANHADOR
             if (ganhadorBotoesContainer) {
                 ganhadorBotoesContainer.addEventListener('click', function(e) {
                     const target = e.target.closest('[data-add-ganhador]');
@@ -797,7 +844,7 @@
                 });
             }
 
-            // H. Clique nos Botões do POTE (Soma o valor)
+            // H. Clique nos Botões do POTE
             todosOsBotoesPote.forEach(container => {
                 container.addEventListener('click', function(e) {
                     const target = e.target.closest('[data-add-pote]');
