@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v40 (Layout 15 Botões)</title>
+    <title>Calculadora de Bolão (VIP) - v41 (Layout Profissional)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -21,29 +21,71 @@
         .container { 
             max-width: 600px; 
             margin: 10px auto; 
-            background: #333; 
-            padding: 24px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
-            border: 1px solid #444; 
+            /* Remove o padding do container, os cards terão o seu */
+            padding: 0; 
         }
         .logo { 
             display: block; 
             max-width: 150px; 
             height: auto; 
             margin: 0 auto 20px auto; 
-            border-bottom: 2px solid #444; 
-            padding-bottom: 15px; 
+            padding-top: 10px;
         }
+        
+        /* NOVO (v41): Estrutura de Card */
+        .card {
+            background: #333;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .card h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #fff;
+            font-size: 1.25em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #4a4a4a;
+            padding-bottom: 15px;
+        }
+        
+        /* Círculo do número do passo */
+        .card h2 span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: #25D366;
+            color: #111;
+            font-size: 0.85em;
+            font-weight: 700;
+            border-radius: 50%;
+            margin-right: 12px;
+        }
+        
+        /* NOVO (v41): Grid de 2 colunas para inputs */
+        .grid-2-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
         
         /* --- ESTILOS DOS FORMULÁRIOS --- */
         label { 
             display: block; 
             margin-bottom: 8px; 
             font-weight: 600; 
-            color: #ffffff; 
+            color: #eee; 
+            font-size: 0.9em;
         }
-        .form-group { margin-bottom: 20px; }
+        .form-group { margin-bottom: 10px; }
         .form-group input[type="number"], 
         .form-group select { 
             width: 100%; 
@@ -68,12 +110,13 @@
         }
         .help-text { 
             font-size: 0.85em; 
-            color: #ffffff; 
+            color: #ccc; 
             margin-top: 5px; 
             font-style: italic; 
+            margin-bottom: 10px;
         }
         
-        /* --- ESTILOS DOS BOTÕES (v39) --- */
+        /* --- ESTILOS DOS BOTÕES (v41) --- */
         .botoes-grid { 
             display: grid; 
             grid-template-columns: repeat(5, 1fr); 
@@ -84,7 +127,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-top: 10px;
+            margin-bottom: 10px;
         }
 
         .botao-premio { 
@@ -103,13 +146,15 @@
             background: #555; 
             color: #fff; 
         }
-        .botao-premio.active { 
+        /* Botão de Aposta (Passo 2) Ativo */
+        #premio_botoes .botao-premio.active { 
             background: #25D366; 
             color: #111; 
             border: none; 
             transform: scale(1.05); 
             box-shadow: 0 0 10px rgba(37, 211, 102, 0.3); 
         }
+        
         .botao-ganhador {
             background: #3a7bd5;
             color: #fff;
@@ -117,11 +162,14 @@
         .botao-ganhador:hover {
             background: #4a8ff7;
         }
-        .botao-ganhador.active {
+        /* Botão Ganhador (Passo 3) Ativo */
+        #ganhador_botoes .botao-premio.active {
              background: #00d2ff;
              color: #111;
              transform: scale(1.05); 
+             box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
         }
+        
         .botao-pote {
             background: #1f9c54;
             color: #fff;
@@ -138,7 +186,6 @@
         .botao-pote-rapido:hover {
             background: #1f9c54;
         }
-
 
         .botao-config { 
             background: #555; 
@@ -170,22 +217,35 @@
             transition: transform 0.2s; 
         }
         .botao-wpp:hover { transform: scale(1.02); }
+        
+        /* NOVO (v41): Resultado agora é um card */
         .resultado { 
-            margin-top: 20px; 
-            padding: 20px; 
-            background: #3a3a3a; 
-            border: 1px solid #555; 
-            border-radius: 8px; 
             display: none; 
+            background: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
-        .resultado h3 { margin-top: 0; color: #fff; }
-        .divisao-box { 
-            background: #404040; 
-            border: none; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin-top: 20px; 
+        .resultado h3 { 
+            margin-top: 0; 
+            color: #fff;
+            font-size: 1.25em;
+            font-weight: 600;
         }
+        
+        /* NOVO (v41): Card de Resumo da Contagem */
+        .card-resumo-contagem {
+             background: #3a3a3a;
+        }
+        .card-resumo-contagem .form-group input {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #25D366;
+            text-align: center;
+        }
+        
         
         /* --- ESTILOS DO MODAL DE CONFIGURAÇÃO --- */
         .modal-overlay { 
@@ -213,6 +273,10 @@
             color: #fff; 
             border-bottom: 2px solid #444; 
             padding-bottom: 15px; 
+            font-size: 1.25em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
         }
         .modal-content p { color: #ccc; }
         .modal-buttons { 
@@ -239,7 +303,7 @@
         }
         #resultadoHeader span { 
             position: absolute; 
-            right: 5px; 
+            right: 0px; /* Alinhado à direita do card */
             top: 50%; 
             transform: translateY(-50%); 
             color: #25D366; 
@@ -253,12 +317,21 @@
             background: #c94444; /* Vermelho */
             color: #fff;
             font-weight: bold;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 0px; /* v37 o tinha */
+            margin-bottom: 15px; /* Novo espaço */
+            display: none; /* Começa escondido */
         }
         #resetContagem:hover {
             background: #e06c6c;
         }
         
-        /* --- (v37): Media Query para Celular --- */
+        /* --- (v39): Media Query para Celular --- */
         @media (max-width: 480px) {
             /* Força 3 colunas em telas pequenas para botões maiores */
             .botoes-grid {
@@ -281,7 +354,19 @@
                 padding: 5px;
             }
             .container {
+                padding: 0 5px; /* Espaço nas laterais */
+            }
+            .card {
                 padding: 15px;
+            }
+            
+            /* Força 1 coluna nos inputs de config e resumo */
+            .grid-2-col {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .form-group {
+                margin-bottom: 15px;
             }
         }
         
@@ -292,27 +377,45 @@
     <div class="container">
         <img src="seu-logo.png" alt="Logo do Bolão" class="logo">
         
-        <div class="form-group">
-            <label for="select_taxa_admin">1. Taxa de Administração (%):</label>
-            <select id="select_taxa_admin"></select>
-            <p class="help-text">Define a % do Prêmio Bruto total para o Admin.</p>
+        <div class="card">
+            <h2><span>1</span> Configurações Principais</h2>
+            <div class="grid-2-col">
+                <div class="form-group">
+                    <label for="select_taxa_admin">Taxa de Administração (%):</label>
+                    <select id="select_taxa_admin"></select>
+                </div>
+                <div class="form-group">
+                    <label for="pct_1_lugar">Porcentagem 1º Lugar (%):</label>
+                    <input type="number" id="pct_1_lugar" step="0.1">
+                </div>
+            </div>
+            <button id="configButton" class="botao-config">⚙️ Configurar Bônus de Faltantes</button>
+        </div>
+        
+        <div class="card">
+            <h2><span>2</span> Selecione a Aposta (Prêmio Bruto)</h2>
+            <p class="help-text" style="margin: -10px 0 10px 0;">(Ex: Botão 30 x Multiplicador 80 = R$ 2.400,00 de Prêmio Bruto)</p>
+            <div id="premio_botoes" class="botoes-grid">
+                <button class="botao-premio" data-valor="15">15</button>
+                <button class="botao-premio" data-valor="30">30</button>
+                <button class="botao-premio" data-valor="45">45</button>
+                <button class="botao-premio" data-valor="60">60</button>
+                <button class="botao-premio" data-valor="75">75</button>
+                <button class="botao-premio" data-valor="90">90</button>
+                <button class="botao-premio" data-valor="105">105</button>
+                <button class="botao-premio" data-valor="120">120</button>
+                <button class="botao-premio" data-valor="135">135</button>
+                <button class="botao-premio" data-valor="150">150</button>
+                <button class="botao-premio" data-valor="165">165</button>
+                <button class="botao-premio" data-valor="180">180</button>
+                <button class="botao-premio" data-valor="195">195</button>
+                <button class="botao-premio" data-valor="210">210</button> <button class="botao-premio" data-valor="300">300</button>
+            </div>
         </div>
 
-        <div class="divisao-box">
-            <div class="form-group">
-                <label for="pct_1_lugar">Porcentagem 1º Lugar (%):</label>
-                <input type="number" id="pct_1_lugar" step="0.1">
-                <p class="help-text">Define a % do Prêmio Bruto total para o 1º Lugar.</p>
-            </div>
-            
-            <button id="configButton" class="botao-config">⚙️ Configurar Regras de Bônus</button>
-            <p class="help-text" style="text-align: center; margin-top: 5px;">(Define o Total Planejado e o que fazer com cotas faltantes)</p>
-            
-            <hr style="margin: 20px 0; border-color: #555;">
-            
-            <label style="font-weight: 600; margin-top: 10px;">2. Adicionar Ganhador (1º Lugar):</label>
-            <p class="help-text" style="margin-top: -5px; margin-bottom: 10px;">(Clique 1x no botão do ganhador)</p>
-            
+        <div class="card">
+            <h2><span>3</span> Adicionar Ganhador (1º Lugar)</h2>
+            <p class="help-text" style="margin: -10px 0 10px 0;">(Clique 1x no botão do ganhador)</p>
             <div id="ganhador_botoes" class="botoes-grid">
                 <button class="botao-premio botao-ganhador" data-add-ganhador="1">G: +1 (15)</button>
                 <button class="botao-premio botao-ganhador" data-add-ganhador="2">G: +2 (30)</button>
@@ -327,18 +430,17 @@
                 <button class="botao-premio botao-ganhador" data-add-ganhador="11">G: +11 (165)</button>
                 <button class="botao-premio botao-ganhador" data-add-ganhador="12">G: +12 (180)</button>
                 <button class="botao-premio botao-ganhador" data-add-ganhador="13">G: +13 (195)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="14">G: +14 (210)</button>
-                <button class="botao-premio botao-ganhador" data-add-ganhador="20">G: +20 (300)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="14">G: +14 (210)</button> <button class="botao-premio botao-ganhador" data-add-ganhador="20">G: +20 (300)</button>
             </div>
-
-            <label style="font-weight: 600; margin-top: 20px;">3. Somar Cotas *do Pote* (p/ dividir):</label>
-             <p class="help-text" style="margin-top: -5px; margin-bottom: 10px;">(Some todos os outros que vão dividir)</p>
-            
+        </div>
+        
+        <div class="card">
+            <h2><span>4</span> Somar Cotas do Pote</h2>
+            <p class="help-text" style="margin: -10px 0 10px 0;">(Some todos os outros que vão dividir)</p>
             <div class="botoes-grid-rapida">
                 <button class="botao-premio botao-pote-rapido" data-add-pote="1" data-count="10">P: +10x (de 15)</button>
                 <button class="botao-premio botao-pote-rapido" data-add-pote="1" data-count="20">P: +20x (de 15)</button>
             </div>
-             
             <div id="pote_botoes" class="botoes-grid">
                 <button class="botao-premio botao-pote" data-add-pote="1">P: +1 (15)</button>
                 <button class="botao-premio botao-pote" data-add-pote="2">P: +2 (30)</button>
@@ -353,58 +455,36 @@
                 <button class="botao-premio botao-pote" data-add-pote="11">P: +11 (165)</button>
                 <button class="botao-premio botao-pote" data-add-pote="12">P: +12 (180)</button>
                 <button class="botao-premio botao-pote" data-add-pote="13">P: +13 (195)</button>
-                <button class="botao-premio botao-pote" data-add-pote="14">P: +14 (210)</button>
-                <button class="botao-premio botao-pote" data-add-pote="20">P: +20 (300)</button>
+                <button class="botao-premio botao-pote" data-add-pote="14">P: +14 (210)</button> <button class="botao-premio botao-pote" data-add-pote="20">P: +20 (300)</button>
             </div>
-
-            <hr style="margin: 20px 0; border-color: #555;">
-
-            <div class="form-group">
-                <label for="num_cotas_presentes">Total de Cotas *Presentes* (Automático):</label>
-                <input type="number" id="num_cotas_presentes" value="0" readonly>
-                <p class="help-text">(Soma de Ganhador + Pote). Usado para o Bônus.</p>
-            </div>
-
-            <div class="form-group">
-                <label for="num_cotas_do_pote">Total de Cotas *do Pote* (Automático):</label>
-                <input type="number" id="num_cotas_do_pote" value="0" readonly>
-                <p class="help-text">Usado para a Divisão do Pote.</p>
-            </div>
-            
         </div>
 
-        <hr style="margin: 20px 0; border-color: #444;">
-
-        <label>4. Selecione a Aposta (Define o Prêmio Bruto):</label>
-        <p class="help-text" style="margin-top: -5px; margin-bottom: 10px;">(Ex: Botão 30 x Multiplicador 80 = R$ 2.400,00 de Prêmio Bruto)</p>
-        
-        <div id="premio_botoes" class="botoes-grid">
-            <button class="botao-premio" data-valor="15">15</button>
-            <button class="botao-premio" data-valor="30">30</button>
-            <button class="botao-premio" data-valor="45">45</button>
-            <button class="botao-premio" data-valor="60">60</button>
-            <button class="botao-premio" data-valor="75">75</button>
-            <button class="botao-premio" data-valor="90">90</button>
-            <button class="botao-premio" data-valor="105">105</button>
-            <button class="botao-premio" data-valor="120">120</button>
-            <button class="botao-premio" data-valor="135">135</button>
-            <button class="botao-premio" data-valor="150">150</button>
-            <button class="botao-premio" data-valor="165">165</button>
-            <button class="botao-premio" data-valor="180">180</button>
-            <button class="botao-premio" data-valor="195">195</button>
-            <button class="botao-premio" data-valor="210">210</button>
-            <button class="botao-premio" data-valor="300">300</button>
+        <div class="card card-resumo-contagem">
+             <h2><span>5</span> Resumo da Contagem</h2>
+             <div class="grid-2-col">
+                 <div class="form-group">
+                    <label for="num_cotas_presentes">Total de Cotas Presentes:</label>
+                    <input type="number" id="num_cotas_presentes" value="0" readonly>
+                    <p class="help-text" style="text-align: center;">(Usado para o Bônus)</p>
+                 </div>
+                 <div class="form-group">
+                    <label for="num_cotas_do_pote">Total de Cotas do Pote:</label>
+                    <input type="number" id="num_cotas_do_pote" value="0" readonly>
+                    <p class="help-text" style="text-align: center;">(Usado para a Divisão)</p>
+                 </div>
+             </div>
         </div>
-
-        <div id="resultadoArea" class="resultado"></div>
         
-        <button id="resetContagem" class="botao-config" style="margin-top: 15px; display: none;">Zerar Contagem (Ganhador e Pote)</button>
+        <div id="resultadoArea" class="resultado">
+            </div>
+        
+        <button id="resetContagem" class="botao-config">Zerar Contagem</button>
 
     </div>
 
     <div id="configModal" class="modal-overlay">
         <div class="modal-content">
-            <h2>Configurar Regras de Bônus (%)</h2>
+            <h2>⚙️ Configurar Bônus de Faltantes</h2>
             <p>Defina como a cota de um participante faltante será dividida (a soma deve ser 100%).</p>
             <div class="form-group">
                 <label for="inputBaseCotasModal">Total de Cotas *Planejado* (Base p/ Bônus):</label>
@@ -432,21 +512,21 @@
     </div>
     
     <script>
-        // (v40): Espera todo o HTML carregar
+        // (v41): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
             const MULTIPLICADOR = 80;
-            const VALOR_COTA_BASE_REAIS = 15; // Define R$ 15,00 como a base
+            const VALOR_COTA_BASE_REAIS = 15;
             
-            // Chaves do LocalStorage (v40)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v40';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v40';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v40'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v40';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v40';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v40';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v40';
+            // Chaves do LocalStorage (v41)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v41';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v41';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v41'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v41';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v41';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v41';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v41';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
@@ -518,9 +598,11 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v40 - Lógica v34) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v41 - Lógica v34) ---
             function calcularEAtualizar() {
-                if (apostaAtual === 0) {
+                // Modificado (v41): Só roda o cálculo se os 3 passos estiverem prontos
+                const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
+                if (apostaAtual === 0 || num_cotas_presentes_atual === 0) {
                     areaResultado.style.display = 'none';
                     if (resetContagemButton) resetContagemButton.style.display = 'none'; 
                     return;
@@ -532,10 +614,7 @@
                 const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0; 
                 const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
                 const base_cotas = valorBaseCotas; 
-                const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
                 const num_cotas_do_pote_atual = parseInt(inputNumCotasDoPote.value) || 0;
-                
-                if (num_cotas_presentes_atual < 0 || num_cotas_do_pote_atual < 0) return;
                 
                 const premio_bruto = valor_aposta * MULTIPLICADOR;
                 const valor_1_lugar_base = premio_bruto * (pct_1_lugar / 100);
@@ -611,7 +690,7 @@
                     return { wa: textoWA, html: textoHTML };
                 }
 
-                if (num_cotas_do_pote_atual === 0) {
+                if (num_cotas_do_pote_atual === 0 && cotasGanhador > 0) {
                     const total_1_lugar_final = total_1_lugar + pote_final_divisao;
                     const valor_acumulado = bns_1_lugar_calc + pote_final_divisao;
                     
@@ -688,7 +767,7 @@
 
                 if (!document.getElementById('resultadoHeader')) {
                     areaResultado.innerHTML = `
-                        <h3 id="resultadoHeader">Resumo do Cálculo (Admin) <span id="toggleIcon"></span></h3>
+                        <h3 id="resultadoHeader"><span>6</span> Resultado Final <span id="toggleIcon"></span></h3>
                         <div id="resultadoConteudo">
                             <p id="textoHtmlResultado"></p>
                             <a id="linkWhatsappResultado" href="#" target="_blank" class="botao-wpp">
