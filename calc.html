@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v28 (Divisão Justa)</title>
+    <title>Calculadora de Bolão (VIP) - v29 (Modo Fácil)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -51,6 +51,13 @@
             font-size: 1.1em; 
             font-weight: 500; 
         }
+        /* NOVO (v29): Estilo para campos "readonly" */
+        .form-group input[readonly] {
+            background: #444;
+            color: #bbb;
+            cursor: not-allowed;
+        }
+        
         .form-group input[type="number"]:focus, 
         .form-group select:focus { 
             border-color: #25D366; 
@@ -87,6 +94,7 @@
             background: #555; 
             color: #fff; 
         }
+        /* Botão de Aposta Ativo (Verde) */
         .botao-premio.active { 
             background: #25D366; 
             color: #111; 
@@ -94,6 +102,30 @@
             transform: scale(1.05); 
             box-shadow: 0 0 10px rgba(37, 211, 102, 0.3); 
         }
+        
+        /* NOVO (v29): Botão do Ganhador (Azul) */
+        .botao-ganhador {
+            background: #3a7bd5;
+            color: #fff;
+        }
+        .botao-ganhador:hover {
+            background: #4a8ff7;
+        }
+        .botao-ganhador.active {
+             background: #00d2ff;
+             color: #111;
+             transform: scale(1.05); 
+        }
+
+        /* NOVO (v29): Botão do Pote (Verde Claro) */
+        .botao-pote {
+            background: #1f9c54;
+            color: #fff;
+        }
+        .botao-pote:hover {
+            background: #25D366;
+        }
+
         .botao-config { 
             background: #555; 
             color: #ddd; 
@@ -201,12 +233,12 @@
         }
         
         /* --- ESTILO PARA BOTÃO ZERAR --- */
-        #resetCotas {
+        #resetContagem {
             background: #c94444; /* Vermelho */
             color: #fff;
             font-weight: bold;
         }
-        #resetCotas:hover {
+        #resetContagem:hover {
             background: #e06c6c;
         }
     </style>
@@ -234,34 +266,40 @@
             
             <hr style="margin: 20px 0; border-color: #555;">
             
-            <div class="form-group">
-                <label for="num_cotas_presentes">2. Nº de Cotas *Presentes* (Total):</label>
-                <input type="number" id="num_cotas_presentes" value="0">
-                <p class="help-text">Soma de TODAS as cotas que pagaram (incluindo o 1º Lugar).</p>
+            <button id="resetContagem" class="botao-config">Zerar Contagem (Ganhador e Pote)</button>
+
+            <label style="font-weight: 600; margin-top: 20px;">2. Adicionar Ganhador (1º Lugar):</label>
+            <p class="help-text" style="margin-top: -5px; margin-bottom: 10px;">(Clique 1x no botão do ganhador)</p>
+            <div id="ganhador_botoes" class="botoes-grid">
+                <button class="botao-premio botao-ganhador" data-add-ganhador="1">G: +1 (15)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="2">G: +2 (30)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="3">G: +3 (45)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="4">G: +4 (60)</button>
+                <button class="botao-premio botao-ganhador" data-add-ganhador="10">G: +10 (150)</button>
             </div>
 
-            <label style="font-weight: 600;">3. Somar Cotas *do Pote* (Base R$15):</label>
-            <p class="help-text" style="margin-top: -5px; margin-bottom: 10px;">(Clique para somar APENAS quem vai dividir o pote. NÃO inclua o 1º Lugar aqui).</p>
-            
-            <div id="cota_adder_botoes" class="botoes-grid" style="margin-top: 0; margin-bottom: 10px;">
-                <button class="botao-premio" data-add-cota="1">+1 (15)</button>
-                <button class="botao-premio" data-add-cota="2">+2 (30)</button>
-                <button class="botao-premio" data-add-cota="3">+3 (45)</button>
-                <button class="botao-premio" data-add-cota="4">+4 (60)</button>
-                <button class="botao-premio" data-add-cota="5">+5 (75)</button>
-                <button class="botao-premio" data-add-cota="6">+6 (90)</button>
-                <button class="botao-premio" data-add-cota="7">+7 (105)</button>
-                <button class="botao-premio" data-add-cota="8">+8 (120)</button>
-                <button class="botao-premio" data-add-cota="10">+10 (150)</button>
-                <button class="botao-premio" data-add-cota="12">+12 (180)</button>
-                <button class="botao-premio" data-add-cota="20">+20 (300)</button>
+            <label style="font-weight: 600; margin-top: 20px;">3. Somar Cotas *do Pote* (p/ dividir):</label>
+             <p class="help-text" style="margin-top: -5px; margin-bottom: 10px;">(Some todos os outros que vão dividir)</p>
+            <div id="pote_botoes" class="botoes-grid">
+                <button class="botao-premio botao-pote" data-add-pote="1">P: +1 (15)</button>
+                <button class="botao-premio botao-pote" data-add-pote="2">P: +2 (30)</button>
+                <button class="botao-premio botao-pote" data-add-pote="3">P: +3 (45)</button>
+                <button class="botao-premio botao-pote" data-add-pote="4">P: +4 (60)</button>
+                <button class="botao-premio botao-pote" data-add-pote="10">P: +10 (150)</button>
             </div>
-            <button id="resetCotas" class="botao-config">Zerar Contagem do Pote</button>
-            
-            <div class="form-group" style="margin-top: 20px;">
-                <label for="num_cotas_do_pote">Nº de Cotas *do Pote* (p/ dividir):</label>
-                <input type="number" id="num_cotas_do_pote" value="0">
-                <p class="help-text">Use os botões acima ou digite a soma das cotas (sem o 1º Lugar).</p>
+
+            <hr style="margin: 20px 0; border-color: #555;">
+
+            <div class="form-group">
+                <label for="num_cotas_presentes">Total de Cotas *Presentes* (Automático):</label>
+                <input type="number" id="num_cotas_presentes" value="0" readonly>
+                <p class="help-text">(Soma de Ganhador + Pote). Usado para o Bônus.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="num_cotas_do_pote">Total de Cotas *do Pote* (Automático):</label>
+                <input type="number" id="num_cotas_do_pote" value="0" readonly>
+                <p class="help-text">Usado para a Divisão do Pote.</p>
             </div>
             
         </div>
@@ -293,80 +331,79 @@
         <div class="modal-content">
             <h2>Configurar Regras de Bônus (%)</h2>
             <p>Defina como a cota de um participante faltante será dividida (a soma deve ser 100%).</p>
-            
             <div class="form-group">
                 <label for="inputBaseCotasModal">Total de Cotas *Planejado* (Base p/ Bônus):</label>
                 <input type="number" id="inputBaseCotasModal">
                 <p class="help-text" style="margin-bottom: 0px;">Ex: Se o bolão é para 29 cotas, digite 29.</p>
             </div>
-            
             <hr style="margin: 20px 0; border-color: #444;">
-            
             <div class="form-group">
                 <label for="inputBonus1LugarPct">% da Cota p/ 1º Lugar:</label>
                 <input type="number" id="inputBonus1LugarPct" step="0.1">
             </div>
-            
             <div class="form-group">
                 <label for="inputBonusAdminPct">% da Cota p/ Admin:</label>
                 <input type="number" id="inputBonusAdminPct" step="0.1">
             </div>
-            
             <div class="form-group">
                 <label for="inputBonusPotePct">% da Cota p/ Pote:</label>
                 <input type="number" id="inputBonusPotePct" step="0.1">
             </div>
-            
             <div class="modal-buttons">
                 <button id="cancelConfig">Cancelar</button>
                 <button id="saveConfig">Salvar Alterações</button>
             </div>
         </div>
     </div>
+    
     <script>
-        // (v28): Espera todo o HTML carregar
+        // (v29): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
             const MULTIPLICADOR = 80;
-            const VALOR_BASE_COTA = 15;
             
-            // Chaves do LocalStorage (v28)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v28';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v28';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v28'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v28';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v28';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v28';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v28';
+            // Chaves do LocalStorage (v29)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v29';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v29';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v29'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v29';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v29';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v29';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v29';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
             let valor1LugarOriginal = "50";
-            let valorBaseCotas = 24; // Valor padrão, pode ser mudado no modal
+            let valorBaseCotas = 24;
             let bonus1LugarPct = 60;
             let bonusAdminPct = 20;
             let bonusPotePct = 20;
             let isResultadoMinimizado = false;
 
+            // --- NOVO (v29): Variáveis de contagem ---
+            let cotasGanhador = 0;
+            let cotasPote = 0;
+
             // --- ELEMENTOS ---
             const selectTaxaAdmin = document.getElementById('select_taxa_admin');
             const containerPremio = document.getElementById('premio_botoes');
-            const premioBotoes = containerPremio.querySelectorAll('.botao-premio');
+            const premioBotoes = containerPremio.querySelectorAll('.botao-premio[data-valor]'); // Botões de Aposta
             const areaResultado = document.getElementById('resultadoArea');
             const inputPct1Lugar = document.getElementById('pct_1_lugar');
             
-            // --- NOVOS ELEMENTOS (v28) ---
-            const inputNumCotasPresentes = document.getElementById('num_cotas_presentes'); // NOVO
-            const inputNumCotasDoPote = document.getElementById('num_cotas_do_pote'); // Renomeado
-            
-            // Elementos do Somador de Cotas
-            const cotaAdderContainer = document.getElementById('cota_adder_botoes');
-            const resetCotasButton = document.getElementById('resetCotas');
+            // Elementos de Contagem (v29)
+            const inputNumCotasPresentes = document.getElementById('num_cotas_presentes'); 
+            const inputNumCotasDoPote = document.getElementById('num_cotas_do_pote');
+            const ganhadorBotoesContainer = document.getElementById('ganhador_botoes');
+            const poteBotoesContainer = document.getElementById('pote_botoes');
+            const resetContagemButton = document.getElementById('resetContagem');
+            const todosBotoesDeContagem = document.querySelectorAll('.botao-ganhador, .botao-pote');
 
             // Elementos do Modal
             const configButton = document.getElementById('configButton');
             const configModal = document.getElementById('configModal');
+            // ... (resto dos elementos do modal)
             const saveConfig = document.getElementById('saveConfig');
             const cancelConfig = document.getElementById('cancelConfig');
             const inputBaseCotasModal = document.getElementById('inputBaseCotasModal');
@@ -374,7 +411,8 @@
             const inputBonusAdminPct = document.getElementById('inputBonusAdminPct');
             const inputBonusPotePct = document.getElementById('inputBonusPotePct');
 
-            // --- 1. FUNÇÃO DE PREENCHER O SELECT (5 em 5) ---
+
+            // --- 1. FUNÇÃO DE PREENCHER O SELECT ---
             function popularSelectAdmin() {
                 for (let i = 0; i <= 100; i += 5) {
                     const option = document.createElement('option');
@@ -406,7 +444,8 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v28) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v29) ---
+            // Esta função agora LÊ os inputs que são PREENCHIDOS pelo contador
             function calcularEAtualizar() {
                 if (apostaAtual === 0) {
                     areaResultado.style.display = 'none';
@@ -415,15 +454,15 @@
 
                 let valor_por_cota_arredondado = 0; 
                 
-                // --- 1. COLETAR DADOS (v28) ---
+                // --- 1. COLETAR DADOS (v29) ---
                 const valor_aposta = apostaAtual;
                 const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0;
                 const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
-                const base_cotas = valorBaseCotas; // Total Planejado (do Modal)
+                const base_cotas = valorBaseCotas; 
                 
-                // --- LÓGICA ATUALIZADA (v28) ---
-                const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; // Total que pagou
-                const num_cotas_do_pote_atual = parseInt(inputNumCotasDoPote.value) || 0; // Total que divide o pote
+                // Lê os valores dos inputs (que foram preenchidos pelos cliques)
+                const num_cotas_presentes_atual = parseInt(inputNumCotasPresentes.value) || 0; 
+                const num_cotas_do_pote_atual = parseInt(inputNumCotasDoPote.value) || 0;
                 
                 if (num_cotas_presentes_atual < 0 || num_cotas_do_pote_atual < 0) return;
                 
@@ -434,7 +473,7 @@
                 const premio_restante_base = premio_bruto - valor_1_lugar_base - valor_admin_base;
                 const valor_por_cota_base = (base_cotas > 0) ? (premio_restante_base / base_cotas) : 0;
 
-                // --- 3. CÁLCULOS BÔNUS (v28) ---
+                // --- 3. CÁLCULOS BÔNUS (v29) ---
                 // Compara o Planejado (base_cotas) com o Total Presente (num_cotas_presentes_atual)
                 const cotas_faltantes = Math.max(0, base_cotas - num_cotas_presentes_atual); 
                 const valor_total_cotas_faltantes = cotas_faltantes * valor_por_cota_base;
@@ -455,7 +494,7 @@
                 const pote_base_restante = premio_restante_base - valor_total_cotas_faltantes;
                 const pote_final_divisao = pote_base_restante + bns_pote_calc; 
 
-                // --- 5. LÓGICA DE ARREDONDAMENTO (v28) ---
+                // --- 5. LÓGICA DE ARREDONDAMENTO (v29) ---
                 // Divide o Pote Final pelo Nº de Cotas DO POTE (num_cotas_do_pote_atual)
                 let sobra_dos_centavos = 0;
                 let total_admin_final = total_admin;
@@ -472,9 +511,7 @@
                     total_admin_final = total_admin + sobra_dos_centavos;
                 }
 
-                // --- 6. GERAÇÃO DE TEXTO (v28) ---
-                
-                // --- A. TEXTO PARA O WHATSAPP (v28) ---
+                // --- 6. GERAÇÃO DE TEXTO (v29) ---
                 const now = new Date();
                 const date = now.toLocaleDateString('pt-BR');
                 const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -483,7 +520,6 @@
                 let texto_resumo_1lugar_wa = "";
                 let texto_resumo_participante_wa = "";
 
-                // Caso especial: Ninguém no Pote (0 cotas do pote)
                 if (num_cotas_do_pote_atual === 0) {
                     const total_1_lugar_final = total_1_lugar + pote_final_divisao;
                     const valor_acumulado = bns_1_lugar_calc + pote_final_divisao;
@@ -498,7 +534,7 @@
                         `👥 RESUMO PARTICIPANTES\n\n` +
                         `Nenhuma cota para divisão do pote.\n`; 
 
-                } else { // Caso normal: Pelo menos 1 cota no pote
+                } else { 
                     texto_resumo_1lugar_wa = 
                         `🏆 RESUMO GANHADOR.\n` +
                         `Prêmio: ${formatar_brl(valor_1_lugar_base)}\n` +
@@ -521,8 +557,6 @@
                     `--------------------\n\n` +
                     `Muito obrigado a todos!`;
 
-
-                // --- B. TEXTO PARA A TELA (Formato Detalhado) (v28) ---
                 let texto_html_para_tela = "";
                 let texto_sobra_tela = (sobra_dos_centavos > 0.01) ? `Sobra (p/ Admin): +${formatar_brl(sobra_dos_centavos)}\n` : "";
                 
@@ -543,7 +577,7 @@
                         `--------------------\n` +
                         `🏆 1º Lugar (${pct_1_lugar}%): -${formatar_brl(valor_1_lugar_base)}\n` +
                         `⚙️ Admin (${pct_admin_base}%): -${formatar_brl(valor_admin_base)}\n` +
-                        `🔩 Bônus (${cotas_faltantes} faltantes de ${base_cotas} plan.):\n` + // Texto atualizado
+                        `🔩 Bônus (${cotas_faltantes} faltantes de ${base_cotas} plan.):\n` +
                         `   (1º Lugar: +${formatar_brl(bns_1_lugar_calc)})\n` +
                         `   (Admin: +${formatar_brl(bns_admin_calc)})\n` +
                         `   (Pote: +${formatar_brl(bns_pote_calc)})\n` +
@@ -554,7 +588,7 @@
                         `--------------------\n` +
                         `Pote Final (a dividir): ${formatar_brl(pote_final_divisao)}\n` +
                         `${texto_sobra_tela}` +
-                        `Divisão por ${num_cotas_do_pote_atual} cotas do pote\n\n` + // Texto atualizado
+                        `Divisão por ${num_cotas_do_pote_atual} cotas do pote\n\n` +
                         `*💰 Valor p/ Cota: ${formatar_brl(valor_por_cota_arredondado)} (Redondo)*\n` +
                         `*⚙️ Admin (Total Final c/ Sobra): ${formatar_brl(total_admin_final)}*`;
                 }
@@ -595,9 +629,34 @@
                 bonusPotePct = parseFloat(localStorage.getItem(STORAGE_KEY_BONUS_POTE_PCT)) || 20;
                 isResultadoMinimizado = localStorage.getItem(STORAGE_KEY_MINIMIZADO) === 'true';
                 
-                // Zera os campos de cotas ao carregar
-                inputNumCotasPresentes.value = 0;
-                inputNumCotasDoPote.value = 0;
+                // Zera contagem ao carregar
+                resetarContagem();
+            }
+            
+            // --- NOVO (v29): Função de Atualizar Contadores ---
+            function atualizarInputsDeCotas() {
+                // Atualiza o input do Pote
+                inputNumCotasDoPote.value = cotasPote;
+                
+                // Calcula e atualiza o input de Presentes
+                const totalPresentes = cotasGanhador + cotasPote;
+                inputNumCotasPresentes.value = totalPresentes;
+                
+                // Roda o cálculo principal
+                calcularEAtualizar();
+            }
+
+            // --- NOVO (v29): Função de Resetar ---
+            function resetarContagem() {
+                cotasGanhador = 0;
+                cotasPote = 0;
+                apostaAtual = 0;
+                
+                // Remove destaque de todos os botões (aposta, ganhador, pote)
+                document.querySelectorAll('.botao-premio').forEach(btn => btn.classList.remove('active'));
+                
+                // Atualiza os inputs e limpa a tela de cálculo
+                atualizarInputsDeCotas();
             }
 
             // --- 5. CONFIGURAÇÃO DOS EVENT LISTENERS ---
@@ -606,8 +665,12 @@
             containerPremio.addEventListener('click', function(e) {
                 if (e.target.classList.contains('botao-premio') && e.target.dataset.valor) {
                     apostaAtual = parseFloat(e.target.dataset.valor);
-                    document.querySelectorAll('.botao-premio').forEach(btn => btn.classList.remove('active'));
+                    
+                    // Remove 'active' SÓ dos botões de aposta
+                    premioBotoes.forEach(btn => btn.classList.remove('active'));
                     e.target.classList.add('active');
+                    
+                    // Roda o cálculo
                     calcularEAtualizar();
                 }
             });
@@ -642,11 +705,9 @@
                 inputBonusPotePct.value = bonusPotePct;
                 configModal.style.display = 'flex';
             });
-
             cancelConfig.addEventListener('click', function() {
                 configModal.style.display = 'none';
             });
-
             saveConfig.addEventListener('click', function() {
                 const novaBaseCotas = parseInt(inputBaseCotasModal.value, 10);
                 const novoBonus1 = parseFloat(inputBonus1LugarPct.value);
@@ -657,32 +718,24 @@
                     alert("Por favor, preencha todos os campos com números válidos (positivos).");
                     return;
                 }
-                
                 const soma = Math.round((novoBonus1 + novoBonusAdmin + novoBonusPote) * 1000) / 1000;
                 if (soma !== 100) {
                     alert("Erro: A soma das porcentagens do bônus (1º Lugar, Admin, Pote) deve ser exatamente 100%.\n\Sua soma atual: " + soma + "%");
                     return;
                 }
-
                 valorBaseCotas = novaBaseCotas;
                 bonus1LugarPct = novoBonus1;
                 bonusAdminPct = novoBonusAdmin;
                 bonusPotePct = novoBonusPote;
-
                 localStorage.setItem(STORAGE_KEY_BASE, valorBaseCotas);
                 localStorage.setItem(STORAGE_KEY_BONUS_1ST_PCT, bonus1LugarPct);
                 localStorage.setItem(STORAGE_KEY_BONUS_ADMIN_PCT, bonusAdminPct);
                 localStorage.setItem(STORAGE_KEY_BONUS_POTE_PCT, bonusPotePct);
-
                 configModal.style.display = 'none';
                 calcularEAtualizar();
             });
 
-            // E. Inputs Manuais de Cotas (v28)
-            inputNumCotasPresentes.addEventListener('input', calcularEAtualizar); 
-            inputNumCotasDoPote.addEventListener('input', calcularEAtualizar); 
-
-            // F. LÓGICA DE MINIMIZAR O RESULTADO
+            // E. LÓGICA DE MINIMIZAR O RESULTADO
             areaResultado.addEventListener('click', function(e) {
                 if (e.target.id === 'resultadoHeader' || e.target.closest('#resultadoHeader')) {
                     isResultadoMinimizado = !isResultadoMinimizado;
@@ -691,42 +744,43 @@
                 }
             });
             
-            // --- Listeners do Somador de Cotas (v28) ---
+            // --- NOVO (v29): Listeners do Contador Inteligente ---
             
-            // G. Clique no Somador de Cotas (Alimenta o campo 'Nº de Cotas DO POTE')
-            if (cotaAdderContainer) {
-                cotaAdderContainer.addEventListener('click', function(e) {
-                    const target = e.target.closest('[data-add-cota]');
+            // G. Clique nos Botões do GANHADOR (Define o valor)
+            if (ganhadorBotoesContainer) {
+                ganhadorBotoesContainer.addEventListener('click', function(e) {
+                    const target = e.target.closest('[data-add-ganhador]');
                     if (target) {
-                        const cotasParaAdicionar = parseInt(target.dataset.addCota, 10);
-                        const cotasAtuais = parseInt(inputNumCotasDoPote.value, 10) || 0;
+                        // Remove 'active' de outros botões de ganhador
+                        ganhadorBotoesContainer.querySelectorAll('.botao-ganhador').forEach(btn => btn.classList.remove('active'));
+                        // Adiciona 'active' no clicado
+                        target.classList.add('active');
                         
-                        inputNumCotasDoPote.value = cotasAtuais + cotasParaAdicionar;
-                        
-                        calcularEAtualizar();
+                        // Define o valor (não soma)
+                        cotasGanhador = parseInt(target.dataset.addGanhador, 10);
+                        atualizarInputsDeCotas();
                     }
                 });
-            } else {
-                console.error("Erro: Elemento 'cota_adder_botoes' não encontrado.");
             }
 
-            // H. Clique no Botão de Zerar Cotas (Zera TUDO para um novo cálculo)
-            if (resetCotasButton) {
-                resetCotasButton.addEventListener('click', function(e) {
-                    e.preventDefault(); 
-                    
-                    // Zera os valores de input
-                    inputNumCotasDoPote.value = 0;
-                    inputNumCotasPresentes.value = 0;
-                    
-                    // Limpa o botão de aposta ativo
-                    document.querySelectorAll('.botao-premio').forEach(btn => btn.classList.remove('active'));
-                    apostaAtual = 0;
-                    
-                    calcularEAtualizar(); // Isso vai limpar a tela de resultado
+            // H. Clique nos Botões do POTE (Soma o valor)
+            if (poteBotoesContainer) {
+                poteBotoesContainer.addEventListener('click', function(e) {
+                    const target = e.target.closest('[data-add-pote]');
+                    if (target) {
+                        // Soma o valor
+                        cotasPote += parseInt(target.dataset.addPote, 10);
+                        atualizarInputsDeCotas();
+                    }
                 });
-            } else {
-                 console.error("Erro: Elemento 'resetCotas' não encontrado.");
+            }
+
+            // I. Clique no Botão de ZERAR CONTAGEM
+            if (resetContagemButton) {
+                resetContagemButton.addEventListener('click', function(e) {
+                    e.preventDefault(); 
+                    resetarContagem();
+                });
             }
 
 
