@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Bolão (VIP) - v38 (Botões Corrigidos)</title>
+    <title>Calculadora de Bolão (VIP) - v39 (Layout Limpo)</title>
     <style>
         /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; }
@@ -73,10 +73,11 @@
             font-style: italic; 
         }
         
-        /* --- ESTILOS DOS BOTÕES --- */
+        /* --- ESTILOS DOS BOTÕES (v39) --- */
         .botoes-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); 
+            /* NOVO (v39): Grade fixa de 5 colunas para desktop */
+            grid-template-columns: repeat(5, 1fr); 
             gap: 10px; 
             margin-top: 10px; 
         }
@@ -92,7 +93,8 @@
             background: #444; 
             color: #ddd; 
             padding: 12px 10px; 
-            border-radius: 20px; 
+            /* NOVO (v39): Borda padrão mais "quadrada" */
+            border-radius: 12px; 
             cursor: pointer; 
             font-size: 14px; 
             font-weight: 600; 
@@ -263,13 +265,13 @@
             /* Força 3 colunas em telas pequenas para botões maiores */
             .botoes-grid {
                 grid-template-columns: repeat(3, 1fr);
-                gap: 12px; /* Aumenta um pouco o espaço */
+                gap: 12px; 
             }
             
             .botao-premio {
-                font-size: 15px; /* Texto um pouco maior */
-                padding: 14px 10px; /* Botão mais alto */
-                border-radius: 12px; /* Menos arredondado */
+                font-size: 15px; 
+                padding: 14px 10px; 
+                /* border-radius: 12px; (Já é padrão) */
             }
 
             .botao-pote-rapido {
@@ -430,21 +432,21 @@
     </div>
     
     <script>
-        // (v38): Espera todo o HTML carregar
+        // (v39): Espera todo o HTML carregar
         document.addEventListener('DOMContentLoaded', function() {
         
             // --- CONSTANTES ---
             const MULTIPLICADOR = 80;
             const VALOR_COTA_BASE_REAIS = 15; // Define R$ 15,00 como a base
             
-            // Chaves do LocalStorage (v38)
-            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v38';
-            const STORAGE_KEY_1ST = 'bolao1stPct_v38';
-            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v38'; 
-            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v38';
-            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v38';
-            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v38';
-            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v38';
+            // Chaves do LocalStorage (v39)
+            const STORAGE_KEY_ADMIN = 'bolaoAdminPct_v39';
+            const STORAGE_KEY_1ST = 'bolao1stPct_v39';
+            const STORAGE_KEY_BASE = 'bolaoBaseCotas_v39'; 
+            const STORAGE_KEY_BONUS_1ST_PCT = 'bolaoBonus1stPct_v39';
+            const STORAGE_KEY_BONUS_ADMIN_PCT = 'bolaoBonusAdminPct_v39';
+            const STORAGE_KEY_BONUS_POTE_PCT = 'bolaoBonusPotePct_v39';
+            const STORAGE_KEY_MINIMIZADO = 'bolaoResultadoMinimizado_v39';
 
             // --- VARIÁVEIS DE ESTADO ---
             let apostaAtual = 0;
@@ -516,7 +518,7 @@
                 }
             }
 
-            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v38 - Lógica v34) ---
+            // --- 3. FUNÇÃO PRINCIPAL DE CÁLCULO (v39 - Lógica v34) ---
             function calcularEAtualizar() {
                 if (apostaAtual === 0) {
                     areaResultado.style.display = 'none';
@@ -526,7 +528,6 @@
 
                 let valor_por_cota_arredondado = 0; 
                 
-                // --- 1. COLETAR DADOS ---
                 const valor_aposta = apostaAtual;
                 const pct_admin_base = parseFloat(selectTaxaAdmin.value) || 0; 
                 const pct_1_lugar = parseFloat(inputPct1Lugar.value) || 0;
@@ -536,7 +537,6 @@
                 
                 if (num_cotas_presentes_atual < 0 || num_cotas_do_pote_atual < 0) return;
                 
-                // --- 2. CÁLCULOS BASE ---
                 const premio_bruto = valor_aposta * MULTIPLICADOR;
                 const valor_1_lugar_base = premio_bruto * (pct_1_lugar / 100);
                 const valor_admin_base = premio_bruto * (pct_admin_base / 100); 
@@ -544,7 +544,6 @@
                 
                 const valor_por_cota_base = (base_cotas > 0) ? (premio_restante_base / base_cotas) : 0;
 
-                // --- 3. CÁLCULOS BÔNUS ---
                 const cotas_faltantes = Math.max(0, base_cotas - num_cotas_presentes_atual); 
                 const valor_total_cotas_faltantes = cotas_faltantes * valor_por_cota_base;
                 
@@ -558,13 +557,11 @@
                     bns_pote_calc = valor_total_cotas_faltantes * (bonusPotePct / 100);
                 }
 
-                // --- 4. TOTAIS ---
                 const total_1_lugar = valor_1_lugar_base + bns_1_lugar_calc;
                 const total_admin = valor_admin_base + bns_admin_calc;
                 const pote_base_restante = premio_restante_base - valor_total_cotas_faltantes;
                 const pote_final_divisao = pote_base_restante + bns_pote_calc; 
 
-                // --- 5. LÓGICA DE ARREDONDAMENTO ---
                 let sobra_dos_centavos = 0;
                 let total_admin_final = total_admin;
                 
@@ -678,7 +675,7 @@
                 const texto_final_whatsapp = 
                     `🎉 RESUMO DE GANHOS VIP BOLÃO 🎉\n\n` +
                     `Gerado: ${timestamp}\n` +
-                    `--------------------\n` +
+                    `--------------------\n\n` +
                     `${texto_resumo_1lugar_wa}\n` +
                     `--------------------\n\n` +
                     `${texto_resumo_participante_wa}` +
@@ -789,7 +786,7 @@
             });
 
 
-            // D. LÓGICA DO MODAL DE CONFIGURAÇÃO
+            // D. LÓGICA DO MODAL DE CONFIGURAÇÃO (v36)
             configButton.addEventListener('click', function() {
                 inputBaseCotasModal.value = valorBaseCotas;
                 inputBonus1LugarPct.value = bonus1LugarPct;
