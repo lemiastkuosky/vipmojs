@@ -4664,7 +4664,7 @@ body.dark-mode #bichosSelectorContainer {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V2.15</strong>
+            <strong>V2.16</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -6273,13 +6273,8 @@ async function shareReceiptToWhatsApp() {
         showToast('Erro: Você não está logado. Faça o login novamente.', 'error', 5000);
         return;
     }
-
-    const receiptContent = document.getElementById('receiptContent').textContent;
-    if (!receiptContent || !receiptContent.trim()) {
-        showToast('Não há recibo para compartilhar.', 'error');
-        return;
-    }
     
+    // 1. Validação de valor (sem mudança)
     const valor = document.getElementById('receiptValueInput').value;
     if (!valor || valor.trim() === '' || valor.trim() === 'R$ 0,00') {
         showToast('Por favor, preencha o valor da aposta.', 'error');
@@ -6289,33 +6284,24 @@ async function shareReceiptToWhatsApp() {
         return;
     }
 
-    // --- INÍCIO DA MODIFICAÇÃO PRINCIPAL ---
-
-    // 1. Mostra o pop-up de seleção e espera o usuário escolher.
+    // 2. Pergunta o método PRIMEIRO (sem mudança)
     const chosenMethod = await showPaymentMethodModal();
-
-    // 2. Se o usuário cancelou (clicou em "Cancelar"), a função para aqui.
     if (!chosenMethod) {
         showToast('Envio cancelado.', 'info');
         return;
     }
 
-    // 3. Marca programaticamente o radio button correspondente à escolha do usuário.
+    // 3. Atualiza o radio button (sem mudança)
     const radioToSelect = document.querySelector(`input[name="metodoPremio"][value="${chosenMethod}"]`);
     if (radioToSelect) {
         radioToSelect.checked = true;
     }
 
-    // 4. ATUALIZA o texto do recibo para garantir que o cálculo do prêmio (50x ou 40x) seja refeito
-    //    antes de mostrar a tela de confirmação final.
-    generateReceiptText();
+    // 4. Gera o texto FINAL na tela com o método correto (ex: 40x)
+    generateReceiptText(chosenMethod);
 
-    // --- FIM DA MODIFICAÇÃO PRINCIPAL ---
-
-
-    // O resto da função continua como antes, agora com a certeza de que o método está correto.
+    // 5. Pega os dados de extração e horário (sem mudança)
     const extracaoNome = document.getElementById('receiptExtractionSelect').value;
-    
     const horarioSelecionado = document.getElementById('receiptTimeSelect').value;
     const agora = new Date();
     const schedule = extractionSchedules[extracaoNome] || [];
@@ -6331,10 +6317,8 @@ async function shareReceiptToWhatsApp() {
         dataSorteioHoje.setHours(sorteioHora, sorteioMinuto, 0, 0);
         const dataLimite = new Date(dataSorteioHoje);
         
-        // Puxa o valor de corte salvo (ou 5 como padrão)
         const savedCutoff = await getData(STORAGE_KEYS.CUTOFF_TIME);
         const cutoffMinutosGlobal = parseInt(savedCutoff, 10) || 5;
-        // Exatamente a mesma lógica da função anterior
         const cutoffParaEsteSorteio = sorteioInfo.corteMinutos === 0 ? 0 : cutoffMinutosGlobal;
         dataLimite.setMinutes(dataSorteioHoje.getMinutes() - cutoffParaEsteSorteio);
 
@@ -6360,9 +6344,6 @@ async function shareReceiptToWhatsApp() {
     const horarioFinal = timeMatchFinal ? timeMatchFinal[0] : proximoSorteioDisponivel.display;
     const extracaoCompletaFinal = `${sigla} - ${horarioFinal}h`;
 
-    // --- INÍCIO DA MODIFICAÇÃO (MENSAGEM DE CONFIRMAÇÃO) ---
-
-    // 3. Traduz o método escolhido para um texto amigável
     let metodoDisplay = '';
     if (chosenMethod === 'padrao') {
         metodoDisplay = 'Padrão (50x)';
@@ -6370,25 +6351,23 @@ async function shareReceiptToWhatsApp() {
         metodoDisplay = 'Bolão (40x)';
     }
 
-    // 4. Monta a mensagem de confirmação JÁ COM O MÉTODO
+    // 6. Monta a mensagem de confirmação (sem mudança)
     let confirmationMessage = `<strong>Confirme os dados:</strong>\n\n` +
                               `<strong>Extração:</strong> ${extracaoCompletaFinal}\n` +
                               `<strong>Valor:</strong> ${valor}\n` +
-                              `<strong>Método:</strong> ${metodoDisplay}\n\n`; // <-- LINHA ADICIONADA
+                              `<strong>Método:</strong> ${metodoDisplay}\n\n`; 
 
-    // 5. Atualiza a mensagem de "sorteio fechado" para também incluir os dados
     if (horarioSelecionado !== proximoSorteioDisponivel.display) {
         confirmationMessage = `<strong>ATENÇÃO:</strong> O horário para a extração das <strong>${horarioSelecionado.split(' ')[0]}</strong> já encerrou.\n\n` +
                               `Sua aposta será registrada para a próxima extração disponível: <strong>${extracaoCompletaFinal}</strong>.\n\n` +
                               `<strong>Valor:</strong> ${valor}\n` +
-                              `<strong>Método:</strong> ${metodoDisplay}\n\n` + // <-- LINHA ADICIONADA AQUI TAMBÉM
+                              `<strong>Método:</strong> ${metodoDisplay}\n\n` + 
                               `Deseja continuar?`;
     } else {
         confirmationMessage += `Está tudo certo?`;
     }
     
-    // --- FIM DA MODIFICAÇÃO (MENSAGEM DE CONFIRMAÇÃO) ---
-    
+    // 7. Mostra a confirmação (sem mudança)
     const userConfirmed = await showCustomConfirm(confirmationMessage, 'Sim, Enviar', 'Cancelar');
     if (!userConfirmed) {
         showToast('Envio cancelado.', 'info');
@@ -6396,6 +6375,27 @@ async function shareReceiptToWhatsApp() {
     }
 
     showToast('Gerando link para compartilhar...', 'info');
+
+    // --- INÍCIO DA CORREÇÃO (Lógica de Limpeza MOVIDA) ---
+    // 8. LÊ o conteúdo da tela DEPOIS de tudo confirmado
+    const receiptElement = document.getElementById('receiptContent');
+    if (!receiptElement) {
+        showToast('Erro: Elemento do recibo não encontrado.', 'error');
+        return;
+    }
+    const receiptClone = receiptElement.cloneNode(true);
+    
+    // 9. Limpa os botões do clone
+    receiptClone.querySelectorAll('.copy-bicho-type-btn').forEach(btn => btn.remove());
+    
+    // 10. Pega o texto LIMPO E ATUALIZADO (com 40x)
+    const receiptContent = receiptClone.textContent;
+    
+    if (!receiptContent || !receiptContent.trim()) {
+        showToast('Não há recibo para compartilhar.', 'error');
+        return;
+    }
+    // --- FIM DA CORREÇÃO ---
 
     try {
         const sorteioHoraFinal = parseInt(timeMatchFinal[1], 10);
@@ -6413,16 +6413,19 @@ async function shareReceiptToWhatsApp() {
         const dataExpiracao = new Date(dataSorteioFinal);
         dataExpiracao.setMinutes(dataSorteioFinal.getMinutes() + expirationMinutes);
 
+        // 11. Salva o texto LIMPO E ATUALIZADO no Firebase
         const docRef = await firestoreDB.collection('receipts').add({
-            content: document.getElementById('receiptContent').textContent, // Pega o conteúdo ATUALIZADO
+            content: receiptContent, // <-- USA A VARIÁVEL CORRETA
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: showCheckEmoji,
             expiresAt: dataExpiracao
         });
 
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
-        const codigo = (document.getElementById('receiptContent').textContent.match(/Código.*:\s*(\S+)/) || [])[1] || 'N/A';
-        const valorRecibo = (document.getElementById('receiptContent').textContent.match(/Valor Pago.*:\s*(R\$\s*[\d,.]+)/) || [])[1] || 'N/A';
+        
+        // 12. Faz o parse do texto LIMPO E ATUALIZADO
+        const codigo = (receiptContent.match(/Código.*:\s*(\S+)/) || [])[1] || 'N/A';
+        const valorRecibo = (receiptContent.match(/Valor Pago.*:\s*(R\$\s*[\d,.]+)/) || [])[1] || 'N/A';
         
         let greeting = "Olá!";
         const hour = new Date().getHours();
@@ -6433,7 +6436,8 @@ async function shareReceiptToWhatsApp() {
         const resumoBichoLines = [];
         const bichoRegex = /Gr\.\s(\d+)\s-\s([A-Za-zçãáéíóúâêôûà\s]+):\s(.*?)\n/g;
         let match;
-        while ((match = bichoRegex.exec(document.getElementById('receiptContent').textContent)) !== null) {
+        // 13. Faz o parse do texto LIMPO E ATUALIZADO
+        while ((match = bichoRegex.exec(receiptContent)) !== null) {
             const groupNumber = match[1].padStart(2, '0');
             const animalName = match[2].trim();
             const details = match[3].trim().toLowerCase();
@@ -6446,6 +6450,7 @@ async function shareReceiptToWhatsApp() {
             resumoSection = `Resumo por Bicho:\n${resumoBichoLines.join('\n')}\n\n`;
         }
 
+        // 14. Monta a mensagem final do WhatsApp (agora correta)
         const message = `${greeting}\n\n` +
                         `Seu recibo foi registrado com sucesso! ✅\n\n` +
                         `Resumo da sua aposta:\n` +
@@ -9216,7 +9221,7 @@ function createEmojiLookupMap() {
 }
 
 
-function generateReceiptText() {
+function generateReceiptText(metodoCalculoOverride = null) {
     const receiptContent = document.getElementById('receiptContent');
     const valorPago = document.getElementById('receiptValueInput').value || 'R$ 0,00';
     const extracao = document.getElementById('receiptExtractionSelect').value || 'Não especificada';
@@ -9303,10 +9308,11 @@ function generateReceiptText() {
             animalBlockLines.push(`<div class="receipt-bicho-section">`); // NOVO: Wrapper
             animalBlockLines.push(`<div class="receipt-bicho-title">Gr. ${data.grupo} - ${data.emoji} ${animalName}: ${summaryParts.join(', ')}</div>`);
 
+            // --- INÍCIO DA MODIFICAÇÃO (Etiquetas removidas + <br> adicionado) ---
             if (milharCount > 0) {
                 animalBlockLines.push(
                     `<div class="number-line-container">` +
-                    `<span class="receipt-number-line"><span class="number-label">Milhares:</span><span class="selectable-numbers">${data.milhar.join(', ')}</span></span>` +
+                    `<span class="receipt-number-line"><br><span class="selectable-numbers">${data.milhar.join(', ')}</span></span>` +
                     `<button class="copy-bicho-type-btn" onclick="copyBichoNumbers('${encodedAnimalName}', 'milhar', this)">Copiar M</button>` +
                     `</div>`
                 );
@@ -9314,7 +9320,7 @@ function generateReceiptText() {
             if (centenaCount > 0) {
                 animalBlockLines.push(
                     `<div class="number-line-container">` +
-                    `<span class="receipt-number-line"><span class="number-label">Centenas:</span><span class="selectable-numbers">${data.centena.join(', ')}</span></span>` +
+                    `<span class="receipt-number-line"><br><span class="selectable-numbers">${data.centena.join(', ')}</span></span>` +
                     `<button class="copy-bicho-type-btn" onclick="copyBichoNumbers('${encodedAnimalName}', 'centena', this)">Copiar C</button>` +
                     `</div>`
                 );
@@ -9322,11 +9328,12 @@ function generateReceiptText() {
             if (dezenaCount > 0) {
                  animalBlockLines.push(
                     `<div class="number-line-container">` +
-                    `<span class="receipt-number-line"><span class="number-label">Dezenas:</span><span class="selectable-numbers">${data.dezena.join(', ')}</span></span>` +
+                    `<span class="receipt-number-line"><br><span class="selectable-numbers">${data.dezena.join(', ')}</span></span>` +
                     `<button class="copy-bicho-type-btn" onclick="copyBichoNumbers('${encodedAnimalName}', 'dezena', this)">Copiar D</button>` +
                     `</div>`
                 );
             }
+            // --- FIM DA MODIFICAÇÃO ---
             
             animalBlockLines.push(`</div>`); // Fim do Wrapper
             return animalBlockLines.join('\n');
@@ -9339,7 +9346,12 @@ function generateReceiptText() {
     
     const valorPagoNumerico = parseFloat(valorPago.replace(/\D/g, '')) / 100;
     
-    const metodoCalculo = document.querySelector('input[name="metodoPremio"]:checked')?.value || 'padrao';
+    // --- INÍCIO DA CORREÇÃO ---
+    // Se um método foi passado (ex: 'bolao_40x'), ele é usado.
+    // Se não (ex: usuário está apenas digitando o valor), ele lê o radio button.
+    const metodoCalculo = metodoCalculoOverride || document.querySelector('input[name="metodoPremio"]:checked')?.value || 'padrao';
+    // --- FIM DA CORREÇÃO ---
+    
     let multiplicador = 50; 
     
     if (metodoCalculo === 'bolao_40x') {
@@ -9368,10 +9380,7 @@ function generateReceiptText() {
     
     const premioFormatado = possivelPremio > 0 ? 'R$ ' + possivelPremio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A';
 
-    // === INÍCIO DA CORREÇÃO ===
-    // Esta linha foi MOVIDA para ANTES da criação do 'reciboCompleto'
     currentReceiptCode = lastGeneratedCode || generateReceiptCode(); 
-    // === FIM DA CORREÇÃO ===
 
     const keyCodigo = "Código".padEnd(15, '.');
     const keyDataHora = "Data/Hora".padEnd(15, '.');
@@ -9381,7 +9390,6 @@ function generateReceiptText() {
     const keyValorCalc = "Valor Calculado".padEnd(15, '.');
     const keyQtd = "Qtd. Números".padEnd(15, '.');
 
-    // Agora 'currentReceiptCode' terá um valor válido
     const reciboCompleto = `
 ==============================
       RECIBO DE APOSTA
@@ -9405,12 +9413,9 @@ ${numerosTexto}
     `;
 
     if (receiptContent) {
-        // A linha que definia o 'currentReceiptCode' foi removida daqui
         receiptContent.innerHTML = reciboCompleto.trim();
-        // A lógica de aplicar seleção foi movida para dentro da criação do 'numerosTexto'
     }
 }
-
 
 function showConferenciaModal() {
     // A primeira verificação que fazemos é se a lista de combinações tem algum item.
@@ -14552,12 +14557,20 @@ async function updateSavedReceiptsContainer() {
                 </div>
             `;
             
-            itemElement.querySelector('.saved-item-text').textContent = item.content;
+            // --- INÍCIO DA MODIFICAÇÃO (Bug "Copiar M") ---
+            const rawContent = item.content || '';
+            // Remove qualquer tag <button> que tenha sido salva por engano em recibos antigos
+            const cleanedContent = rawContent.replace(/<button[^>]*>.*?<\/button>/g, '');
+            
+            // Define o HTML limpo
+            itemElement.querySelector('.saved-item-text').innerHTML = cleanedContent;
+            // --- FIM DA MODIFICAÇÃO ---
             
             // Adiciona os eventos de clique dinamicamente
             itemElement.querySelector('.copy-btn').addEventListener('click', e => {
                 e.stopPropagation();
-                copyToClipboard(item.content, e.currentTarget);
+                // --- MODIFICAÇÃO: Copia o texto limpo ---
+                copyToClipboard(itemElement.querySelector('.saved-item-text').textContent, e.currentTarget);
             });
 
             itemElement.querySelector('.resend-btn').addEventListener('click', e => {
