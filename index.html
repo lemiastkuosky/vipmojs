@@ -4697,28 +4697,12 @@ body.dark-mode #bichosSelectorContainer {
     </div>
 </div>
 
-<div id="paymentMethodModal" class="modal modal-super-top" role="dialog" aria-modal="true" aria-labelledby="paymentMethodModalTitle">    <div class="modal-content" style="max-width: 450px;">
-      <h3 id="paymentMethodModalTitle" class="modal-title">Selecione o Método de Cálculo</h3>
-      <p style="text-align: center; margin-top: -10px; margin-bottom: 25px; color: #6c757d;">
-          Escolha como o prêmio deve ser calculado antes de continuar.
-      </p>
-      
-      <div class="data-management-buttons">
+        <div class="data-management-buttons">
         <button onclick="handlePaymentMethodSelection('padrao')" class="view-button">
             <span style="font-size: 1.5rem; line-height: 1;">⚙️</span>
             <div>
                 <strong>Padrão (50x)</strong>
-                <small style="font-weight: normal;">Cálculo padrão de prêmios.</small>
-            </div>
-        </button>
-        <button onclick="handlePaymentMethodSelection('bolao_40x')" class="bolao-button" style="background-color: #fd7e14;">
-            <span style="font-size: 1.5rem; line-height: 1;">🎟️</span>
-            <div>
-                <strong>Bolão (40x)</strong>
-                <small style="font-weight: normal;">Cálculo especial para bolões.</small>
-            </div>
-        </button>
-      </div>
+                
 
       <button onclick="closePaymentMethodModal()" class="load-button" style="width: 100%; margin-top: 20px;">Cancelar</button>
     </div>
@@ -5307,6 +5291,8 @@ body.dark-mode #bichosSelectorContainer {
             <button class="quick-value-btn" onclick="addReceiptValue(20000)">+ R$ 200,00</button>
         </div>
 
+
+
         <div id="final-action-buttons" class="button-group" style="margin-top: 20px; display: none;">
             <button onclick="undoReceiptValueChange()" class="quick-value-btn undo-btn">🔄 Zerar</button>
             <button id="receiptBottomActionButton" onclick="shareReceiptToWhatsApp()" class="save-button">✅ Confirmar e Enviar</button>
@@ -5417,37 +5403,20 @@ function showLoadingIndicator(message = 'Processando...') {
 
 let resolvePaymentMethodPromise;
 
-function showPaymentMethodModal() {
-    return new Promise(resolve => {
-        // Guarda a função 'resolve' para que possamos chamá-la depois
-        resolvePaymentMethodPromise = resolve;
-        const modal = document.getElementById('paymentMethodModal');
-        if (modal) {
-            modal.classList.add('active');
-        }
-    });
-}
-
-function closePaymentMethodModal() {
-    const modal = document.getElementById('paymentMethodModal');
-    if (modal) {
-        modal.classList.remove('active');
-    }
-    // Se o usuário cancelou, resolvemos a promessa com 'null'
-    if (resolvePaymentMethodPromise) {
-        resolvePaymentMethodPromise(null);
-    }
-}
-
 function handlePaymentMethodSelection(method) {
-    const modal = document.getElementById('paymentMethodModal');
-    if (modal) {
-        modal.classList.remove('active');
+    // Marca o radio button oculto correspondente
+    const radioToSelect = document.querySelector(`input[name="metodoPremio"][value="${method}"]`);
+    if (radioToSelect) {
+        radioToSelect.checked = true;
     }
-    // Resolve a promessa com o método que o usuário escolheu ('padrao' ou 'bolao_40x')
-    if (resolvePaymentMethodPromise) {
-        resolvePaymentMethodPromise(method);
-    }
+
+    // Salva a preferência
+    saveData(STORAGE_KEYS.LAST_CALC_METHOD, method);
+
+    // ATUALIZA o texto do recibo para refletir o novo cálculo
+    generateReceiptText();
+
+    showToast(`Método de cálculo alterado para: ${method === 'padrao' ? 'Padrão (50x)' : 'Bolão (40x)'}`, 'success');
 }
 
 function showAnalysisHubModal() {
@@ -6202,7 +6171,7 @@ async function shareReceiptToWhatsApp() {
         showToast('Não há recibo para compartilhar.', 'error');
         return;
     }
-    
+
     const valor = document.getElementById('receiptValueInput').value;
     if (!valor || valor.trim() === '' || valor.trim() === 'R$ 0,00') {
         showToast('Por favor, preencha o valor da aposta.', 'error');
@@ -6212,34 +6181,17 @@ async function shareReceiptToWhatsApp() {
         return;
     }
 
-    // --- INÍCIO DA MODIFICAÇÃO PRINCIPAL ---
+    // --- INÍCIO DA MUDANÇA ---
+    // Não precisamos mais do pop-up. Apenas lemos o radio button
+    // que já está na tela. A função handlePaymentMethodSelection
+    // garantiu que o radio oculto 'metodoPremio' esteja correto.
+    console.log("Método de cálculo já selecionado. Prosseguindo...");
+    // --- FIM DA MUDANÇA ---
 
-    // 1. Mostra o pop-up de seleção e espera o usuário escolher.
-    const chosenMethod = await showPaymentMethodModal();
-
-    // 2. Se o usuário cancelou (clicou em "Cancelar"), a função para aqui.
-    if (!chosenMethod) {
-        showToast('Envio cancelado.', 'info');
-        return;
-    }
-
-    // 3. Marca programaticamente o radio button correspondente à escolha do usuário.
-    const radioToSelect = document.querySelector(`input[name="metodoPremio"][value="${chosenMethod}"]`);
-    if (radioToSelect) {
-        radioToSelect.checked = true;
-    }
-
-    // 4. ATUALIZA o texto do recibo para garantir que o cálculo do prêmio (50x ou 40x) seja refeito
-    //    antes de mostrar a tela de confirmação final.
-    generateReceiptText();
-
-    // --- FIM DA MODIFICAÇÃO PRINCIPAL ---
-
-
-    // O resto da função continua como antes, agora com a certeza de que o método está correto.
+    // O resto da função continua como antes, com a lógica de confirmação
     const extracaoNome = document.getElementById('receiptExtractionSelect').value;
     await saveData(STORAGE_KEYS.LAST_RECEIPT_EXTRACTION, extracaoNome);
-    
+
     const horarioSelecionado = document.getElementById('receiptTimeSelect').value;
     const agora = new Date();
     const schedule = extractionSchedules[extracaoNome] || [];
@@ -6253,8 +6205,14 @@ async function shareReceiptToWhatsApp() {
         const sorteioMinuto = parseInt(timeMatch[2], 10);
         const dataSorteioHoje = new Date();
         dataSorteioHoje.setHours(sorteioHora, sorteioMinuto, 0, 0);
+
+        // Re-calcula a data limite aqui
+        const savedCutoff = await getData(STORAGE_KEYS.CUTOFF_TIME);
+        const cutoffMinutosGlobal = parseInt(savedCutoff, 10) || 5;
+        const cutoffParaEsteSorteio = sorteioInfo.corteMinutos === 0 ? 0 : cutoffMinutosGlobal;
         const dataLimite = new Date(dataSorteioHoje);
-        dataLimite.setMinutes(dataSorteioHoje.getMinutes() - sorteioInfo.corteMinutos);
+        dataLimite.setMinutes(dataSorteioHoje.getMinutes() - cutoffParaEsteSorteio);
+
         if (agora < dataLimite) {
             proximoSorteioDisponivel = sorteioInfo;
             break;
@@ -6284,8 +6242,8 @@ async function shareReceiptToWhatsApp() {
     } else {
         confirmationMessage += `Está tudo certo?`;
     }
-    
-    const userConfirmed = await showCustomConfirm(confirmationMessage, 'Sim, Enviar', 'Cancelar');
+
+    const userConfirmed = await showCustomConfirm(confirmationMessage, 'Sim, Enviar', 'Cancelar', 'receiptModal'); // Aponta para o receiptModal
     if (!userConfirmed) {
         showToast('Envio cancelado.', 'info');
         return;
@@ -6310,7 +6268,7 @@ async function shareReceiptToWhatsApp() {
         dataExpiracao.setMinutes(dataSorteioFinal.getMinutes() + expirationMinutes);
 
         const docRef = await firestoreDB.collection('receipts').add({
-            content: document.getElementById('receiptContent').textContent, // Pega o conteúdo ATUALIZADO
+            content: document.getElementById('receiptContent').textContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: showCheckEmoji,
             expiresAt: dataExpiracao
@@ -6319,7 +6277,7 @@ async function shareReceiptToWhatsApp() {
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
         const codigo = (document.getElementById('receiptContent').textContent.match(/Código.*:\s*(\S+)/) || [])[1] || 'N/A';
         const valorRecibo = (document.getElementById('receiptContent').textContent.match(/Valor Pago.*:\s*(R\$\s*[\d,.]+)/) || [])[1] || 'N/A';
-        
+
         let greeting = "Olá!";
         const hour = new Date().getHours();
         if (hour >= 5 && hour < 12) { greeting = 'Bom dia!'; }
@@ -14199,29 +14157,24 @@ async function updateExtractionTimes() {
 
 async function showReceiptModal() {
     const modal = document.getElementById('receiptModal');
-    
-    // --- INÍCIO DA CORREÇÃO ---
-    // 1. Reseta o radio button oculto para 'padrao' toda vez que o modal é aberto
-    const radioPadrao = document.querySelector('input[name="metodoPremio"][value="padrao"]');
-    if (radioPadrao) radioPadrao.checked = true;
-    // --- FIM DA CORREÇÃO ---
 
-    // 2. Carrega o último método de cálculo salvo (mas o 'padrao' acima garante o reset)
+    // --- INÍCIO DA MUDANÇA ---
+    // Carrega o último método de cálculo salvo
     const savedCalcMethod = await getData(STORAGE_KEYS.LAST_CALC_METHOD) || 'padrao';
     const radioToCheck = document.querySelector(`input[name="metodoPremio"][value="${savedCalcMethod}"]`);
-    if (radioToCheck) radioToCheck.checked = true;
+    if (radioToCheck) {
+        radioToCheck.checked = true;
+    } else {
+        // Se o salvo for inválido, garante o padrão
+        document.querySelector('input[name="metodoPremio"][value="padrao"]').checked = true;
+    }
+    // --- FIM DA MUDANÇA ---
 
-    // 3. Força a chamada para zerar o valor para "R$ 0,00".
     await revealReceiptInputs(); 
-    
-    // 4. Atualiza os horários da extração
     await updateExtractionTimes();
-    
-    // 5. Gera o texto do recibo (que agora usará o radio 'padrao' oculto)
     generateReceiptText();
 
-    // 6. Mostra o modal
-    document.getElementById('receiptModal').classList.add('active');
+    modal.classList.add('active');
 }
 
 // 4. FUNÇÃO DE REVELAR CAMPOS (VERSÃO MODIFICADA PARA ESCONDER BOTÕES)
