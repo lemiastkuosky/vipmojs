@@ -4626,7 +4626,7 @@ body.dark-mode #bichosSelectorContainer {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V2.07</strong>
+            <strong>V2.08</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -5270,7 +5270,10 @@ body.dark-mode #bichosSelectorContainer {
         <span class="close-modal" onclick="closeReceiptModal()" aria-label="Fechar">×</span>
         <h3 id="receiptModalTitle" class="modal-title">📄 Recibo de Pagamento</h3>
         <h4 id="receipt-instruction" style="display: none; text-align: center; margin-bottom: 15px; color: #fd7e14;">👇 Preencha os dados abaixo para continuar 👇</h4>
-        
+        <div style="display: none;">
+    <input type="radio" name="metodoPremio" value="padrao" checked>
+    <input type="radio" name="metodoPremio" value="bolao_40x">
+</div>
         <div id="receipt-inputs" style="text-align: left; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px;">
             <div style="flex: 1; min-width: 120px;">
                 <label for="receiptExtractionSelect" style="font-weight: bold; margin-bottom: 5px; display: block;">Extração:</label>
@@ -14159,25 +14162,27 @@ async function updateExtractionTimes() {
 async function showReceiptModal() {
     const modal = document.getElementById('receiptModal');
     
-    // 1. Carrega o último método de cálculo salvo (Padrão 50x ou Bolão 40x)
+    // --- INÍCIO DA CORREÇÃO ---
+    // 1. Reseta o radio button oculto para 'padrao' toda vez que o modal é aberto
+    const radioPadrao = document.querySelector('input[name="metodoPremio"][value="padrao"]');
+    if (radioPadrao) radioPadrao.checked = true;
+    // --- FIM DA CORREÇÃO ---
+
+    // 2. Carrega o último método de cálculo salvo (mas o 'padrao' acima garante o reset)
     const savedCalcMethod = await getData(STORAGE_KEYS.LAST_CALC_METHOD) || 'padrao';
     const radioToCheck = document.querySelector(`input[name="metodoPremio"][value="${savedCalcMethod}"]`);
     if (radioToCheck) radioToCheck.checked = true;
 
-    // --- INÍCIO DA CORREÇÃO ---
-    // REMOVIDA a lógica que carregava o valor salvo (LAST_RECEIPT_VALUE).
-    // Forçamos a chamada para revealReceiptInputs() CADA VEZ que o modal é aberto.
-    // Esta função já é responsável por zerar o valor para "R$ 0,00".
+    // 3. Força a chamada para zerar o valor para "R$ 0,00".
     await revealReceiptInputs(); 
-    // --- FIM DA CORREÇÃO ---
     
-    // 2. Atualiza os horários da extração
+    // 4. Atualiza os horários da extração
     await updateExtractionTimes();
     
-    // 3. Gera o texto do recibo (que agora estará zerado)
+    // 5. Gera o texto do recibo (que agora usará o radio 'padrao' oculto)
     generateReceiptText();
 
-    // 4. Mostra o modal
+    // 6. Mostra o modal
     document.getElementById('receiptModal').classList.add('active');
 }
 
