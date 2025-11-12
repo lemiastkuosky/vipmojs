@@ -4138,6 +4138,44 @@ body.dark-mode #bichosSelectorContainer {
     text-align: center;
 }
 
+/* --- Estilos para Botões de Seleção de Extração --- */
+        .receipt-extraction-btn {
+            flex: 1 1 auto; /* Permite que os botões cresçam e encolham */
+            padding: 10px 8px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f8f9fa; /* Cor padrão (inativo) */
+            color: #495057;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .receipt-extraction-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ESTADO SELECIONADO (Ativo) */
+        .receipt-extraction-btn.selected {
+            background-color: #007bff; /* Cor azul (ativo) */
+            color: white;
+            border-color: #007bff;
+        }
+
+        /* --- Modo Escuro --- */
+        body.dark-mode .receipt-extraction-btn {
+            background-color: #3a3f44;
+            border-color: #555;
+            color: #e9ecef;
+        }
+
+        body.dark-mode .receipt-extraction-btn.selected {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+        }
+
 </style>
 
 </head>
@@ -4626,7 +4664,7 @@ body.dark-mode #bichosSelectorContainer {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V2.10</strong>
+            <strong>V2.15</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -5267,36 +5305,44 @@ body.dark-mode #bichosSelectorContainer {
 <div id="receiptModal" class="modal modal-top" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
     <div class="modal-content">
         <span class="close-modal" onclick="closeReceiptModal()" aria-label="Fechar">×</span>
-        <<h3 id="receiptModalTitle" class="modal-title">📄 Recibo de Pagamento</h3>
+        <h3 id="receiptModalTitle" class="modal-title">📄 Recibo de Pagamento</h3>
 <div style="display: none;">
     <input type="radio" name="metodoPremio" value="padrao" checked>
     <input type="radio" name="metodoPremio" value="bolao_40x">
 </div>
-<h4 id="receipt-instruction" style="display: none;">...</h4>
+<h4 id="receipt-instruction" style="display: none;"></h4>
         <div id="receipt-inputs" style="text-align: left; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px;">
-            <div style="flex: 1; min-width: 120px;">
-                <label for="receiptExtractionSelect" style="font-weight: bold; margin-bottom: 5px; display: block;">Extração:</label>
-                <select id="receiptExtractionSelect" class="save-dialog-input" onchange="updateExtractionTimes()">
-                    <option value="Rio de Janeiro">Rio de Janeiro</option>
-                    <option value="Nacional">Nacional</option>
-                    <option value="Look">Look</option>
-                    <option value="Loteria Federal">Loteria Federal</option>
-                    <option value="Outra">Outra</option>
-                </select>
+            
+            <select id="receiptExtractionSelect" class="save-dialog-input" onchange="updateExtractionTimes()" style="display: none;">
+                <option value="" disabled selected>-- Selecione a Extração --</option>
+                <option value="Rio de Janeiro">Rio de Janeiro</option>
+                <option value="Nacional">Nacional</option>
+                <option value="Look">Look</option>
+                <option value="Loteria Federal">Loteria Federal</option>
+                <option value="Outra">Outra</option>
+            </select>
+            
+            <div style="flex: 1 1 100%; min-width: 100%;">
+                <label style="font-weight: bold; margin-bottom: 5px; display: block;">Extração:</label>
+                <div id="receiptExtractionButtons" class="button-group" style="margin-top: 5px; gap: 6px;">
+                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Rio de Janeiro')">Rio de Janeiro</button>
+                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Nacional')">Nacional</button>
+                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Look')">Look</button>
+                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Loteria Federal')">Federal</button>
+                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Outra')">Outra</button>
+                </div>
             </div>
-            <div style="flex: 1; min-width: 120px;">
+            
+            <div style="flex: 1 1 100%; min-width: 100%;">
                 <label for="receiptTimeSelect" style="font-weight: bold; margin-bottom: 5px; display: block;">Horário:</label>
-                <select id="receiptTimeSelect" class="save-dialog-input" onchange="generateReceiptText()"></select>
+<select id="receiptTimeSelect" class="save-dialog-input" onchange="generateReceiptText(); document.getElementById('receiptValueInput').focus();"></select>            </div>
+            
             </div>
-            <div style="flex: 1; min-width: 120px;">
-                <label for="receiptValueInput" style="font-weight: bold; margin-bottom: 5px; display: block;">Valor Pago:</label>
-                <input type="text" id="receiptValueInput" class="save-dialog-input" placeholder="R$ 0,00" oninput="formatCurrency(this); generateReceiptText();">
-            </div>
-        </div>
 
         <div id="quick-values-buttons" class="quick-values-container">
             <button class="quick-value-btn" onclick="addReceiptValue(500)">+ R$ 5,00</button>
             <button class="quick-value-btn" onclick="addReceiptValue(1000)">+ R$ 10,00</button>
+            <button class="quick-value-btn" onclick="addReceiptValue(1500)">+ R$ 15,00</button>
             <button class="quick-value-btn" onclick="addReceiptValue(2000)">+ R$ 20,00</button>
             <button class="quick-value-btn" onclick="addReceiptValue(2500)">+ R$ 25,00</button>
             <button class="quick-value-btn" onclick="addReceiptValue(3000)">+ R$ 30,00</button>
@@ -5307,7 +5353,12 @@ body.dark-mode #bichosSelectorContainer {
             <button class="quick-value-btn" onclick="addReceiptValue(20000)">+ R$ 200,00</button>
         </div>
 
-        <div id="final-action-buttons" class="button-group" style="margin-top: 20px; display: none;">
+        <div style="flex: 1; min-width: 100%; margin-top: 15px;">
+            <label for="receiptValueInput" style="font-weight: bold; margin-bottom: 5px; display: block;">Valor Pago:</label>
+            <input type="text" id="receiptValueInput" class="save-dialog-input" placeholder="R$ 0,00" oninput="formatCurrency(this); generateReceiptText();">
+        </div>
+
+            <div id="final-action-buttons" class="button-group" style="margin-top: 20px; display: none;">
             <button onclick="undoReceiptValueChange()" class="quick-value-btn undo-btn">🔄 Zerar</button>
             <button id="receiptBottomActionButton" onclick="shareReceiptToWhatsApp()" class="save-button">✅ Confirmar e Enviar</button>
         </div>
@@ -5413,6 +5464,32 @@ function showLoadingIndicator(message = 'Processando...') {
     textElement.textContent = message;
     indicator.style.display = 'flex';
   }
+}
+
+// --- NOVA FUNÇÃO PARA OS BOTÕES DE EXTRAÇÃO ---
+function selectExtractionButton(buttonElement, value) {
+    // 1. Remove a classe 'selected' de todos os botões
+    const buttons = document.querySelectorAll('.receipt-extraction-btn');
+    buttons.forEach(btn => btn.classList.remove('selected'));
+
+    // 2. Adiciona a classe 'selected' ao botão clicado
+    buttonElement.classList.add('selected');
+
+    // 3. Atualiza o <select> escondido
+    const hiddenSelect = document.getElementById('receiptExtractionSelect');
+    hiddenSelect.value = value;
+
+    // 4. Dispara o evento 'change' no select escondido
+    // Isso acionará as funções updateExtractionTimes() e validateReceiptInputs()
+    hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // --- FOCO MODIFICADO AQUI ---
+    const valorInput = document.getElementById('receiptValueInput');
+    if (valorInput) {
+        valorInput.focus(); // Pula o foco para o campo de valor
+        valorInput.select(); // Seleciona o "R$ 0,00" para facilitar a digitação
+    }
+    // --- FIM DA MODIFICAÇÃO ---
 }
 
 let resolvePaymentMethodPromise;
@@ -6238,7 +6315,6 @@ async function shareReceiptToWhatsApp() {
 
     // O resto da função continua como antes, agora com a certeza de que o método está correto.
     const extracaoNome = document.getElementById('receiptExtractionSelect').value;
-    await saveData(STORAGE_KEYS.LAST_RECEIPT_EXTRACTION, extracaoNome);
     
     const horarioSelecionado = document.getElementById('receiptTimeSelect').value;
     const agora = new Date();
@@ -6254,7 +6330,14 @@ async function shareReceiptToWhatsApp() {
         const dataSorteioHoje = new Date();
         dataSorteioHoje.setHours(sorteioHora, sorteioMinuto, 0, 0);
         const dataLimite = new Date(dataSorteioHoje);
-        dataLimite.setMinutes(dataSorteioHoje.getMinutes() - sorteioInfo.corteMinutos);
+        
+        // Puxa o valor de corte salvo (ou 5 como padrão)
+        const savedCutoff = await getData(STORAGE_KEYS.CUTOFF_TIME);
+        const cutoffMinutosGlobal = parseInt(savedCutoff, 10) || 5;
+        // Exatamente a mesma lógica da função anterior
+        const cutoffParaEsteSorteio = sorteioInfo.corteMinutos === 0 ? 0 : cutoffMinutosGlobal;
+        dataLimite.setMinutes(dataSorteioHoje.getMinutes() - cutoffParaEsteSorteio);
+
         if (agora < dataLimite) {
             proximoSorteioDisponivel = sorteioInfo;
             break;
@@ -6277,13 +6360,34 @@ async function shareReceiptToWhatsApp() {
     const horarioFinal = timeMatchFinal ? timeMatchFinal[0] : proximoSorteioDisponivel.display;
     const extracaoCompletaFinal = `${sigla} - ${horarioFinal}h`;
 
-    let confirmationMessage = `<strong>Confirme os dados:</strong>\n\n<strong>Extração:</strong> ${extracaoCompletaFinal}\n<strong>Valor:</strong> ${valor}\n\n`;
+    // --- INÍCIO DA MODIFICAÇÃO (MENSAGEM DE CONFIRMAÇÃO) ---
 
+    // 3. Traduz o método escolhido para um texto amigável
+    let metodoDisplay = '';
+    if (chosenMethod === 'padrao') {
+        metodoDisplay = 'Padrão (50x)';
+    } else if (chosenMethod === 'bolao_40x') {
+        metodoDisplay = 'Bolão (40x)';
+    }
+
+    // 4. Monta a mensagem de confirmação JÁ COM O MÉTODO
+    let confirmationMessage = `<strong>Confirme os dados:</strong>\n\n` +
+                              `<strong>Extração:</strong> ${extracaoCompletaFinal}\n` +
+                              `<strong>Valor:</strong> ${valor}\n` +
+                              `<strong>Método:</strong> ${metodoDisplay}\n\n`; // <-- LINHA ADICIONADA
+
+    // 5. Atualiza a mensagem de "sorteio fechado" para também incluir os dados
     if (horarioSelecionado !== proximoSorteioDisponivel.display) {
-        confirmationMessage = `<strong>ATENÇÃO:</strong> O horário para a extração das <strong>${horarioSelecionado.split(' ')[0]}</strong> já encerrou.\n\nSua aposta será registrada para a próxima extração disponível: <strong>${extracaoCompletaFinal}</strong>.\n\nDeseja continuar?`;
+        confirmationMessage = `<strong>ATENÇÃO:</strong> O horário para a extração das <strong>${horarioSelecionado.split(' ')[0]}</strong> já encerrou.\n\n` +
+                              `Sua aposta será registrada para a próxima extração disponível: <strong>${extracaoCompletaFinal}</strong>.\n\n` +
+                              `<strong>Valor:</strong> ${valor}\n` +
+                              `<strong>Método:</strong> ${metodoDisplay}\n\n` + // <-- LINHA ADICIONADA AQUI TAMBÉM
+                              `Deseja continuar?`;
     } else {
         confirmationMessage += `Está tudo certo?`;
     }
+    
+    // --- FIM DA MODIFICAÇÃO (MENSAGEM DE CONFIRMAÇÃO) ---
     
     const userConfirmed = await showCustomConfirm(confirmationMessage, 'Sim, Enviar', 'Cancelar');
     if (!userConfirmed) {
@@ -9436,32 +9540,27 @@ function handleReceiptInputChange() {
 
 // 1. NOVA FUNÇÃO PARA VALIDAR OS CAMPOS DO RECIBO
 function validateReceiptInputs() {
-    const valorInput = document.getElementById('receiptValueInput'); // Pega o campo de valor
+    // 1. Pega todos os campos
+    const valorInput = document.getElementById('receiptValueInput');
+    const extracaoInput = document.getElementById('receiptExtractionSelect');
+    const horarioInput = document.getElementById('receiptTimeSelect');
+    const actionButton = document.getElementById('receiptBottomActionButton'); 
 
-    // =================================================================
-    // /// A CORREÇÃO ESTÁ AQUI (trocamos o ID do botão) ///
-    // /// Agora a função afeta o botão correto ("Confirmar e Enviar") ///
-    // =================================================================
-    const actionButton = document.getElementById('receiptBottomActionButton'); // Pega o botão "Confirmar e Enviar"
-    // =================================================================
+    if (!actionButton) return; // Sai se o botão não existir
 
-    // Se, por algum motivo, o botão não for encontrado, interrompe a função
-    if (!actionButton) return;
-
-    // Verifica se o campo de valor tem algum conteúdo válido (não vazio e não "R$ 0,00")
+    // 2. Verifica a validade de CADA campo
     const isValueValid = valorInput.value && valorInput.value.trim() !== '' && valorInput.value.trim() !== 'R$ 0,00';
+    const isExtracaoValid = extracaoInput.value && extracaoInput.value.trim() !== '';
+    const isHorarioValid = horarioInput.value && horarioInput.value.trim() !== '';
 
-    // Se o valor for válido:
-    if (isValueValid) {
-        actionButton.disabled = false; // Habilita o botão (permite clicar)
-        // Aplica estilos visuais para indicar que está habilitado
+    // 3. A condição final agora checa os TRÊS
+    if (isValueValid && isExtracaoValid && isHorarioValid) {
+        actionButton.disabled = false; 
         actionButton.style.opacity = '1';
         actionButton.style.cursor = 'pointer';
     }
-    // Se o valor NÃO for válido:
     else {
-        actionButton.disabled = true; // Desabilita o botão (impede de clicar)
-        // Aplica estilos visuais para indicar que está desabilitado
+        actionButton.disabled = true; 
         actionButton.style.opacity = '0.6';
         actionButton.style.cursor = 'not-allowed';
     }
@@ -12777,11 +12876,6 @@ async function generateSelectedNumbers() {
                     shuffleArray(shuffledPoolArray);
                     const milharesGeradas = shuffledPoolArray.slice(0, quantidadeParaGerar);
                     
-                    // --- INÍCIO DA CORREÇÃO (REMOÇÃO) ---
-                    // A linha que "gastava" os números foi REMOVIDA daqui
-                    // milharesGeradas.forEach(m => currentPool.delete(m)); // <-- BUG REMOVIDO
-                    // --- FIM DA CORREÇÃO (REMOÇÃO) ---
-                    
                     finalMilharesCercar.push(...milharesGeradas); // Adiciona ao array local
                     totalGeradasCercar += milharesGeradas.length;
 
@@ -12982,39 +13076,21 @@ async function generateSelectedNumbers() {
 
     const userConfirmed = await showCustomConfirm(generationSummary, "Sim, Gerar", 'Cancelar', 'randomGeneratorModal');
 
-    // ==========================================
-    // === INÍCIO DA CORREÇÃO (Botão Cancelar) ===
-    // ==========================================
     if (!userConfirmed) {
-        // Se o usuário cancelou, não fazemos NADA com o pool.
-        // O pool global (cercarBichoPools) não foi modificado,
-        // então está pronto para a próxima tentativa.
-        
-        // Apenas mostramos o toast de cancelamento.
         showToast('Geração cancelada.', 'info');
-        return; // Interrompe a geração
+        return; 
     }
-    // ==========================================
-    // === FIM DA CORREÇÃO (Botão Cancelar) ===
-    // ==========================================
 
-
-    // =======================================================
-    // === INÍCIO DA CORREÇÃO (Gastar o Pool SÓ AGORA) ===
-    // =======================================================
-    // Se o usuário CONFIRMOU, agora vamos "gastar" os números do pool global
     if (mode === 'bichos' && bichoMilharMethod === 'cercar_completo') {
-        const milharesGeradas = finalResults.milhar; // Pega os números que planejamos gerar
+        const milharesGeradas = finalResults.milhar; 
         
         console.log(`Confirmado! Removendo ${milharesGeradas.length} milhares do pool global.`);
         
         milharesGeradas.forEach(milhar => {
             const bichoData = getBichoDataFromNumber(milhar);
             if (bichoData && cercarBichoPools[bichoData.grupo]) {
-                // Deleta a milhar do pool do seu bicho correspondente
                 cercarBichoPools[bichoData.grupo].delete(milhar);
                 
-                // Se o pool daquele bicho ficou vazio, remove o bicho do map
                 if (cercarBichoPools[bichoData.grupo].size === 0) {
                     console.log(`Pool do ${bichoData.animal} esgotado.`);
                     delete cercarBichoPools[bichoData.grupo];
@@ -13022,10 +13098,6 @@ async function generateSelectedNumbers() {
             }
         });
     }
-    // =======================================================
-    // === FIM DA CORREÇÃO (Gastar o Pool SÓ AGORA) ===
-    // =======================================================
-
 
     logQuantityUsage(totalQuantity);
 
@@ -13047,7 +13119,9 @@ async function generateSelectedNumbers() {
         }
     });
 
-    document.getElementById('generatorActionButtons').style.display = 'flex';
+    const actionButtons = document.getElementById('generatorActionButtons');
+    if (actionButtons) actionButtons.style.display = 'flex'; // Mostra os botões
+
     document.getElementById('mcdSearchContainer').style.display = 'flex'; 
     document.getElementById('sendFromFiltersBtn').style.display = 'inline-flex'; 
 
@@ -13055,6 +13129,13 @@ async function generateSelectedNumbers() {
     if (sortButton && hasResultsToSort) {
         sortButton.style.display = 'block';
     }
+
+    // --- INÍCIO DA MODIFICAÇÃO (PULAR PARA OS BOTÕES) ---
+    if (actionButtons) {
+        // Rola a tela para os botões de ação que acabaram de aparecer
+        actionButtons.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // --- FIM DA MODIFICAÇÃO ---
 
     const hasAnyResult = typeKeys.some(key => finalResults[key] && finalResults[key].length > 0);
         if (hasAnyResult) {
@@ -13213,12 +13294,15 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
     }
     
     const select = document.getElementById('extractionSelect');
-    const savedExtraction = await getData(STORAGE_KEYS.LAST_EXTRACTION);
-    if (savedExtraction) {
-        select.value = savedExtraction;
-    } else {
-        select.value = '';
-    }
+    // O BLOCO DE CÓDIGO ABAIXO FOI REMOVIDO:
+    // const savedExtraction = await getData(STORAGE_KEYS.LAST_EXTRACTION);
+    // if (savedExtraction) {
+    //     select.value = savedExtraction;
+    // } else {
+    //     select.value = '';
+    // }
+    select.value = ''; // <-- LINHA ADICIONADA (Força o campo a começar em branco)
+
 
     document.getElementById('includeFullMessageCheckbox').checked = true;
 }
@@ -13279,11 +13363,7 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
 
         window.open(whatsappUrl, '_blank');
         showToast('Preparando para enviar no WhatsApp...', 'success');
-        
-        if (extraction) {
-            saveData(STORAGE_KEYS.LAST_EXTRACTION, extraction);
-        }
-        
+               
         setTimeout(() => { closeRandomGeneratorModal(); }, 500);
     }
 
@@ -14224,7 +14304,6 @@ async function showReceiptModal() {
     document.getElementById('receiptModal').classList.add('active');
 }
 
-// 4. FUNÇÃO DE REVELAR CAMPOS (VERSÃO MODIFICADA PARA ESCONDER BOTÕES)
 async function revealReceiptInputs() {
     document.getElementById('receiptModalTitle').innerHTML = '✍️ Preencha os Dados da Aposta';
     document.getElementById('receipt-instruction').style.display = 'block';
@@ -14262,10 +14341,18 @@ async function revealReceiptInputs() {
 
     validateReceiptInputs();
     
+    // --- FOCO CORRIGIDO AQUI ---
     setTimeout(() => {
-        receiptValueInput.focus();
-        receiptValueInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 1. Pega o primeiro botão de extração
+        const firstExtractionButton = document.querySelector('#receiptExtractionButtons .receipt-extraction-btn');
+
+        if (firstExtractionButton) {
+            // 2. Rola a tela para o botão (se necessário) e foca nele.
+            // A ordem é esta: focar, e o navegador rolará para o foco.
+            firstExtractionButton.focus();
+        }
     }, 100);
+    // --- FIM DA CORREÇÃO ---
 
     showBottomSendButton(); // Mostra botões secundários (Confirmar/Zerar), se existirem
 }
