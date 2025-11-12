@@ -9122,6 +9122,9 @@ function generateReceiptText() {
 
     let totalMilhares = 0, totalCentenas = 0, totalDezenas = 0;
     const bichoDetails = {};
+    
+    // Limpa os dados de cópia antes de recalcular
+    window.receiptBichoDataForCopy = {}; 
 
     ['milhar', 'centena', 'dezena'].forEach(type => {
         const resultGroup = document.getElementById(`${type}Result`);
@@ -9130,17 +9133,27 @@ function generateReceiptText() {
             if (type === 'milhar') totalMilhares += numbers.length;
             if (type === 'centena') totalCentenas += numbers.length;
             if (type === 'dezena') totalDezenas += numbers.length;
+            
             numbers.forEach(num => {
                 const bichoData = getBichoDataFromNumber(num);
                 if (bichoData) {
-                    if (!bichoDetails[bichoData.animal]) {
-                        bichoDetails[bichoData.animal] = { grupo: bichoData.grupo, milhar: [], centena: [], dezena: [] };
+                    const animalNameKey = `${bichoData.grupo}-${bichoData.animal}`; // Chave única
+                    if (!bichoDetails[animalNameKey]) {
+                        bichoDetails[animalNameKey] = { 
+                            grupo: bichoData.grupo, 
+                            animal: bichoData.animal, 
+                            emoji: bichoData.emoji, 
+                            milhar: [], 
+                            centena: [], 
+                            dezena: [] 
+                        };
                     }
                     if ((type === 'milhar' && num.length >= 4) ||
                         (type === 'centena' && num.length === 3) ||
                         (type === 'dezena' && num.length >= 2)) {
-                        let relevantNum = num;
-                         bichoDetails[bichoData.animal][type].push(relevantNum);
+                        
+                        let relevantNum = num; // Mantém o número completo (M/C/D)
+                        bichoDetails[animalNameKey][type].push(relevantNum);
                     }
                 }
             });
@@ -9149,52 +9162,89 @@ function generateReceiptText() {
 
     const totalNumeros = totalMilhares + totalCentenas + totalDezenas;
     let numerosTexto = "Nenhum número para resumir.";
-    const sortedBichos = Object.keys(bichoDetails).sort((a, b) => parseInt(bichoDetails[a].grupo, 10) - parseInt(bichoDetails[b].grupo, 10));
+    
+    // Ordena os bichos pelo número do grupo (ex: G01, G02, G05...)
+    const sortedBichosKeys = Object.keys(bichoDetails).sort((a, b) => {
+        return parseInt(bichoDetails[a].grupo, 10) - parseInt(bichoDetails[b].grupo, 10);
+    });
+    
+    // Limpa e repopula os dados para a cópia
+    window.receiptBichoDataForCopy = {};
 
-    if (sortedBichos.length > 0) {
-        numerosTexto = sortedBichos.map(animal => {
-            const data = bichoDetails[animal];
+    if (sortedBichosKeys.length > 0) {
+        numerosTexto = sortedBichosKeys.map(animalKey => {
+            const data = bichoDetails[animalKey];
+            const animalName = data.animal;
+            
+            // Popula os dados para a função de cópia
+            window.receiptBichoDataForCopy[animalName] = {
+                milhar: data.milhar.filter(n => n.length === 4),
+                centena: data.centena.filter(n => n.length === 3),
+                dezena: data.dezena.filter(n => n.length === 2)
+            };
+
             let animalBlockLines = [];
             const summaryParts = [];
-            const milharCount = data.milhar.filter(n => n.length === 4).length;
-            const centenaCount = data.centena.filter(n => n.length === 3).length;
-            const dezenaCount = data.dezena.filter(n => n.length === 2).length;
+
+            const milharCount = window.receiptBichoDataForCopy[animalName].milhar.length;
+            const centenaCount = window.receiptBichoDataForCopy[animalName].centena.length;
+            const dezenaCount = window.receiptBichoDataForCopy[animalName].dezena.length;
 
             if (milharCount > 0) summaryParts.push(`${milharCount} Milhar${milharCount > 1 ? 'es' : ''}`);
             if (centenaCount > 0) summaryParts.push(`${centenaCount} Centena${centenaCount > 1 ? 's' : ''}`);
             if (dezenaCount > 0) summaryParts.push(`${dezenaCount} Dezena${dezenaCount > 1 ? 's' : ''}`);
 
-            animalBlockLines.push(`Gr. ${data.grupo} - ${animal}: ${summaryParts.join(', ')}`);
-            animalBlockLines.push(''); 
+            const encodedAnimalName = encodeURIComponent(animalName);
+            
+            animalBlockLines.push(`<div class="receipt-bicho-section">`); // NOVO: Wrapper
+            animalBlockLines.push(`<div class="receipt-bicho-title">Gr. ${data.grupo} - ${data.emoji} ${animalName}: ${summaryParts.join(', ')}</div>`);
 
-            if (data.milhar.filter(n => n.length === 4).length > 0) animalBlockLines.push(`  ${data.milhar.filter(n => n.length === 4).join(', ')}`);
-            if (data.centena.filter(n => n.length === 3).length > 0) animalBlockLines.push(`  ${data.centena.filter(n => n.length === 3).join(', ')}`);
-            if (data.dezena.filter(n => n.length === 2).length > 0) animalBlockLines.push(`  ${data.dezena.filter(n => n.length === 2).join(', ')}`);
-
+            if (milharCount > 0) {
+                animalBlockLines.push(
+                    `<div class="number-line-container">` +
+                    `<span class="receipt-number-line"><span class="number-label">Milhares:</span><span class="selectable-numbers">${data.milhar.join(', ')}</span></span>` +
+                    `<button class="copy-bicho-type-btn" onclick="copyBichoNumbers('${encodedAnimalName}', 'milhar', this)">Copiar M</button>` +
+                    `</div>`
+                );
+            }
+            if (centenaCount > 0) {
+                animalBlockLines.push(
+                    `<div class="number-line-container">` +
+                    `<span class="receipt-number-line"><span class="number-label">Centenas:</span><span class="selectable-numbers">${data.centena.join(', ')}</span></span>` +
+                    `<button class="copy-bicho-type-btn" onclick="copyBichoNumbers('${encodedAnimalName}', 'centena', this)">Copiar C</button>` +
+                    `</div>`
+                );
+            }
+            if (dezenaCount > 0) {
+                 animalBlockLines.push(
+                    `<div class="number-line-container">` +
+                    `<span class="receipt-number-line"><span class="number-label">Dezenas:</span><span class="selectable-numbers">${data.dezena.join(', ')}</span></span>` +
+                    `<button class="copy-bicho-type-btn" onclick="copyBichoNumbers('${encodedAnimalName}', 'dezena', this)">Copiar D</button>` +
+                    `</div>`
+                );
+            }
+            
+            animalBlockLines.push(`</div>`); // Fim do Wrapper
             return animalBlockLines.join('\n');
-        }).join('\n\n');
+            
+        }).join('\n'); // Remove o '\n\n'
     }
 
     const custoTotalCalculado = totalNumeros * 0.25;
     const valorCalculadoFormatado = 'R$ ' + custoTotalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
-    // --- INÍCIO DA LÓGICA ATUALIZADA ---
     const valorPagoNumerico = parseFloat(valorPago.replace(/\D/g, '')) / 100;
     
-    // 1. Lê qual método o usuário selecionou
     const metodoCalculo = document.querySelector('input[name="metodoPremio"]:checked')?.value || 'padrao';
-    let multiplicador = 50; // Padrão
+    let multiplicador = 50; 
     
     if (metodoCalculo === 'bolao_40x') {
-        multiplicador = 40; // Novo multiplicador
+        multiplicador = 40; 
     }
-    // --- FIM DA LÓGICA ATUALIZADA ---
 
     let possivelPremio = 0;
     if (valorPagoNumerico > 0) {
-        // --- LÓGICA DE CÁLCULO ATUALIZADA ---
         if (metodoCalculo === 'padrao') {
-            // Mantém a lógica antiga de 'switch' para os valores especiais do modo padrão (50x)
             switch (valorPagoNumerico) {
                 case 25: possivelPremio = 1250; break;
                 case 50: possivelPremio = 2500; break; 
@@ -9202,21 +9252,22 @@ function generateReceiptText() {
                 case 100: possivelPremio = 5000; break; 
                 case 150: possivelPremio = 7500; break;
                 case 200: possivelPremio = 10000; break;
-                default: possivelPremio = valorPagoNumerico * multiplicador; break; // default 50x
+                default: possivelPremio = valorPagoNumerico * multiplicador; break; 
             }
         } else if (metodoCalculo === 'bolao_40x') {
-            // Para o novo modo (40x), podemos adicionar valores especiais como o que você mencionou
             switch (valorPagoNumerico) {
-                case 15: possivelPremio = 600; break; // Seu novo caso: 15 -> 600 (40x)
-                // Adicione outros valores especiais do bolão (40x) aqui se precisar
-                // Ex: case 30: possivelPremio = 1200; break;
-                default: possivelPremio = valorPagoNumerico * multiplicador; break; // default 40x
+                case 15: possivelPremio = 600; break; 
+                default: possivelPremio = valorPagoNumerico * multiplicador; break; 
             }
         }
-        // --- FIM DA LÓGICA DE CÁLCULO ATUALIZADA ---
     }
     
     const premioFormatado = possivelPremio > 0 ? 'R$ ' + possivelPremio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A';
+
+    // === INÍCIO DA CORREÇÃO ===
+    // Esta linha foi MOVIDA para ANTES da criação do 'reciboCompleto'
+    currentReceiptCode = lastGeneratedCode || generateReceiptCode(); 
+    // === FIM DA CORREÇÃO ===
 
     const keyCodigo = "Código".padEnd(15, '.');
     const keyDataHora = "Data/Hora".padEnd(15, '.');
@@ -9226,45 +9277,33 @@ function generateReceiptText() {
     const keyValorCalc = "Valor Calculado".padEnd(15, '.');
     const keyQtd = "Qtd. Números".padEnd(15, '.');
 
+    // Agora 'currentReceiptCode' terá um valor válido
     const reciboCompleto = `
 ==============================
       RECIBO DE APOSTA
 ==============================
 
-${keyCodigo}: ${currentReceiptCode}
-${keyDataHora}: ${dataHora}
-${keyExtracao}: ${extracao} - ${horario}
-${keyValorPago}: ${valorPago}
-${keyPremio}: ${premioFormatado}
-${keyValorCalc}: ${valorCalculadoFormatado}
-${keyQtd}: ${totalNumeros}
+<span class="receipt-header-line"><strong>${keyCodigo}</strong>: ${currentReceiptCode}</span>
+<span class="receipt-header-line"><strong>${keyDataHora}</strong>: ${dataHora}</span>
+<span class="receipt-header-line"><strong>${keyExtracao}</strong>: ${extracao} - ${horario}</span>
+<span class="receipt-header-line"><strong>${keyValorPago}</strong>: ${valorPago}</span>
+<span class="receipt-header-line"><strong>${keyPremio}</strong>: ${premioFormatado}</span>
+<span class="receipt-header-line"><strong>${keyValorCalc}</strong>: ${valorCalculadoFormatado}</span>
+<span class="receipt-header-line"><strong>${keyQtd}</strong>: ${totalNumeros}</span>
 
-------------------------------
-       RESUMO DETALHADO
-------------------------------
+<span class="receipt-divider">------------------------------</span>
+<span class="receipt-divider">       RESUMO DETALHADO       </span>
+<span class="receipt-divider">------------------------------</span>
 ${numerosTexto}
-==============================
-         BOA SORTE! 🍀
-==============================
+<span class="receipt-divider">==============================</span>
+<span class="receipt-divider">         BOA SORTE! 🍀         </span>
+<span class="receipt-divider">==============================</span>
     `;
 
     if (receiptContent) {
-        receiptContent.textContent = reciboCompleto.trim();
-        try {
-            let currentHTML = receiptContent.innerHTML;
-            const numberLineRegex = /^( {2,})([\d,\s]+[0-9]) *?(?=<br>|$)/gm;
-            const modifiedHTML = currentHTML.replace(
-                numberLineRegex,
-                (match, leadingSpaces, numberString) => {
-                    const cleanedNumberString = numberString.trim().replace(/,$/, '');
-                    return `${leadingSpaces}<span class="selectable-numbers">${cleanedNumberString}</span>`;
-                }
-            );
-            receiptContent.innerHTML = modifiedHTML;
-        } catch (e) {
-            console.error("Erro ao aplicar seleção de números:", e);
-            receiptContent.textContent = reciboCompleto.trim();
-        }
+        // A linha que definia o 'currentReceiptCode' foi removida daqui
+        receiptContent.innerHTML = reciboCompleto.trim();
+        // A lógica de aplicar seleção foi movida para dentro da criação do 'numerosTexto'
     }
 }
 
