@@ -32,8 +32,7 @@
       transition: background-color 0.3s, color 0.3s;
       margin: 0;
       overscroll-behavior: none;
-      -webkit-user-select: none;
-      user-select: none;
+      /* As duas linhas de user-select foram removidas */
       overflow-x: hidden;
     }
 
@@ -4267,7 +4266,15 @@ body.dark-mode #bichosSelectorContainer {
                 <small style="font-weight: normal;">Alimenta a I.A. com o último mês.</small>
             </div>
         </button>
-      </div>
+
+        <button onclick="runFullIAAnalysisUpdate()" class="analysis-button" style="background-color: #6f42c1; color: white; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 15px;">
+            <span style="font-size: 1.5rem; line-height: 1;">🧠</span>
+            <div>
+                <strong>Atualizar Análises I.A. (Custo Alto)</strong>
+                <small style="font-weight: normal;">Calcula atrasados/frequentes (Usar 1x por dia)</small>
+            </div>
+        </button>
+        </div>
     </div>
 </div>
 
@@ -4742,21 +4749,21 @@ body.dark-mode #bichosSelectorContainer {
       </p>
       
       <div class="data-management-buttons">
-        <button onclick="handlePaymentMethodSelection('padrao')" class="view-button">
-            <span style="font-size: 1.5rem; line-height: 1;">⚙️</span>
-            <div>
-                <strong>Padrão (50x)</strong>
-                <small style="font-weight: normal;">Cálculo padrão de prêmios.</small>
-            </div>
-        </button>
-        <button onclick="handlePaymentMethodSelection('bolao_40x')" class="bolao-button" style="background-color: #fd7e14;">
-            <span style="font-size: 1.5rem; line-height: 1;">🎟️</span>
-            <div>
-                <strong>Bolão (40x)</strong>
-                <small style="font-weight: normal;">Cálculo especial para bolões.</small>
-            </div>
-        </button>
-      </div>
+            <button onclick="handlePaymentMethodSelection('padrao')" class="view-button">
+                <span style="font-size: 1.5rem; line-height: 1;">⚙️</span>
+                <div>
+                    <strong>Bolão Padrão</strong>
+                    <small style="font-weight: normal;">(Prêmio 50x)</small>
+                </div>
+            </button>
+            <button onclick="handlePaymentMethodSelection('bolao_40x')" class="bolao-button" style="background-color: #fd7e14;">
+                <span style="font-size: 1.5rem; line-height: 1;">🎟️</span>
+                <div>
+                    <strong>Bolão Especial</strong>
+                    <small style="font-weight: normal;">(Prêmio 40x)</small>
+                </div>
+            </button>
+          </div>
 
       <button onclick="closePaymentMethodModal()" class="load-button" style="width: 100%; margin-top: 20px;">Cancelar</button>
     </div>
@@ -5749,72 +5756,7 @@ async function generateIAPalpites(loteria, loteriaNome) { // <-- MUDANÇA AQUI
     document.getElementById('iaPalpiteResultsContainer').style.display = 'block'; // <-- Mostra os resultados
 }
 
-async function getPalpitesIA(loteria, posicaoPremio = 1) {
-    showLoadingIndicator(`I.A. está analisando os bichos mais atrasados...`);
 
-    const currentUser = firebase.auth().currentUser;
-    if (!currentUser) {
-        hideLoadingIndicator();
-        showToast('Você precisa estar logado para consultar a I.A.', 'error');
-        checkAuth();
-        return [];
-    }
-
-    // 1. Cria um mapa para rastrear a data do último aparecimento de cada bicho
-    const ultimosVistos = new Map();
-
-    try {
-        // 2. Busca os últimos 1000 resultados
-        const querySnapshot = await firestoreDB.collection('resultados')
-            .where('loteria', '==', loteria)
-            .where('posicao', '==', posicaoPremio)
-            .orderBy('data', 'desc')
-            .limit(1000) 
-            .get();
-
-        if (querySnapshot.empty) {
-            hideLoadingIndicator();
-            showToast(`I.A.: Nenhum dado histórico encontrado para 1º prêmio da ${loteria.toUpperCase()}.`, 'info', 4000);
-            return [];
-        }
-
-        // 3. Preenche o mapa com a data mais recente
-        querySnapshot.forEach(doc => {
-            const data = doc.data();
-            const grupo = data.bichoGrupo;
-            
-            if (grupo && !ultimosVistos.has(grupo)) {
-                ultimosVistos.set(grupo, data.data.toDate());
-            }
-        });
-
-        // 4. Mapeia todos os 25 bichos
-        const dataMaisAntiga = new Date('2000-01-01');
-        
-        const listaDeAtraso = tabelaDeGrupos.map(bicho => {
-            const dataUltimaVez = ultimosVistos.get(bicho.grupo);
-            return {
-                grupo: bicho.grupo,
-                animal: bicho.animal,
-                emoji: bicho.emoji,
-                dezenas: bicho.dezenas,
-                data: dataUltimaVez || dataMaisAntiga 
-            };
-        });
-
-        // 5. Ordena a lista (mais antiga primeiro)
-        listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
-
-        // 6. Retorna os 5 primeiros (os mais atrasados)
-        return listaDeAtraso.slice(0, 5); // <-- MUDANÇA AQUI (de 10 para 5)
-
-    } catch (error) {
-        hideLoadingIndicator();
-        console.error("Erro ao buscar palpites da I.A.:", error);
-        showToast('Erro ao analisar o banco de dados da I.A.', 'error');
-        return [];
-    }
-}
 
 /**
  * (Placeholder) Função que o botão de compartilhar vai chamar
@@ -6346,12 +6288,12 @@ async function shareReceiptToWhatsApp() {
 
     let metodoDisplay = '';
     if (chosenMethod === 'padrao') {
-        metodoDisplay = 'Padrão (50x)';
+        metodoDisplay = 'Bolão Padrão (50x)'; // Texto atualizado
     } else if (chosenMethod === 'bolao_40x') {
-        metodoDisplay = 'Bolão (40x)';
+        metodoDisplay = 'Bolão Especial (40x)'; // Texto atualizado
     }
 
-    // 6. Monta a mensagem de confirmação (sem mudança)
+    // 6. Monta a mensagem de confirmação (texto atualizado)
     let confirmationMessage = `<strong>Confirme os dados:</strong>\n\n` +
                               `<strong>Extração:</strong> ${extracaoCompletaFinal}\n` +
                               `<strong>Valor:</strong> ${valor}\n` +
@@ -6376,26 +6318,21 @@ async function shareReceiptToWhatsApp() {
 
     showToast('Gerando link para compartilhar...', 'info');
 
-    // --- INÍCIO DA CORREÇÃO (Lógica de Limpeza MOVIDA) ---
-    // 8. LÊ o conteúdo da tela DEPOIS de tudo confirmado
+    // --- Lógica de Limpeza MOVIDA (sem mudança) ---
     const receiptElement = document.getElementById('receiptContent');
     if (!receiptElement) {
         showToast('Erro: Elemento do recibo não encontrado.', 'error');
         return;
     }
     const receiptClone = receiptElement.cloneNode(true);
-    
-    // 9. Limpa os botões do clone
     receiptClone.querySelectorAll('.copy-bicho-type-btn').forEach(btn => btn.remove());
-    
-    // 10. Pega o texto LIMPO E ATUALIZADO (com 40x)
     const receiptContent = receiptClone.textContent;
     
     if (!receiptContent || !receiptContent.trim()) {
         showToast('Não há recibo para compartilhar.', 'error');
         return;
     }
-    // --- FIM DA CORREÇÃO ---
+    // --- Fim da Lógica de Limpeza ---
 
     try {
         const sorteioHoraFinal = parseInt(timeMatchFinal[1], 10);
@@ -6415,7 +6352,7 @@ async function shareReceiptToWhatsApp() {
 
         // 11. Salva o texto LIMPO E ATUALIZADO no Firebase
         const docRef = await firestoreDB.collection('receipts').add({
-            content: receiptContent, // <-- USA A VARIÁVEL CORRETA
+            content: receiptContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: showCheckEmoji,
             expiresAt: dataExpiracao
@@ -6434,7 +6371,18 @@ async function shareReceiptToWhatsApp() {
         else { greeting = 'Boa noite!'; }
 
         const resumoBichoLines = [];
-        const bichoRegex = /Gr\.\s(\d+)\s-\s([A-Za-zçãáéíóúâêôûà\s]+):\s(.*?)\n/g;
+
+        // ====================================================================
+        // === INÍCIO DA CORREÇÃO (Regex que ignora o emoji) ===
+        // ====================================================================
+        
+        // Esta regex agora "pula" o emoji (se ele existir) e captura o nome do bicho
+        const bichoRegex = /Gr\.\s(\d+)\s-\s(?:.*?\s)?([A-Za-zçãáéíóúâêôûà\s]+):\s(.*?)\n/g;
+
+        // ====================================================================
+        // === FIM DA CORREÇÃO ===
+        // ====================================================================
+        
         let match;
         // 13. Faz o parse do texto LIMPO E ATUALIZADO
         while ((match = bichoRegex.exec(receiptContent)) !== null) {
@@ -6450,19 +6398,25 @@ async function shareReceiptToWhatsApp() {
             resumoSection = `Resumo por Bicho:\n${resumoBichoLines.join('\n')}\n\n`;
         }
 
-        // 14. Monta a mensagem final do WhatsApp (agora correta)
+        // 14. Prepara a linha de Valor
+        let valorLinha = `💰 Valor: ${valorRecibo}`;
+        if (chosenMethod === 'bolao_40x') {
+            valorLinha += ' (Cada bolão)';
+        }
+
+        // 15. Monta a mensagem final do WhatsApp
         const message = `${greeting}\n\n` +
                         `Seu recibo foi registrado com sucesso! ✅\n\n` +
                         `Resumo da sua aposta:\n` +
                         `🔑 ID da Aposta: ${codigo}\n` +
-                        `💰 Valor: ${valorRecibo}\n` +
+                        `${valorLinha}\n` + 
                         `🎯 Extração: ${extracaoCompletaFinal}\n\n` +
                         `${resumoSection}` +
                         `Clique no link abaixo para visualizar todos os detalhes:\n` +
                         `${link}\n\n` +
                         `Para sua segurança, o link expira após o sorteio.\n\n` +
                         `Boa sorte! 🍀`;
-
+        
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
         window.open(whatsappUrl, '_blank');
@@ -6796,183 +6750,6 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
     // O finally não é mais necessário aqui, pois o botão é reabilitado nos fluxos de cancelamento/erro
 }
 
-async function getDezenasAtrasadasIA(loteria) {
-    const currentUser = firebase.auth().currentUser;
-    if (!currentUser) {
-         showToast('Você precisa estar logado para consultar a I.A.', 'error');
-         return [];
-    }
-
-    // 1. Cria um mapa para rastrear as 100 dezenas (00-99)
-    const ultimosVistos = new Map();
-    // Pré-popula o mapa com uma data muito antiga para todas as dezenas
-    const dataMaisAntiga = new Date('2000-01-01');
-    for (let i = 0; i < 100; i++) {
-        ultimosVistos.set(String(i).padStart(2, '0'), dataMaisAntiga);
-    }
-
-    try {
-        // 2. Busca os últimos 2500 resultados (1º ao 5º) da loteria.
-        // (500 sorteios * 5 prêmios = 2500 dezenas)
-        const querySnapshot = await firestoreDB.collection('resultados')
-            .where('loteria', '==', loteria)
-            .orderBy('data', 'desc')
-            .limit(2500)
-            .get();
-
-        if (querySnapshot.empty) {
-            showToast(`I.A.: Nenhum dado histórico encontrado para ${loteria.toUpperCase()}.`, 'info');
-            return [];
-        }
-
-        // 3. Atualiza o mapa com a data mais recente de cada dezena
-        querySnapshot.forEach(doc => {
-            const data = doc.data();
-            const dezena = data.dezena; // Pega a dezena (ex: '34')
-            const dataSorteio = data.data.toDate();
-
-            // Se a data deste sorteio for MAIS RECENTE que a data que temos no mapa...
-            // (E o mapa ainda não tiver uma data mais nova)
-            if (dezena && dataSorteio > ultimosVistos.get(dezena)) {
-                ultimosVistos.set(dezena, dataSorteio);
-            }
-        });
-
-        // 4. Converte o mapa em uma lista de objetos
-        const listaDeAtraso = [];
-        ultimosVistos.forEach((data, dezena) => {
-            listaDeAtraso.push({
-                numero: dezena,
-                data: data
-            });
-        });
-
-        // 5. Ordena pela data (mais antiga primeiro)
-        listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
-
-        // 6. Retorna as 5 mais atrasadas
-        return listaDeAtraso.slice(0, 5);
-
-    } catch (error) {
-        console.error("Erro ao buscar dezenas atrasadas da I.A.:", error);
-        showToast('Erro ao analisar as dezenas no banco de dados.', 'error');
-        return [];
-    }
-}
-
-async function getCentenasAtrasadasIA(loteria) {
-    const currentUser = firebase.auth().currentUser;
-    if (!currentUser) return [];
-
-    // 1. Cria um mapa para rastrear as 1000 centenas (000-999)
-    const ultimosVistos = new Map();
-    const dataMaisAntiga = new Date('2000-01-01');
-    // NOTA: Pré-popular 1000 centenas pode ser lento.
-    // Vamos popular dinamicamente apenas as que encontrarmos.
-
-    try {
-        // 2. Busca um volume grande de resultados
-        const querySnapshot = await firestoreDB.collection('resultados')
-            .where('loteria', '==', loteria)
-            .orderBy('data', 'desc')
-            .limit(5000) // 1000 sorteios * 5 prêmios
-            .get();
-
-        if (querySnapshot.empty) return [];
-
-        // 3. Preenche o mapa com a data mais recente de cada centena
-        querySnapshot.forEach(doc => {
-            const data = doc.data();
-            const centena = data.centena; // Pega a centena (ex: '134')
-            const dataSorteio = data.data.toDate();
-
-            if (centena && !ultimosVistos.has(centena)) {
-                 ultimosVistos.set(centena, dataSorteio);
-            }
-        });
-
-        // 4. Adiciona centenas "nunca vistas"
-        for (let i = 0; i < 1000; i++) {
-            const centenaStr = String(i).padStart(3, '0');
-            if (!ultimosVistos.has(centenaStr)) {
-                ultimosVistos.set(centenaStr, dataMaisAntiga);
-            }
-        }
-        
-        // 5. Converte o mapa em lista e ordena
-        const listaDeAtraso = [];
-        ultimosVistos.forEach((data, centena) => {
-            listaDeAtraso.push({
-                numero: centena,
-                data: data
-            });
-        });
-
-        listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
-
-        // 6. Retorna as 5 mais atrasadas
-        return listaDeAtraso.slice(0, 5);
-
-    } catch (error) {
-        console.error("Erro ao buscar centenas atrasadas da I.A.:", error);
-        return [];
-    }
-}
-
-async function getUnidadesAtrasadasIA(loteria) {
-    const currentUser = firebase.auth().currentUser;
-    if (!currentUser) return [];
-
-    // 1. Cria um mapa para rastrear as 10 unidades (0-9)
-    const ultimosVistos = new Map();
-    const dataMaisAntiga = new Date('2000-01-01');
-    for (let i = 0; i < 10; i++) {
-        ultimosVistos.set(String(i), dataMaisAntiga);
-    }
-
-    try {
-        // 2. Busca os últimos 500 resultados (1º ao 5º)
-        const querySnapshot = await firestoreDB.collection('resultados')
-            .where('loteria', '==', loteria)
-            .orderBy('data', 'desc')
-            .limit(500) // 100 sorteios * 5 prêmios = 500 unidades
-            .get();
-
-        if (querySnapshot.empty) return [];
-
-        // 3. Atualiza o mapa com a data mais recente de cada unidade
-        querySnapshot.forEach(doc => {
-            const data = doc.data();
-            const dezena = data.dezena; // Pega a dezena (ex: '34')
-            const dataSorteio = data.data.toDate();
-
-            if (dezena && dezena.length === 2) {
-                const unidade = dezena[1]; // Pega o último dígito
-                if (dataSorteio > ultimosVistos.get(unidade)) {
-                    ultimosVistos.set(unidade, dataSorteio);
-                }
-            }
-        });
-
-        // 4. Converte o mapa em lista e ordena
-        const listaDeAtraso = [];
-        ultimosVistos.forEach((data, unidade) => {
-            listaDeAtraso.push({
-                numero: unidade,
-                data: data
-            });
-        });
-
-        listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
-
-        // 6. Retorna as 2 mais atrasadas
-        return listaDeAtraso.slice(0, 2);
-
-    } catch (error) {
-        console.error("Erro ao buscar unidades atrasadas da I.A.:", error);
-        return [];
-    }
-}
 
 async function getPuxadaDoDiaIA(loteria) {
     const currentUser = firebase.auth().currentUser;
@@ -7562,9 +7339,8 @@ async function handleLogin() {
             passwordInput.value = '';
 
             // --- [PROPOSTA 2] INICIA A ATUALIZAÇÃO AUTOMÁTICA ---
-            console.log("Usuário logado e ativo. Chamando getMilharCount e runAutoUpdateIA...");
+           console.log("Usuário logado e ativo. Chamando getMilharCount...");
             getMilharCount(user); // Busca a contagem de milhares
-            runAutoUpdateIA(); // Inicia a verificação de atualização silenciosa
             // --- FIM DA ADIÇÃO ---
             
         } else if (doc.exists && doc.data().ativo === false) {
@@ -7831,6 +7607,239 @@ async function restoreGameTypeSelection() {
         });
     }
 }
+
+// --- INÍCIO DO NOVO BLOCO: FUNÇÕES DE AGREGAÇÃO (ADMIN) ---
+
+/**
+ * (ADMIN) Roda a análise pesada de I.A. e salva em um único documento.
+ * Gasta milhares de leituras.
+ */
+async function runFullIAAnalysisUpdate() {
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        showToast('Você precisa estar logado para rodar a análise.', 'error');
+        return;
+    }
+    const userConfirmed = await showCustomConfirm(
+        'ATENÇÃO: CUSTO DE LEITURA!\n\nEsta ação vai ler milhares de documentos do banco de dados para recalcular as estatísticas (Atrasados/Frequentes).\n\nUse isso apenas 1-2 vezes por dia para evitar custos altos.\n\nDeseja continuar?',
+        'Sim, Rodar Análise',
+        'Cancelar',
+        'updateModal' // Garante que fique por cima do modal de atualização
+    );
+
+    if (!userConfirmed) {
+        showToast('Análise cancelada.', 'info');
+        return;
+    }
+
+    showLoadingIndicator('Analisando I.A. (Pode levar um minuto)...');
+    
+    try {
+        // 1. Coletar todos os dados em paralelo (o que gasta as leituras)
+        const [
+            bichosAtrasados1Premio,
+            bichosFrequentes,
+            dezenasAtrasadas,
+            centenasAtrasadas,
+            unidadesAtrasadas
+        ] = await Promise.all([
+            _agg_getBichosAtrasados1Premio(), // Antiga getPalpitesIA
+            _agg_getBichosFrequentes(7),      // Antiga getBichosFrequentesIA
+            _agg_getDezenasAtrasadas(),       // Antiga getDezenasAtrasadasIA
+            _agg_getCentenasAtrasadas(),      // Antiga getCentenasAtrasadasIA
+            _agg_getUnidadesAtrasadas()       // Antiga getUnidadesAtrasadasIA
+        ]);
+
+        // 2. Montar o documento de resumo
+        const summaryData = {
+            bichosAtrasados1Premio: bichosAtrasados1Premio,
+            bichosFrequentes: bichosFrequentes,
+            dezenasAtrasadas: dezenasAtrasadas,
+            centenasAtrasadas: centenasAtrasadas,
+            unidadesAtrasadas: unidadesAtrasadas,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // 3. Salvar o documento único
+        const summaryDocRef = firestoreDB.collection('analises').doc('dadosIA');
+        await summaryDocRef.set(summaryData, { merge: true }); // Usa 'merge: true' por segurança
+
+        hideLoadingIndicator();
+        showToast('Análise I.A. atualizada com sucesso!', 'success');
+        closeUpdateModal();
+        
+        // Limpa o cache local para forçar a leitura dos novos dados
+        iaSummaryCache = null; 
+
+    } catch (error) {
+        hideLoadingIndicator();
+        console.error("Erro ao rodar análise completa da I.A.:", error);
+        showToast('Falha ao atualizar a análise I.A.', 'error');
+    }
+}
+
+// (HELPER) Função que faz a leitura pesada (Bichos 1º Prêmio)
+async function _agg_getBichosAtrasados1Premio() {
+    console.log("[IA Admin] Executando: _agg_getBichosAtrasados1Premio (1000 leituras)");
+    const ultimosVistos = new Map();
+    const querySnapshot = await firestoreDB.collection('resultados')
+        .where('posicao', '==', 1)
+        .orderBy('data', 'desc')
+        .limit(1000) 
+        .get();
+
+    if (querySnapshot.empty) return [];
+
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const grupo = data.bichoGrupo;
+        if (grupo && !ultimosVistos.has(grupo)) {
+            ultimosVistos.set(grupo, data.data.toDate());
+        }
+    });
+
+    const dataMaisAntiga = new Date('2000-01-01');
+    const listaDeAtraso = tabelaDeGrupos.map(bicho => {
+        return {
+            grupo: bicho.grupo,
+            animal: bicho.animal,
+            emoji: bicho.emoji,
+            dezenas: bicho.dezenas,
+            data: ultimosVistos.get(bicho.grupo) || dataMaisAntiga 
+        };
+    });
+    listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
+    return listaDeAtraso.slice(0, 5);
+}
+
+// (HELPER) Função que faz a leitura pesada (Bichos Frequentes)
+async function _agg_getBichosFrequentes(daysAgo = 7) {
+    console.log(`[IA Admin] Executando: _agg_getBichosFrequentes (lendo ${daysAgo} dias)`);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysAgo);
+    const startTimestamp = firebase.firestore.Timestamp.fromDate(startDate);
+    const bichoCounts = new Map();
+    tabelaDeGrupos.forEach(b => bichoCounts.set(b.grupo, { ...b, count: 0 }));
+
+    const querySnapshot = await firestoreDB.collection('resultados')
+        .where('data', '>=', startTimestamp)
+        .get();
+    
+    if (querySnapshot.empty) return [];
+
+    querySnapshot.forEach(doc => {
+        const grupo = doc.data().bichoGrupo;
+        if (bichoCounts.has(grupo)) {
+            bichoCounts.get(grupo).count++;
+        }
+    });
+
+    const listaFrequencia = Array.from(bichoCounts.values());
+    listaFrequencia.sort((a, b) => b.count - a.count);
+    return listaFrequencia.slice(0, 5);
+}
+
+// (HELPER) Função que faz a leitura pesada (Dezenas Atrasadas)
+async function _agg_getDezenasAtrasadas() {
+    console.log("[IA Admin] Executando: _agg_getDezenasAtrasadas (2500 leituras)");
+    const ultimosVistos = new Map();
+    const dataMaisAntiga = new Date('2000-01-01');
+    for (let i = 0; i < 100; i++) {
+        ultimosVistos.set(String(i).padStart(2, '0'), dataMaisAntiga);
+    }
+
+    const querySnapshot = await firestoreDB.collection('resultados')
+        .orderBy('data', 'desc')
+        .limit(2500)
+        .get();
+
+    if (querySnapshot.empty) return [];
+
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const dezena = data.dezena;
+        const dataSorteio = data.data.toDate();
+        if (dezena && dataSorteio > ultimosVistos.get(dezena)) {
+            ultimosVistos.set(dezena, dataSorteio);
+        }
+    });
+
+    const listaDeAtraso = [];
+    ultimosVistos.forEach((data, dezena) => listaDeAtraso.push({ numero: dezena, data: data }));
+    listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
+    return listaDeAtraso.slice(0, 5);
+}
+
+// (HELPER) Função que faz a leitura pesada (Centenas Atrasadas)
+async function _agg_getCentenasAtrasadas() {
+    console.log("[IA Admin] Executando: _agg_getCentenasAtrasadas (5000 leituras)");
+    const ultimosVistos = new Map();
+    const dataMaisAntiga = new Date('2000-01-01');
+    
+    const querySnapshot = await firestoreDB.collection('resultados')
+        .orderBy('data', 'desc')
+        .limit(5000)
+        .get();
+
+    if (querySnapshot.empty) return [];
+
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const centena = data.centena;
+        const dataSorteio = data.data.toDate();
+        if (centena && !ultimosVistos.has(centena)) {
+             ultimosVistos.set(centena, dataSorteio);
+        }
+    });
+
+    for (let i = 0; i < 1000; i++) {
+        const centenaStr = String(i).padStart(3, '0');
+        if (!ultimosVistos.has(centenaStr)) {
+            ultimosVistos.set(centenaStr, dataMaisAntiga);
+        }
+    }
+    
+    const listaDeAtraso = [];
+    ultimosVistos.forEach((data, centena) => listaDeAtraso.push({ numero: centena, data: data }));
+    listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
+    return listaDeAtraso.slice(0, 5);
+}
+
+// (HELPER) Função que faz a leitura pesada (Unidades Atrasadas)
+async function _agg_getUnidadesAtrasadas() {
+    console.log("[IA Admin] Executando: _agg_getUnidadesAtrasadas (500 leituras)");
+    const ultimosVistos = new Map();
+    const dataMaisAntiga = new Date('2000-01-01');
+    for (let i = 0; i < 10; i++) {
+        ultimosVistos.set(String(i), dataMaisAntiga);
+    }
+
+    const querySnapshot = await firestoreDB.collection('resultados')
+        .orderBy('data', 'desc')
+        .limit(500)
+        .get();
+
+    if (querySnapshot.empty) return [];
+
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const dezena = data.dezena;
+        const dataSorteio = data.data.toDate();
+        if (dezena && dezena.length === 2) {
+            const unidade = dezena[1];
+            if (dataSorteio > ultimosVistos.get(unidade)) {
+                ultimosVistos.set(unidade, dataSorteio);
+            }
+        }
+    });
+
+    const listaDeAtraso = [];
+    ultimosVistos.forEach((data, unidade) => listaDeAtraso.push({ numero: unidade, data: data }));
+    listaDeAtraso.sort((a, b) => a.data.getTime() - b.data.getTime());
+    return listaDeAtraso.slice(0, 2);
+}
+
+// --- FIM DO NOVO BLOCO ---
 
 async function runSilentIAUpdate(daysToFetch) {
     console.log(`[AutoUpdate] Iniciando atualização silenciosa para ${daysToFetch} dia(s)...`);
@@ -8160,14 +8169,13 @@ function showBolaoModal() {
     templateTextarea.removeEventListener('input', handleBolaoTemplateInput);
     templateTextarea.addEventListener('input', handleBolaoTemplateInput);
 
+    // O bloco que populava 'bolaoNomeSelect' foi REMOVIDO DAQUI.
+    // A função 'atualizarSelectNomes' agora cuida disso.
+    // Apenas garantimos que o valor seja resetado:
     const nomeSelect = document.getElementById('bolaoNomeSelect');
-    nomeSelect.innerHTML = '<option value="">-- Selecione um nome --</option>';
-    nomesSalvos.forEach(nome => {
-        const option = document.createElement('option');
-        option.value = nome;
-        option.textContent = nome;
-        nomeSelect.appendChild(option);
-    });
+    if (nomeSelect) {
+        nomeSelect.value = ''; // Reseta a seleção
+    }
     
     updateBolaoPreview();
     
@@ -9858,56 +9866,94 @@ function toggleQuickShortcuts() {
         }
     }
 
-    async function getBichosFrequentesIA(loteria, daysAgo = 7) {
-    const currentUser = firebase.auth().currentUser;
-    if (!currentUser) return []; // Retorna vazio se não estiver logado
+    // --- INÍCIO DO BLOCO DE SUBSTITUIÇÃO (FUNÇÕES OTIMIZADAS) ---
 
-    // 1. Define a data de início da análise (ex: 7 dias atrás)
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - daysAgo);
-    const startTimestamp = firebase.firestore.Timestamp.fromDate(startDate);
+// Variável de cache global para o documento de análise
+let iaSummaryCache = null;
+let iaSummaryCacheTime = null;
+const IA_CACHE_DURATION = 10 * 60 * 1000; // Cache de 10 minutos
 
-    // 2. Cria um "placar" para contar os bichos
-    const bichoCounts = new Map();
-    tabelaDeGrupos.forEach(b => {
-        // Inicializa o placar com os dados do bicho e contagem 0
-        bichoCounts.set(b.grupo, { ...b, count: 0 });
-    });
-
-    try {
-        // 3. Busca todos os resultados (1º-5º prêmio) da loteria DESDE a data de início
-        const querySnapshot = await firestoreDB.collection('resultados')
-            .where('loteria', '==', loteria)
-            .where('data', '>=', startTimestamp)
-            .get();
-
-        if (querySnapshot.empty) {
-            console.log(`[IA Quente] Nenhum dado encontrado nos últimos ${daysAgo} dias para ${loteria}`);
-            return [];
-        }
-
-        // 4. Conta as ocorrências de cada bicho (1º ao 5º prêmio)
-        querySnapshot.forEach(doc => {
-            const grupo = doc.data().bichoGrupo;
-            if (bichoCounts.has(grupo)) {
-                bichoCounts.get(grupo).count++;
-            }
-        });
-
-        // 5. Converte o placar (Mapa) em um array
-        const listaFrequencia = Array.from(bichoCounts.values());
-
-        // 6. Ordena o array pela contagem (do maior para o menor)
-        listaFrequencia.sort((a, b) => b.count - a.count);
-
-        // 7. Retorna os 5 bichos mais "quentes"
-        return listaFrequencia.slice(0, 5);
-
-    } catch (error) {
-        console.error("[IA Quente] Erro ao buscar bichos frequentes:", error);
-        return [];
+/**
+ * (HELPER) Busca o documento de resumo 'analises/dadosIA' (com cache).
+ * Gasta 1 LEITURA (apenas se o cache expirar).
+ */
+async function getIaSummaryDocument() {
+    const now = new Date().getTime();
+    // Se tiver cache e o cache não tiver expirado (10 min), usa o cache
+    if (iaSummaryCache && iaSummaryCacheTime && (now - iaSummaryCacheTime < IA_CACHE_DURATION)) {
+        console.log("[IA] Usando cache de resumo I.A.");
+        return iaSummaryCache;
     }
+
+    console.log("[IA] Buscando novo resumo I.A. do Firestore (1 LEITURA)...");
+    const summaryDocRef = firestoreDB.collection('analises').doc('dadosIA');
+    const doc = await summaryDocRef.get();
+
+    if (!doc.exists) {
+        console.error("[IA] Documento de resumo 'analises/dadosIA' NÃO ENCONTRADO!");
+        showToast('Dados da I.A. ainda não foram gerados. Peça ao admin para rodar a "Atualizar Análises I.A."', 'error', 5000);
+        return null;
+    }
+
+    // Salva no cache
+    iaSummaryCache = doc.data();
+    iaSummaryCacheTime = now;
+    console.log("[IA] Resumo I.A. salvo no cache local.");
+    return iaSummaryCache;
 }
+
+/**
+ * (OTIMIZADO) Busca os Bichos Atrasados (1º Prêmio) do resumo.
+ * Custo: 1 LEITURA (em cache)
+ */
+async function getPalpitesIA(loteria, posicaoPremio = 1) {
+    showLoadingIndicator(`Buscando I.A.: Bichos Frios...`);
+    const summary = await getIaSummaryDocument();
+    
+    // O 'hideLoadingIndicator' será chamado pela função principal 'generateIAPalpites'
+    
+    // Retorna os dados do resumo, ou um array vazio se falhar
+    return summary ? (summary.bichosAtrasados1Premio || []) : [];
+}
+
+/**
+ * (OTIMIZADO) Busca os Bichos Frequentes do resumo.
+ * Custo: 1 LEITURA (em cache)
+ */
+async function getBichosFrequentesIA(loteria, daysAgo = 7) {
+    showLoadingIndicator(`Buscando I.A.: Bichos Quentes...`);
+    const summary = await getIaSummaryDocument();
+    return summary ? (summary.bichosFrequentes || []) : [];
+}
+
+/**
+ * (OTIMIZADO) Busca as Dezenas Atrasadas do resumo.
+ * Custo: 1 LEITURA (em cache)
+ */
+async function getDezenasAtrasadasIA(loteria) {
+    const summary = await getIaSummaryDocument();
+    return summary ? (summary.dezenasAtrasadas || []) : [];
+}
+
+/**
+ * (OTIMIZADO) Busca as Centenas Atrasadas do resumo.
+ * Custo: 1 LEITURA (em cache)
+ */
+async function getCentenasAtrasadasIA(loteria) {
+    const summary = await getIaSummaryDocument();
+    return summary ? (summary.centenasAtrasadas || []) : [];
+}
+
+/**
+ * (OTIMIZADO) Busca as Unidades Atrasadas do resumo.
+ * Custo: 1 LEITURA (em cache)
+ */
+async function getUnidadesAtrasadasIA(loteria) {
+    const summary = await getIaSummaryDocument();
+    return summary ? (summary.unidadesAtrasadas || []) : [];
+}
+
+// --- FIM DO BLOCO DE SUBSTITUIÇÃO ---
 
     async function removeDataAppInventor(key) {
         if (isInAppInventor) {
@@ -9966,8 +10012,8 @@ function toggleQuickShortcuts() {
             shouldSort: false,
             shouldSortItems: false
         });
-        atualizarSelectNomes(); 
-
+        // A LINHA 'atualizarSelectNomes();' FOI REMOVIDA DAQUI
+ 
 const nomeSelectModal = document.getElementById('nomePessoaSelectModal');
     if (nomeSelectModal) {
         choicesNomePessoaModal = new Choices(nomeSelectModal, {
@@ -9977,7 +10023,7 @@ const nomeSelectModal = document.getElementById('nomePessoaSelectModal');
             shouldSort: false, // A lista já vem ordenada
             shouldSortItems: false
         });
-        
+        // A LINHA 'atualizarSelectNomes();' FOI REMOVIDA DAQUI
     }
 
     }
@@ -10944,10 +10990,26 @@ function displayResultsWithSummary(type, resultsArray) {
         const novasOpcoesPrincipal = [{ value: '', label: '-- Nenhum selecionado --', selected: true, disabled: true }];
         const novasOpcoesExcluir = [{ value: '', label: '-- Selecione para excluir --', selected: true, disabled: true }];
         
+        // --- INÍCIO DA ADIÇÃO (Bolão) ---
+        const bolaoSelect = document.getElementById('bolaoNomeSelect');
+        if (bolaoSelect) {
+             bolaoSelect.innerHTML = '<option value="">-- Selecione um nome --</option>'; // Limpa e adiciona padrão
+        }
+        // --- FIM DA ADIÇÃO ---
+
         nomesSalvos.forEach(nome => {
             const opcao = { value: nome, label: nome };
             novasOpcoesPrincipal.push(opcao);
             novasOpcoesExcluir.push(opcao);
+            
+            // --- INÍCIO DA ADIÇÃO (Bolão) ---
+            if (bolaoSelect) {
+                const bolaoOption = document.createElement('option');
+                bolaoOption.value = nome;
+                bolaoOption.textContent = nome;
+                bolaoSelect.appendChild(bolaoOption);
+            }
+            // --- FIM DA ADIÇÃO ---
         });
 
         // Atualiza o dropdown PRINCIPAL (Choices.js)
