@@ -10866,61 +10866,118 @@ function displayResultsWithSummary(type, resultsArray) {
 
     async function carregarNomesSalvos() {
         const currentUser = firebase.auth().currentUser;
-        if (!currentUser) {
-            console.log("Carregar Nomes: Usuário não logado. Lista de nomes vazia.");
-            nomesSalvos = [];
-            atualizarSelectNomes();
-            return;
+        let nomesDaNuvem = [];
+        let nomesLocais = [];
+        let nuvemFalhou = false; // Flag para controlar o toast
+
+        // 1. Sempre carregar os nomes locais primeiro
+        try {
+            nomesLocais = await window.getData(STORAGE_KEYS.NAMES) || [];
+            console.log(`Nomes carregados localmente: ${nomesLocais.length}`);
+        } catch (localError) {
+            console.error("Erro ao carregar nomes locais:", localError);
+            showToast("Erro ao ler nomes salvos no aparelho.", "error");
+            // Continua mesmo se o local falhar, para tentar a nuvem.
         }
 
-        console.log("Carregando nomes salvos da nuvem para o usuário:", currentUser.uid);
-        try {
-            const userDocRef = firestoreDB.collection('users').doc(currentUser.uid);
-            const doc = await userDocRef.get();
+        // 2. Se estiver logado, tentar carregar e sincronizar com a nuvem
+        if (currentUser) {
+            console.log("Carregando nomes salvos da nuvem para o usuário:", currentUser.uid);
+            try {
+                const userDocRef = firestoreDB.collection('users').doc(currentUser.uid);
+                const doc = await userDocRef.get();
 
-            // Verifica se o documento existe e se o campo 'nomesSalvos' é um array
-            if (doc.exists && doc.data().nomesSalvos && Array.isArray(doc.data().nomesSalvos)) {
-                nomesSalvos = doc.data().nomesSalvos;
-                nomesSalvos.sort((a, b) => a.localeCompare(b)); // Ordena alfabeticamente
-                console.log("Nomes carregados da nuvem:", nomesSalvos.length);
-            } else {
-                console.log("Nenhum nome salvo na nuvem para este usuário. Iniciando com lista vazia.");
-                nomesSalvos = [];
+                if (doc.exists && doc.data().nomesSalvos && Array.isArray(doc.data().nomesSalvos)) {
+                    nomesDaNuvem = doc.data().nomesSalvos;
+                    console.log(`Nomes carregados da nuvem: ${nomesDaNuvem.length}`);
+                } else {
+                    console.log("Nenhum nome salvo na nuvem para este usuário.");
+                }
+            } catch (error) {
+                console.error("Erro ao carregar nomes da nuvem:", error);
+                nuvemFalhou = true; // Marca que a nuvem falhou
             }
-        } catch (error) {
-            console.error("Erro ao carregar nomes da nuvem:", error);
-            showToast("Erro ao buscar seus nomes salvos. Verifique sua conexão.", "error");
-            nomesSalvos = []; // Começa vazio em caso de erro
+        } else {
+            console.log("Carregar Nomes: Usuário não logado. Usando apenas lista local.");
+        }
+
+        // 3. Mesclar (Merge) as duas listas
+        // Usar um Set garante que não haja duplicatas
+        const mergedSet = new Set([...nomesLocais, ...nomesDaNuvem]);
+        nomesSalvos = Array.from(mergedSet);
+        nomesSalvos.sort((a, b) => a.localeCompare(b)); // Ordena alfabeticamente
+
+        // 4. Sincronizar de volta (se necessário)
+        // Se a lista mesclada for maior que a lista local, salva localmente.
+        if (nomesSalvos.length > nomesLocais.length) {
+            console.log("Sincronizando lista mesclada de volta para o local...");
+            await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos);
+        }
+        // Se estiver logado, a nuvem não falhou, e a lista mesclada for maior que a da nuvem, salva na nuvem.
+        if (currentUser && !nuvemFalhou && nomesSalvos.length > nomesDaNuvem.length) {
+            console.log("Sincronizando lista mesclada de volta para a nuvem...");
+            try {
+                await firestoreDB.collection('users').doc(currentUser.uid).set({ 
+                    nomesSalvos: nomesSalvos 
+                }, { merge: true });
+            } catch (syncError) {
+                console.error("Erro ao sincronizar nomes mesclados para a nuvem:", syncError);
+                // Não precisa de toast aqui, a falha já foi (ou será) notificada.
+            }
         }
         
-        // Atualiza a interface (os <select>) com os nomes carregados
+        // 5. Notificar o usuário se a nuvem falhou, mas os dados locais foram carregados
+        if (nuvemFalhou && nomesLocais.length > 0) {
+             showToast("Falha ao buscar nomes da nuvem. Usando a lista salva localmente.", "warning", 4000);
+        } else if (nuvemFalhou && nomesLocais.length === 0) {
+            showToast("Falha ao conectar com a nuvem. Não há nomes salvos localmente.", "error", 4000);
+        }
+
+        // 6. Atualizar a interface
         atualizarSelectNomes();
     }
 
     async function salvarNomes() {
         const currentUser = firebase.auth().currentUser;
-        if (!currentUser) {
-            console.warn("Usuário não logado. Não é possível salvar nomes na nuvem.");
-            // Não podemos mais salvar localmente, pois o "load" é da nuvem.
-            showToast("Você não está logado. Não é possível salvar.", "error");
-            return false;
-        }
         
+        // 1. Salvar localmente PRIMEIRO. Isso é obrigatório.
         try {
-            const userDocRef = firestoreDB.collection('users').doc(currentUser.uid);
-            // Usamos .set() com { merge: true } para adicionar/atualizar o campo 'nomesSalvos'
-            // sem apagar outros campos do usuário (como 'email' ou 'ativo').
-            await userDocRef.set({ 
-                nomesSalvos: nomesSalvos 
-            }, { merge: true });
-            
-            console.log("Nomes salvos na nuvem com sucesso.");
-            return true;
+            await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos);
+            console.log("Nomes salvos localmente com sucesso.");
+        } catch (localError) {
+            console.error("Erro CRÍTICO ao salvar nomes localmente:", localError);
+            showToast("Erro grave: Não foi possível salvar os nomes no aparelho.", "error");
+            return false; // Se o local falhar, é um erro grave.
+        }
 
-        } catch (error) {
-            console.error("Erro ao salvar nomes na nuvem:", error);
-            showToast("Erro ao salvar nome na nuvem. Tente novamente.", "error");
-            return false;
+        // 2. Se estiver logado, TENTA salvar na nuvem (sincronizar).
+        if (currentUser) {
+            try {
+                const userDocRef = firestoreDB.collection('users').doc(currentUser.uid);
+                await userDocRef.set({ 
+                    nomesSalvos: nomesSalvos 
+                }, { merge: true });
+                
+                console.log("Nomes sincronizados com a nuvem com sucesso.");
+                // O toast de sucesso já é mostrado pela função 'addNome' ou 'removeNome'
+                return true; // Sucesso total (local + nuvem)
+            } catch (error) {
+                console.error("Erro ao sincronizar nomes com a nuvem:", error);
+                
+                // Verifica se o erro é de cota ou conexão
+                if (error.code === 'resource-exhausted' || error.code === 'unavailable' || error.code === 'permission-denied') {
+                     showToast("Nomes salvos localmente, mas falha ao sincronizar com a nuvem (limite de dados/cota).", "warning", 4000);
+                } else {
+                     showToast("Nomes salvos localmente, mas falha ao conectar com a nuvem.", "warning", 4000);
+                }
+                
+                // Ainda retorna 'true' porque o salvamento LOCAL foi um sucesso.
+                return true; 
+            }
+        } else {
+            // Não está logado, o salvamento local já foi feito e isso é o esperado.
+            console.log("Usuário não logado. Nomes salvos apenas localmente.");
+            return true; // Sucesso (local)
         }
     }
 
