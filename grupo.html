@@ -846,24 +846,28 @@
 
         /**
          * Faz a análise de puxadas e retorna a contagem dos grupos mais puxados.
+         * MODIFICADO: Retorna os dados de Puxada Forte (1º) e Puxada Mista (2º-5º) para uso na IA.
          */
         function analisarPuxadas() {
             const container = document.getElementById('analise-container');
             container.innerHTML = ''; 
 
-            if (App.todosResultados.length === 0) {
+            if (App.groupedResults.length === 0) {
                  container.innerHTML = '<p class="text-gray-400">Sem dados para analisar.</p>';
                  return {};
             }
-
-            const ultimoResultado = App.todosResultados.find(r => r.posicao === 1);
-            if (!ultimoResultado) {
+            
+            // 1. Encontra o último sorteio completo
+            const ultimoSorteio = App.groupedResults[0];
+            const ultimoResultado1P = ultimoSorteio.premios.find(p => p.posicao === 1);
+            
+            if (!ultimoResultado1P) {
                 container.innerHTML = '<p class="text-gray-400">Nenhum resultado de 1º prémio encontrado para análise.</p>';
                 return {};
             }
 
-            const loteriaQuePuxa = ultimoResultado.loteria;
-            const grupoQuePuxa = ultimoResultado.bichoGrupo;
+            const loteriaQuePuxa = ultimoSorteio.loteria;
+            const grupoQuePuxa = ultimoResultado1P.bichoGrupo;
             const bichoQuePuxa = getBichoData(grupoQuePuxa);
             const loteriaPuxada = App.regrasPuxada[loteriaQuePuxa];
             
@@ -875,32 +879,48 @@
                 return {};
             }
 
-            // Apenas considera pares onde a loteria ANTERIOR (a que puxa) foi a `loteriaQuePuxa`
-            // e a loteria ATUAL (a puxada) foi a `loteriaPuxada`.
-            const pares = [];
-            for (let i = App.todosResultados.length - 1; i > 0; i--) {
-                const anterior = App.todosResultados[i];
-                const atual = App.todosResultados[i-1];
+            // --- CÁLCULO DE PARES HISTÓRICOS ---
+            const paresPuxadaForte = []; // 1º Prêmio -> 1º Prêmio
+            const paresPuxadaMista = [];  // 1º ao 5º Prêmio -> 1º Prêmio
+            
+            for (let i = App.groupedResults.length - 1; i > 0; i--) {
+                const sorteioAnterior = App.groupedResults[i];
+                const sorteioAtual = App.groupedResults[i-1];
                 
-                if (anterior.loteria === loteriaQuePuxa && atual.loteria === loteriaPuxada && anterior.posicao === 1 && atual.posicao === 1) {
-                    pares.push({ saiu: anterior.bichoGrupo, deu: atual.bichoGrupo });
+                // Se o sorteio anterior corresponde à loteria que Puxa e o atual à loteria Puxada
+                if (sorteioAnterior.loteria === loteriaQuePuxa && sorteioAtual.loteria === loteriaPuxada) {
+                    
+                    const bichosPuxadores = sorteioAnterior.premios.map(p => p.bichoGrupo).filter(g => g);
+                    const bichoPuxado = sorteioAtual.premios.find(p => p.posicao === 1)?.bichoGrupo;
+
+                    if (bichoPuxado) {
+                         // 1. Puxada Forte (Bicho do 1º prêmio anterior)
+                        const bichoForte = sorteioAnterior.premios.find(p => p.posicao === 1)?.bichoGrupo;
+                        if (bichoForte && bichoForte === grupoQuePuxa) {
+                             paresPuxadaForte.push({ saiu: bichoForte, deu: bichoPuxado });
+                        }
+
+                        // 2. Puxada Mista (Qualquer bicho do 1º ao 5º anterior que seja o 'grupoQuePuxa')
+                        if (bichosPuxadores.includes(grupoQuePuxa)) {
+                            paresPuxadaMista.push({ saiu: grupoQuePuxa, deu: bichoPuxado });
+                        }
+                    }
                 }
             }
 
-            const paresFiltrados = pares.filter(p => p.saiu === grupoQuePuxa);
+            // --- CONTAGEM E RANKING ---
+            const contagemForte = {};
+            paresPuxadaForte.forEach(par => { contagemForte[par.deu] = (contagemForte[par.deu] || 0) + 1; });
+            const rankingForte = Object.entries(contagemForte).sort((a, b) => b[1] - a[1]);
+            
+            const contagemMista = {};
+            paresPuxadaMista.forEach(par => { contagemMista[par.deu] = (contagemMista[par.deu] || 0) + 1; });
+            const rankingMista = Object.entries(contagemMista).sort((a, b) => b[1] - a[1]);
 
-            const contagem = {};
-            paresFiltrados.forEach(par => {
-                if(par.deu) {
-                    contagem[par.deu] = (contagem[par.deu] || 0) + 1;
-                }
-            });
 
-            const contagemArray = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
-
-            let listaPuxadasHTML = contagemArray.slice(0, 5).map(([grupo, count]) => {
+            let listaPuxadasHTML = rankingForte.slice(0, 5).map(([grupo, count]) => {
                 const bicho = getBichoData(grupo);
-                const percentual = ((count / paresFiltrados.length) * 100).toFixed(0);
+                const percentual = ((count / paresPuxadaForte.length) * 100).toFixed(0);
                 return `<li class="p-3 bg-gray-800/50 rounded-lg flex justify-between items-center">
                             <span class="text-lg font-semibold">${bicho.emoji} ${bicho.animal} (G${grupo})</span>
                             <span class="font-bold text-yellow-300 text-xl">${count}x <span class="text-sm text-gray-400 font-normal">(${percentual}%)</span></span>
@@ -920,21 +940,28 @@
                     </div>
                 </div>
                 <hr class="border-gray-700 my-4">
-                <p class="text-base sm:text-lg mb-3">Historicamente, quando o <strong class="text-yellow-300">${bichoQuePuxa.animal} (G${grupoQuePuxa})</strong> saiu, os 5 que mais saíram na <strong class="text-yellow-300">${App.nomesLoterias[loteriaPuxada]}</strong> (1º Prémio) foram:</p>
+                <p class="text-base sm:text-lg mb-3">Historicamente, quando o <strong class="text-yellow-300">${bichoQuePuxa.animal} (G${grupoQuePuxa})</strong> saiu na cabeça, os 5 que mais saíram na <strong class="text-yellow-300">${App.nomesLoterias[loteriaPuxada]}</strong> (1º Prémio) foram:</p>
                 <ul class="space-y-2">
                     ${listaPuxadasHTML}
                 </ul>
-                <p class="text-xs text-gray-500 mt-3 text-center">Baseado em ${paresFiltrados.length} ocorrências históricas (1º Prémio ➜ 1º Prémio).</p>
+                <p class="text-xs text-gray-500 mt-3 text-center">Baseado em ${paresPuxadaForte.length} ocorrências históricas (1º Prémio ➜ 1º Prémio).</p>
             `;
             
-            // Retorna os top 3 grupos puxados
-            return { loteriaQuePuxa, loteriaPuxada, grupoQuePuxa, gruposMaisPuxados: contagemArray.slice(0, 3).map(([grupo, count]) => ({ grupo, count })) };
+            // Retorna os rankings (Puxada Forte e Puxada Mista)
+            return { 
+                loteriaQuePuxa, 
+                loteriaPuxada, 
+                grupoQuePuxa, 
+                rankingForte: rankingForte.slice(0, 3).map(([grupo, count]) => ({ grupo, count })),
+                rankingMista: rankingMista.slice(0, 3).map(([grupo, count]) => ({ grupo, count }))
+            };
         }
 
         /**
          * Análise de Probabilidade Futura (Atraso + Frequência Recente)
          */
         function analisarProbabilidadeFutura(loteriaAlvo, numDias = 7) {
+            // USANDO resultados de 1º prêmio para estatística de atraso/frequência
             const resultadosAlvo = App.todosResultados.filter(r => 
                 r.loteria === loteriaAlvo && r.posicao === 1
             );
@@ -1133,6 +1160,7 @@
 
         /**
          * Calcula e renderiza as sugestões para as próximas 3 extrações.
+         * MODIFICADO: Utiliza Puxada Forte (1º) e Puxada Mista (1º-5º) para refinar a sugestão final.
          */
         function renderizarProximasPrevisoes() {
             const container = document.getElementById('previsoes-container');
@@ -1145,91 +1173,92 @@
 
             const proximas = getProximasExtraçoes(ultimoResultado.loteria, ultimoResultado.data, 3);
             
-            // Chamamos carregarHistoricoPrevisoes() diretamente, pois verificarAcertos() já salvou a versão mais recente
             let historicoPrevisoes = carregarHistoricoPrevisoes();
             
-            // Coleta dados do último resultado (ponto de partida)
             const grupoQuePuxa = ultimoResultado.bichoGrupo;
             const loteriaQuePuxa = ultimoResultado.loteria;
 
-            // Obtém o histórico de puxada (dados brutos da análise)
-            const resultadosPuxada = analisarPuxadas(); 
+            // Obtém os rankings de puxada (Forte e Mista)
+            const { rankingForte, rankingMista } = analisarPuxadas(); 
             let previsoesHTML = '';
             
-            // Itera sobre as próximas extrações
+            // Converte rankings para arrays de grupos
+            const gruposPuxadosForte = rankingForte.map(g => g.grupo);
+            const gruposPuxadosMista = rankingMista.map(g => g.grupo);
+            
             proximas.forEach(extração => {
                 const loteriaAlvo = extração.loteria;
-                // Qual loteria DEVERIA ser puxada pelo ÚLTIMO resultado real (pode ser null se não houver regra)
                 const loteriaPuxadaEsperada = App.regrasPuxada[loteriaQuePuxa]; 
 
-                // --- FATOR 1: Puxada (Aplicado APENAS se a loteria ALVO for a loteria ESPERADA) ---
-                let gruposMaisPuxados = [];
-                if (loteriaAlvo === loteriaPuxadaEsperada) {
-                    // Usa os grupos puxados da análise histórica
-                    gruposMaisPuxados = resultadosPuxada.gruposMaisPuxados ? resultadosPuxada.gruposMaisPuxados.slice(0, 3).map(g => g.grupo) : [];
-                }
-                
-                // --- FATOR 2: Probabilidade Global (Analisada sempre na loteria ALVO) ---
+                // --- FATOR 2: Probabilidade Global (Estatística) ---
                 const analiseProbabilidade = analisarProbabilidadeFutura(loteriaAlvo, 7);
                 const gruposAtrasados = analiseProbabilidade.atrasados.slice(0, 3).map(b => b.grupo); 
+                const gruposQuentes = analiseProbabilidade.quentes.slice(0, 3).map(b => b.grupo); 
                 
-                // --- Lógica de Sugestão Final (Interligação para 3 Grupos) ---
+                // --- Lógica de Sugestão Final (Integração de 3 Fatores) ---
                 let sugestaoFinal = [];
-                const gruposPuxadosSet = new Set(gruposMaisPuxados); 
-                const gruposAtrasadosSet = new Set(gruposAtrasados); 
+                const puxadosForteSet = new Set(gruposPuxadosForte);
+                const puxadosMistaSet = new Set(gruposPuxadosMista);
+                const atrasadosSet = new Set(gruposAtrasados);
+                const quentesSet = new Set(gruposQuentes);
                 
-                // Prioridade 1: Bichos que estão na Puxada (se aplicável) E estão Atrasados (Sinal Forte)
-                gruposMaisPuxados.forEach(g => { 
-                    if (gruposAtrasadosSet.has(g)) {
+                // Puxada Forte é considerada apenas se a loteria alvo for a que o último resultado puxa
+                const aplicaPuxadaForte = loteriaAlvo === loteriaPuxadaEsperada;
+
+                // 1. Prioridade Máxima: Intersecção Puxada Forte + Atraso/Quente
+                if (aplicaPuxadaForte) {
+                    gruposPuxadosForte.forEach(g => {
+                        if (atrasadosSet.has(g) || quentesSet.has(g)) {
+                            if (!sugestaoFinal.find(s => s.grupo === g)) {
+                                sugestaoFinal.push({ grupo: g, origem: "FORTE + ESTATÍSTICA" });
+                            }
+                        }
+                    });
+                }
+                
+                // 2. Prioridade Alta: Intersecção Puxada Mista + Atraso (Mais diversidade)
+                gruposPuxadosMista.forEach(g => {
+                    if (atrasadosSet.has(g) && !puxadosForteSet.has(g)) { // Se não for Puxada Forte (evita duplicidade)
                         if (!sugestaoFinal.find(s => s.grupo === g)) {
-                             sugestaoFinal.push({ grupo: g, origem: "Puxada + Atraso" });
+                             sugestaoFinal.push({ grupo: g, origem: "MISTA + ATRASO" });
                         }
                     }
                 });
 
-                // Prioridade 2: Bichos Top 1/2 da Puxada (Se a loteria alvo for a esperada)
-                if (loteriaAlvo === loteriaPuxadaEsperada) {
-                    // Garante o Top 1 da Puxada
-                    if (gruposMaisPuxados.length > 0) {
-                        const g = gruposMaisPuxados[0];
-                        if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Puxada Forte" });
+                // 3. Prioridade Média: Top 1 Atrasado ou Top 1 Puxada Forte (Garante os mais prováveis)
+                if (sugestaoFinal.length < 3) {
+                     // Adiciona o Top 1 Atrasado (sempre relevante)
+                    const gAtrasado = gruposAtrasados.length > 0 ? gruposAtrasados[0] : null;
+                    if (gAtrasado && !sugestaoFinal.find(s => s.grupo === gAtrasado)) {
+                        sugestaoFinal.push({ grupo: gAtrasado, origem: "ATRASO MÁXIMO" });
                     }
-                    // Garante o Top 2 da Puxada
-                    if (gruposMaisPuxados.length > 1) {
-                        const g = gruposMaisPuxados[1];
-                        if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Puxada Média" });
+
+                    // Adiciona o Top 1 Forte (se aplicável)
+                    const gForte = aplicaPuxadaForte && gruposPuxadosForte.length > 0 ? gruposPuxadosForte[0] : null;
+                    if (gForte && !sugestaoFinal.find(s => s.grupo === gForte)) {
+                        sugestaoFinal.push({ grupo: gForte, origem: "PUXADA FORTE" });
                     }
                 }
                 
-                // Prioridade 3: Bichos Top 1/2 Atrasados (Sempre aplicável)
-                // Garante o Top 1 dos Atrasados
-                if (gruposAtrasados.length > 0) {
-                    const g = gruposAtrasados[0];
-                    if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Atraso Forte" });
-                }
-                // Garante o Top 2 dos Atrasados
-                if (gruposAtrasados.length > 1) {
-                    const g = gruposAtrasados[1];
-                    if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Atraso Médio" });
-                }
-
-                // Prioridade 4: Garante mais um do Top 3 da Puxada ou Atraso se ainda não tiver 3
+                // 4. Prioridade Baixa: Completa com Puxada Mista ou Atrasado
                 if (sugestaoFinal.length < 3) {
-                    // Tenta o Puxada Suave (se aplicável)
-                    const grupoExtraPuxada = (loteriaAlvo === loteriaPuxadaEsperada && gruposMaisPuxados.length > 2) ? gruposMaisPuxados[2] : null;
-                    const grupoExtraAtraso = gruposAtrasados.length > 2 ? gruposAtrasados[2] : null;
-
-                    if (grupoExtraPuxada && !sugestaoFinal.find(s => s.grupo === grupoExtraPuxada)) {
-                        sugestaoFinal.push({ grupo: grupoExtraPuxada, origem: "Puxada Suave" });
-                    } else if (grupoExtraAtraso && !sugestaoFinal.find(s => s.grupo === grupoExtraAtraso)) {
-                        sugestaoFinal.push({ grupo: grupoExtraAtraso, origem: "Atraso Suave" });
+                    const gruposParaCompletar = [...new Set([...gruposAtrasados, ...gruposPuxadosMista])];
+                    
+                    for (const g of gruposParaCompletar) {
+                         if (!sugestaoFinal.find(s => s.grupo === g)) {
+                            sugestaoFinal.push({ 
+                                grupo: g, 
+                                origem: puxadosMistaSet.has(g) ? "PUXADA MISTA" : "ATRASO SUAVE"
+                            });
+                            if (sugestaoFinal.length >= 3) break;
+                        }
                     }
                 }
-
-                // Remove duplicatas e limita a 3 sugestões
+                
+                // Filtra para garantir exatamente 3 (ou menos se não houver dados)
                 let gruposSugeridos = [];
                 sugestaoFinal = Array.from(new Set(sugestaoFinal.map(s => s.grupo)))
-                                     .slice(0, 3) // Limita a no máximo 3 grupos
+                                     .slice(0, 3) 
                                      .map(g => {
                                          const original = sugestaoFinal.find(s => s.grupo === g);
                                          gruposSugeridos.push(g);
@@ -1237,7 +1266,6 @@
                                      });
 
                 // --- Captura da Previsão para o Histórico ---
-                // Identificação mais precisa pelo nome completo da extração
                 const nomeSorteioPrev = extração.nomeSorteio; 
                 const dataPrevisaoStr = new Date(extração.dataPrevisao).toDateString();
                 
@@ -1247,9 +1275,9 @@
                     historicoPrevisoes.push({
                         loteria: extração.loteria,
                         nomeSorteio: nomeSorteioPrev,
-                        hora: extração.hora + ':' + extração.minuto, // Salva hora e minuto como string H:M
+                        hora: extração.hora + ':' + extração.minuto,
                         dataPrevisao: extração.dataPrevisao,
-                        sugestoes: gruposSugeridos.map(g => g.grupo), // Salva APENAS os grupos
+                        sugestoes: gruposSugeridos.map(g => g.grupo),
                         status: 'pendente',
                         acerto: null,
                         bichoReal: null
@@ -1264,17 +1292,14 @@
                 let resultadoMsg = '';
 
                 if (statusPrev && statusPrev.status === 'resolvido') {
-                    // Nota: Usamos statusPrev.bichoReal que é o grupo
                     const bichoRealData = getBichoData(statusPrev.bichoReal);
                     if (statusPrev.acerto) {
                         statusIcone = '✅';
                         statusCor = '#34d399'; // green-400
-                        // Busca o bicho real pelo grupo salvo no histórico
                         resultadoMsg = `ACERTOU! Bicho: ${bichoRealData.emoji} ${bichoRealData.animal}`;
                     } else {
                         statusIcone = '❌';
                         statusCor = '#f87171'; // red-400
-                        // Busca o bicho real pelo grupo salvo no histórico
                         resultadoMsg = `ERROU. Bicho: ${bichoRealData.emoji} ${bichoRealData.animal}`;
                     }
                 } else if (extração.dataPrevisao < new Date()) {
@@ -1293,8 +1318,6 @@
                      origemPuxadaMsg = `(Análise Estatística em ${App.nomesLoterias[loteriaAlvo]})`;
                 }
 
-
-                // Geração do HTML para até 3 sugestões
                 const sugestaoHTML = sugestaoFinal.map(b => `
                     <div class="text-center">
                         <span class="text-3xl sm:text-4xl">${b.emoji}</span>
@@ -1323,7 +1346,6 @@
             });
 
             container.innerHTML = previsoesHTML;
-            // Salva o histórico (apesar de já ter sido salvo em verificarAcertos)
             salvarHistoricoPrevisoes(historicoPrevisoes); 
         }
 
