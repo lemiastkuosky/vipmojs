@@ -184,6 +184,12 @@
         </div>
 
     </main>
+    
+    <footer class="mt-8 pb-4 text-center text-xs text-gray-500/70">
+        <p>Analisador de Puxadas - Versão Final</p>
+        <p>Criado por Le Miastkuosky</p>
+    </footer>
+
 
     <script type="module">
         // Importa as funções necessárias do Firebase
@@ -881,7 +887,7 @@
 
             // --- CÁLCULO DE PARES HISTÓRICOS ---
             const paresPuxadaForte = []; // 1º Prêmio -> 1º Prêmio
-            const paresPuxadaMista = [];  // 1º ao 5º Prêmio -> 1º Prêmio
+            const paresPuxadaMista = [];  // 1º ao 5º Prêmio -> 1º Prêmio (para o bicho que puxa)
             
             for (let i = App.groupedResults.length - 1; i > 0; i--) {
                 const sorteioAnterior = App.groupedResults[i];
@@ -1160,7 +1166,6 @@
 
         /**
          * Calcula e renderiza as sugestões para as próximas 3 extrações.
-         * MODIFICADO: Utiliza Puxada Forte (1º) e Puxada Mista (1º-5º) para refinar a sugestão final.
          */
         function renderizarProximasPrevisoes() {
             const container = document.getElementById('previsoes-container');
@@ -1275,9 +1280,9 @@
                     historicoPrevisoes.push({
                         loteria: extração.loteria,
                         nomeSorteio: nomeSorteioPrev,
-                        hora: extração.hora + ':' + extração.minuto,
+                        hora: extração.hora + ':' + extração.minuto, // Salva hora e minuto como string H:M
                         dataPrevisao: extração.dataPrevisao,
-                        sugestoes: gruposSugeridos.map(g => g.grupo),
+                        sugestoes: gruposSugeridos.map(g => g.grupo), // Salva APENAS os grupos
                         status: 'pendente',
                         acerto: null,
                         bichoReal: null
@@ -1292,14 +1297,17 @@
                 let resultadoMsg = '';
 
                 if (statusPrev && statusPrev.status === 'resolvido') {
+                    // Nota: Usamos statusPrev.bichoReal que é o grupo
                     const bichoRealData = getBichoData(statusPrev.bichoReal);
                     if (statusPrev.acerto) {
                         statusIcone = '✅';
                         statusCor = '#34d399'; // green-400
+                        // Busca o bicho real pelo grupo salvo no histórico
                         resultadoMsg = `ACERTOU! Bicho: ${bichoRealData.emoji} ${bichoRealData.animal}`;
                     } else {
                         statusIcone = '❌';
                         statusCor = '#f87171'; // red-400
+                        // Busca o bicho real pelo grupo salvo no histórico
                         resultadoMsg = `ERROU. Bicho: ${bichoRealData.emoji} ${bichoRealData.animal}`;
                     }
                 } else if (extração.dataPrevisao < new Date()) {
@@ -1318,6 +1326,8 @@
                      origemPuxadaMsg = `(Análise Estatística em ${App.nomesLoterias[loteriaAlvo]})`;
                 }
 
+
+                // Geração do HTML para até 3 sugestões
                 const sugestaoHTML = sugestaoFinal.map(b => `
                     <div class="text-center">
                         <span class="text-3xl sm:text-4xl">${b.emoji}</span>
@@ -1346,6 +1356,7 @@
             });
 
             container.innerHTML = previsoesHTML;
+            // Salva o histórico (apesar de já ter sido salvo em verificarAcertos)
             salvarHistoricoPrevisoes(historicoPrevisoes); 
         }
 
