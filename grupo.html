@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador de Puxadas</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Estilos Base e Animações */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1a0f35, #0a041a);
+            background-size: 400% 400%;
+            animation: gradient-animation 15s ease infinite;
+            color: #e0e0e0;
+        }
+        @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        .card {
+            background-color: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+        .filter-btn {
+            padding: 0.5rem 0.75rem; /* Ajuste no padding do botão de filtro */
+            border-radius: 0.5rem;
+            background-color: rgba(76, 29, 149, 0.6);
+            color: #d8b4fe;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            -webkit-tap-highlight-color: transparent;
+            font-size: 0.875rem; /* Tamanho da fonte menor para mobile */
+        }
+        .filter-btn:hover { background-color: rgba(107, 33, 168, 0.8); }
+        .filter-btn.active {
+            background-color: #fde047;
+            color: #1f2937;
+            font-weight: 700;
+            box-shadow: 0 0 15px rgba(253, 224, 71, 0.4);
+        }
+
+        /* Estilo para o botão de atualização e animação de giro */
+        #refresh-btn {
+            background-color: #17a2b8; /* Ciano */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        #refresh-btn:hover {
+            background-color: #1391a3;
+        }
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .previsao-card {
+            background-color: rgba(30, 41, 59, 0.8);
+            border-left: 5px solid #06b6d4; /* Cian-500 */
+        }
+        
+        /* Estilos para controle de tela */
+        .hidden-view {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+    <main class="max-w-4xl mx-auto space-y-8">
+
+        <header class="text-center">
+            <div class="flex justify-between items-center mb-4">
+                <h1 id="main-title" class="text-2xl sm:text-4xl font-orbitron font-bold text-yellow-300" style="text-shadow: 0 0 10px rgba(253, 224, 71, 0.5);">
+                    Analisador de Puxadas
+                </h1>
+                <button id="refresh-btn" onclick="refreshData()" title="Atualizar dados do Firebase e análise" class="text-sm">
+                    🔄 Atualizar
+                </button>
+            </div>
+            
+            <div class="flex justify-center space-x-2 sm:space-x-4 mb-4">
+                <button id="show-main-btn" onclick="showView('main')" class="filter-btn active bg-cyan-600/70 text-white font-bold hover:bg-cyan-700">
+                    Probabilidades
+                </button>
+                <button id="show-analysis-btn" onclick="showView('analysis')" class="filter-btn bg-purple-600/70 text-purple-200 hover:bg-purple-700/80">
+                    🔮 Análises
+                </button>
+                <button id="show-history-btn" onclick="showView('history')" class="filter-btn bg-purple-600/70 text-purple-200 hover:bg-purple-700/80">
+                    📜 Histórico
+                </button>
+            </div>
+        </header>
+
+
+        <div id="main-view">
+            
+            <section class="card bg-cyan-900/40 border-cyan-700 p-3">
+                <h2 class="text-xl font-bold text-white mb-2">📊 Desempenho por Extração</h2>
+                <div id="contador-container" class="flex flex-wrap justify-around items-center gap-4 sm:gap-6"> 
+                    <p class="text-sm sm:text-lg text-gray-400">Carregando contagem...</p>
+                    <button onclick="resetContador()" class="text-xs sm:text-sm text-gray-400 hover:text-red-400 transition">Reiniciar Contagem Geral</button>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="text-xl sm:text-2xl font-bold font-orbitron text-cyan-400 mb-4" style="text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);">
+                    ⏳ Próximas 3 Extrações Analisadas
+                </h2>
+                <div id="previsoes-container" class="space-y-4">
+                    <p class="text-gray-400">Calculando as 3 próximas extrações...</p>
+                </div>
+            </section>
+        </div>
+
+
+        <div id="analysis-view" class="hidden-view space-y-8">
+            
+            <section class="card">
+                <h2 class="text-xl sm:text-2xl font-bold text-purple-300 mb-4">🔮 Análise de Puxada (Último Resultado)</h2>
+                <div id="analise-container"> 
+                    <p class="text-gray-400">Carregando histórico para análise...</p>
+                </div>
+            </section>
+            
+            <section class="card">
+                <h2 class="text-xl sm:text-2xl font-bold font-orbitron text-green-400 mb-4" style="text-shadow: 0 0 8px rgba(52, 211, 153, 0.5);">
+                    🤖 Probabilidade Global (3 Extrações)
+                </h2>
+                <div id="analise-futura-container">
+                    <p class="text-gray-400">Analisando atraso e frequência...</p>
+                </div>
+            </section>
+
+        </div>
+
+
+        <div id="history-view" class="hidden-view space-y-8">
+            <section class="card">
+                <h2 class="text-xl sm:text-2xl font-bold text-purple-300 mb-4">🔎 Filtrar por Loteria</h2>
+                <div id="filtros-container" class="flex flex-wrap gap-2 sm:gap-3">
+                    <button class="filter-btn active" data-filtro="todos">Todos</button>
+                    <button class="filter-btn" data-filtro="rj">Rio (RJ)</button>
+                    <button class="filter-btn" data-filtro="lk">Look (LK)</button>
+                    <button class="filter-btn" data-filtro="ln">Nacional (LN)</button>
+                    <button class="filter-btn" data-filtro="ba">Bahia (BA)</button>
+                    <button class="filter-btn" data-filtro="fd">Federal (FD)</button>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-xl sm:text-2xl font-bold text-purple-300 mb-4">📜 Histórico de Resultados</h2>
+                <div id="resultados-container" class="space-y-6 md:grid md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                    <p class="text-gray-400 col-span-full">Carregando resultados do Firebase...</p>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <script type="module">
+        // Importa as funções necessárias do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // --- Tabela de Grupos (Base de dados interna para emojis/nomes) ---
+        const tabelaDeGrupos = [
+            { grupo: '01', animal: 'Avestruz', dezenas: ['01', '02', '03', '04'], emoji: '🦤' }, 
+            { grupo: '02', animal: 'Águia', dezenas: ['05', '06', '07', '08'], emoji: '🦅' },
+            { grupo: '03', animal: 'Burro', dezenas: ['09', '10', '11', '12'], emoji: '🐴' }, 
+            { grupo: '04', animal: 'Borboleta', dezenas: ['13', '14', '15', '16'], emoji: '🦋' },
+            { grupo: '05', animal: 'Cachorro', dezenas: ['17', '18', '19', '20'], emoji: '🐶' },
+            { grupo: '06', animal: 'Cabra', dezenas: ['21', '22', '23', '24'], emoji: '🐐' },
+            { grupo: '07', animal: 'Carneiro', dezenas: ['25', '26', '27', '28'], emoji: '🐑' },
+            { grupo: '08', animal: 'Camelo', dezenas: ['29', '30', '31', '32'], emoji: '🐪' },
+            { grupo: '09', animal: 'Cobra', dezenas: ['33', '34', '35', '36'], emoji: '🐍' },
+            { grupo: '10', animal: 'Coelho', dezenas: ['37', '38', '39', '40'], emoji: '🐰' },
+            { grupo: '11', animal: 'Cavalo', dezenas: ['41', '42', '43', '44'], emoji: '🐎' },
+            { grupo: '12', animal: 'Elefante', dezenas: ['45', '46', '47', '48'], emoji: '🐘' },
+            { grupo: '13', animal: 'Galo', dezenas: ['49', '50', '51', '52'], emoji: '🐓' },
+            { grupo: '14', animal: 'Gato', dezenas: ['53', '54', '55', '56'], emoji: '🐱' },
+            { grupo: '15', animal: 'Jacaré', dezenas: ['57', '58', '59', '60'], emoji: '🐊' },
+            { grupo: '16', animal: 'Leão', dezenas: ['61', '62', '63', '64'], emoji: '🦁' },
+            { grupo: '17', animal: 'Macaco', dezenas: ['65', '66', '67', '68'], emoji: '🐒' },
+            { grupo: '18', animal: 'Porco', dezenas: ['69', '70', '71', '72'], emoji: '🐷' },
+            { grupo: '19', animal: 'Pavão', dezenas: ['73', '74', '75', '76'], emoji: '🦚' },
+            { grupo: '20', animal: 'Peru', dezenas: ['77', '78', '79', '80'], emoji: '🦃' },
+            { grupo: '21', animal: 'Touro', dezenas: ['81', '82', '83', '84'], emoji: '🐂' },
+            { grupo: '22', animal: 'Tigre', dezenas: ['85', '86', '87', '88'], emoji: '🐅' },
+            { grupo: '23', animal: 'Urso', dezenas: ['89', '90', '91', '92'], emoji: '🐻' },
+            { grupo: '24', animal: 'Veado', dezenas: ['93', '94', '95', '96'], emoji: '🦌' },
+            { grupo: '25', animal: 'Vaca', dezenas: ['97', '98', '99', '00'], emoji: '🐄' }
+        ];
+
+        /**
+         * Função auxiliar para pegar dados do bicho (emoji, nome) a partir do número do grupo.
+         */
+        function getBichoData(grupo) {
+            if (!grupo) return { animal: 'N/A', emoji: '❔', grupo: grupo };
+            const bicho = tabelaDeGrupos.find(b => b.grupo === grupo);
+            return bicho || { animal: 'N/A', emoji: '❔', grupo: grupo };
+        }
+        // --- Fim: Tabela de Grupos ---
+
+        // Configuração global do App
+        const App = {
+            todosResultados: [], 
+            groupedResults: [],  
+            filtroAtual: 'todos',
+            // Regras de puxada: Loteria que deu o resultado -> Loteria que deve ser puxada
+            regrasPuxada: { 
+                'ln': 'lk', 'lk': 'rj', 'rj': 'ln' // Ciclo de puxada
+            },
+            nomesLoterias: { 
+                'ln': 'Nacional', 'lk': 'Look', 'rj': 'Rio', 'ba': 'Bahia', 'fd': 'Federal', 'todos': 'Todas'
+            },
+            // Tabela de horários de extração (NOVA E DETALHADA)
+            horariosDetalhe: {
+                'rj': [
+                    { nome: 'RIO 09:20', display: 'RIO 09:20', hora: 9, minuto: 20 },
+                    { nome: 'RIO 11:20', display: 'RIO 11:20', hora: 11, minuto: 20 },
+                    { nome: 'RIO 14:20', display: 'RIO 14:20', hora: 14, minuto: 20 },
+                    { nome: 'RIO 16:20', display: 'RIO 16:20', hora: 16, minuto: 20 },
+                    { nome: 'RIO 18:20', display: 'RIO 18:20', hora: 18, minuto: 20 },
+                    { nome: 'CORUJA 21:30', display: 'CORUJA 21:30', hora: 21, minuto: 30 }
+                ],
+                'lk': [
+                    { nome: 'LOOK 07:20', display: 'LOOK 07:20', hora: 7, minuto: 20 },
+                    { nome: 'LOOK 09:20', display: 'LOOK 09:20', hora: 9, minuto: 20 },
+                    { nome: 'LOOK 11:20', display: 'LOOK 11:20', hora: 11, minuto: 20 },
+                    { nome: 'LOOK 14:20', display: 'LOOK 14:20', hora: 14, minuto: 20 },
+                    { nome: 'LOOK 16:20', display: 'LOOK 16:20', hora: 16, minuto: 20 },
+                    { nome: 'LOOK 18:20', display: 'LOOK 18:20', hora: 18, minuto: 20 },
+                    { nome: 'LOOK 21:20', display: 'LOOK 21:20', hora: 21, minuto: 20 },
+                    { nome: 'LOOK 23:20', display: 'LOOK 23:20', hora: 23, minuto: 20 }
+                ],
+                'ln': [
+                    { nome: 'NACIONAL 02:00', display: 'NACIONAL 02h', hora: 2, minuto: 0 },
+                    { nome: 'NACIONAL 08:00', display: 'NACIONAL 08h', hora: 8, minuto: 0 },
+                    { nome: 'NACIONAL 10:00', display: 'NACIONAL 10h', hora: 10, minuto: 0 },
+                    { nome: 'NACIONAL 12:00', display: 'NACIONAL 12h', hora: 12, minuto: 0 },
+                    { nome: 'NACIONAL 15:00', display: 'NACIONAL 15h', hora: 15, minuto: 0 },
+                    { nome: 'NACIONAL 17:00', display: 'NACIONAL 17h', hora: 17, minuto: 0 },
+                    { nome: 'NACIONAL 20:00', display: 'NACIONAL 20h', hora: 20, minuto: 0 },
+                    { nome: 'NACIONAL 23:00', display: 'NACIONAL 23h', hora: 23, minuto: 0 }
+                ],
+            },
+            horariosExtracao: [] // Será preenchido com a lista unificada e ordenada
+        };
+
+        /**
+         * Constrói a lista unificada e ordenada de extrações.
+         */
+        function buildGlobalHorarios() {
+            let globalList = [];
+            for (const loteria in App.horariosDetalhe) {
+                App.horariosDetalhe[loteria].forEach(extracao => {
+                    globalList.push({
+                        loteria: loteria,
+                        nome: extracao.nome,
+                        display: extracao.display,
+                        hora: extracao.hora,
+                        minuto: extracao.minuto,
+                        timeValue: extracao.hora * 60 + extracao.minuto // Valor para ordenação
+                    });
+                });
+            }
+
+            // Ordena cronologicamente
+            globalList.sort((a, b) => a.timeValue - b.timeValue);
+            App.horariosExtracao = globalList;
+        }
+
+        // --- Funções de Persistência (localStorage) ---
+        const STORAGE_KEY_PREVISOES = 'previsoes_historico_v2';
+        const STORAGE_KEY_CONTADOR = 'previsoes_contador_v2';
+
+        /**
+         * Carrega o contador de acertos/erros.
+         */
+        function carregarContador() {
+            try {
+                const contador = JSON.parse(localStorage.getItem(STORAGE_KEY_CONTADOR)) || { acertos: 0, erros: 0 };
+                return contador;
+            } catch (e) {
+                console.error("Erro ao carregar contador:", e);
+                return { acertos: 0, erros: 0 };
+            }
+        }
+
+        /**
+         * Salva o contador de acertos/erros.
+         */
+        function salvarContador(contador) {
+            localStorage.setItem(STORAGE_KEY_CONTADOR, JSON.stringify(contador));
+        }
+
+        /**
+         * Reseta o contador (acessível via botão no HTML).
+         */
+        window.resetContador = function() {
+            if (confirm("Tem certeza que deseja zerar o contador de Acertos/Erros?")) {
+                localStorage.removeItem(STORAGE_KEY_CONTADOR);
+                localStorage.removeItem(STORAGE_KEY_PREVISOES);
+                // Força a re-renderização para limpar o status nos cards
+                main(); 
+                alert("Contador e histórico de previsões reiniciados.");
+            }
+        }
+
+        /**
+         * Carrega o histórico de previsões.
+         */
+        function carregarHistoricoPrevisoes() {
+            try {
+                const historico = JSON.parse(localStorage.getItem(STORAGE_KEY_PREVISOES)) || [];
+                return historico;
+            } catch (e) {
+                console.error("Erro ao carregar histórico:", e);
+                return [];
+            }
+        }
+
+        /**
+         * Salva o histórico de previsões.
+         */
+        function salvarHistoricoPrevisoes(historico) {
+            localStorage.setItem(STORAGE_KEY_PREVISOES, JSON.stringify(historico));
+        }
+        
+        // NOVO: Função para renderizar o contador na interface
+        function renderizarContador() {
+            const contador = carregarContador();
+            const container = document.getElementById('contador-container');
+            
+            // Adicionado flex-col e espaçamento para melhor visualização
+            container.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <span class="text-2xl font-bold text-green-400">${contador.acertos}</span>
+                    <span class="text-xs sm:text-sm text-green-300">✅ Acertos</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-2xl font-bold text-red-400">${contador.erros}</span>
+                    <span class="text-xs sm:text-sm text-red-300">❌ Erros</span>
+                </div>
+                <button onclick="resetContador()" class="text-xs sm:text-sm text-gray-400 hover:text-red-400 transition">Reiniciar Contagem Geral</button>
+            `;
+        }
+
+        /**
+         * Verifica e atualiza o contador de acertos/erros.
+         */
+        function verificarAcertos() {
+            let historicoPrevisoes = carregarHistoricoPrevisoes();
+            let contador = carregarContador();
+            let contadorMudou = false;
+
+            const resultados1P = App.todosResultados.filter(r => r.posicao === 1);
+            
+            historicoPrevisoes = historicoPrevisoes.map(prev => {
+                if (prev.status === 'pendente') {
+                    
+                    const resultado = resultados1P.find(r => 
+                        r.loteria === prev.loteria &&
+                        r.data && typeof r.data.toDate === 'function' && 
+                        new Date(r.data.toDate()).toDateString() === new Date(prev.dataPrevisao).toDateString() &&
+                        // ATUALIZADO: Usamos o nome completo (Ex: RIO 18:20) para a correspondência
+                        r.nomeSorteio.toUpperCase().includes(prev.nomeSorteio.toUpperCase())
+                    );
+
+                    if (resultado) {
+                        prev.status = 'resolvido';
+                        const bichoReal = resultado.bichoGrupo;
+                        
+                        if (prev.sugestoes.includes(bichoReal)) {
+                            prev.acerto = true;
+                            contador.acertos++;
+                        } else {
+                            prev.acerto = false;
+                            contador.erros++;
+                        }
+                        
+                        prev.bichoReal = bichoReal;
+                        contadorMudou = true;
+                    }
+                }
+                return prev;
+            });
+
+            if (contadorMudou) {
+                salvarContador(contador);
+            }
+            // Retorna o histórico atualizado
+            return historicoPrevisoes; 
+        }
+
+        // ===================================================================
+        // FIREBASE CONFIG E INICIALIZAÇÃO
+        // ===================================================================
+        const firebaseConfig = {
+          apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
+          authDomain: "meus-recibos-vip.firebaseapp.com",
+          databaseURL: "https://meus-recibos-vip-default-rtdb.firebaseio.com",
+          projectId: "meus-recibos-vip",
+          storageBucket: "meus-recibos-vip.firebasestorage.app",
+          messagingSenderId: "254959368683",
+          appId: "1:254959368683:web:80676a26f614040df6c1ae"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        /**
+         * Função para alternar entre as visualizações
+         */
+        window.showView = function(viewId) {
+            const views = {
+                'main': document.getElementById('main-view'),
+                'analysis': document.getElementById('analysis-view'),
+                'history': document.getElementById('history-view')
+            };
+            const buttons = {
+                'main': document.getElementById('show-main-btn'),
+                'analysis': document.getElementById('show-analysis-btn'),
+                'history': document.getElementById('show-history-btn')
+            };
+
+            for (const id in views) {
+                // Remove todos os estilos ativos/inativos e aplica o padrão
+                buttons[id].classList.remove('active', 'bg-yellow-500/70', 'text-gray-900', 'bg-cyan-600/70', 'text-white', 'bg-purple-600/70', 'text-purple-200');
+                
+                if (id === viewId) {
+                    views[id].classList.remove('hidden-view');
+                    // Estilo de ativo
+                    buttons[id].classList.add('active', 'bg-yellow-500/70', 'text-gray-900', 'font-bold');
+                } else {
+                    views[id].classList.add('hidden-view');
+                    // Estilo de inativo
+                    buttons[id].classList.add('bg-purple-600/70', 'text-purple-200');
+                }
+            }
+            // Regra especial para o botão 'Probabilidades'
+            if (viewId === 'main') {
+                 buttons['main'].classList.add('bg-cyan-600/70', 'text-white');
+                 buttons['main'].classList.remove('bg-purple-600/70', 'text-purple-200', 'bg-yellow-500/70', 'text-gray-900');
+            }
+        }
+
+        /**
+         * Função Principal
+         */
+        async function main() {
+            buildGlobalHorarios(); // CONSTRÓI A LISTA GLOBAL DE HORÁRIOS
+            renderizarContador(); // NOVO: Renderiza o contador ao iniciar
+            await buscarResultados(); 
+            configurarFiltros(); 
+            showView('main'); // Garante que a tela de previsão seja a inicial
+        }
+        
+        window.refreshData = async function() {
+            const btn = document.getElementById('refresh-btn');
+            const originalText = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.classList.add('spin');
+            btn.innerHTML = 'Carregando...';
+            
+            await main(); 
+            
+            btn.disabled = false;
+            btn.classList.remove('spin');
+            btn.innerHTML = originalText;
+        }
+
+        /**
+         * Busca e processa resultados
+         */
+        async function buscarResultados() {
+            try {
+                const q = query(collection(db, "resultados"), orderBy("data", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                App.todosResultados = querySnapshot.docs.map(doc => doc.data());
+
+                if (App.todosResultados.length === 0) {
+                    const errorMsg = '<p class="text-red-400">Nenhum resultado encontrado no Firebase.</p>';
+                    document.getElementById('analise-container').innerHTML = errorMsg;
+                    document.getElementById('resultados-container').innerHTML = `<p class="text-red-400 col-span-full">${errorMsg}</p>`;
+                    const analiseFuturaContainer = document.getElementById('analise-futura-container');
+                    if (analiseFuturaContainer) analiseFuturaContainer.innerHTML = errorMsg;
+                    const previsoesContainer = document.getElementById('previsoes-container');
+                    if (previsoesContainer) previsoesContainer.innerHTML = errorMsg;
+                    return;
+                }
+
+                // NOVO: A função verificarAcertos agora só salva o histórico e a contagem
+                verificarAcertos(); 
+                renderizarContador(); // Atualiza a contagem após a verificação
+
+                App.groupedResults = agruparResultados(App.todosResultados);
+
+                analisarPuxadas(); 
+                renderizarAnaliseFutura(); // Função renderizarAnaliseFutura existe e é chamada aqui
+                renderizarProximasPrevisoes(); 
+                renderizarResultados();
+
+            } catch (error) {
+                console.error("Erro ao buscar dados: ", error);
+                const errorMsg = `<p class="text-red-400">Falha ao carregar dados. (Erro: ${error.message})<br>Verifique suas Regras do Firebase (precisa de 'allow read: if true;') ou se o índice 'data (desc)' está criado.</p>`;
+                document.getElementById('analise-container').innerHTML = errorMsg;
+                document.getElementById('resultados-container').innerHTML = `<p class="text-red-400 col-span-full">${errorMsg}</p>`;
+                const analiseFuturaContainer = document.getElementById('analise-futura-container');
+                if (analiseFuturaContainer) analiseFuturaContainer.innerHTML = errorMsg;
+                const previsoesContainer = document.getElementById('previsoes-container');
+                if (previsoesContainer) previsoesContainer.innerHTML = errorMsg;
+            }
+        }
+
+        /**
+         * Agrupa os resultados individuais em "sorteios"
+         */
+        function agruparResultados(resultadosIndividuais) {
+            const groupedMap = new Map();
+            resultadosIndividuais.forEach(doc => {
+                if (!doc.loteria || !doc.nomeSorteio || !doc.data || !doc.posicao) { return; }
+
+                const key = `${doc.loteria}-${doc.nomeSorteio}-${doc.data.seconds}`;
+
+                if (!groupedMap.has(key)) {
+                    groupedMap.set(key, {
+                        key: key,
+                        loteria: doc.loteria,
+                        nomeSorteio: doc.nomeSorteio,
+                        data: doc.data,
+                        premios: []
+                    });
+                }
+
+                const group = groupedMap.get(key);
+                group.premios.push({
+                    posicao: doc.posicao,
+                    milhar: doc.milhar,
+                    bichoNome: doc.bichoNome,
+                    bichoGrupo: doc.bichoGrupo
+                });
+            });
+
+            const finalGroupedList = Array.from(groupedMap.values());
+            finalGroupedList.forEach(group => {
+                group.premios.sort((a, b) => a.posicao - b.posicao);
+            });
+            
+            return finalGroupedList;
+        }
+
+
+        /**
+         * Renderiza os resultados AGRUPADOS (TELA DE HISTÓRICO)
+         */
+        function renderizarResultados() {
+            const container = document.getElementById('resultados-container');
+            container.innerHTML = "";
+
+            const resultadosFiltrados = App.groupedResults.filter(group => 
+                App.filtroAtual === 'todos' || group.loteria === App.filtroAtual
+            );
+
+            if (resultadosFiltrados.length === 0) {
+                container.innerHTML = `<p class="text-gray-400 col-span-full">Nenhum resultado encontrado para o filtro "${App.nomesLoterias[App.filtroAtual] || App.filtroAtual}".</p>`;
+                return;
+            }
+
+            resultadosFiltrados.forEach(group => {
+                let dataFormatada = 'Data inválida';
+                if (group.data && typeof group.data.toDate === 'function') {
+                    dataFormatada = group.data.toDate().toLocaleDateString('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'
+                    });
+                }
+
+                let premiosHTML = '';
+                for (let i = 1; i <= 5; i++) {
+                    const premio = group.premios.find(p => p.posicao === i);
+                    
+                    if (premio) {
+                        const bicho = getBichoData(premio.bichoGrupo);
+                        
+                        premiosHTML += `
+                            <li class="grid grid-cols-5 gap-2 items-center py-2 px-3 rounded-lg ${i === 1 ? 'bg-yellow-500/20' : 'bg-gray-800/60'}">
+                                <span class="col-span-1 font-bold text-left ${i === 1 ? 'text-yellow-300' : 'text-gray-300'}">
+                                    ${i}º
+                                </span>
+                                <span class="col-span-2 font-mono text-base text-center ${i === 1 ? 'text-white' : 'text-gray-200'}">
+                                    ${premio.milhar}
+                                </span>
+                                <span class="col-span-2 text-xs text-right truncate ${i === 1 ? 'text-yellow-300' : 'text-gray-400'}" title="${premio.bichoNome} (G${premio.bichoGrupo})">
+                                    ${bicho.emoji} ${bicho.grupo}
+                                </span>
+                            </li>`;
+                    } else {
+                        premiosHTML += `
+                            <li class="grid grid-cols-5 gap-2 items-center py-2 px-3 rounded-lg bg-gray-800/60 opacity-50">
+                                <span class="col-span-1 font-bold text-gray-500">${i}º</span>
+                                <span class="col-span-2 font-mono text-base text-center text-gray-500">----</span>
+                                <span class="col-span-2 text-xs text-right text-gray-500">N/A</span>
+                            </li>`;
+                    }
+                }
+
+                const card = document.createElement('div');
+                card.className = 'card'; 
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg sm:text-xl font-bold text-purple-300 truncate" title="${group.nomeSorteio}">
+                            ${group.nomeSorteio || 'Sorteio'}
+                        </h3>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-800 text-purple-200">
+                            ${App.nomesLoterias[group.loteria] || group.loteria.toUpperCase()}
+                        </span>
+                    </div>
+                    
+                    <ul class="space-y-2 mb-3">
+                        ${premiosHTML}
+                    </ul>
+
+                    <div class="text-sm text-gray-400 text-center">
+                        <p>${dataFormatada}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        /**
+         * Configura os botões de filtro
+         */
+        function configurarFiltros() {
+            const container = document.getElementById('filtros-container');
+            container.addEventListener('click', (e) => {
+                const targetButton = e.target.closest('button.filter-btn');
+                if (targetButton) {
+                    container.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                    targetButton.classList.add('active');
+                    App.filtroAtual = targetButton.dataset.filtro;
+                    renderizarResultados();
+                }
+            });
+        }
+
+        /**
+         * Faz a análise de puxadas e retorna a contagem dos grupos mais puxados.
+         */
+        function analisarPuxadas() {
+            const container = document.getElementById('analise-container');
+            container.innerHTML = ''; 
+
+            if (App.todosResultados.length === 0) {
+                 container.innerHTML = '<p class="text-gray-400">Sem dados para analisar.</p>';
+                 return {};
+            }
+
+            const ultimoResultado = App.todosResultados.find(r => r.posicao === 1);
+            if (!ultimoResultado) {
+                container.innerHTML = '<p class="text-gray-400">Nenhum resultado de 1º prémio encontrado para análise.</p>';
+                return {};
+            }
+
+            const loteriaQuePuxa = ultimoResultado.loteria;
+            const grupoQuePuxa = ultimoResultado.bichoGrupo;
+            const bichoQuePuxa = getBichoData(grupoQuePuxa);
+            const loteriaPuxada = App.regrasPuxada[loteriaQuePuxa];
+            
+            if (!loteriaPuxada) {
+                container.innerHTML = `
+                    <p class="text-lg">Último resultado (1º Prémio): <strong class="text-yellow-300">${App.nomesLoterias[loteriaQuePuxa] || loteriaQuePuxa}</strong> deu ${bichoQuePuxa.emoji} ${bichoQuePuxa.animal} (G${grupoQuePuxa}).</p>
+                    <p class="text-gray-400">Não há regra de puxada configurada para esta loteria.</p>
+                `;
+                return {};
+            }
+
+            // Apenas considera pares onde a loteria ANTERIOR (a que puxa) foi a `loteriaQuePuxa`
+            // e a loteria ATUAL (a puxada) foi a `loteriaPuxada`.
+            const pares = [];
+            for (let i = App.todosResultados.length - 1; i > 0; i--) {
+                const anterior = App.todosResultados[i];
+                const atual = App.todosResultados[i-1];
+                
+                if (anterior.loteria === loteriaQuePuxa && atual.loteria === loteriaPuxada && anterior.posicao === 1 && atual.posicao === 1) {
+                    pares.push({ saiu: anterior.bichoGrupo, deu: atual.bichoGrupo });
+                }
+            }
+
+            const paresFiltrados = pares.filter(p => p.saiu === grupoQuePuxa);
+
+            const contagem = {};
+            paresFiltrados.forEach(par => {
+                if(par.deu) {
+                    contagem[par.deu] = (contagem[par.deu] || 0) + 1;
+                }
+            });
+
+            const contagemArray = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
+
+            let listaPuxadasHTML = contagemArray.slice(0, 5).map(([grupo, count]) => {
+                const bicho = getBichoData(grupo);
+                const percentual = ((count / paresFiltrados.length) * 100).toFixed(0);
+                return `<li class="p-3 bg-gray-800/50 rounded-lg flex justify-between items-center">
+                            <span class="text-lg font-semibold">${bicho.emoji} ${bicho.animal} (G${grupo})</span>
+                            <span class="font-bold text-yellow-300 text-xl">${count}x <span class="text-sm text-gray-400 font-normal">(${percentual}%)</span></span>
+                        </li>`;
+            }).join('');
+
+            // Atualiza o HTML da Análise (Seção 1)
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-400">Último Resultado (1º Prémio):</p>
+                        <p class="text-base sm:text-lg"><strong class="text-yellow-300">${App.nomesLoterias[loteriaQuePuxa]}</strong> deu ${bichoQuePuxa.emoji} ${bichoQuePuxa.animal} (G${grupoQuePuxa})</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Regra de Puxada Aplicada:</p>
+                        <p class="text-base sm:text-lg"><strong class="text-yellow-300">${App.nomesLoterias[loteriaQuePuxa]}</strong> (1º) puxa <strong class="text-yellow-300">${App.nomesLoterias[loteriaPuxada]}</strong> (1º)</p>
+                    </div>
+                </div>
+                <hr class="border-gray-700 my-4">
+                <p class="text-base sm:text-lg mb-3">Historicamente, quando o <strong class="text-yellow-300">${bichoQuePuxa.animal} (G${grupoQuePuxa})</strong> saiu, os 5 que mais saíram na <strong class="text-yellow-300">${App.nomesLoterias[loteriaPuxada]}</strong> (1º Prémio) foram:</p>
+                <ul class="space-y-2">
+                    ${listaPuxadasHTML}
+                </ul>
+                <p class="text-xs text-gray-500 mt-3 text-center">Baseado em ${paresFiltrados.length} ocorrências históricas (1º Prémio ➜ 1º Prémio).</p>
+            `;
+            
+            // Retorna os top 3 grupos puxados
+            return { loteriaQuePuxa, loteriaPuxada, grupoQuePuxa, gruposMaisPuxados: contagemArray.slice(0, 3).map(([grupo, count]) => ({ grupo, count })) };
+        }
+
+        /**
+         * Análise de Probabilidade Futura (Atraso + Frequência Recente)
+         */
+        function analisarProbabilidadeFutura(loteriaAlvo, numDias = 7) {
+            const resultadosAlvo = App.todosResultados.filter(r => 
+                r.loteria === loteriaAlvo && r.posicao === 1
+            );
+
+            if (resultadosAlvo.length === 0) {
+                return { atrasados: [], quentes: [] };
+            }
+
+            const dataLimite = new Date();
+            dataLimite.setDate(dataLimite.getDate() - numDias);
+
+            // --- 1. Atrasados ---
+            const contagemAtraso = new Map();
+            tabelaDeGrupos.forEach(b => contagemAtraso.set(b.grupo, { dias: 999, data: null }));
+
+            for (const bicho of tabelaDeGrupos) {
+                const ultimoResultado = resultadosAlvo.find(r => r.bichoGrupo === bicho.grupo);
+                
+                if (ultimoResultado && ultimoResultado.data && typeof ultimoResultado.data.toDate === 'function') {
+                    const dataUltimo = ultimoResultado.data.toDate();
+                    const diffTime = Math.abs(new Date() - dataUltimo);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                    
+                    contagemAtraso.set(bicho.grupo, { dias: diffDays, data: dataUltimo });
+                }
+            }
+            
+            const bichosAtrasados = Array.from(contagemAtraso.entries())
+                .map(([grupo, dados]) => ({ ...getBichoData(grupo), ...dados }))
+                .sort((a, b) => b.dias - a.dias)
+                .slice(0, 5); 
+
+            // --- 2. Quentes ---
+            const resultadosRecentes = resultadosAlvo.filter(r => 
+                r.data && typeof r.data.toDate === 'function' && r.data.toDate() >= dataLimite
+            );
+
+            const contagemQuente = {};
+            resultadosRecentes.forEach(r => {
+                contagemQuente[r.bichoGrupo] = (contagemQuente[r.bichoGrupo] || 0) + 1;
+            });
+
+            const bichosQuentes = Object.entries(contagemQuente)
+                .map(([grupo, count]) => ({ ...getBichoData(grupo), count: count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5); 
+
+            return { atrasados: bichosAtrasados, quentes: bichosQuentes };
+        }
+
+        /**
+         * Renderiza a análise de probabilidade (Atraso/Frequência) para as 3 próximas extrações.
+         */
+        function renderizarAnaliseFutura() {
+            const container = document.getElementById('analise-futura-container'); 
+            if (!container) return; 
+            
+            if (App.todosResultados.length === 0) {
+                 container.innerHTML = '<p class="text-red-400">Sem dados para análise de probabilidade.</p>';
+                 return;
+            }
+
+            const ultimoResultado = App.todosResultados.find(r => r.posicao === 1);
+            if (!ultimoResultado) {
+                 container.innerHTML = '<p class="text-gray-400">Nenhum resultado de 1º prémio encontrado para basear a análise.</p>';
+                 return;
+            }
+            
+            // CORRIGIDO: Certifica-se de que ultimoResultado está definido antes de chamar
+            const proximas = getProximasExtraçoes(ultimoResultado.loteria, ultimoResultado.data, 3);
+            let analisesHTML = '';
+
+            proximas.forEach(extração => {
+                const loteriaAlvo = extração.loteria;
+                const analise = analisarProbabilidadeFutura(loteriaAlvo, 7); 
+                // Usando a hora/minuto do detalhe
+                const displayTime = `${String(extração.hora).padStart(2, '0')}:${String(extração.minuto).padStart(2, '0')}`;
+                const dataHoraFormatada = extração.dataPrevisao.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' }) + ` (${displayTime})`;
+
+
+                // Limita a 3 grupos para visualização compacta
+                const atrasados = analise.atrasados.slice(0, 3);
+                const quentes = analise.quentes.slice(0, 3);
+
+                // Geração do HTML de Atrasados
+                let atrasadosHTML = atrasados.map(b => 
+                    `<span class="text-red-300 font-bold">${b.emoji} G${b.grupo}</span><span class="text-xs text-gray-500"> (${b.dias === 999 ? 'Nunca' : b.dias + 'd'})</span>`
+                ).join('<span class="text-gray-500"> | </span>');
+
+                // Geração do HTML de Quentes
+                let quentesHTML = quentes.map(b => 
+                    `<span class="text-green-300 font-bold">${b.emoji} G${b.grupo}</span><span class="text-xs text-gray-500"> (${b.count}x)</span>`
+                ).join('<span class="text-gray-500"> | </span>');
+
+                analisesHTML += `
+                    <div class="p-3 border-b border-gray-700 last:border-b-0">
+                        <h4 class="text-lg font-bold text-green-400 mb-1">
+                            ${extração.display || App.nomesLoterias[loteriaAlvo] || loteriaAlvo.toUpperCase()}
+                        </h4>
+                        <p class="text-xs text-gray-400 mb-2">${dataHoraFormatada}</p>
+                        <p class="text-sm">
+                            <strong class="text-red-300">🐢 Atrasados:</strong><br> ${atrasadosHTML || '<span class="text-gray-500">N/A</span>'}
+                        </p>
+                        <p class="text-sm mt-2">
+                            <strong class="text-green-300">🔥 Quentes:</strong><br> ${quentesHTML || '<span class="text-gray-500">N/A</span>'}
+                        </p>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = analisesHTML;
+        }
+
+        /**
+         * Retorna a Loteria e Hora da próxima extração.
+         */
+        function getProximasExtraçoes(lastLoteria, lastDate, count = 3) {
+            const agora = new Date();
+            const agoraTimeValue = agora.getHours() * 60 + agora.getMinutes();
+
+            const proximaLista = [];
+            let horarios = App.horariosExtracao; // Usa a lista unificada e ordenada
+            
+            let lastExtractionIndex = -1;
+            
+            // 1. Encontrar o índice da última extração real
+            if (lastDate && typeof lastDate.toDate === 'function') {
+                const lastDateObj = lastDate.toDate();
+                const lastExtractionTimeValue = lastDateObj.getHours() * 60 + lastDateObj.getMinutes();
+                
+                // Tenta encontrar a extração que aconteceu no mesmo horário (aproximadamente) e loteria
+                lastExtractionIndex = horarios.findIndex(h => {
+                     const hTimeValue = h.hora * 60 + h.minuto;
+                     return h.loteria === lastLoteria && Math.abs(hTimeValue - lastExtractionTimeValue) < 30; // 30min de margem
+                });
+            }
+
+
+            // 2. Determinar o ponto de partida (startIndex)
+            // Se o último resultado não foi encontrado ou está muito distante, buscamos a próxima extração a partir de agora.
+            let startIndex = (lastExtractionIndex !== -1) ? lastExtractionIndex + 1 : 0;
+            let currentIndex = startIndex;
+            let dataReferencia = new Date();
+            let diaAvancado = false;
+            
+            // Se não encontramos o índice do último resultado, procuramos a próxima extração cronológica a partir do 'agora'
+            if (lastExtractionIndex === -1) {
+                const nextChronologicalIndex = horarios.findIndex(h => h.timeValue > agoraTimeValue);
+                if (nextChronologicalIndex !== -1) {
+                    currentIndex = nextChronologicalIndex;
+                    startIndex = nextChronologicalIndex;
+                } else {
+                    // Todos os horários já passaram hoje, começa do início amanhã
+                    currentIndex = 0;
+                    startIndex = 0;
+                    dataReferencia.setDate(dataReferencia.getDate() + 1);
+                    diaAvancado = true;
+                }
+            }
+            
+            // 3. Loop para encontrar as próximas 'count' extrações futuras
+            while (proximaLista.length < count) {
+                if (currentIndex >= horarios.length) {
+                    currentIndex = 0; 
+                    if (!diaAvancado) {
+                        dataReferencia.setDate(dataReferencia.getDate() + 1); 
+                        diaAvancado = true;
+                    }
+                }
+                
+                const extração = horarios[currentIndex];
+                
+                let dataPrevisao = new Date(dataReferencia);
+                dataPrevisao.setHours(extração.hora, extração.minuto, 0, 0);
+
+                // Garante que a previsão é sempre no futuro ou hoje, se ainda não tiver passado
+                if (proximaLista.length === 0 && dataPrevisao < agora && !diaAvancado) {
+                    dataPrevisao.setDate(dataPrevisao.getDate() + 1);
+                    dataReferencia.setDate(dataReferencia.getDate() + 1);
+                    diaAvancado = true;
+                }
+                
+                proximaLista.push({
+                    loteria: extração.loteria,
+                    nomeSorteio: extração.nome, // Nome completo (RIO 18:20)
+                    display: extração.display,   // Nome Curto (RIO 18:20)
+                    hora: extração.hora,         // Hora numérica
+                    minuto: extração.minuto,     // Minuto numérico
+                    dataPrevisao: dataPrevisao
+                });
+                
+                currentIndex++;
+            }
+            
+            return proximaLista;
+        }
+
+        /**
+         * Calcula e renderiza as sugestões para as próximas 3 extrações.
+         */
+        function renderizarProximasPrevisoes() {
+            const container = document.getElementById('previsoes-container');
+            const ultimoResultado = App.todosResultados.find(r => r.posicao === 1);
+            
+            if (!ultimoResultado) {
+                container.innerHTML = '<p class="text-gray-400">Sem resultados para basear as previsões.</p>';
+                return;
+            }
+
+            const proximas = getProximasExtraçoes(ultimoResultado.loteria, ultimoResultado.data, 3);
+            
+            // Chamamos carregarHistoricoPrevisoes() diretamente, pois verificarAcertos() já salvou a versão mais recente
+            let historicoPrevisoes = carregarHistoricoPrevisoes();
+            
+            // Coleta dados do último resultado (ponto de partida)
+            const grupoQuePuxa = ultimoResultado.bichoGrupo;
+            const loteriaQuePuxa = ultimoResultado.loteria;
+
+            // Obtém o histórico de puxada (dados brutos da análise)
+            const resultadosPuxada = analisarPuxadas(); 
+            let previsoesHTML = '';
+            
+            // Itera sobre as próximas extrações
+            proximas.forEach(extração => {
+                const loteriaAlvo = extração.loteria;
+                // Qual loteria DEVERIA ser puxada pelo ÚLTIMO resultado real (pode ser null se não houver regra)
+                const loteriaPuxadaEsperada = App.regrasPuxada[loteriaQuePuxa]; 
+
+                // --- FATOR 1: Puxada (Aplicado APENAS se a loteria ALVO for a loteria ESPERADA) ---
+                let gruposMaisPuxados = [];
+                if (loteriaAlvo === loteriaPuxadaEsperada) {
+                    // Usa os grupos puxados da análise histórica
+                    gruposMaisPuxados = resultadosPuxada.gruposMaisPuxados ? resultadosPuxada.gruposMaisPuxados.slice(0, 3).map(g => g.grupo) : [];
+                }
+                
+                // --- FATOR 2: Probabilidade Global (Analisada sempre na loteria ALVO) ---
+                const analiseProbabilidade = analisarProbabilidadeFutura(loteriaAlvo, 7);
+                const gruposAtrasados = analiseProbabilidade.atrasados.slice(0, 3).map(b => b.grupo); 
+                
+                // --- Lógica de Sugestão Final (Interligação para 3 Grupos) ---
+                let sugestaoFinal = [];
+                const gruposPuxadosSet = new Set(gruposMaisPuxados); 
+                const gruposAtrasadosSet = new Set(gruposAtrasados); 
+                
+                // Prioridade 1: Bichos que estão na Puxada (se aplicável) E estão Atrasados (Sinal Forte)
+                gruposMaisPuxados.forEach(g => { 
+                    if (gruposAtrasadosSet.has(g)) {
+                        if (!sugestaoFinal.find(s => s.grupo === g)) {
+                             sugestaoFinal.push({ grupo: g, origem: "Puxada + Atraso" });
+                        }
+                    }
+                });
+
+                // Prioridade 2: Bichos Top 1/2 da Puxada (Se a loteria alvo for a esperada)
+                if (loteriaAlvo === loteriaPuxadaEsperada) {
+                    // Garante o Top 1 da Puxada
+                    if (gruposMaisPuxados.length > 0) {
+                        const g = gruposMaisPuxados[0];
+                        if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Puxada Forte" });
+                    }
+                    // Garante o Top 2 da Puxada
+                    if (gruposMaisPuxados.length > 1) {
+                        const g = gruposMaisPuxados[1];
+                        if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Puxada Média" });
+                    }
+                }
+                
+                // Prioridade 3: Bichos Top 1/2 Atrasados (Sempre aplicável)
+                // Garante o Top 1 dos Atrasados
+                if (gruposAtrasados.length > 0) {
+                    const g = gruposAtrasados[0];
+                    if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Atraso Forte" });
+                }
+                // Garante o Top 2 dos Atrasados
+                if (gruposAtrasados.length > 1) {
+                    const g = gruposAtrasados[1];
+                    if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Atraso Médio" });
+                }
+
+                // Prioridade 4: Garante mais um do Top 3 da Puxada ou Atraso se ainda não tiver 3
+                if (sugestaoFinal.length < 3) {
+                    // Tenta o Puxada Suave (se aplicável)
+                    const grupoExtraPuxada = (loteriaAlvo === loteriaPuxadaEsperada && gruposMaisPuxados.length > 2) ? gruposMaisPuxados[2] : null;
+                    const grupoExtraAtraso = gruposAtrasados.length > 2 ? gruposAtrasados[2] : null;
+
+                    if (grupoExtraPuxada && !sugestaoFinal.find(s => s.grupo === grupoExtraPuxada)) {
+                        sugestaoFinal.push({ grupo: grupoExtraPuxada, origem: "Puxada Suave" });
+                    } else if (grupoExtraAtraso && !sugestaoFinal.find(s => s.grupo === grupoExtraAtraso)) {
+                        sugestaoFinal.push({ grupo: grupoExtraAtraso, origem: "Atraso Suave" });
+                    }
+                }
+
+                // Remove duplicatas e limita a 3 sugestões
+                let gruposSugeridos = [];
+                sugestaoFinal = Array.from(new Set(sugestaoFinal.map(s => s.grupo)))
+                                     .slice(0, 3) // Limita a no máximo 3 grupos
+                                     .map(g => {
+                                         const original = sugestaoFinal.find(s => s.grupo === g);
+                                         gruposSugeridos.push(g);
+                                         return { ...getBichoData(g), origem: original ? original.origem : 'Combinada' };
+                                     });
+
+                // --- Captura da Previsão para o Histórico ---
+                // Identificação mais precisa pelo nome completo da extração
+                const nomeSorteioPrev = extração.nomeSorteio; 
+                const dataPrevisaoStr = new Date(extração.dataPrevisao).toDateString();
+                
+                const isNewPrediction = !historicoPrevisoes.find(p => p.nomeSorteio.toUpperCase() === nomeSorteioPrev.toUpperCase() && new Date(p.dataPrevisao).toDateString() === dataPrevisaoStr);
+
+                if (isNewPrediction) {
+                    historicoPrevisoes.push({
+                        loteria: extração.loteria,
+                        nomeSorteio: nomeSorteioPrev,
+                        hora: extração.hora + ':' + extração.minuto, // Salva hora e minuto como string H:M
+                        dataPrevisao: extração.dataPrevisao,
+                        sugestoes: gruposSugeridos.map(g => g.grupo), // Salva APENAS os grupos
+                        status: 'pendente',
+                        acerto: null,
+                        bichoReal: null
+                    });
+                }
+                
+                // Busca o status atual para renderizar
+                const statusPrev = historicoPrevisoes.find(p => p.nomeSorteio.toUpperCase() === nomeSorteioPrev.toUpperCase() && new Date(p.dataPrevisao).toDateString() === dataPrevisaoStr);
+
+                let statusIcone = '⚪';
+                let statusCor = '#6b7280'; // gray-500
+                let resultadoMsg = '';
+
+                if (statusPrev && statusPrev.status === 'resolvido') {
+                    // Nota: Usamos statusPrev.bichoReal que é o grupo
+                    const bichoRealData = getBichoData(statusPrev.bichoReal);
+                    if (statusPrev.acerto) {
+                        statusIcone = '✅';
+                        statusCor = '#34d399'; // green-400
+                        // Busca o bicho real pelo grupo salvo no histórico
+                        resultadoMsg = `ACERTOU! Bicho: ${bichoRealData.emoji} ${bichoRealData.animal}`;
+                    } else {
+                        statusIcone = '❌';
+                        statusCor = '#f87171'; // red-400
+                        // Busca o bicho real pelo grupo salvo no histórico
+                        resultadoMsg = `ERROU. Bicho: ${bichoRealData.emoji} ${bichoRealData.animal}`;
+                    }
+                } else if (extração.dataPrevisao < new Date()) {
+                    statusIcone = '⏳';
+                    statusCor = '#fbbf24'; // amber-400
+                    resultadoMsg = 'Aguardando Resultado...';
+                }
+
+                const displayTime = `${String(extração.hora).padStart(2, '0')}:${String(extração.minuto).padStart(2, '0')}`;
+                const dataHoraFormatada = extração.dataPrevisao.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                
+                let origemPuxadaMsg = '';
+                if (loteriaAlvo === loteriaPuxadaEsperada) {
+                     origemPuxadaMsg = `(Puxada de ${App.nomesLoterias[loteriaQuePuxa]} para ${App.nomesLoterias[loteriaAlvo]})`;
+                } else {
+                     origemPuxadaMsg = `(Análise Estatística em ${App.nomesLoterias[loteriaAlvo]})`;
+                }
+
+
+                // Geração do HTML para até 3 sugestões
+                const sugestaoHTML = sugestaoFinal.map(b => `
+                    <div class="text-center">
+                        <span class="text-3xl sm:text-4xl">${b.emoji}</span>
+                        <p class="text-xs sm:text-sm font-bold text-white">${b.animal} (G${b.grupo})</p>
+                        <p class="text-xs text-cyan-200">${b.origem.replace("Forte", "F").replace("Média", "M").replace("Suave", "S")}</p>
+                    </div>
+                `).join('');
+
+
+                previsoesHTML += `
+                    <div class="previsao-card p-4 rounded-lg shadow-xl" style="border-left-color: ${statusCor};">
+                        <div class="flex justify-between items-start mb-3 border-b border-gray-700 pb-2">
+                            <h3 class="text-lg sm:text-xl font-bold text-cyan-400 leading-tight">
+                                ${statusIcone} ${extração.display || App.nomesLoterias[loteriaAlvo] || loteriaAlvo.toUpperCase()} (${displayTime})
+                            </h3>
+                            <span class="text-xs text-gray-400 text-right">${dataHoraFormatada}</span>
+                        </div>
+                        ${resultadoMsg ? `<p class="text-sm sm:text-md font-bold text-center mb-2" style="color: ${statusCor};">${resultadoMsg}</p>` : ''}
+                        
+                        <p class="text-xs text-gray-400 mb-3 text-center">Último resultado: ${getBichoData(grupoQuePuxa).emoji} ${getBichoData(grupoQuePuxa).animal} (${App.nomesLoterias[loteriaQuePuxa]}) ${origemPuxadaMsg}</p>
+                        <div class="flex justify-around items-start gap-2">
+                            ${sugestaoHTML || '<p class="text-gray-400 text-center col-span-3">Análise indisponível ou sem sugestões fortes.</p>'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = previsoesHTML;
+            // Salva o histórico (apesar de já ter sido salvo em verificarAcertos)
+            salvarHistoricoPrevisoes(historicoPrevisoes); 
+        }
+
+        // Inicia a aplicação
+        document.addEventListener('DOMContentLoaded', main);
+    </script>
+</body>
+</html>
