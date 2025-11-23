@@ -37,7 +37,6 @@
             font-weight: 600;
             transition: all 0.2s ease;
             border: 1px solid rgba(167, 139, 250, 0.3);
-            -webkit-tap-highlight-color: transparent;
             font-size: 0.875rem; /* Tamanho da fonte menor para mobile */
         }
         .filter-btn:hover { background-color: rgba(107, 33, 168, 0.8); }
@@ -109,10 +108,17 @@
         <div id="main-view">
             
             <section class="card bg-cyan-900/40 border-cyan-700 p-3">
-                <h2 class="text-xl font-bold text-white mb-2">📊 Desempenho por Extração</h2>
+                <h2 class="text-xl font-bold text-white mb-2">📊 Desempenho Geral (1º ao 5º)</h2>
                 <div id="contador-container" class="flex flex-wrap justify-around items-center gap-4 sm:gap-6"> 
                     <p class="text-sm sm:text-lg text-gray-400">Carregando contagem...</p>
                     <button onclick="resetContador()" class="text-xs sm:text-sm text-gray-400 hover:text-red-400 transition">Reiniciar Contagem Geral</button>
+                </div>
+            </section>
+            
+            <section class="card bg-gray-800/40 border-gray-700 p-3">
+                <h2 class="text-xl font-bold text-white mb-2">🎯 Desempenho por Extração (1º ao 5º)</h2>
+                <div id="desempenho-detalhado" class="space-y-3">
+                    <p class="text-sm text-gray-400">Calculando desempenho histórico...</p>
                 </div>
             </section>
 
@@ -124,6 +130,14 @@
                     <p class="text-gray-400">Calculando as 3 próximas extrações...</p>
                 </div>
             </section>
+
+            <section class="card bg-gray-900/50 border-gray-600 p-3">
+                <h2 class="text-xl font-bold text-purple-300 mb-2">📜 Histórico de Previsões Resolvidas</h2>
+                <div id="historico-previsoes-resolvidas" class="space-y-3">
+                    <p class="text-sm text-gray-400">Nenhuma previsão resolvida no histórico.</p>
+                </div>
+            </section>
+            
         </div>
 
 
@@ -170,6 +184,12 @@
         </div>
 
     </main>
+    
+    <footer class="mt-8 pb-4 text-center text-xs text-gray-500/70">
+        <p>Analisador de Puxadas - Versão Final</p>
+        <p>Criado por Le Miastkuosky</p>
+    </footer>
+
 
     <script type="module">
         // Importa as funções necessárias do Firebase
@@ -254,7 +274,8 @@
                     { nome: 'NACIONAL 12:00', display: 'NACIONAL 12h', hora: 12, minuto: 0 },
                     { nome: 'NACIONAL 15:00', display: 'NACIONAL 15h', hora: 15, minuto: 0 },
                     { nome: 'NACIONAL 17:00', display: 'NACIONAL 17h', hora: 17, minuto: 0 },
-                    { nome: 'NACIONAL 20:00', display: 'NACIONAL 20h', hora: 20, minuto: 0 },
+                    // CORRIGIDO: Hora da extração da Loteria Nacional (20:00 -> 21:00)
+                    { nome: 'NACIONAL 21:00', display: 'NACIONAL 21h', hora: 21, minuto: 0 }, 
                     { nome: 'NACIONAL 23:00', display: 'NACIONAL 23h', hora: 23, minuto: 0 }
                 ],
             },
@@ -287,34 +308,58 @@
         // --- Funções de Persistência (localStorage) ---
         const STORAGE_KEY_PREVISOES = 'previsoes_historico_v2';
         const STORAGE_KEY_CONTADOR = 'previsoes_contador_v2';
+        // NOVO: Chave para o contador detalhado por extração
+        const STORAGE_KEY_DETALHE = 'previsoes_detalhe_v2'; 
 
         /**
-         * Carrega o contador de acertos/erros.
+         * Carrega o contador geral de acertos/erros.
          */
         function carregarContador() {
             try {
                 const contador = JSON.parse(localStorage.getItem(STORAGE_KEY_CONTADOR)) || { acertos: 0, erros: 0 };
                 return contador;
             } catch (e) {
-                console.error("Erro ao carregar contador:", e);
+                console.error("Erro ao carregar contador geral:", e);
                 return { acertos: 0, erros: 0 };
             }
         }
 
         /**
-         * Salva o contador de acertos/erros.
+         * Salva o contador geral de acertos/erros.
          */
         function salvarContador(contador) {
             localStorage.setItem(STORAGE_KEY_CONTADOR, JSON.stringify(contador));
         }
 
         /**
+         * Carrega o contador detalhado.
+         */
+        function carregarContadorDetalhado() {
+             try {
+                // Estrutura: { 'loteria': { 'nomeSorteio': { acertos: N, erros: M } } }
+                return JSON.parse(localStorage.getItem(STORAGE_KEY_DETALHE)) || {};
+            } catch (e) {
+                console.error("Erro ao carregar contador detalhado:", e);
+                return {};
+            }
+        }
+        
+        /**
+         * Salva o contador detalhado.
+         */
+        function salvarContadorDetalhado(detalhe) {
+            localStorage.setItem(STORAGE_KEY_DETALHE, JSON.stringify(detalhe));
+        }
+
+
+        /**
          * Reseta o contador (acessível via botão no HTML).
          */
         window.resetContador = function() {
-            if (confirm("Tem certeza que deseja zerar o contador de Acertos/Erros?")) {
+            if (confirm("Tem certeza que deseja zerar TODAS as contagens de Acertos/Erros (Geral e Detalhada) e o Histórico de Previsões?")) {
                 localStorage.removeItem(STORAGE_KEY_CONTADOR);
                 localStorage.removeItem(STORAGE_KEY_PREVISOES);
+                localStorage.removeItem(STORAGE_KEY_DETALHE);
                 // Força a re-renderização para limpar o status nos cards
                 main(); 
                 alert("Contador e histórico de previsões reiniciados.");
@@ -341,12 +386,11 @@
             localStorage.setItem(STORAGE_KEY_PREVISOES, JSON.stringify(historico));
         }
         
-        // NOVO: Função para renderizar o contador na interface
+        // Função para renderizar o contador geral na interface
         function renderizarContador() {
             const contador = carregarContador();
             const container = document.getElementById('contador-container');
             
-            // Adicionado flex-col e espaçamento para melhor visualização
             container.innerHTML = `
                 <div class="flex flex-col items-center">
                     <span class="text-2xl font-bold text-green-400">${contador.acertos}</span>
@@ -360,40 +404,182 @@
             `;
         }
 
+        // Função para renderizar o desempenho detalhado por extração
+        function renderizarDesempenhoDetalhado() {
+            const detalhe = carregarContadorDetalhado();
+            const container = document.getElementById('desempenho-detalhado');
+            let html = '';
+            let listaExtrações = [];
+
+            // Constrói uma lista de todas as extrações únicas no detalhe
+            for (const loteria in detalhe) {
+                for (const nomeSorteio in detalhe[loteria]) {
+                    listaExtrações.push({
+                        loteria: loteria,
+                        nomeSorteio: nomeSorteio,
+                        ...detalhe[loteria][nomeSorteio]
+                    });
+                }
+            }
+
+            // Ordena a lista de extrações (ex: RJ antes de LK, e cronologicamente)
+            listaExtrações.sort((a, b) => {
+                if (a.loteria !== b.loteria) {
+                    return a.loteria.localeCompare(b.loteria);
+                }
+                // Ordenação por horário (supondo que o nomeSorteio tem a hora)
+                return a.nomeSorteio.localeCompare(b.nomeSorteio); 
+            });
+
+            if (listaExtrações.length === 0) {
+                 container.innerHTML = '<p class="text-sm text-gray-400">Nenhuma previsão resolvida para calcular o desempenho detalhado.</p>';
+                 return;
+            }
+
+            listaExtrações.forEach(extracao => {
+                const total = extracao.acertos + extracao.erros;
+                const percentual = total > 0 ? ((extracao.acertos / total) * 100).toFixed(0) : 0;
+                const corBarra = percentual >= 50 ? 'bg-green-500' : 'bg-red-500';
+                const larguraBarra = `${percentual}%`;
+
+                html += `
+                    <div class="p-3 bg-gray-800/60 rounded-lg">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-sm font-semibold text-cyan-300">${extracao.nomeSorteio} (${App.nomesLoterias[extracao.loteria]})</span>
+                            <span class="text-xs text-gray-400">(${total} Tentativas)</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-green-400">✅ ${extracao.acertos}</span>
+                            <span class="font-bold text-yellow-300">${percentual}%</span>
+                            <span class="text-red-400">❌ ${extracao.erros}</span>
+                        </div>
+                        <div class="mt-1 h-1.5 bg-gray-600 rounded-full">
+                            <div class="${corBarra} h-full rounded-full" style="width: ${larguraBarra};"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Função para renderizar o histórico detalhado das previsões
+        function renderizarHistoricoPrevisoes() {
+            const historico = carregarHistoricoPrevisoes();
+            const container = document.getElementById('historico-previsoes-resolvidas');
+            
+            const resolvidos = historico
+                .filter(p => p.status === 'resolvido')
+                .sort((a, b) => new Date(b.dataPrevisao) - new Date(a.dataPrevisao)); // Mais recentes primeiro
+
+            if (resolvidos.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-400">Nenhuma previsão resolvida no histórico.</p>';
+                return;
+            }
+
+            let html = '';
+            resolvidos.slice(0, 10).forEach(p => { // Mostra apenas os 10 mais recentes
+                const statusIcone = p.acerto ? '✅' : '❌';
+                const statusCor = p.acerto ? 'text-green-400' : 'text-red-400';
+                const dataFormatada = new Date(p.dataPrevisao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                
+                // O bicho real salvo (prev.bichoReal) é o bicho que saiu no 1º prêmio para fins de referência.
+                const bichoRealData = getBichoData(p.bichoReal);
+                
+                // Limpa as sugestões de grupos para exibição
+                const sugestoesHTML = p.sugestoes.map(grupo => {
+                    const bicho = getBichoData(grupo);
+                    return `${bicho.emoji} G${bicho.grupo}`;
+                }).join(' / ');
+
+                html += `
+                    <div class="p-2 bg-gray-800/80 rounded-lg flex flex-col sm:flex-row justify-between text-sm">
+                        <span class="font-bold ${statusCor}">
+                            ${statusIcone} ${p.nomeSorteio} (${App.nomesLoterias[p.loteria]})
+                        </span>
+                        <span class="text-gray-300">
+                            Saída (1º): ${bichoRealData.emoji} G${bichoRealData.grupo}
+                        </span>
+                        <span class="text-xs sm:text-sm text-gray-500">
+                            Prev: ${sugestoesHTML}
+                        </span>
+                        <span class="text-xs text-gray-400">${dataFormatada}</span>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
         /**
-         * Verifica e atualiza o contador de acertos/erros.
+         * Verifica e atualiza o contador de acertos/erros (Geral e Detalhado).
+         * ACERTO: Contado se o bicho sugerido sair do 1º ao 5º prêmio.
          */
         function verificarAcertos() {
             let historicoPrevisoes = carregarHistoricoPrevisoes();
             let contador = carregarContador();
+            let detalhe = carregarContadorDetalhado(); // Carrega o detalhe
             let contadorMudou = false;
 
-            const resultados1P = App.todosResultados.filter(r => r.posicao === 1);
+            const resultadosCompletos = App.groupedResults; // Usamos os resultados agrupados
             
             historicoPrevisoes = historicoPrevisoes.map(prev => {
+                // SÓ PROCESSA PREVISÕES PENDENTES
                 if (prev.status === 'pendente') {
                     
-                    const resultado = resultados1P.find(r => 
-                        r.loteria === prev.loteria &&
-                        r.data && typeof r.data.toDate === 'function' && 
-                        new Date(r.data.toDate()).toDateString() === new Date(prev.dataPrevisao).toDateString() &&
-                        // ATUALIZADO: Usamos o nome completo (Ex: RIO 18:20) para a correspondência
-                        r.nomeSorteio.toUpperCase().includes(prev.nomeSorteio.toUpperCase())
-                    );
+                    // Extrai a hora e minuto da previsão salva
+                    const dataPrevisaoObj = new Date(prev.dataPrevisao);
+                    const horaPrev = dataPrevisaoObj.getHours();
+                    const minutoPrev = dataPrevisaoObj.getMinutes();
 
-                    if (resultado) {
+                    // --- BUSCA PELO SORTEIO COMPLETO ---
+                    const sorteioCompleto = resultadosCompletos.find(g => {
+                        if (!g.data || typeof g.data.toDate !== 'function') return false;
+
+                        const dataResultado = g.data.toDate();
+                        const horaResultado = dataResultado.getHours();
+                        const minutoResultado = dataResultado.getMinutes();
+
+                        // Compara Loteria, Dia e Hora/Minuto
+                        return g.loteria === prev.loteria &&
+                                dataResultado.toDateString() === dataPrevisaoObj.toDateString() &&
+                                horaResultado === horaPrev &&
+                                minutoResultado === minutoPrev;
+                    });
+                    
+                    if (sorteioCompleto) {
                         prev.status = 'resolvido';
-                        const bichoReal = resultado.bichoGrupo;
                         
-                        if (prev.sugestoes.includes(bichoReal)) {
+                        // Determina o Bicho que Puxa (o bicho do 1º prêmio para fins de exibição de acerto)
+                        const premio1 = sorteioCompleto.premios.find(p => p.posicao === 1);
+                        const bichoRealPuxa = premio1 ? premio1.bichoGrupo : null;
+                        
+                        // --- CRITÉRIO DE ACERTO (1º ao 5º) ---
+                        // Cria uma lista de todos os grupos que saíram (1º ao 5º)
+                        const gruposQueSairam = sorteioCompleto.premios.map(p => p.bichoGrupo).filter(g => g); // Filtra por grupo válido
+                        
+                        // Verifica se alguma das sugestões está nos grupos que saíram
+                        const acertoEncontrado = prev.sugestoes.some(sugestao => gruposQueSairam.includes(sugestao));
+
+
+                        // Inicializa o detalhe se não existir
+                        if (!detalhe[prev.loteria]) detalhe[prev.loteria] = {};
+                        if (!detalhe[prev.loteria][prev.nomeSorteio]) {
+                            detalhe[prev.loteria][prev.nomeSorteio] = { acertos: 0, erros: 0 };
+                        }
+
+                        if (acertoEncontrado) {
                             prev.acerto = true;
                             contador.acertos++;
+                            detalhe[prev.loteria][prev.nomeSorteio].acertos++; // Incrementa detalhado
                         } else {
                             prev.acerto = false;
                             contador.erros++;
+                            detalhe[prev.loteria][prev.nomeSorteio].erros++; // Incrementa detalhado
                         }
                         
-                        prev.bichoReal = bichoReal;
+                        // Salva o bicho do 1º prêmio (para manter a referência visual na análise)
+                        prev.bichoReal = bichoRealPuxa; 
                         contadorMudou = true;
                     }
                 }
@@ -402,6 +588,7 @@
 
             if (contadorMudou) {
                 salvarContador(contador);
+                salvarContadorDetalhado(detalhe); // Salva o detalhe
             }
             // Retorna o histórico atualizado
             return historicoPrevisoes; 
@@ -464,8 +651,11 @@
          */
         async function main() {
             buildGlobalHorarios(); // CONSTRÓI A LISTA GLOBAL DE HORÁRIOS
-            renderizarContador(); // NOVO: Renderiza o contador ao iniciar
+            renderizarContador(); // Renderiza o contador geral ao iniciar
             await buscarResultados(); 
+            // Chamadas de renderização final
+            renderizarDesempenhoDetalhado();
+            renderizarHistoricoPrevisoes();
             configurarFiltros(); 
             showView('main'); // Garante que a tela de previsão seja a inicial
         }
@@ -506,14 +696,14 @@
                     return;
                 }
 
-                // NOVO: A função verificarAcertos agora só salva o histórico e a contagem
+                // A função verificarAcertos salva o histórico e a contagem
                 verificarAcertos(); 
-                renderizarContador(); // Atualiza a contagem após a verificação
-
+                renderizarContador(); // Atualiza a contagem geral
+                
                 App.groupedResults = agruparResultados(App.todosResultados);
 
                 analisarPuxadas(); 
-                renderizarAnaliseFutura(); // Função renderizarAnaliseFutura existe e é chamada aqui
+                renderizarAnaliseFutura(); 
                 renderizarProximasPrevisoes(); 
                 renderizarResultados();
 
@@ -662,24 +852,28 @@
 
         /**
          * Faz a análise de puxadas e retorna a contagem dos grupos mais puxados.
+         * MODIFICADO: Retorna os dados de Puxada Forte (1º) e Puxada Mista (2º-5º) para uso na IA.
          */
         function analisarPuxadas() {
             const container = document.getElementById('analise-container');
             container.innerHTML = ''; 
 
-            if (App.todosResultados.length === 0) {
+            if (App.groupedResults.length === 0) {
                  container.innerHTML = '<p class="text-gray-400">Sem dados para analisar.</p>';
                  return {};
             }
-
-            const ultimoResultado = App.todosResultados.find(r => r.posicao === 1);
-            if (!ultimoResultado) {
+            
+            // 1. Encontra o último sorteio completo
+            const ultimoSorteio = App.groupedResults[0];
+            const ultimoResultado1P = ultimoSorteio.premios.find(p => p.posicao === 1);
+            
+            if (!ultimoResultado1P) {
                 container.innerHTML = '<p class="text-gray-400">Nenhum resultado de 1º prémio encontrado para análise.</p>';
                 return {};
             }
 
-            const loteriaQuePuxa = ultimoResultado.loteria;
-            const grupoQuePuxa = ultimoResultado.bichoGrupo;
+            const loteriaQuePuxa = ultimoSorteio.loteria;
+            const grupoQuePuxa = ultimoResultado1P.bichoGrupo;
             const bichoQuePuxa = getBichoData(grupoQuePuxa);
             const loteriaPuxada = App.regrasPuxada[loteriaQuePuxa];
             
@@ -691,32 +885,48 @@
                 return {};
             }
 
-            // Apenas considera pares onde a loteria ANTERIOR (a que puxa) foi a `loteriaQuePuxa`
-            // e a loteria ATUAL (a puxada) foi a `loteriaPuxada`.
-            const pares = [];
-            for (let i = App.todosResultados.length - 1; i > 0; i--) {
-                const anterior = App.todosResultados[i];
-                const atual = App.todosResultados[i-1];
+            // --- CÁLCULO DE PARES HISTÓRICOS ---
+            const paresPuxadaForte = []; // 1º Prêmio -> 1º Prêmio
+            const paresPuxadaMista = [];  // 1º ao 5º Prêmio -> 1º Prêmio (para o bicho que puxa)
+            
+            for (let i = App.groupedResults.length - 1; i > 0; i--) {
+                const sorteioAnterior = App.groupedResults[i];
+                const sorteioAtual = App.groupedResults[i-1];
                 
-                if (anterior.loteria === loteriaQuePuxa && atual.loteria === loteriaPuxada && anterior.posicao === 1 && atual.posicao === 1) {
-                    pares.push({ saiu: anterior.bichoGrupo, deu: atual.bichoGrupo });
+                // Se o sorteio anterior corresponde à loteria que Puxa e o atual à loteria Puxada
+                if (sorteioAnterior.loteria === loteriaQuePuxa && sorteioAtual.loteria === loteriaPuxada) {
+                    
+                    const bichosPuxadores = sorteioAnterior.premios.map(p => p.bichoGrupo).filter(g => g);
+                    const bichoPuxado = sorteioAtual.premios.find(p => p.posicao === 1)?.bichoGrupo;
+
+                    if (bichoPuxado) {
+                         // 1. Puxada Forte (Bicho do 1º prêmio anterior)
+                        const bichoForte = sorteioAnterior.premios.find(p => p.posicao === 1)?.bichoGrupo;
+                        if (bichoForte && bichoForte === grupoQuePuxa) {
+                             paresPuxadaForte.push({ saiu: bichoForte, deu: bichoPuxado });
+                        }
+
+                        // 2. Puxada Mista (Qualquer bicho do 1º ao 5º anterior que seja o 'grupoQuePuxa')
+                        if (bichosPuxadores.includes(grupoQuePuxa)) {
+                            paresPuxadaMista.push({ saiu: grupoQuePuxa, deu: bichoPuxado });
+                        }
+                    }
                 }
             }
 
-            const paresFiltrados = pares.filter(p => p.saiu === grupoQuePuxa);
+            // --- CONTAGEM E RANKING ---
+            const contagemForte = {};
+            paresPuxadaForte.forEach(par => { contagemForte[par.deu] = (contagemForte[par.deu] || 0) + 1; });
+            const rankingForte = Object.entries(contagemForte).sort((a, b) => b[1] - a[1]);
+            
+            const contagemMista = {};
+            paresPuxadaMista.forEach(par => { contagemMista[par.deu] = (contagemMista[par.deu] || 0) + 1; });
+            const rankingMista = Object.entries(contagemMista).sort((a, b) => b[1] - a[1]);
 
-            const contagem = {};
-            paresFiltrados.forEach(par => {
-                if(par.deu) {
-                    contagem[par.deu] = (contagem[par.deu] || 0) + 1;
-                }
-            });
 
-            const contagemArray = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
-
-            let listaPuxadasHTML = contagemArray.slice(0, 5).map(([grupo, count]) => {
+            let listaPuxadasHTML = rankingForte.slice(0, 5).map(([grupo, count]) => {
                 const bicho = getBichoData(grupo);
-                const percentual = ((count / paresFiltrados.length) * 100).toFixed(0);
+                const percentual = ((count / paresPuxadaForte.length) * 100).toFixed(0);
                 return `<li class="p-3 bg-gray-800/50 rounded-lg flex justify-between items-center">
                             <span class="text-lg font-semibold">${bicho.emoji} ${bicho.animal} (G${grupo})</span>
                             <span class="font-bold text-yellow-300 text-xl">${count}x <span class="text-sm text-gray-400 font-normal">(${percentual}%)</span></span>
@@ -736,21 +946,28 @@
                     </div>
                 </div>
                 <hr class="border-gray-700 my-4">
-                <p class="text-base sm:text-lg mb-3">Historicamente, quando o <strong class="text-yellow-300">${bichoQuePuxa.animal} (G${grupoQuePuxa})</strong> saiu, os 5 que mais saíram na <strong class="text-yellow-300">${App.nomesLoterias[loteriaPuxada]}</strong> (1º Prémio) foram:</p>
+                <p class="text-base sm:text-lg mb-3">Historicamente, quando o <strong class="text-yellow-300">${bichoQuePuxa.animal} (G${grupoQuePuxa})</strong> saiu na cabeça, os 5 que mais saíram na <strong class="text-yellow-300">${App.nomesLoterias[loteriaPuxada]}</strong> (1º Prémio) foram:</p>
                 <ul class="space-y-2">
                     ${listaPuxadasHTML}
                 </ul>
-                <p class="text-xs text-gray-500 mt-3 text-center">Baseado em ${paresFiltrados.length} ocorrências históricas (1º Prémio ➜ 1º Prémio).</p>
+                <p class="text-xs text-gray-500 mt-3 text-center">Baseado em ${paresPuxadaForte.length} ocorrências históricas (1º Prémio ➜ 1º Prémio).</p>
             `;
             
-            // Retorna os top 3 grupos puxados
-            return { loteriaQuePuxa, loteriaPuxada, grupoQuePuxa, gruposMaisPuxados: contagemArray.slice(0, 3).map(([grupo, count]) => ({ grupo, count })) };
+            // Retorna os rankings (Puxada Forte e Puxada Mista)
+            return { 
+                loteriaQuePuxa, 
+                loteriaPuxada, 
+                grupoQuePuxa, 
+                rankingForte: rankingForte.slice(0, 3).map(([grupo, count]) => ({ grupo, count })),
+                rankingMista: rankingMista.slice(0, 3).map(([grupo, count]) => ({ grupo, count }))
+            };
         }
 
         /**
          * Análise de Probabilidade Futura (Atraso + Frequência Recente)
          */
         function analisarProbabilidadeFutura(loteriaAlvo, numDias = 7) {
+            // USANDO resultados de 1º prêmio para estatística de atraso/frequência
             const resultadosAlvo = App.todosResultados.filter(r => 
                 r.loteria === loteriaAlvo && r.posicao === 1
             );
@@ -865,7 +1082,7 @@
         }
 
         /**
-         * Retorna a Loteria e Hora da próxima extração.
+         * Retorna a Loteria e Hora da próxima extração. (Otimizado para pular extrações já realizadas)
          */
         function getProximasExtraçoes(lastLoteria, lastDate, count = 3) {
             const agora = new Date();
@@ -874,50 +1091,48 @@
             const proximaLista = [];
             let horarios = App.horariosExtracao; // Usa a lista unificada e ordenada
             
-            let lastExtractionIndex = -1;
+            let lastExtractionTimeValue = -1;
+            let lastExtractionDate = null;
             
-            // 1. Encontrar o índice da última extração real
+            // 1. Determina a hora do último sorteio REAL
             if (lastDate && typeof lastDate.toDate === 'function') {
                 const lastDateObj = lastDate.toDate();
-                const lastExtractionTimeValue = lastDateObj.getHours() * 60 + lastDateObj.getMinutes();
-                
-                // Tenta encontrar a extração que aconteceu no mesmo horário (aproximadamente) e loteria
-                lastExtractionIndex = horarios.findIndex(h => {
-                     const hTimeValue = h.hora * 60 + h.minuto;
-                     return h.loteria === lastLoteria && Math.abs(hTimeValue - lastExtractionTimeValue) < 30; // 30min de margem
-                });
+                lastExtractionTimeValue = lastDateObj.getHours() * 60 + lastDateObj.getMinutes();
+                lastExtractionDate = lastDateObj;
             }
 
 
             // 2. Determinar o ponto de partida (startIndex)
-            // Se o último resultado não foi encontrado ou está muito distante, buscamos a próxima extração a partir de agora.
-            let startIndex = (lastExtractionIndex !== -1) ? lastExtractionIndex + 1 : 0;
-            let currentIndex = startIndex;
+            let startIndex = 0;
             let dataReferencia = new Date();
             let diaAvancado = false;
             
-            // Se não encontramos o índice do último resultado, procuramos a próxima extração cronológica a partir do 'agora'
-            if (lastExtractionIndex === -1) {
-                const nextChronologicalIndex = horarios.findIndex(h => h.timeValue > agoraTimeValue);
-                if (nextChronologicalIndex !== -1) {
-                    currentIndex = nextChronologicalIndex;
-                    startIndex = nextChronologicalIndex;
-                } else {
-                    // Todos os horários já passaram hoje, começa do início amanhã
-                    currentIndex = 0;
-                    startIndex = 0;
-                    dataReferencia.setDate(dataReferencia.getDate() + 1);
-                    diaAvancado = true;
-                }
+            // Procura o primeiro horário que está no futuro (hoje ou em dias seguintes)
+            const nextChronologicalIndex = horarios.findIndex(h => h.timeValue > agoraTimeValue);
+
+            if (nextChronologicalIndex !== -1) {
+                // Se o próximo horário é hoje
+                startIndex = nextChronologicalIndex;
+            } else {
+                // Todos os horários já passaram hoje, começa do início amanhã
+                startIndex = 0;
+                dataReferencia.setDate(dataReferencia.getDate() + 1);
+                diaAvancado = true;
             }
+            
+            let currentIndex = startIndex;
             
             // 3. Loop para encontrar as próximas 'count' extrações futuras
             while (proximaLista.length < count) {
                 if (currentIndex >= horarios.length) {
                     currentIndex = 0; 
+                    // Avança um dia se o loop circular (sinaliza que já passamos por todos os horários de hoje)
                     if (!diaAvancado) {
                         dataReferencia.setDate(dataReferencia.getDate() + 1); 
                         diaAvancado = true;
+                    } else {
+                        // Se já avançamos um dia e voltamos ao início, avançar para o próximo dia real
+                        dataReferencia.setDate(dataReferencia.getDate() + 1);
                     }
                 }
                 
@@ -926,13 +1141,14 @@
                 let dataPrevisao = new Date(dataReferencia);
                 dataPrevisao.setHours(extração.hora, extração.minuto, 0, 0);
 
-                // Garante que a previsão é sempre no futuro ou hoje, se ainda não tiver passado
-                if (proximaLista.length === 0 && dataPrevisao < agora && !diaAvancado) {
-                    dataPrevisao.setDate(dataPrevisao.getDate() + 1);
-                    dataReferencia.setDate(dataReferencia.getDate() + 1);
-                    diaAvancado = true;
+                // IMPORTANTE: Garantir que não estamos sugerindo extrações que já foram resolvidas/sorteadas hoje
+                // (Compara a data do último sorteio conhecido com a data/hora da previsão)
+                if (lastExtractionDate && dataPrevisao <= lastExtractionDate) {
+                    // Pula esta previsão, pois ela é anterior ou igual ao último resultado que temos
+                    currentIndex++;
+                    continue; 
                 }
-                
+
                 proximaLista.push({
                     loteria: extração.loteria,
                     nomeSorteio: extração.nome, // Nome completo (RIO 18:20)
@@ -962,91 +1178,92 @@
 
             const proximas = getProximasExtraçoes(ultimoResultado.loteria, ultimoResultado.data, 3);
             
-            // Chamamos carregarHistoricoPrevisoes() diretamente, pois verificarAcertos() já salvou a versão mais recente
             let historicoPrevisoes = carregarHistoricoPrevisoes();
             
-            // Coleta dados do último resultado (ponto de partida)
             const grupoQuePuxa = ultimoResultado.bichoGrupo;
             const loteriaQuePuxa = ultimoResultado.loteria;
 
-            // Obtém o histórico de puxada (dados brutos da análise)
-            const resultadosPuxada = analisarPuxadas(); 
+            // Obtém os rankings de puxada (Forte e Mista)
+            const { rankingForte, rankingMista } = analisarPuxadas(); 
             let previsoesHTML = '';
             
-            // Itera sobre as próximas extrações
+            // Converte rankings para arrays de grupos
+            const gruposPuxadosForte = rankingForte.map(g => g.grupo);
+            const gruposPuxadosMista = rankingMista.map(g => g.grupo);
+            
             proximas.forEach(extração => {
                 const loteriaAlvo = extração.loteria;
-                // Qual loteria DEVERIA ser puxada pelo ÚLTIMO resultado real (pode ser null se não houver regra)
                 const loteriaPuxadaEsperada = App.regrasPuxada[loteriaQuePuxa]; 
 
-                // --- FATOR 1: Puxada (Aplicado APENAS se a loteria ALVO for a loteria ESPERADA) ---
-                let gruposMaisPuxados = [];
-                if (loteriaAlvo === loteriaPuxadaEsperada) {
-                    // Usa os grupos puxados da análise histórica
-                    gruposMaisPuxados = resultadosPuxada.gruposMaisPuxados ? resultadosPuxada.gruposMaisPuxados.slice(0, 3).map(g => g.grupo) : [];
-                }
-                
-                // --- FATOR 2: Probabilidade Global (Analisada sempre na loteria ALVO) ---
+                // --- FATOR 2: Probabilidade Global (Estatística) ---
                 const analiseProbabilidade = analisarProbabilidadeFutura(loteriaAlvo, 7);
                 const gruposAtrasados = analiseProbabilidade.atrasados.slice(0, 3).map(b => b.grupo); 
+                const gruposQuentes = analiseProbabilidade.quentes.slice(0, 3).map(b => b.grupo); 
                 
-                // --- Lógica de Sugestão Final (Interligação para 3 Grupos) ---
+                // --- Lógica de Sugestão Final (Integração de 3 Fatores) ---
                 let sugestaoFinal = [];
-                const gruposPuxadosSet = new Set(gruposMaisPuxados); 
-                const gruposAtrasadosSet = new Set(gruposAtrasados); 
+                const puxadosForteSet = new Set(gruposPuxadosForte);
+                const puxadosMistaSet = new Set(gruposPuxadosMista);
+                const atrasadosSet = new Set(gruposAtrasados);
+                const quentesSet = new Set(gruposQuentes);
                 
-                // Prioridade 1: Bichos que estão na Puxada (se aplicável) E estão Atrasados (Sinal Forte)
-                gruposMaisPuxados.forEach(g => { 
-                    if (gruposAtrasadosSet.has(g)) {
+                // Puxada Forte é considerada apenas se a loteria alvo for a que o último resultado puxa
+                const aplicaPuxadaForte = loteriaAlvo === loteriaPuxadaEsperada;
+
+                // 1. Prioridade Máxima: Intersecção Puxada Forte + Atraso/Quente
+                if (aplicaPuxadaForte) {
+                    gruposPuxadosForte.forEach(g => {
+                        if (atrasadosSet.has(g) || quentesSet.has(g)) {
+                            if (!sugestaoFinal.find(s => s.grupo === g)) {
+                                sugestaoFinal.push({ grupo: g, origem: "FORTE + ESTATÍSTICA" });
+                            }
+                        }
+                    });
+                }
+                
+                // 2. Prioridade Alta: Intersecção Puxada Mista + Atraso (Mais diversidade)
+                gruposPuxadosMista.forEach(g => {
+                    if (atrasadosSet.has(g) && !puxadosForteSet.has(g)) { // Se não for Puxada Forte (evita duplicidade)
                         if (!sugestaoFinal.find(s => s.grupo === g)) {
-                             sugestaoFinal.push({ grupo: g, origem: "Puxada + Atraso" });
+                             sugestaoFinal.push({ grupo: g, origem: "MISTA + ATRASO" });
                         }
                     }
                 });
 
-                // Prioridade 2: Bichos Top 1/2 da Puxada (Se a loteria alvo for a esperada)
-                if (loteriaAlvo === loteriaPuxadaEsperada) {
-                    // Garante o Top 1 da Puxada
-                    if (gruposMaisPuxados.length > 0) {
-                        const g = gruposMaisPuxados[0];
-                        if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Puxada Forte" });
+                // 3. Prioridade Média: Top 1 Atrasado ou Top 1 Puxada Forte (Garante os mais prováveis)
+                if (sugestaoFinal.length < 3) {
+                     // Adiciona o Top 1 Atrasado (sempre relevante)
+                    const gAtrasado = gruposAtrasados.length > 0 ? gruposAtrasados[0] : null;
+                    if (gAtrasado && !sugestaoFinal.find(s => s.grupo === gAtrasado)) {
+                        sugestaoFinal.push({ grupo: gAtrasado, origem: "ATRASO MÁXIMO" });
                     }
-                    // Garante o Top 2 da Puxada
-                    if (gruposMaisPuxados.length > 1) {
-                        const g = gruposMaisPuxados[1];
-                        if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Puxada Média" });
+
+                    // Adiciona o Top 1 Forte (se aplicável)
+                    const gForte = aplicaPuxadaForte && gruposPuxadosForte.length > 0 ? gruposPuxadosForte[0] : null;
+                    if (gForte && !sugestaoFinal.find(s => s.grupo === gForte)) {
+                        sugestaoFinal.push({ grupo: gForte, origem: "PUXADA FORTE" });
                     }
                 }
                 
-                // Prioridade 3: Bichos Top 1/2 Atrasados (Sempre aplicável)
-                // Garante o Top 1 dos Atrasados
-                if (gruposAtrasados.length > 0) {
-                    const g = gruposAtrasados[0];
-                    if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Atraso Forte" });
-                }
-                // Garante o Top 2 dos Atrasados
-                if (gruposAtrasados.length > 1) {
-                    const g = gruposAtrasados[1];
-                    if (!sugestaoFinal.find(s => s.grupo === g)) sugestaoFinal.push({ grupo: g, origem: "Atraso Médio" });
-                }
-
-                // Prioridade 4: Garante mais um do Top 3 da Puxada ou Atraso se ainda não tiver 3
+                // 4. Prioridade Baixa: Completa com Puxada Mista ou Atrasado
                 if (sugestaoFinal.length < 3) {
-                    // Tenta o Puxada Suave (se aplicável)
-                    const grupoExtraPuxada = (loteriaAlvo === loteriaPuxadaEsperada && gruposMaisPuxados.length > 2) ? gruposMaisPuxados[2] : null;
-                    const grupoExtraAtraso = gruposAtrasados.length > 2 ? gruposAtrasados[2] : null;
-
-                    if (grupoExtraPuxada && !sugestaoFinal.find(s => s.grupo === grupoExtraPuxada)) {
-                        sugestaoFinal.push({ grupo: grupoExtraPuxada, origem: "Puxada Suave" });
-                    } else if (grupoExtraAtraso && !sugestaoFinal.find(s => s.grupo === grupoExtraAtraso)) {
-                        sugestaoFinal.push({ grupo: grupoExtraAtraso, origem: "Atraso Suave" });
+                    const gruposParaCompletar = [...new Set([...gruposAtrasados, ...gruposPuxadosMista])];
+                    
+                    for (const g of gruposParaCompletar) {
+                         if (!sugestaoFinal.find(s => s.grupo === g)) {
+                            sugestaoFinal.push({ 
+                                grupo: g, 
+                                origem: puxadosMistaSet.has(g) ? "PUXADA MISTA" : "ATRASO SUAVE"
+                            });
+                            if (sugestaoFinal.length >= 3) break;
+                        }
                     }
                 }
-
-                // Remove duplicatas e limita a 3 sugestões
+                
+                // Filtra para garantir exatamente 3 (ou menos se não houver dados)
                 let gruposSugeridos = [];
                 sugestaoFinal = Array.from(new Set(sugestaoFinal.map(s => s.grupo)))
-                                     .slice(0, 3) // Limita a no máximo 3 grupos
+                                     .slice(0, 3) 
                                      .map(g => {
                                          const original = sugestaoFinal.find(s => s.grupo === g);
                                          gruposSugeridos.push(g);
@@ -1054,7 +1271,6 @@
                                      });
 
                 // --- Captura da Previsão para o Histórico ---
-                // Identificação mais precisa pelo nome completo da extração
                 const nomeSorteioPrev = extração.nomeSorteio; 
                 const dataPrevisaoStr = new Date(extração.dataPrevisao).toDateString();
                 
