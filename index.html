@@ -4671,7 +4671,7 @@ body.dark-mode #bichosSelectorContainer {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V2.16</strong>
+            <strong>V3.16</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -13093,49 +13093,74 @@ async function generateSelectedNumbers() {
             
             // --- CASO 3: PADRÃO (BICHOS) (Sem alterações) ---
             case 'padrao':
-            default:
-                const baseQuantity = Math.floor(totalQuantity / selectedBichos.length);
-                const remainder = totalQuantity % selectedBichos.length;
+default:
+    // 1. Cálculos de quantidade (Estrutura do Segundo Código)
+    const baseQuantity = Math.floor(totalQuantity / selectedBichos.length);
+    const remainder = totalQuantity % selectedBichos.length;
 
-                summaryParts.push(`\n<strong>- Modo:</strong> Grupo Bichos (Padrão)`);
-                summaryParts.push(`<strong>- Grupos Selecionados:</strong> ${selectedBichos.length}`);
-                summaryParts.push("\n<strong>- Detalhes da Geração:</strong>");
+    // 2. Montagem do Relatório/Log (Estrutura do Segundo Código)
+    summaryParts.push(`\n<strong>- Modo:</strong> Grupo Bichos (Padrão)`);
+    summaryParts.push(`<strong>- Grupos Selecionados:</strong> ${selectedBichos.length}`);
+    summaryParts.push("\n<strong>- Detalhes da Geração:</strong>");
 
-                selectedBichos.forEach((bicho, index) => {
-                    const quantityForThisBicho = baseQuantity + (index < remainder ? 1 : 0);
-                    if(quantityForThisBicho > 0) {
-                         const formattedTypes = checkedTypes.map(type => (quantityForThisBicho > 1) ? (type.endsWith('r') ? type + 'es' : type + 's') : type).join('/');
-                         summaryParts.push(`  • ${quantityForThisBicho}x ${formattedTypes} para G${bicho.grupo} ${bicho.animal} ${bicho.emoji}`);
-                    }
-                });
+    selectedBichos.forEach((bicho, index) => {
+        const quantityForThisBicho = baseQuantity + (index < remainder ? 1 : 0);
+        if(quantityForThisBicho > 0) {
+             const formattedTypes = checkedTypes.map(type => (quantityForThisBicho > 1) ? (type.endsWith('r') ? type + 'es' : type + 's') : type).join('/');
+             summaryParts.push(`  • ${quantityForThisBicho}x ${formattedTypes} para G${bicho.grupo} ${bicho.animal} ${bicho.emoji}`);
+        }
+    });
 
-                selectedBichos.forEach((bicho, index) => {
-                    const quantityForThisBicho = baseQuantity + (index < remainder ? 1 : 0);
-                    if (quantityForThisBicho === 0) return;
-                    const dezenasPool = bicho.dezenas;
-                    for (const typeKey of typeKeys) {
-                        const resultSet = new Set();
-                        let attempts = 0;
-                        while (resultSet.size < quantityForThisBicho && attempts < quantityForThisBicho * 50) {
-                            attempts++;
-                            let generatedNumber = '';
-                            if (typeKey === 'milhar') {
-                                generatedNumber = String(Math.floor(Math.random() * 100)).padStart(2, '0') + dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
-                            } else if (typeKey === 'centena') {
-                                generatedNumber = String(Math.floor(Math.random() * 10)) + dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
-                            } else if (typeKey === 'dezena') {
-                                generatedNumber = dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
-                            }
-                            if (applyAdvancedFilters(generatedNumber, typeKey)) {
-                               resultSet.add(generatedNumber);
-                            }
-                        }
-                        finalResults[typeKey].push(...Array.from(resultSet));
-                    }
-                });
-                typeKeys.forEach(typeKey => shuffleArray(finalResults[typeKey]));
+    // 3. Loop de Geração (Estrutura do Segundo Código com LÓGICA do Primeiro)
+    selectedBichos.forEach((bicho, index) => {
+        const quantityForThisBicho = baseQuantity + (index < remainder ? 1 : 0);
+        
+        if (quantityForThisBicho === 0) return;
+        
+        // Pega as dezenas do bicho (Ex: ['01', '02', '03', '04'])
+        const dezenasPool = bicho.dezenas;
+
+        for (const typeKey of typeKeys) { // typeKey = 'milhar', 'centena' ou 'dezena'
+            const resultSet = new Set();
+            let attempts = 0;
+
+            // Tenta gerar até atingir a quantidade ou o limite de tentativas
+            while (resultSet.size < quantityForThisBicho && attempts < quantityForThisBicho * 50) {
+                attempts++;
                 
-                break; // Fim do 'padrao'
+                // --- AQUI ENTRA A LÓGICA DO PRIMEIRO CÓDIGO ---
+                
+                // Passo A: Escolhe a dezena do bicho separadamente (igual ao código 1)
+                const randomDezena = dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
+                
+                let generatedNumber = '';
+
+                if (typeKey === 'milhar') {
+                    // Passo B: Gera 00-99 e cola na dezena (Lógica exata do código 1)
+                    generatedNumber = String(Math.floor(Math.random() * 100)).padStart(2, '0') + randomDezena;
+                } else if (typeKey === 'centena') {
+                    // Passo C: Gera 0-9 e cola na dezena
+                    generatedNumber = String(Math.floor(Math.random() * 10)) + randomDezena;
+                } else if (typeKey === 'dezena') {
+                    generatedNumber = randomDezena;
+                }
+
+                // --- FIM DA LÓGICA DO PRIMEIRO CÓDIGO ---
+
+                // Verifica filtros e unicidade (Estrutura do código 2)
+                if (applyAdvancedFilters(generatedNumber, typeKey)) {
+                   resultSet.add(generatedNumber);
+                }
+            }
+            // Salva no objeto de resultados final
+            finalResults[typeKey].push(...Array.from(resultSet));
+        }
+    });
+
+    // Embaralha o resultado final para não ficar agrupado por bicho
+    typeKeys.forEach(typeKey => shuffleArray(finalResults[typeKey]));
+    
+    break; // Fim do 'padrao'
         }
         // ---- FIM DO NOVO BLOCO SWITCH ----
     }
