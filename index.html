@@ -13259,25 +13259,43 @@ default:
     if (mode === 'bichos' && bichoMilharMethod === 'cercar_completo') {
         const milharesGeradas = finalResults.milhar; 
         
-        console.log(`Confirmado! Removendo ${milharesGeradas.length} milhares do pool global.`);
+        // 1. Agrupa os números gerados por Grupo de Bicho para processar em lote
+        const remocoesPorGrupo = {};
         
         milharesGeradas.forEach(milhar => {
             const bichoData = getBichoDataFromNumber(milhar);
-            // Verifica se o bicho existe e se o pool dele está carregado na memória
-            if (bichoData && cercarBichoPools[bichoData.grupo]) {
-                cercarBichoPools[bichoData.grupo].delete(milhar);
-                
-                // Apenas loga se acabou, mas NÃO salva aqui dentro
-                if (cercarBichoPools[bichoData.grupo].size === 0) {
-                    console.log(`Pool do ${bichoData.animal} esgotado.`);
+            if (bichoData) {
+                if (!remocoesPorGrupo[bichoData.grupo]) {
+                    remocoesPorGrupo[bichoData.grupo] = [];
                 }
+                remocoesPorGrupo[bichoData.grupo].push(milhar);
             }
         });
 
-        // 1. A MÁGICA ESTÁ AQUI: Salvamos FORA do loop.
-        // Assim, qualquer quantidade consumida (seja 1, 10 ou 100) é abatida
-        // e salva permanentemente no banco de dados.
+        // 2. Processa a remoção grupo a grupo
+        for (const [grupo, listaParaRemover] of Object.entries(remocoesPorGrupo)) {
+            // Verifica se o pool existe na memória
+            if (cercarBichoPools[grupo]) {
+                const poolAtual = cercarBichoPools[grupo];
+                const tamanhoAntes = poolAtual.size;
+                const quantidadeParaRemover = listaParaRemover.length;
+
+                // --- A MÁGICA ACONTECE AQUI ---
+                // Se vamos remover tudo o que resta (ou mais), forçamos o ZERO.
+                if (quantidadeParaRemover >= tamanhoAntes) {
+                    poolAtual.clear(); // Limpa o Set completamente
+                    console.log(`[Ciclo] Grupo ${grupo}: Esvaziado completamente (Force Clear).`);
+                } else {
+                    // Remoção item a item padrão
+                    listaParaRemover.forEach(m => poolAtual.delete(m));
+                    console.log(`[Ciclo] Grupo ${grupo}: Removidos ${quantidadeParaRemover}. Restam ${poolAtual.size}.`);
+                }
+            }
+        }
+
+        // 3. Salva o estado atualizado (incluindo os que ficaram com size=0)
         await saveCercarPools(); 
+        console.log("Estado dos ciclos salvo no banco de dados.");
     }
 
     logQuantityUsage(totalQuantity);
