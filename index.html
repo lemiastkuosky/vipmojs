@@ -7611,7 +7611,6 @@ async function restoreGameTypeSelection() {
         });
     }
 }
-
 async function resetCercarCycle() {
     // Confirmação para evitar cliques acidentais
     const confirmed = await showCustomConfirm(
@@ -10929,7 +10928,7 @@ function displayResultsWithSummary(type, resultsArray) {
             showToast("Erro: Não foi possível salvar os nomes no aparelho.", "error");
             return false; // Retorna falha
         }
-    }
+    
 
         // 2. Se estiver logado, TENTA salvar na nuvem (sincronizar).
         if (currentUser) {
@@ -10960,7 +10959,8 @@ function displayResultsWithSummary(type, resultsArray) {
             console.log("Usuário não logado. Nomes salvos apenas localmente.");
             return true; // Sucesso (local)
         }
-    
+    }
+
     async function addNome() {
         const input = document.getElementById('nomePessoaInputModal'); 
         const nome = input.value.trim();
@@ -12606,6 +12606,18 @@ function fecharPreviewConfirmacao() {
     }
 }
 
+// --- CÓDIGO NOVO PARA CONTROLAR O BOTÃO DE RESET ---
+    const btnResetCiclo = document.getElementById('btnResetCiclo');
+    if (btnResetCiclo) {
+        // Mostra o botão APENAS se estiver no modo 'bichos' E sub-modo 'cercar_completo'
+        if (selectedMode === 'bichos' && bichoMilharMethod === 'cercar_completo') {
+            btnResetCiclo.style.display = 'block';
+        } else {
+            btnResetCiclo.style.display = 'none';
+        }
+    }
+
+
 function populateBichosSelector() {
     if (bichosPopulated) return;
     const container = document.getElementById('bichosSelectorContainer');
@@ -12689,6 +12701,29 @@ function resendReceiptLink(receiptId) {
     showToast('Preparando para reenviar...', 'success');
 }
 
+// Salva o estado atual dos pools no armazenamento
+async function saveCercarPools() {
+    const poolsToSave = {};
+    // Converte os Sets em Arrays para o JSON aceitar
+    for (const [grupo, setMilhares] of Object.entries(cercarBichoPools)) {
+        poolsToSave[grupo] = Array.from(setMilhares);
+    }
+    await saveData('cercarBichoPoolsData', poolsToSave);
+}
+
+// Carrega os pools salvos ao abrir o app/modal
+async function loadCercarPools() {
+    const savedData = await getData('cercarBichoPoolsData');
+    if (savedData) {
+        cercarBichoPools = {};
+        // Converte os Arrays de volta para Sets
+        for (const [grupo, arrayMilhares] of Object.entries(savedData)) {
+            cercarBichoPools[grupo] = new Set(arrayMilhares);
+        }
+        console.log("Pools de 'Cercar Bicho' restaurados do armazenamento.");
+    }
+}
+
 async function checkMilharInHistory() {
     const searchInput = document.getElementById('searchHistoryInput');
     const resultContainer = document.getElementById('searchHistoryResult');
@@ -12770,29 +12805,6 @@ async function checkMilharInHistory() {
     }
 }
 
-// Salva o estado atual dos pools no armazenamento
-async function saveCercarPools() {
-    const poolsToSave = {};
-    // Converte os Sets em Arrays para o JSON aceitar
-    for (const [grupo, setMilhares] of Object.entries(cercarBichoPools)) {
-        poolsToSave[grupo] = Array.from(setMilhares);
-    }
-    await saveData('cercarBichoPoolsData', poolsToSave);
-}
-
-// Carrega os pools salvos ao abrir o app/modal
-async function loadCercarPools() {
-    const savedData = await getData('cercarBichoPoolsData');
-    if (savedData) {
-        cercarBichoPools = {};
-        // Converte os Arrays de volta para Sets
-        for (const [grupo, arrayMilhares] of Object.entries(savedData)) {
-            cercarBichoPools[grupo] = new Set(arrayMilhares);
-        }
-        console.log("Pools de 'Cercar Bicho' restaurados do armazenamento.");
-    }
-}
-
 async function generateSelectedNumbers() {
     // 1. Obter configurações iniciais
     const quantityInput = document.getElementById('randomQuantityInput');
@@ -12822,17 +12834,6 @@ async function generateSelectedNumbers() {
     
     // Lê o novo seletor de modo de milhar de bicho
     const bichoMilharMethod = document.querySelector('input[name="bichoMilharMethod"]:checked')?.value || 'padrao';
-
-const btnResetCiclo = document.getElementById('btnResetCiclo');
-    if (btnResetCiclo) {
-        // Mostra o botão APENAS se estiver no modo 'bichos' E sub-modo 'cercar_completo'
-        if (selectedMode === 'bichos' && bichoMilharMethod === 'cercar_completo') {
-            btnResetCiclo.style.display = 'block';
-        } else {
-            btnResetCiclo.style.display = 'none';
-        }
-    
-} // Fim da função updateGeneratorOptions
 
     // ==========================================
     // MODO: I.A. BICHOS
@@ -13262,16 +13263,21 @@ default:
         
         milharesGeradas.forEach(milhar => {
             const bichoData = getBichoDataFromNumber(milhar);
+            // Verifica se o bicho existe e se o pool dele está carregado na memória
             if (bichoData && cercarBichoPools[bichoData.grupo]) {
                 cercarBichoPools[bichoData.grupo].delete(milhar);
                 
+                // Apenas loga se acabou, mas NÃO salva aqui dentro
                 if (cercarBichoPools[bichoData.grupo].size === 0) {
                     console.log(`Pool do ${bichoData.animal} esgotado.`);
-                    delete cercarBichoPools[bichoData.grupo];
                 }
             }
         });
-        saveCercarPools(); // Salva o estado atualizado (com os números removidos)
+
+        // 1. A MÁGICA ESTÁ AQUI: Salvamos FORA do loop.
+        // Assim, qualquer quantidade consumida (seja 1, 10 ou 100) é abatida
+        // e salva permanentemente no banco de dados.
+        await saveCercarPools(); 
     }
 
     logQuantityUsage(totalQuantity);
