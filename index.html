@@ -4671,7 +4671,7 @@ body.dark-mode #bichosSelectorContainer {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V3.16</strong>
+            <strong>V3.19</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -5189,9 +5189,13 @@ body.dark-mode #bichosSelectorContainer {
                 <p id="bichoMethodDescription" style="font-size: 0.85rem; color: #ffffff; margin: 12px 0 0 0; padding: 0 5px; min-height: 2.5em; text-align: center;">
                     </p>
             </fieldset>
-            <div id="bichoSelectionActions" style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <div id="bichoSelectionActions" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
                 <button onclick="selectAllBichos(true)" class="bolao-button" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Selecionar Todos</button>
                 <button onclick="selectAllBichos(false)" class="import-btn" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Limpar Seleção</button>
+                
+                <button id="btnResetCiclo" onclick="resetCercarCycle()" class="load-button" style="display: none; flex-basis: 100%; background-color: #fd7e14; color: white;">
+                    ♻️ Zerar Ciclo (Reiniciar 400)
+                </button>
             </div>
             <div id="bichosSelectorContainer"></div>
 
@@ -7605,6 +7609,26 @@ async function restoreGameTypeSelection() {
                 checkbox.checked = true;
             }
         });
+    }
+}
+
+async function resetCercarCycle() {
+    // Confirmação para evitar cliques acidentais
+    const confirmed = await showCustomConfirm(
+        'Isso apagará o histórico dos números que já saíram para os bichos selecionados e começará um novo ciclo de 400 milhares.\n\nDeseja continuar?',
+        'Sim, Zerar',
+        'Cancelar',
+        'randomGeneratorModal'
+    );
+
+    if (confirmed) {
+        // 1. Limpa a variável na memória
+        cercarBichoPools = {};
+        
+        // 2. Limpa o armazenamento persistente
+        await removeData('cercarBichoPoolsData');
+        
+        showToast('Ciclo reiniciado! Todos os números estão disponíveis novamente.', 'success');
     }
 }
 
@@ -10535,34 +10559,35 @@ handleMethodChange();
     }
 
     function clearMCDForm() {
-    // 1. Reseta os inputs do formulário para o estado inicial
+    // 1. Reseta os inputs do formulário
     document.querySelector('input[name="generationMode"][value="offline"]').checked = true;
     document.querySelector('input[name="generationType"][value="milhar"]').checked = true;
     document.querySelector('input[name="generationMethod"][value="padrao"]').checked = true;
     
-    // --- MUDANÇA AQUI ---
-    cercarBichoPools = {}; // Limpa o MAPA de pools
-    // (A linha 'cercarBichoSignature = null' não é mais necessária)
+    // 2. Limpa a memória RAM
+    cercarBichoPools = {}; 
     
-    // Esconde os painéis que podem estar abertos
+    // 3. --- NOVO: Limpa o armazenamento persistente ---
+    removeData('cercarBichoPoolsData'); 
+    
+    // Esconde os painéis
     toggleBichosSelector('offline');
     handleMethodChange();
-    updateGeneratorOptions(); // Garante que o painel de bicho milhar suma
+    updateGeneratorOptions();
     
-    // Desmarca todos os bichos
+    // Desmarca bichos
     selectAllBichos(false);
     
-    // Reseta a quantidade para o valor padrão
+    // Reseta quantidade
     const DEFAULT_QUANTITY_KEY = 'generatorDefaultQuantity';
     getData(DEFAULT_QUANTITY_KEY).then(savedValue => {
         document.getElementById('randomQuantityInput').value = savedValue || '100';
     });
 
-    // 2. Chama a função que já existe para limpar a área de resultados
-    clearRandomResults(); // Esta função já esconde botões de ação, etc.
+    // Limpa resultados visuais
+    clearRandomResults(); 
 
-    // 3. Mostra uma notificação de sucesso
-    showToast('Formulário do gerador limpo.', 'info');
+    showToast('Formulário limpo e ciclos reiniciados.', 'info');
 }
 
     function removeFromIndexedDB(key) {
@@ -10865,90 +10890,46 @@ function displayResultsWithSummary(type, resultsArray) {
 }
 
     async function carregarNomesSalvos() {
-        const currentUser = firebase.auth().currentUser;
-        let nomesDaNuvem = [];
-        let nomesLocais = [];
-        let nuvemFalhou = false; // Flag para controlar o toast
-
-        // 1. Sempre carregar os nomes locais primeiro
-        try {
-            nomesLocais = await window.getData(STORAGE_KEYS.NAMES) || [];
-            console.log(`Nomes carregados localmente: ${nomesLocais.length}`);
-        } catch (localError) {
-            console.error("Erro ao carregar nomes locais:", localError);
-            showToast("Erro ao ler nomes salvos no aparelho.", "error");
-            // Continua mesmo se o local falhar, para tentar a nuvem.
-        }
-
-        // 2. Se estiver logado, tentar carregar e sincronizar com a nuvem
-        if (currentUser) {
-            console.log("Carregando nomes salvos da nuvem para o usuário:", currentUser.uid);
-            try {
-                const userDocRef = firestoreDB.collection('users').doc(currentUser.uid);
-                const doc = await userDocRef.get();
-
-                if (doc.exists && doc.data().nomesSalvos && Array.isArray(doc.data().nomesSalvos)) {
-                    nomesDaNuvem = doc.data().nomesSalvos;
-                    console.log(`Nomes carregados da nuvem: ${nomesDaNuvem.length}`);
-                } else {
-                    console.log("Nenhum nome salvo na nuvem para este usuário.");
-                }
-            } catch (error) {
-                console.error("Erro ao carregar nomes da nuvem:", error);
-                nuvemFalhou = true; // Marca que a nuvem falhou
-            }
-        } else {
-            console.log("Carregar Nomes: Usuário não logado. Usando apenas lista local.");
-        }
-
-        // 3. Mesclar (Merge) as duas listas
-        // Usar um Set garante que não haja duplicatas
-        const mergedSet = new Set([...nomesLocais, ...nomesDaNuvem]);
-        nomesSalvos = Array.from(mergedSet);
-        nomesSalvos.sort((a, b) => a.localeCompare(b)); // Ordena alfabeticamente
-
-        // 4. Sincronizar de volta (se necessário)
-        // Se a lista mesclada for maior que a lista local, salva localmente.
-        if (nomesSalvos.length > nomesLocais.length) {
-            console.log("Sincronizando lista mesclada de volta para o local...");
-            await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos);
-        }
-        // Se estiver logado, a nuvem não falhou, e a lista mesclada for maior que a da nuvem, salva na nuvem.
-        if (currentUser && !nuvemFalhou && nomesSalvos.length > nomesDaNuvem.length) {
-            console.log("Sincronizando lista mesclada de volta para a nuvem...");
-            try {
-                await firestoreDB.collection('users').doc(currentUser.uid).set({ 
-                    nomesSalvos: nomesSalvos 
-                }, { merge: true });
-            } catch (syncError) {
-                console.error("Erro ao sincronizar nomes mesclados para a nuvem:", syncError);
-                // Não precisa de toast aqui, a falha já foi (ou será) notificada.
-            }
-        }
+        console.log("Carregando nomes (Apenas Local)...");
         
-        // 5. Notificar o usuário se a nuvem falhou, mas os dados locais foram carregados
-        if (nuvemFalhou && nomesLocais.length > 0) {
-             showToast("Falha ao buscar nomes da nuvem. Usando a lista salva localmente.", "warning", 4000);
-        } else if (nuvemFalhou && nomesLocais.length === 0) {
-            showToast("Falha ao conectar com a nuvem. Não há nomes salvos localmente.", "error", 4000);
+        try {
+            // Busca apenas do armazenamento local
+            const dadosLocais = await window.getData(STORAGE_KEYS.NAMES);
+            
+            // Se houver dados, usa eles. Se não, inicia lista vazia.
+            if (Array.isArray(dadosLocais)) {
+                nomesSalvos = dadosLocais;
+                console.log(`Nomes carregados localmente: ${nomesSalvos.length}`);
+            } else {
+                nomesSalvos = [];
+                console.log("Nenhum nome encontrado localmente.");
+            }
+
+            // Ordena alfabeticamente para ficar organizado
+            nomesSalvos.sort((a, b) => a.localeCompare(b));
+
+        } catch (error) {
+            console.error("Erro ao carregar nomes locais:", error);
+            showToast("Erro ao ler nomes salvos no aparelho.", "error");
+            nomesSalvos = [];
         }
 
-        // 6. Atualizar a interface
+        // Atualiza os dropdowns na tela
         atualizarSelectNomes();
     }
 
     async function salvarNomes() {
-        const currentUser = firebase.auth().currentUser;
-        
-        // 1. Salvar localmente PRIMEIRO. Isso é obrigatório.
+        // Salva apenas no armazenamento local
         try {
             await window.saveData(STORAGE_KEYS.NAMES, nomesSalvos);
             console.log("Nomes salvos localmente com sucesso.");
-        } catch (localError) {
-            console.error("Erro CRÍTICO ao salvar nomes localmente:", localError);
-            showToast("Erro grave: Não foi possível salvar os nomes no aparelho.", "error");
-            return false; // Se o local falhar, é um erro grave.
+            return true; // Retorna sucesso
+        } catch (error) {
+            console.error("Erro CRÍTICO ao salvar nomes localmente:", error);
+            showToast("Erro: Não foi possível salvar os nomes no aparelho.", "error");
+            return false; // Retorna falha
         }
+    }
 
         // 2. Se estiver logado, TENTA salvar na nuvem (sincronizar).
         if (currentUser) {
@@ -10979,8 +10960,7 @@ function displayResultsWithSummary(type, resultsArray) {
             console.log("Usuário não logado. Nomes salvos apenas localmente.");
             return true; // Sucesso (local)
         }
-    }
-
+    
     async function addNome() {
         const input = document.getElementById('nomePessoaInputModal'); 
         const nome = input.value.trim();
@@ -12350,6 +12330,7 @@ async function ensureCorrectGenModeVisualState() {
    async function showRandomGeneratorModal() {
     if (document.activeElement) document.activeElement.blur(); 
     await restoreGameTypeSelection();
+    await loadCercarPools(); // Tenta restaurar o progresso anterior
     const modal = document.getElementById('randomGeneratorModal');
     await updateQuickQuantityButtons();
     modal.classList.add('active');
@@ -12789,6 +12770,29 @@ async function checkMilharInHistory() {
     }
 }
 
+// Salva o estado atual dos pools no armazenamento
+async function saveCercarPools() {
+    const poolsToSave = {};
+    // Converte os Sets em Arrays para o JSON aceitar
+    for (const [grupo, setMilhares] of Object.entries(cercarBichoPools)) {
+        poolsToSave[grupo] = Array.from(setMilhares);
+    }
+    await saveData('cercarBichoPoolsData', poolsToSave);
+}
+
+// Carrega os pools salvos ao abrir o app/modal
+async function loadCercarPools() {
+    const savedData = await getData('cercarBichoPoolsData');
+    if (savedData) {
+        cercarBichoPools = {};
+        // Converte os Arrays de volta para Sets
+        for (const [grupo, arrayMilhares] of Object.entries(savedData)) {
+            cercarBichoPools[grupo] = new Set(arrayMilhares);
+        }
+        console.log("Pools de 'Cercar Bicho' restaurados do armazenamento.");
+    }
+}
+
 async function generateSelectedNumbers() {
     // 1. Obter configurações iniciais
     const quantityInput = document.getElementById('randomQuantityInput');
@@ -12818,6 +12822,17 @@ async function generateSelectedNumbers() {
     
     // Lê o novo seletor de modo de milhar de bicho
     const bichoMilharMethod = document.querySelector('input[name="bichoMilharMethod"]:checked')?.value || 'padrao';
+
+const btnResetCiclo = document.getElementById('btnResetCiclo');
+    if (btnResetCiclo) {
+        // Mostra o botão APENAS se estiver no modo 'bichos' E sub-modo 'cercar_completo'
+        if (selectedMode === 'bichos' && bichoMilharMethod === 'cercar_completo') {
+            btnResetCiclo.style.display = 'block';
+        } else {
+            btnResetCiclo.style.display = 'none';
+        }
+    
+} // Fim da função updateGeneratorOptions
 
     // ==========================================
     // MODO: I.A. BICHOS
@@ -12937,7 +12952,7 @@ async function generateSelectedNumbers() {
         // ---- INÍCIO DO NOVO BLOCO SWITCH ----
         switch (bichoMilharMethod) {
             
-            // --- CASO 1: CERCAR BICHO (400) ---
+            // --- CASO 1: CERCAR BICHO (400) - CORRIGIDO ---
             case 'cercar_completo':
                 if (!typeKeys.includes('milhar')) {
                     showToast('O modo "Cercar Bicho" só gera Milhares. Por favor, selecione o tipo "Milhar".', 'error');
@@ -12948,12 +12963,12 @@ async function generateSelectedNumbers() {
                 const remainderCercar = totalQuantity % selectedBichos.length;
 
                 const bichoNamesCercar = selectedBichos.map(b=>b.animal).join(', ');
-                summaryParts.push(`\n<strong>- Modo:</strong> 🎯 Cercar Bicho (Dividido)`);
+                summaryParts.push(`\n<strong>- Modo:</strong> 🎯 Cercar Bicho (Ciclo 400)`);
                 summaryParts.push(`<strong>- Bichos Base:</strong> ${bichoNamesCercar}`);
                 summaryParts.push("\n<strong>- Detalhes da Geração:</strong>");
 
                 let totalGeradasCercar = 0;
-                let finalMilharesCercar = []; // <- Usando variável local
+                let finalMilharesCercar = []; 
 
                 selectedBichos.forEach((bicho, index) => {
                     const quantityForThisBicho = baseQuantityCercar + (index < remainderCercar ? 1 : 0);
@@ -12961,36 +12976,47 @@ async function generateSelectedNumbers() {
 
                     const bichoGrupo = bicho.grupo;
 
-                    if (!cercarBichoPools[bichoGrupo]) {
-                        showToast(`Iniciando novo ciclo para: ${bicho.animal}...`, 'info');
+                    // --- CORREÇÃO AQUI: Verifica se não existe OU se o tamanho é 0 ---
+                    if (!cercarBichoPools[bichoGrupo] || cercarBichoPools[bichoGrupo].size === 0) {
+                        // Se for um novo ciclo, avisa no log/toast
+                        if (cercarBichoPools[bichoGrupo] && cercarBichoPools[bichoGrupo].size === 0) {
+                             console.log(`Pool do ${bicho.animal} estava vazio. Reiniciando ciclo.`);
+                        }
                         
                         const newPool = new Set();
                         const dezenasDoBicho = bicho.dezenas;
+                        // Gera as 400 milhares (00 a 99 + dezenas do bicho)
                         for (let i = 0; i < 100; i++) {
                             const prefixo = String(i).padStart(2, '0');
                             for (const dezena of dezenasDoBicho) {
                                 const milharCompleta = prefixo + dezena;
+                                // Aplica filtros globais (ex: se o usuário filtrou paridade)
                                 if (applyAdvancedFilters(milharCompleta, 'milhar')) {
                                     newPool.add(milharCompleta);
                                 }
                             }
                         }
                         cercarBichoPools[bichoGrupo] = newPool;
+                        
+                        // Feedback visual de que um novo ciclo começou
+                        showToast(`Novo ciclo iniciado para: ${bicho.animal} (${newPool.size} milhares)`, 'info');
                     }
 
                     const currentPool = cercarBichoPools[bichoGrupo];
                     const totalDisponivel = currentPool.size;
 
+                    // Se mesmo recriando estiver vazio (ex: filtros muito agressivos bloquearam tudo)
                     if (totalDisponivel === 0) {
-                        summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: 0x (Pool esgotado!)`);
-                        showToast(`Pool de ${bicho.animal} esgotado. Limpe o formulário para reiniciar o ciclo.`, 'warning');
+                        summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: 0x (Filtros impediram a geração!)`);
                         return;
                     }
                     
                     let quantidadeParaGerar = quantityForThisBicho;
+                    
+                    // Se pedir mais do que tem sobrando no ciclo
                     if (quantityForThisBicho > totalDisponivel) {
-                        summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: ${totalDisponivel}x (Pool esgotado!)`);
-                        showToast(`Pedido ${quantityForThisBicho} para ${bicho.animal}, mas só restam ${totalDisponivel}. Gerando as restantes.`, 'warning', 4000);
+                        summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: ${totalDisponivel}x (Fim do ciclo!)`);
+                        showToast(`Restavam apenas ${totalDisponivel} milhares para ${bicho.animal}. Ciclo encerrado.`, 'warning', 5000);
                         quantidadeParaGerar = totalDisponivel;
                     } else {
                          summaryParts.push(`  • G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: ${quantidadeParaGerar}x (de ${totalDisponivel} restantes)`);
@@ -13000,16 +13026,15 @@ async function generateSelectedNumbers() {
                     shuffleArray(shuffledPoolArray);
                     const milharesGeradas = shuffledPoolArray.slice(0, quantidadeParaGerar);
                     
-                    finalMilharesCercar.push(...milharesGeradas); // Adiciona ao array local
+                    finalMilharesCercar.push(...milharesGeradas); 
                     totalGeradasCercar += milharesGeradas.length;
 
-                    // Esta lógica agora é apenas uma "previsão" do que vai acontecer
+                    // Aviso visual se o pool for zerar agora
                     if (quantidadeParaGerar >= totalDisponivel) {
-                        summaryParts.push(`  • 🎉 Pool de ${bicho.animal} esgotará!`);
+                        summaryParts.push(`  • ♻️ Ciclo do ${bicho.animal} completado! Próxima vez reinicia.`);
                     }
                 }); 
 
-                // Salva os resultados temporários para o pop-up
                 finalResults.milhar = finalMilharesCercar;
                 finalResults.centena = [];
                 finalResults.dezena = [];
@@ -13246,6 +13271,7 @@ default:
                 }
             }
         });
+        saveCercarPools(); // Salva o estado atualizado (com os números removidos)
     }
 
     logQuantityUsage(totalQuantity);
