@@ -4174,6 +4174,24 @@ body.dark-mode #bichosSelectorContainer {
             border-color: #007bff;
             color: white;
         }
+        /* Badge de contagem do ciclo dentro do botão */
+.bicho-cycle-badge {
+    display: none; /* Começa escondido, só aparece no modo Cercar */
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    background-color: #28a745; /* Verde padrão */
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-top: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    min-width: 30px;
+}
+
+/* Modo escuro para o badge */
+body.dark-mode .bicho-cycle-badge {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
 
 </style>
 
@@ -4668,10 +4686,10 @@ body.dark-mode #bichosSelectorContainer {
 
    <footer>
    
-    <div class="footer-info-wrapper">
+    <div class="footer-info-wrapper">SSS
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V3.19</strong>
+            <strong>V3.29</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -5172,31 +5190,34 @@ body.dark-mode #bichosSelectorContainer {
                 <div class="form-group-title">Modo de Geração (Milhar de Bicho)</div>
                 
                 <div class="button-style-radios">
-                    <label>
-                        <input type="radio" name="bichoMilharMethod" value="padrao" checked onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription();">
-                        Padrão
-                    </label>
-                    <label>
-                        <input type="radio" name="bichoMilharMethod" value="fechamento_mc" onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription();">
-                        Fechar M-C
-                    </label>
-                    <label>
-                        <input type="radio" name="bichoMilharMethod" value="cercar_completo" onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription();">
-                        Cercar Bicho
-                    </label>
-                </div>
+    <label>
+        <input type="radio" name="bichoMilharMethod" value="padrao" checked 
+               onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
+        Padrão
+    </label>
+    <label>
+        <input type="radio" name="bichoMilharMethod" value="fechamento_mc" 
+               onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
+        Fechar M-C
+    </label>
+    <label>
+        <input type="radio" name="bichoMilharMethod" value="cercar_completo" 
+               onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
+        Cercar Bicho
+    </label>
+</div>
 
                 <p id="bichoMethodDescription" style="font-size: 0.85rem; color: #ffffff; margin: 12px 0 0 0; padding: 0 5px; min-height: 2.5em; text-align: center;">
                     </p>
             </fieldset>
             <div id="bichoSelectionActions" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                <button onclick="selectAllBichos(true)" class="bolao-button" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Selecionar Todos</button>
-                <button onclick="selectAllBichos(false)" class="import-btn" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Limpar Seleção</button>
-                
-                <button id="btnResetCiclo" onclick="resetCercarCycle()" class="load-button" style="display: none; flex-basis: 100%; background-color: #fd7e14; color: white;">
-                    ♻️ Zerar Ciclo (Reiniciar 400)
-                </button>
-            </div>
+    
+    <button id="btnResetCiclo" onclick="resetCercarCycle()" class="load-button" style="display: none; flex-basis: 100%; background-color: #fd7e14; color: white; margin-bottom: 5px;">
+        ♻️ Zerar Ciclo (Reiniciar 400)
+    </button>
+    <button onclick="selectAllBichos(true)" class="bolao-button" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Selecionar Todos</button>
+    <button onclick="selectAllBichos(false)" class="import-btn" style="flex: 1; padding: 8px; font-size: 0.9rem; min-width: auto;">Limpar Seleção</button>
+</div>
             <div id="bichosSelectorContainer"></div>
 
         </div>
@@ -7626,7 +7647,7 @@ async function resetCercarCycle() {
         
         // 2. Limpa o armazenamento persistente
         await removeData('cercarBichoPoolsData');
-        
+        updateBichoCycleBadges();
         showToast('Ciclo reiniciado! Todos os números estão disponíveis novamente.', 'success');
     }
 }
@@ -12547,7 +12568,7 @@ function fecharPreviewConfirmacao() {
 }
 
     
-    async function updateGeneratorOptions() {
+    function updateGeneratorOptions() {
     // 1. Lê o estado atual dos botões e checkboxes
     const showMilhar = document.querySelector('input[name="generationType"][value="milhar"]').checked;
     const showCentena = document.querySelector('input[name="generationType"][value="centena"]').checked;
@@ -12557,7 +12578,7 @@ function fecharPreviewConfirmacao() {
     const checkedModeRadio = document.querySelector('input[name="generationMode"]:checked');
     const selectedMode = checkedModeRadio ? checkedModeRadio.value : 'offline';
 
-    // 2. Define a visibilidade de cada painel
+    // 2. Define a visibilidade de cada painel de dígitos iniciais
     document.getElementById('milharStartOptions').style.display = (showMilhar && isStartDigitsEnabled) ? 'flex' : 'none';
     document.getElementById('centenaStartOptions').style.display = (showCentena && isStartDigitsEnabled) ? 'flex' : 'none';
     document.getElementById('dezenaStartOptions').style.display = (showDezena && isStartDigitsEnabled) ? 'flex' : 'none';
@@ -12577,7 +12598,7 @@ function fecharPreviewConfirmacao() {
         }
     }
 
-    // 4. --- LÓGICA ATUALIZADA (ESTA É A CORREÇÃO) ---
+    // 4. Lógica para o painel de Modo de Milhar de Bicho
     const bichoMilharPanel = document.getElementById('bichoMilharMethodContainer');
     
     // O painel SÓ deve aparecer se:
@@ -12590,12 +12611,11 @@ function fecharPreviewConfirmacao() {
         
         // Se o painel for exibido, carrega a última opção salva
         if (deveMostrarPainelBichoMilhar) {
-            const savedBichoMode = await getData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE) || 'padrao';
-            const radioToCheck = document.querySelector(`input[name="bichoMilharMethod"][value="${savedBichoMode}"]`);
-            if (radioToCheck) {
-                radioToCheck.checked = true;
-                updateBichoMethodDescription();
-            }
+            // Nota: getData é assíncrono, mas para atualização visual rápida, confiamos no checked atual ou no padrão
+            // O carregamento real do storage acontece no init ou ao clicar.
+            const savedBichoMode = document.querySelector('input[name="bichoMilharMethod"]:checked')?.value || 'padrao';
+            // A atualização da descrição acontece via evento onchange, mas podemos forçar aqui se necessário:
+            // updateBichoMethodDescription(); 
         }
     }
     
@@ -12604,41 +12624,53 @@ function fecharPreviewConfirmacao() {
     if (iaLotteryContainer) {
         iaLotteryContainer.style.display = (selectedMode === 'ia_bichos') ? 'block' : 'none';
     }
-}
 
-// --- CÓDIGO NOVO PARA CONTROLAR O BOTÃO DE RESET ---
+    // =========================================================
+    // === 6. CORREÇÃO: Lógica do Botão Zerar Ciclo ===
+    // =========================================================
     const btnResetCiclo = document.getElementById('btnResetCiclo');
+    
+    // Pega o sub-modo selecionado (Padrão / Fechamento / Cercar)
+    const currentSubMode = document.querySelector('input[name="bichoMilharMethod"]:checked')?.value;
+
     if (btnResetCiclo) {
-        // Mostra o botão APENAS se estiver no modo 'bichos' E sub-modo 'cercar_completo'
-        if (selectedMode === 'bichos' && bichoMilharMethod === 'cercar_completo') {
+        // Mostra o botão SÓ se:
+        // 1. Modo Geral for 'bichos'
+        // 2. Sub-modo for 'cercar_completo'
+        // 3. O painel de opções estiver visível (implica que é Milhar)
+        if (selectedMode === 'bichos' && currentSubMode === 'cercar_completo' && deveMostrarPainelBichoMilhar) {
             btnResetCiclo.style.display = 'block';
+            btnResetCiclo.style.marginTop = '10px';
+            btnResetCiclo.style.marginBottom = '10px';
         } else {
             btnResetCiclo.style.display = 'none';
         }
     }
-
-
+}
+    
 function populateBichosSelector() {
     if (bichosPopulated) return;
     const container = document.getElementById('bichosSelectorContainer');
-    if (!container) return; // Adiciona verificação se o container existe
+    if (!container) return;
 
     tabelaDeGrupos.forEach(bicho => {
         const label = document.createElement('label');
 
-        // --- CÓDIGO CORRIGIDO (linha do comentário removida) ---
         label.innerHTML = `
             <input type="checkbox" value="${bicho.grupo}" name="selectedBichos">
             <span class="bicho-grid-item">
                 <span class="bicho-number">${bicho.grupo} - ${bicho.emoji}</span>
                 <span class="bicho-name-grid">${bicho.animal}</span>
-               <span class="ia-suggestion-count" data-group="${bicho.grupo}" style="font-size: 0.7em; color: #888; height: 1.2em; display: block; margin-top: 2px;"></span>
+                
+                <span class="bicho-cycle-badge" id="cycle-badge-${bicho.grupo}">400</span>
+                
+                <span class="ia-suggestion-count" data-group="${bicho.grupo}" style="font-size: 0.7em; color: #888; height: 1.2em; display: block; margin-top: 2px;"></span>
             </span>`;
-        // --- FIM DA CORREÇÃO ---
 
         container.appendChild(label);
     });
     bichosPopulated = true;
+    updateBichoCycleBadges();
 }
 
 function toggleBichosSelector(mode) {
@@ -12722,6 +12754,7 @@ async function loadCercarPools() {
         }
         console.log("Pools de 'Cercar Bicho' restaurados do armazenamento.");
     }
+    updateBichoCycleBadges();
 }
 
 async function checkMilharInHistory() {
@@ -12977,64 +13010,78 @@ async function generateSelectedNumbers() {
 
                     const bichoGrupo = bicho.grupo;
 
-                    // --- CORREÇÃO AQUI: Verifica se não existe OU se o tamanho é 0 ---
+                    // Inicializa o pool (Novo Ciclo) se necessário
                     if (!cercarBichoPools[bichoGrupo] || cercarBichoPools[bichoGrupo].size === 0) {
-                        // Se for um novo ciclo, avisa no log/toast
-                        if (cercarBichoPools[bichoGrupo] && cercarBichoPools[bichoGrupo].size === 0) {
-                             console.log(`Pool do ${bicho.animal} estava vazio. Reiniciando ciclo.`);
-                        }
-                        
                         const newPool = new Set();
                         const dezenasDoBicho = bicho.dezenas;
-                        // Gera as 400 milhares (00 a 99 + dezenas do bicho)
                         for (let i = 0; i < 100; i++) {
                             const prefixo = String(i).padStart(2, '0');
                             for (const dezena of dezenasDoBicho) {
                                 const milharCompleta = prefixo + dezena;
-                                // Aplica filtros globais (ex: se o usuário filtrou paridade)
                                 if (applyAdvancedFilters(milharCompleta, 'milhar')) {
                                     newPool.add(milharCompleta);
                                 }
                             }
                         }
                         cercarBichoPools[bichoGrupo] = newPool;
-                        
-                        // Feedback visual de que um novo ciclo começou
-                        showToast(`Novo ciclo iniciado para: ${bicho.animal} (${newPool.size} milhares)`, 'info');
                     }
 
                     const currentPool = cercarBichoPools[bichoGrupo];
                     const totalDisponivel = currentPool.size;
 
-                    // Se mesmo recriando estiver vazio (ex: filtros muito agressivos bloquearam tudo)
+                    // Se estiver vazio/bloqueado
                     if (totalDisponivel === 0) {
-                        summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: 0x (Filtros impediram a geração!)`);
+                        summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: 0x (Bloqueado)`);
                         return;
                     }
                     
                     let quantidadeParaGerar = quantityForThisBicho;
-                    
-                    // Se pedir mais do que tem sobrando no ciclo
                     if (quantityForThisBicho > totalDisponivel) {
-                        summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: ${totalDisponivel}x (Fim do ciclo!)`);
-                        showToast(`Restavam apenas ${totalDisponivel} milhares para ${bicho.animal}. Ciclo encerrado.`, 'warning', 5000);
                         quantidadeParaGerar = totalDisponivel;
+                    }
+
+                    // --- CÁLCULO DOS LEDS ---
+                    const sobraEstimada = totalDisponivel - quantidadeParaGerar;
+                    
+                    // Lógica: Se a sobra for menor ou igual a X, o LED correspondente fica vermelho (usado)
+                    // 400 total. Cada LED vale 100.
+                    // Led 1 (0-100 gastos): Fica vermelho se sobrar <= 300
+                    // Led 2 (101-200 gastos): Fica vermelho se sobrar <= 200
+                    // Led 3 (201-300 gastos): Fica vermelho se sobrar <= 100
+                    // Led 4 (301-400 gastos): Fica vermelho se sobrar == 0
+                    
+                    const ledStyle = "display:inline-block; width:10px; height:10px; border-radius:50%; margin-left:3px; border:1px solid #aaa;";
+                    const green = "#28a745"; // Cor Verde
+                    const red   = "#dc3545"; // Cor Vermelha
+                    
+                    let ledsHTML = '';
+                    
+                    // Monta os 4 LEDs
+                    ledsHTML += `<span style="${ledStyle} background-color: ${sobraEstimada <= 300 ? red : green};"></span>`;
+                    ledsHTML += `<span style="${ledStyle} background-color: ${sobraEstimada <= 200 ? red : green};"></span>`;
+                    ledsHTML += `<span style="${ledStyle} background-color: ${sobraEstimada <= 100 ? red : green};"></span>`;
+                    ledsHTML += `<span style="${ledStyle} background-color: ${sobraEstimada === 0 ? red : green};"></span>`;
+
+                    // --- MENSAGEM FINAL ---
+                    if (quantityForThisBicho > totalDisponivel) {
+                        summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: Só restam ${totalDisponivel}x ${ledsHTML}`);
+                        showToast(`Restavam apenas ${totalDisponivel} milhares para ${bicho.animal}. Ciclo encerrado.`, 'warning', 5000);
                     } else {
-                         summaryParts.push(`  • G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: ${quantidadeParaGerar}x (de ${totalDisponivel} restantes)`);
+                        // Mostra: Nome: +100x | Restam: 300 [LEDS]
+                        summaryParts.push(`  • G${bicho.grupo} ${bicho.animal}: +${quantidadeParaGerar}x | Restam: ${sobraEstimada} ${ledsHTML}`);
                     }
                     
+                    // Lógica de sorteio (sem alterações)
                     const shuffledPoolArray = Array.from(currentPool);
                     shuffleArray(shuffledPoolArray);
                     const milharesGeradas = shuffledPoolArray.slice(0, quantidadeParaGerar);
                     
                     finalMilharesCercar.push(...milharesGeradas); 
                     totalGeradasCercar += milharesGeradas.length;
-
-                    // Aviso visual se o pool for zerar agora
-                    if (quantidadeParaGerar >= totalDisponivel) {
-                        summaryParts.push(`  • ♻️ Ciclo do ${bicho.animal} completado! Próxima vez reinicia.`);
-                    }
                 }); 
+                // =======================================================
+                // === FIM DO BLOCO ===
+                // ===============================
 
                 finalResults.milhar = finalMilharesCercar;
                 finalResults.centena = [];
@@ -13297,7 +13344,7 @@ default:
         await saveCercarPools(); 
         console.log("Estado dos ciclos salvo no banco de dados.");
     }
-
+    updateBichoCycleBadges();
     logQuantityUsage(totalQuantity);
 
     clearRandomResults(); 
@@ -13684,6 +13731,48 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
             document.getElementById('templateSelect').value = newTemplate.id;
         }
     }
+
+    function updateBichoCycleBadges() {
+    // 1. Verifica se estamos no modo "Cercar Bicho"
+    const currentMode = document.querySelector('input[name="generationMode"]:checked')?.value;
+    const currentSubMode = document.querySelector('input[name="bichoMilharMethod"]:checked')?.value;
+    const isCercarMode = (currentMode === 'bichos' && currentSubMode === 'cercar_completo');
+
+    // 2. Loop por todos os bichos
+    tabelaDeGrupos.forEach(bicho => {
+        const badge = document.getElementById(`cycle-badge-${bicho.grupo}`);
+        if (!badge) return;
+
+        if (isCercarMode) {
+            badge.style.display = 'inline-block'; // Mostra o badge
+            
+            // Verifica o estoque
+            let count = 400; // Padrão (Cheio)
+            if (cercarBichoPools && cercarBichoPools[bicho.grupo]) {
+                count = cercarBichoPools[bicho.grupo].size;
+            }
+
+            badge.textContent = count;
+
+            // Define a cor baseada na quantidade
+            if (count === 0) {
+                badge.style.backgroundColor = '#6c757d'; // Cinza (Esgotado/Reset)
+                badge.textContent = '0 ♻️';
+            } else if (count <= 50) {
+                badge.style.backgroundColor = '#dc3545'; // Vermelho (Crítico)
+            } else if (count <= 200) {
+                badge.style.backgroundColor = '#ffc107'; // Amarelo (Médio)
+                badge.style.color = '#333'; // Texto escuro para contraste
+            } else {
+                badge.style.backgroundColor = '#28a745'; // Verde (Cheio)
+                badge.style.color = 'white';
+            }
+
+        } else {
+            badge.style.display = 'none'; // Esconde se não for modo Cercar
+        }
+    });
+}
 
 async function renderIntegratedHistory() {
     const container = document.getElementById('integratedHistoryContainer');
