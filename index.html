@@ -4505,13 +4505,12 @@ body.dark-mode .bicho-cycle-badge {
     <div id="errorMessage" class="error" role="alert" aria-live="polite"></div>
     
     <div class="below-textarea-actions">
-    <button id="toggleShortcutsBtn" class="toggle-btn" onclick="toggleQuickShortcuts()" aria-expanded="false">
-    🔽 Mostrar Bichos 
-   </button>
-   <button id="pasteButton" class="shortcut-btn" title="Colar da Área de Transferência">📋</button>
-   <button id="themeToggle" class="shortcut-btn" onclick="toggleTheme()" title="Alternar Tema"></button>
-   </div>
-   <div id="quickShortcutsContainer" class="button-group">
+<button id="surpresinhaBtn" class="shortcut-btn" onclick="openSurpresinhaModal()" title="Gerar Surpresinha (20 dezenas)" style="background-color: #6f42c1; color: white; display: none;">🎲</button>      
+      <button id="toggleShortcutsBtn" class="toggle-btn" onclick="toggleQuickShortcuts()" aria-expanded="false">
+        🔽 Mostrar Bichos 
+      </button>
+      <button id="pasteButton" class="shortcut-btn" title="Colar da Área de Transferência">📋</button>
+      <button id="themeToggle" class="shortcut-btn" onclick="toggleTheme()" title="Alternar Tema"></button>
    </div>
 
     <div id="fechamentoModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="fechamentoModalTitle">
@@ -4622,6 +4621,19 @@ body.dark-mode .bicho-cycle-badge {
         <label><input type="radio" name="viewOption" value="terno" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Ternos</label>
         <label><input type="radio" name="viewOption" value="duque" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Duques</label>
         <label><input type="radio" name="viewOption" value="bicho" onchange="showMilharesCentenasDezenas()"> Mostrar Apenas Bichos</label>
+        
+        <label>
+            <input type="radio" name="viewOption" value="separado_barra" onchange="showMilharesCentenasDezenas()"> 
+            Mostrar Apenas Bolão
+        </label>
+        
+        <div id="surpresinhaContainer" style="display: none; width: 100%;">
+            <button id="surpresinhaBtn" onclick="openSurpresinhaModal()" class="load-button" 
+                    style="background-color: #6f42c1; color: white; font-size: 1.1rem; font-weight: bold; padding: 12px; width: 100%; display: block; margin-top: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(111, 66, 193, 0.2); transition: all 0.3s ease;">
+                🎲 GERAR SURPRESINHA
+            </button>
+        </div>
+
     </fieldset>
 
      <div class="radio-buttons" style="margin-top: -10px; padding-top: 5px; padding-bottom: 5px;">
@@ -4641,10 +4653,10 @@ body.dark-mode .bicho-cycle-badge {
         <h2 class="sr-only">Resultado da Conversão</h2>
         <div id="duplicateWarningMessage" class="warning-fixed"></div>
         <div class="output" id="emojiOutput"></div>
-        <div id="copyButtons" class="button-group" style="display: none; margin-top: 10px;">
-            <button onclick="copyOnlyEmojisToClipboard()" class="load-button">📋 Copiar Texto</button>
-            <button onclick="showPreviewModal()" class="view-button">👁️ Abrir Listas</button>
-        </div>
+           
+    <button id="btnCopiarTexto" onclick="copyOnlyEmojisToClipboard()" class="load-button">📋 Copiar Texto</button>
+    <button id="btnAbrirListas" onclick="showPreviewModal()" class="view-button">👁️ Abrir Listas</button>
+</div>
 
 <div id="consultasModal" class="modal modal-advanced" role="dialog" aria-modal="true" aria-labelledby="consultasModalTitle">
     <div class="modal-content" style="max-width: 450px;">
@@ -4686,7 +4698,7 @@ body.dark-mode .bicho-cycle-badge {
 
    <footer>
    
-    <div class="footer-info-wrapper">SSS
+    <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
             <strong>V3.29</strong>
@@ -5108,6 +5120,40 @@ body.dark-mode .bicho-cycle-badge {
         <span id="centenaFiltersToggleIcon" style="transition: transform 0.3s ease; transform: rotate(0deg);">▶</span>
     </div>
 
+    <div id="milharFiltersContainer" class="form-group" style="display: none;">
+    <div class="form-group-title" onclick="toggleMilharFilters()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; width: calc(100% - 24px);">
+        <span>Filtros Avançados (Milhar)</span>
+        <span id="milharFiltersToggleIcon" style="transition: transform 0.3s ease; transform: rotate(0deg);">▶</span>
+    </div>
+
+    <div id="milharFiltersContent" style="display: none; margin-top: 15px;">
+        <label for="milharParityFilter" class="bolao-label" style="margin-top: 0;">Paridade (Equilíbrio):</label>
+        <select id="milharParityFilter" class="save-dialog-input">
+            <option value="any" selected>Qualquer combinação</option>
+            <option value="2P2I">Equilibrado (2 Pares / 2 Ímpares)</option>
+            <option value="3P1I">3 Pares e 1 Ímpar</option>
+            <option value="1P3I">1 Par e 3 Ímpares</option>
+            <option value="4P0I">Todos Pares (PPPP)</option>
+            <option value="0P4I">Todos Ímpares (IIII)</option>
+        </select>
+
+        <label class="bolao-label">Soma dos 4 Dígitos:</label>
+        <div class="bolao-input-row">
+            <input type="number" id="milharSumMin" class="save-dialog-input" placeholder="Mín (ex: 15)">
+            <input type="number" id="milharSumMax" class="save-dialog-input" placeholder="Máx (ex: 25)">
+        </div>
+
+        <label for="milharRepetitionFilter" class="bolao-label">Repetição de Dígitos:</label>
+        <select id="milharRepetitionFilter" class="save-dialog-input">
+            <option value="any" selected>Qualquer</option>
+            <option value="none">Sem Repetição (ex: 1234)</option>
+            <option value="double">Apenas 1 Dupla (ex: 1123)</option>
+            <option value="triple">Trinca (ex: 1112)</option>
+            <option value="quadra">Quadra (ex: 1111)</option>
+        </select>
+    </div>
+</div>
+
     <div id="centenaFiltersContent" style="display: none; margin-top: 15px;">
 
         <label for="centenaParityFilter" class="bolao-label" style="margin-top: 0;">Paridade (P=Par, I=Ímpar):</label>
@@ -5439,6 +5485,28 @@ body.dark-mode .bicho-cycle-badge {
     </div>
 </div>
 
+<div id="surpresinhaModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 350px;">
+        <span class="close-modal" onclick="closeSurpresinhaModal()">×</span>
+        <h3 class="modal-title">🎲 Gerar Surpresinha</h3>
+        <p style="text-align: center; color: #6c757d; margin-bottom: 15px;">
+            Gera linhas de 20 dezenas aleatórias (sem repetição) para o modo Barra.
+        </p>
+        
+        <label for="qtdSurpresinha">Quantos jogos deseja gerar?</label>
+        <div class="quantity-control">
+            <button type="button" class="quantity-btn" onclick="changeSurpresinhaQtd(-1)">-</button>
+            <input type="number" id="qtdSurpresinha" class="save-dialog-input" value="1" style="margin:0; text-align:center;">
+            <button type="button" class="quantity-btn" onclick="changeSurpresinhaQtd(1)">+</button>
+        </div>
+
+        <div class="button-group" style="margin-top: 20px;">
+            <button onclick="generateSurpresinha()" class="save-button">🚀 Gerar Agora</button>
+            <button onclick="closeSurpresinhaModal()" class="load-button">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <script>
 
 // !!! IMPORTANTE !!! Cole aqui o HASH que você gerou no Passo 1.
@@ -5589,6 +5657,81 @@ function openPalpitesIAFromHub() {
     setTimeout(() => {
         showPalpitesIAModal(); // Chama a nova função
     }, 300);
+}
+
+// =========================================================
+// === FUNÇÕES DA SURPRESINHA (20 DEZENAS) ===
+// =========================================================
+
+function openSurpresinhaModal() {
+    document.getElementById('surpresinhaModal').classList.add('active');
+}
+
+function closeSurpresinhaModal() {
+    document.getElementById('surpresinhaModal').classList.remove('active');
+}
+
+function changeSurpresinhaQtd(delta) {
+    const input = document.getElementById('qtdSurpresinha');
+    let val = parseInt(input.value) || 1;
+    val += delta;
+    if (val < 1) val = 1;
+    if (val > 100) val = 100;
+    input.value = val;
+}
+
+// === FUNÇÃO ATUALIZADA: SURPRESINHA (ADICIONA AO INVÉS DE SUBSTITUIR) ===
+function generateSurpresinha() {
+    const qtd = parseInt(document.getElementById('qtdSurpresinha').value) || 1;
+    const textarea = document.getElementById('input');
+    const jogos = [];
+
+    for (let i = 0; i < qtd; i++) {
+        // 1. Cria um pool de 00 a 99
+        const pool = [];
+        for (let n = 0; n <= 99; n++) {
+            pool.push(String(n).padStart(2, '0'));
+        }
+
+        // 2. Embaralha o pool (Algoritmo Fisher-Yates)
+        for (let j = pool.length - 1; j > 0; j--) {
+            const k = Math.floor(Math.random() * (j + 1));
+            [pool[j], pool[k]] = [pool[k], pool[j]];
+        }
+
+        // 3. Pega os primeiros 20 números (garantido sem repetição)
+        const selecionados = pool.slice(0, 20);
+        
+        // 4. Junta com espaços (formato padrão de entrada)
+        jogos.push(selecionados.join(' '));
+    }
+
+    const novosJogosTexto = jogos.join('\n');
+
+    // === A MUDANÇA ESTÁ AQUI: VERIFICA SE JÁ TEM TEXTO ===
+    if (textarea.value.trim() !== '') {
+        // Se já tem texto, pula uma linha e adiciona os novos jogos embaixo
+        textarea.value += '\n' + novosJogosTexto;
+    } else {
+        // Se está vazio, apenas adiciona
+        textarea.value = novosJogosTexto;
+    }
+
+    // 6. Configura a tela
+    closeSurpresinhaModal();
+    
+    // Força a seleção do rádio "Bolão de dezena"
+    const radioBarra = document.querySelector('input[name="viewOption"][value="separado_barra"]');
+    if (radioBarra) {
+        radioBarra.checked = true;
+    }
+
+    // 7. Dispara a conversão e validação
+    showToast(`${qtd} jogo(s) adicionado(s) à lista!`, 'success');
+    
+    // Força o evento de input para que a validação (barras vermelhas de erro) rode imediatamente
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    // convertToEmojisRealTime(); // O dispatchEvent acima já chama isso, mas se quiser garantir, pode descomentar.
 }
 
 // --- Funções Reais para o NOVO Modal de Palpites ---
@@ -7288,22 +7431,142 @@ function toggleBolaoPagoStatus(button) {
 }
 
 function toggleCentenaFilters() {
-    const content = document.getElementById('centenaFiltersContent');
-    const icon = document.getElementById('centenaFiltersToggleIcon');
-    const title = content.closest('.form-group').querySelector('.form-group-title');
-
-    const isHidden = content.style.display === 'none' || content.style.display === '';
-
-    if (isHidden) {
-        content.style.display = 'block';
-        if (icon) icon.style.transform = 'rotate(90deg)';
-        if (title) title.classList.add('expanded');
-    } else {
-        content.style.display = 'none';
-        if (icon) icon.style.transform = 'rotate(0deg)';
-        if (title) title.classList.remove('expanded');
-    }
+    const c = document.getElementById('centenaFiltersContent');
+    const i = document.getElementById('centenaFiltersToggleIcon');
+    const h = c.style.display === 'none'; c.style.display = h ? 'block' : 'none'; i.style.transform = h ? 'rotate(90deg)' : 'rotate(0deg)';
 }
+function toggleMilharFilters() {
+    const c = document.getElementById('milharFiltersContent');
+    const i = document.getElementById('milharFiltersToggleIcon');
+    const h = c.style.display === 'none'; c.style.display = h ? 'block' : 'none'; i.style.transform = h ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+
+// --- Lógica Matemática ---
+
+function checkParity(numStr, rule, digitsCount) {
+    const digits = numStr.split('').map(d => parseInt(d, 10));
+    const evenCount = digits.filter(d => d % 2 === 0).length;
+    const oddCount = digitsCount - evenCount;
+
+    if (digitsCount === 3) { // Regras de Centena
+        if (rule === '2P1I') return evenCount === 2 && oddCount === 1;
+        if (rule === '1P2I') return evenCount === 1 && oddCount === 2;
+        if (rule === '3P0I') return evenCount === 3;
+        if (rule === '0P3I') return oddCount === 3;
+    } 
+    else if (digitsCount === 4) { // Regras de Milhar
+        if (rule === '2P2I') return evenCount === 2 && oddCount === 2;
+        if (rule === '3P1I') return evenCount === 3 && oddCount === 1;
+        if (rule === '1P3I') return evenCount === 1 && oddCount === 3;
+        if (rule === '4P0I') return evenCount === 4;
+        if (rule === '0P4I') return oddCount === 4;
+    }
+    return true;
+}
+
+function checkSum(numStr, min, max) {
+     const sum = numStr.split('').reduce((acc, digit) => acc + parseInt(digit, 10), 0);
+     const validMin = (!isNaN(min) && min !== '') ? parseInt(min) : 0;
+     const validMax = (!isNaN(max) && max !== '') ? parseInt(max) : 40; 
+     return sum >= validMin && sum <= validMax;
+}
+
+function checkRepetition(numStr, rule, digitsCount) {
+    const uniqueDigits = new Set(numStr.split('')).size;
+
+    if (rule === 'none') return uniqueDigits === digitsCount; // Todos diferentes
+    
+    if (digitsCount === 4) { // Milhar
+        // 1123 (3 unicos), 1122 (2 unicos), 1112 (2 unicos), 1111 (1 unico)
+        if (rule === 'double') return uniqueDigits === 3; // Ex: 1123
+        if (rule === 'triple') {
+            // Trinca é mais chato: tem 2 unicos (1112), mas 1122 tb tem 2 unicos.
+            // Simplificação: Verifica se algum digito repete 3x
+            const counts = {}; numStr.split('').forEach(x => counts[x] = (counts[x] || 0) + 1);
+            return Object.values(counts).includes(3);
+        }
+        if (rule === 'quadra') return uniqueDigits === 1;
+    } else { // Centena
+        if (rule === 'one') return uniqueDigits === 2; // 112
+        if (rule === 'triple') return uniqueDigits === 1; // 111
+    }
+    return true;
+}
+
+// === FUNÇÃO PRINCIPAL DE APLICAÇÃO ===
+function applyAdvancedFilters(numberStr, numberType) {
+    // 1. Filtros Globais (Dezena Final, Paridade Dezena, Inicio) - MANTÉM IGUAL
+    const useDezenaFinalFilter = document.getElementById('toggleDezenaFinalCheck')?.checked;
+    if (useDezenaFinalFilter) {
+        const allowedFinalDigits = new Set(Array.from(document.querySelectorAll('#dezenaFinalDigits input:checked')).map(cb => cb.value));
+        if (!allowedFinalDigits.has(numberStr.slice(-1))) return false;
+    }
+    const useParityFilter = document.getElementById('toggleParityCheck')?.checked;
+    if (useParityFilter) {
+        const selectedParity = document.querySelector('input[name="paridadeDezena"]:checked')?.value;
+        if (selectedParity && numberStr.length >= 2) {
+            const dezenaPart = parseInt(numberStr.slice(-2), 10);
+            const isEven = dezenaPart % 2 === 0;
+            if ((selectedParity === 'even' && !isEven) || (selectedParity === 'odd' && isEven)) return false;
+        }
+    }
+    const useStartDigitsFilter = document.getElementById('toggleStartDigitsCheck')?.checked;
+    if (useStartDigitsFilter) {
+        let allowedStartDigits;
+        if (numberType === 'milhar') allowedStartDigits = new Set(Array.from(document.querySelectorAll('#milharStartOptions input:checked')).map(cb => cb.value));
+        else if (numberType === 'centena') allowedStartDigits = new Set(Array.from(document.querySelectorAll('#centenaStartOptions input:checked')).map(cb => cb.value));
+        else if (numberType === 'dezena') allowedStartDigits = new Set(Array.from(document.querySelectorAll('#dezenaStartOptions input:checked')).map(cb => cb.value));
+        if (allowedStartDigits && !allowedStartDigits.has(numberStr[0])) return false;
+    }
+
+    // 2. === FILTROS ESPECÍFICOS DE CENTENA ===
+    if (numberType === 'centena') {
+         const parityRule = document.getElementById('centenaParityFilter')?.value;
+         if (parityRule && parityRule !== 'any' && !checkParity(numberStr, parityRule, 3)) return false;
+
+         const sumMin = document.getElementById('centenaSumMin')?.value;
+         const sumMax = document.getElementById('centenaSumMax')?.value;
+         if ((sumMin || sumMax) && !checkSum(numberStr, sumMin, sumMax)) return false;
+
+         const repRule = document.getElementById('centenaRepetitionFilter')?.value;
+         if (repRule && repRule !== 'any' && !checkRepetition(numberStr, repRule, 3)) return false;
+    }
+
+    // 3. === NOVO: FILTROS ESPECÍFICOS DE MILHAR ===
+    if (numberType === 'milhar') {
+         const parityRule = document.getElementById('milharParityFilter')?.value;
+         if (parityRule && parityRule !== 'any' && !checkParity(numberStr, parityRule, 4)) return false;
+
+         const sumMin = document.getElementById('milharSumMin')?.value;
+         const sumMax = document.getElementById('milharSumMax')?.value;
+         if ((sumMin || sumMax) && !checkSum(numberStr, sumMin, sumMax)) return false;
+
+         const repRule = document.getElementById('milharRepetitionFilter')?.value;
+         if (repRule && repRule !== 'any' && !checkRepetition(numberStr, repRule, 4)) return false;
+    }
+
+    return true;
+}
+
+// AGORA, DENTRO DA SUA FUNÇÃO 'applyAdvancedFilters' JÁ EXISTENTE, ADICIONE AS CHAMADAS:
+/*
+    // ... código existente ...
+
+    // NOVO BLOCO DE VALIDAÇÃO DE CENTENA
+    if (numberType === 'milhar' || numberType === 'centena') {
+         const parityRule = document.getElementById('centenaParityFilter').value;
+         if (parityRule !== 'any' && !checkCentenaParity(numberStr, parityRule)) return false;
+
+         const sumMin = document.getElementById('centenaSumMin').value;
+         const sumMax = document.getElementById('centenaSumMax').value;
+         if ((sumMin || sumMax) && !checkCentenaSum(numberStr, sumMin, sumMax)) return false;
+
+         const repRule = document.getElementById('centenaRepetitionFilter').value;
+         if (repRule !== 'any' && !checkCentenaRepetition(numberStr, repRule)) return false;
+    }
+    
+    return true; // Passou em tudo
+*/
 
 async function handleLogin() {
     const emailInput = document.getElementById('loginEmail');
@@ -10080,30 +10343,45 @@ const nomeSelectModal = document.getElementById('nomePessoaSelectModal');
 
 document.querySelectorAll('input[name="generationMode"]').forEach(radio => {
     radio.addEventListener('change', function() {
-        console.log(`>>> GenMode CHANGE detectado: Novo valor = ${this.value}, Timestamp: ${Date.now()}`);
-        // Seu código existente...
+        console.log(`>>> GenMode CHANGE detectado: Novo valor = ${this.value}`);
+        
+        // 1. Atualiza a interface básica
         toggleBichosSelector(this.value);
         updateGeneratorOptions();
         saveData(STORAGE_KEYS.LAST_GEN_MODE, this.value);
 
-        // --- VERIFIQUE SE ESTE BLOCO EXISTE E ESTÁ CORRETO ---
+        // 2. CORREÇÃO: Força a atualização dos números do ciclo (esconde se for I.A.)
+        updateBichoCycleBadges(); 
+
+        // 3. Lógica específica da I.A.
         if (this.value === 'ia_bichos') {
             const selectedIaLottery = document.getElementById('iaLotterySelect')?.value;
             if (selectedIaLottery) {
-                // --- ADICIONE UM LOG AQUI ---
                 console.log(">>> Listener Modo I.A.: Chamando fetchAndCacheIaPrefixes...");
                 fetchAndCacheIaPrefixes(selectedIaLottery);
             } else {
-                console.log(">>> Listener Modo I.A.: Nenhuma loteria selecionada ainda.");
                 updateIaSuggestionCountsDisplay(null);
             }
         } else {
-            console.log(">>> Listener Modo Geração: Limpando contagens I.A.");
+            // Se saiu do modo I.A., limpa as porcentagens da I.A.
             updateIaSuggestionCountsDisplay(null);
         }
-        // --- FIM DA VERIFICAÇÃO ---
     });
 });
+
+// --- Listener para os botões de modo de Milhar do Bicho (Padrão / Fechamento / Cercar) ---
+    document.querySelectorAll('input[name="bichoMilharMethod"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Atualiza a descrição do método na tela
+            updateBichoMethodDescription();
+            
+            // Atualiza a visibilidade do botão "Zerar Ciclo"
+            updateGeneratorOptions();
+            
+            // Força a atualização imediata dos badges (números vermelhos/verdes)
+            updateBichoCycleBadges(); 
+        });
+    });
 
     let initApp = async () => {
         checkAppInventorEnvironment();
@@ -11621,17 +11899,41 @@ function getDezenaPart(numStr) {
 }
 
 function convertToEmojisRealTime() {
+    const inputElement = document.getElementById('input');
     // A CORREÇÃO ESTÁ AQUI: Pegamos o valor do 'input' e passamos para a função.
-    const numbers = parseNumbers(document.getElementById('input').value); 
+    const numbers = parseNumbers(inputElement.value); 
     
     const outputElement = document.getElementById('emojiOutput');
     const copyButtonsDiv = document.getElementById('copyButtons');
     
+    // Gera o visual
     showMilharesCentenasDezenas(); 
 
-    const outputContent = outputElement.innerHTML.trim(); // Usar innerHTML para checar se há conteúdo renderizado
-    if (outputContent && document.getElementById('errorMessage').textContent === '') {
-        copyButtonsDiv.style.display = 'flex'; 
+    // === LÓGICA DE EXIBIÇÃO DOS BOTÕES INFERIORES ===
+    const outputContent = outputElement.innerHTML.trim();
+    const hasError = document.getElementById('errorMessage').textContent !== '';
+    const hasContent = outputContent && !hasError;
+    
+    // Verifica se está no modo Barra (para mostrar o botão Surpresinha)
+    const isBarraMode = document.querySelector('input[name="viewOption"]:checked')?.value === 'separado_barra';
+
+    // Os botões de COPIAR só aparecem se tiver conteúdo gerado e sem erros bloqueantes
+    // (Lembre-se da trava de segurança que criamos antes: se tiver erro, hasContent será falso ou bloqueado visualmente)
+    const showCopyButtons = hasContent && (document.getElementById('duplicateWarningMessage').style.display !== 'block' || !document.getElementById('duplicateWarningMessage').classList.contains('error'));
+
+    const btnCopiar = document.getElementById('btnCopiarTexto');
+    const btnListas = document.getElementById('btnAbrirListas');
+    const btnSurpresa = document.getElementById('surpresinhaBtn');
+
+    if (btnCopiar) btnCopiar.style.display = showCopyButtons ? 'inline-flex' : 'none';
+    if (btnListas) btnListas.style.display = showCopyButtons ? 'inline-flex' : 'none';
+    
+    // O botão Surpresinha aparece se estiver no modo Barra
+    if (btnSurpresa) btnSurpresa.style.display = isBarraMode ? 'inline-flex' : 'none';
+
+    // A barra inteira aparece se tiver conteúdo OU se o botão surpresinha precisar aparecer
+    if (showCopyButtons || isBarraMode) {
+        copyButtonsDiv.style.display = 'flex';
     } else {
         copyButtonsDiv.style.display = 'none';
     }
@@ -11757,112 +12059,234 @@ function parseNumbers(inputText) {
 }
 
 function showMilharesCentenasDezenas() {
-    // 1. Configuração básica e limpeza da tela
-    const inputText = document.getElementById('input').value;
+    // 1. Configuração básica
+    const inputElement = document.getElementById('input');
     const outputElement = document.getElementById('emojiOutput');
     const warningElement = document.getElementById('duplicateWarningMessage');
     const selectedOption = document.querySelector('input[name="viewOption"]:checked')?.value || 'both';
-    const allowRepetition = document.getElementById('allowRepetitionToggle').checked;
-
+    
+    // Reseta estados
+    let hasError = false;
+    let dataSectionsHTML = '';
     outputElement.innerHTML = '';
+    
     warningElement.style.display = 'none';
     warningElement.innerHTML = '';
+    warningElement.className = 'warning-fixed'; 
 
-    if (inputText.trim() === '') {
+    const rawNumbers = parseNumbers(inputElement.value);
+    const isEmpty = rawNumbers.length === 0;
+
+    if (isEmpty) {
         outputElement.textContent = 'Aguardando números...';
-        document.getElementById('copyButtons').style.display = 'none';
-        return;
-    }
+    } 
+    else {
+        // --- Processamento padrão para outros modos ---
+        const { milhares, centenas, dezenas, ternos, duques, bichos } = processNumbers(rawNumbers);
+        const selectedName = document.getElementById('nomePessoaSelect').value || '';
+        const quantidade = document.getElementById('quantidadeSelect').value || '';
 
-    const rawNumbers = parseNumbers(inputText);
-    if (rawNumbers.length === 0) {
-        document.getElementById('copyButtons').style.display = 'none';
-        return;
-    }
-
-    // --- LÓGICA DE AVISO DE DUPLICADOS ATUALIZADA ---
-    if (!allowRepetition) {
-        const rawMilhares = [], rawCentenas = [], rawDezenas = [];
-        rawNumbers.forEach(n => {
-            if (n.length === 4) rawMilhares.push(n);
-            const cPart = getCentenaPart(n);
-            if (cPart) rawCentenas.push(cPart);
-            const dPart = getDezenaPart(n);
-            if (dPart) rawDezenas.push(dPart);
-        });
-
-        const findDuplicates = (array) => {
-            const counts = {};
-            array.forEach(item => { counts[item] = (counts[item] || 0) + 1; });
-            return Object.entries(counts)
-                .filter(([key, value]) => value > 1)
-                .map(([key, value]) => `${key} (${value}x)`)
-                .join(', ');
+        const formatWithName = (arr) => {
+            let nomeFormatado = selectedName;
+            if (nomeFormatado) {
+                let emojis = '';
+                if (isPinned) emojis += '📌';
+                if (showCheckEmoji) emojis += '✅';
+                if (emojis) nomeFormatado = `${nomeFormatado} ${emojis}`;
+            }
+            const nomeCompleto = quantidade && nomeFormatado ? `${quantidade} ${nomeFormatado}` : nomeFormatado;
+            if (!nomeCompleto || arr.length === 0) return arr;
+            if (arr.length === 1) return [`${arr[0]} ${nomeCompleto}`];
+            const newArr = [...arr];
+            newArr[0] = `${newArr[0]} ${nomeCompleto}`;
+            newArr[newArr.length - 1] = `${newArr[newArr.length - 1]} ${nomeCompleto}`;
+            return newArr;
         };
 
-        const repeatedMilhares = findDuplicates(rawMilhares);
-        const repeatedCentenas = findDuplicates(rawCentenas);
-        const repeatedDezenas = findDuplicates(rawDezenas);
+        const buildSection = (title, data, type) => {
+            if (data.length === 0) return '';
+            const formattedData = formatWithName(data);
+            const content = (type === 'dezenas' || type === 'bichos' || type === 'barra') ? formattedData.join('<br>') : formattedData.join('\n');
+            return `<section><h3 class="section-title">${title} <span class="count-red">(${type === 'barra' ? rawNumbers.length : data.length})</span>:</h3><div class="emoji-content" data-content-type="${type}">${content}</div></section>`;
+        };
 
-        let warningItems = [];
-        // Adiciona o aviso de Milhar apenas se a visão for 'both' ou 'milhar'
-        if ((selectedOption === 'both' || selectedOption === 'milhar') && repeatedMilhares) {
-            warningItems.push(`<li><strong>Milhares:</strong> ${repeatedMilhares}</li>`);
-        }
-        // Adiciona o aviso de Centena apenas se a visão for 'both' ou 'centena'
-        if ((selectedOption === 'both' || selectedOption === 'centena') && repeatedCentenas) {
-            warningItems.push(`<li><strong>Centenas:</strong> ${repeatedCentenas}</li>`);
-        }
-        // Adiciona o aviso de Dezena apenas se a visão for 'both' ou 'dezena'
-        if ((selectedOption === 'both' || selectedOption === 'dezena') && repeatedDezenas) {
-            warningItems.push(`<li><strong>Dezenas:</strong> ${repeatedDezenas}</li>`);
-        }
+        // =========================================================
+        // === MODO BOLÃO DE DEZENA (VALIDAÇÃO RIGOROSA DE ENTRADA) ===
+        // =========================================================
+        if (selectedOption === 'separado_barra') {
+            let todasDezenas = [];
+            let listaErros = []; // Agora acumula erros desde a extração
 
-        // Se houver algum item de aviso relevante para a visão atual, mostra o quadro de aviso
-        if (warningItems.length > 0) {
-            let warningHTML = '<strong>Aviso de Repetição:</strong><ul>' + warningItems.join('') + '</ul>';
-            warningElement.innerHTML = warningHTML;
-            warningElement.style.display = 'block';
-        }
-    }
-    // --- FIM DA LÓGICA DE AVISO ---
+            // 1. Extração e Validação de Dígitos (O BUG DO 323 É MORTO AQUI)
+            rawNumbers.forEach(num => {
+                let sNum = String(num).replace(/\D/g, '');
+                
+                if (sNum.length === 0) return;
 
-    const { milhares, centenas, dezenas, ternos, duques, bichos } = processNumbers(rawNumbers);
+                // Caso A: Dezena simples (1 ou 2 dígitos) -> OK
+                if (sNum.length <= 2) { 
+                    todasDezenas.push(sNum.padStart(2, '0')); 
+                } 
+                // Caso B: 3 dígitos (ex: 323) -> ERRO!
+                else if (sNum.length === 3) {
+                    hasError = true;
+                    listaErros.push(`Entrada Inválida: <strong>${num}</strong> (3 dígitos). Digite apenas dezenas (ex: 23 32) separadas.`);
+                }
+                // Caso C: Sequência longa ("Tripa")
+                else { 
+                    // Se for ímpar (ex: 12345), sobra um dígito -> ERRO!
+                    if (sNum.length % 2 !== 0) {
+                        hasError = true;
+                        listaErros.push(`Sequência Quebrada: <strong>${num}</strong> tem ${sNum.length} dígitos (ímpar). Verifique se faltou algum número.`);
+                    } else {
+                        // Se for par (ex: 1234), processa -> OK
+                        const pares = sNum.match(/\d{2}/g); 
+                        if (pares) todasDezenas.push(...pares); 
+                    }
+                }
+            });
 
-    const selectedName = document.getElementById('nomePessoaSelect').value || '';
-    const quantidade = document.getElementById('quantidadeSelect').value || '';
-    const paidEmoji = showCheckEmoji ? ' ✅' : '';
-    const pinnedEmoji = isPinned ? '📌 ' : '';
+            // Se passou na validação de entrada, verifica as linhas
+            if (!hasError && todasDezenas.length > 0) {
+                const linhasFinais = [];
+                const tamanhoGrupo = 20;
 
-    const formatWithName = (arr) => {
-        let nomeFormatado = selectedName;
-        if (nomeFormatado) {
-            let emojis = '';
-            if (isPinned) emojis += '📌';
-            if (showCheckEmoji) emojis += '✅';
-            if (emojis) nomeFormatado = `${nomeFormatado} ${emojis}`;
-        }
-        const nomeCompleto = quantidade && nomeFormatado ? `${quantidade} ${nomeFormatado}` : nomeFormatado;
-        if (!nomeCompleto || arr.length === 0) return arr;
-        if (arr.length === 1) return [`${arr[0]} ${nomeCompleto}`];
-        const newArr = [...arr];
-        newArr[0] = `${newArr[0]} ${nomeCompleto}`;
-        newArr[newArr.length - 1] = `${newArr[newArr.length - 1]} ${nomeCompleto}`;
-        return newArr;
-    };
+                for (let i = 0; i < todasDezenas.length; i += tamanhoGrupo) {
+                    const linha = todasDezenas.slice(i, i + tamanhoGrupo);
+                    linhasFinais.push(linha);
+                    
+                    const numLinha = linhasFinais.length;
 
-    const buildSection = (title, data, type) => {
-        if (data.length === 0) return '';
-        const formattedData = formatWithName(data);
-        const content = (type === 'dezenas' || type === 'bichos') ? formattedData.join('<br>') : formattedData.join('\n');
-        
-        return `<section>
-                    <h3 class="section-title">${title} <span class="count-red">(${data.length})</span>:</h3>
-                    <div class="emoji-content" data-content-type="${type}">${content}</div>
+                    // Valida Quantidade
+                    if (linha.length < 20) {
+                        hasError = true;
+                        listaErros.push(`Linha ${numLinha}: <strong>Incompleta</strong> (${linha.length}/20 dezenas).`);
+                    }
+
+                    // Valida Repetição
+                    const unicos = new Set(linha);
+                    if (unicos.size !== linha.length) {
+                        hasError = true;
+                        const contagem = {};
+                        const repetidos = [];
+                        linha.forEach(d => {
+                            contagem[d] = (contagem[d] || 0) + 1;
+                            if (contagem[d] === 2) repetidos.push(d);
+                        });
+                        listaErros.push(`Linha ${numLinha}: <strong>Repetição</strong> (Dezenas: ${repetidos.join(', ')}).`);
+                    }
+                }
+
+                // Renderização (Só renderiza se chegou até aqui)
+                const linhasFormatadas = [];
+                let prefixo = selectedName ? (quantidade ? `${quantidade} ${selectedName} - ` : `${selectedName} - `) : '';
+                let sufixo = (selectedName && isPinned ? ' 📌' : '') + (selectedName && showCheckEmoji ? ' ✅' : '');
+
+                linhasFinais.forEach((linha) => {
+                    let txt = linha.join('/');
+                    if (prefixo) {
+                        txt = `${prefixo}${txt}${sufixo}`;
+                    }
+                    linhasFormatadas.push(txt);
+                });
+                
+                dataSectionsHTML += `<section>
+                    <h3 class="section-title">🔗 Sequência com Barra:</h3>
+                    <div class="emoji-content" data-content-type="barra">${linhasFormatadas.join('<br>')}</div>
                 </section>`;
-    };
+            }
+
+            // Exibição do Aviso de Erro (Seja de extração ou de linha)
+            if (hasError) {
+                warningElement.style.display = 'block';
+                warningElement.className = 'warning-fixed error';
+                
+                // AJUSTE 1: Fontes menores e margens reduzidas no box de aviso
+                warningElement.innerHTML = `
+                    <div style="font-weight:bold; font-size: 0.9rem; margin-bottom:3px;">⛔ ERROS ENCONTRADOS:</div>
+                    <ul style="margin:0; padding-left:15px; font-size: 0.85rem; line-height: 1.4;">
+                        <li>${listaErros.join('</li><li>')}</li>
+                    </ul>`;
+                
+                // AJUSTE 2: Título "Pré-visualização" menor e linha mais fina
+                outputElement.innerHTML = `<h2 style="text-align:left; font-size: 1rem; margin-top: 10px; border-bottom: 1px solid #dc3545; color: #dc3545; padding-bottom: 3px;">Pré-visualização (Corrija para Copiar)</h2>`;
+                
+                // AJUSTE 3: Texto de instrução menor e mais discreto
+                if (!dataSectionsHTML) {
+                    outputElement.innerHTML += `<p style="color:#666; font-size: 0.85rem; font-style:italic; margin-top: 5px;">Corrija os números inválidos (3 dígitos ou ímpares) para ver o resultado.</p>`;
+                }
+            }
+        }
+
+        // =========================================================
+        // === MODO PADRÃO (Sem validação da barra) ===
+        // =========================================================
+        if (!hasError && selectedOption !== 'separado_barra') {
+            if (selectedOption === 'both' || selectedOption === 'milhar') dataSectionsHTML += buildSection('📊 Milhares', milhares, 'milhares');
+            if (selectedOption === 'both' || selectedOption === 'centena') dataSectionsHTML += buildSection('📊 Centenas', centenas, 'centenas');
+            if (selectedOption === 'both' || selectedOption === 'dezena') dataSectionsHTML += buildSection('📊 Dezenas', dezenas, 'dezenas');
+            if (selectedOption === 'terno') dataSectionsHTML += buildSection('📊 Ternos', ternos, 'ternos');
+            if (selectedOption === 'duque') dataSectionsHTML += buildSection('📊 Duques', duques, 'duques');
+            if (selectedOption === 'bicho') dataSectionsHTML += buildSection('🐾 Bichos', bichos, 'bichos');
+        }
+
+        if(dataSectionsHTML) outputElement.innerHTML += dataSectionsHTML;
+    }
+
+    // ============================================================
+    // === CONTROLE DOS BOTÕES (BLOQUEIO/LIBERAÇÃO) ===
+    // ============================================================
+    const copyButtonsDiv = document.getElementById('copyButtons');
+    const btnCopiar = document.getElementById('btnCopiarTexto');
+    const btnListas = document.getElementById('btnAbrirListas');
+    const containerSurpresa = document.getElementById('surpresinhaContainer');
+
+    const isBarraMode = (selectedOption === 'separado_barra');
+    const canCopy = !isEmpty && !hasError; 
+
+    if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
+    if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
     
-    let dataSectionsHTML = '';
+    if (copyButtonsDiv) {
+        copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
+    }
+
+    if (containerSurpresa) {
+        containerSurpresa.style.display = isBarraMode ? 'block' : 'none';
+    }
+}
+    // ============================================================
+    // === LÓGICA CENTRALIZADA DOS BOTÕES (ATUALIZADA) ===
+    // ============================================================
+    const copyButtonsDiv = document.getElementById('copyButtons');
+    const btnCopiar = document.getElementById('btnCopiarTexto');
+    const btnListas = document.getElementById('btnAbrirListas');
+    
+    // Novo container que está dentro do Radio Fieldset
+    const containerSurpresa = document.getElementById('surpresinhaContainer');
+
+    // Regras de Exibição
+    const isBarraMode = (selectedOption === 'separado_barra');
+    const canCopy = !isEmpty && !hasError; // Só copia se tiver texto E não tiver erro
+
+    // 1. Botões de Baixo (Copiar/Listas)
+    if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
+    if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
+    
+    // Mostra a barra de baixo APENAS se os botões de ação estiverem visíveis
+    // (O botão surpresinha saiu daqui, então não influencia mais essa barra)
+    if (copyButtonsDiv) {
+        copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
+    }
+
+    // 2. Botão Surpresinha (Agora embaixo do Radio)
+    if (containerSurpresa) {
+        // Mostra o container inteiro se estiver no modo barra
+        containerSurpresa.style.display = isBarraMode ? 'block' : 'none';
+    }
+
+    // === FIM DO CÓDIGO ATUALIZADO ===
+    
     if (selectedOption === 'both' || selectedOption === 'milhar') dataSectionsHTML += buildSection('📊 Milhares', milhares, 'milhares');
     if (selectedOption === 'both' || selectedOption === 'centena') dataSectionsHTML += buildSection('📊 Centenas', centenas, 'centenas');
     if (selectedOption === 'both' || selectedOption === 'dezena') dataSectionsHTML += buildSection('📊 Dezenas', dezenas, 'dezenas');
@@ -11878,7 +12302,6 @@ function showMilharesCentenasDezenas() {
         outputElement.innerHTML = finalOutputHTML;
         document.getElementById('copyButtons').style.display = 'flex';
     }
-}
     
     function getBichoNameByDezena(dezena) {
         if (dezena >= 1 && dezena <= 4) return 'Avestruz';
@@ -12569,75 +12992,41 @@ function fecharPreviewConfirmacao() {
 
     
     function updateGeneratorOptions() {
-    // 1. Lê o estado atual dos botões e checkboxes
     const showMilhar = document.querySelector('input[name="generationType"][value="milhar"]').checked;
     const showCentena = document.querySelector('input[name="generationType"][value="centena"]').checked;
     const showDezena = document.querySelector('input[name="generationType"][value="dezena"]').checked;
     const isStartDigitsEnabled = document.getElementById('toggleStartDigitsCheck').checked;
-
     const checkedModeRadio = document.querySelector('input[name="generationMode"]:checked');
     const selectedMode = checkedModeRadio ? checkedModeRadio.value : 'offline';
 
-    // 2. Define a visibilidade de cada painel de dígitos iniciais
+    // 1. Visibilidade dos Dígitos Iniciais
     document.getElementById('milharStartOptions').style.display = (showMilhar && isStartDigitsEnabled) ? 'flex' : 'none';
     document.getElementById('centenaStartOptions').style.display = (showCentena && isStartDigitsEnabled) ? 'flex' : 'none';
     document.getElementById('dezenaStartOptions').style.display = (showDezena && isStartDigitsEnabled) ? 'flex' : 'none';
 
-    // 3. Lógica para o painel de Filtros de Centena
-    const centenaFiltersPanel = document.getElementById('centenaFiltersContainer');
-    if (centenaFiltersPanel) {
-        centenaFiltersPanel.style.display = showCentena ? 'block' : 'none';
-        
-        // Garante que o conteúdo interno comece minimizado (se já não estiver)
-        const content = document.getElementById('centenaFiltersContent');
-        if (content && content.style.display !== 'block') {
-             const icon = document.getElementById('centenaFiltersToggleIcon');
-             const title = content?.previousElementSibling; 
-             if (icon) icon.style.transform = 'rotate(0deg)'; 
-             if (title) title.classList.remove('expanded');
-        }
-    }
+    // 2. --- LÓGICA ATUALIZADA: Painéis Separados ---
+    
+    // Painel Centena (Só aparece se 'Centena' estiver marcado)
+    const painelCentena = document.getElementById('centenaFiltersContainer');
+    if (painelCentena) painelCentena.style.display = showCentena ? 'block' : 'none';
 
-    // 4. Lógica para o painel de Modo de Milhar de Bicho
+    // Painel Milhar (Só aparece se 'Milhar' estiver marcado)
+    const painelMilhar = document.getElementById('milharFiltersContainer');
+    if (painelMilhar) painelMilhar.style.display = showMilhar ? 'block' : 'none';
+
+    // 3. Painel Bicho Milhar
     const bichoMilharPanel = document.getElementById('bichoMilharMethodContainer');
-    
-    // O painel SÓ deve aparecer se:
-    // 1. O tipo "Milhar" estiver selecionado E
-    // 2. O modo "Grupo Bichos" (e NÃO a I.A.) estiver ativo
     const deveMostrarPainelBichoMilhar = showMilhar && (selectedMode === 'bichos');
-
-    if (bichoMilharPanel) {
-        bichoMilharPanel.style.display = deveMostrarPainelBichoMilhar ? 'block' : 'none';
-        
-        // Se o painel for exibido, carrega a última opção salva
-        if (deveMostrarPainelBichoMilhar) {
-            // Nota: getData é assíncrono, mas para atualização visual rápida, confiamos no checked atual ou no padrão
-            // O carregamento real do storage acontece no init ou ao clicar.
-            const savedBichoMode = document.querySelector('input[name="bichoMilharMethod"]:checked')?.value || 'padrao';
-            // A atualização da descrição acontece via evento onchange, mas podemos forçar aqui se necessário:
-            // updateBichoMethodDescription(); 
-        }
-    }
+    if (bichoMilharPanel) bichoMilharPanel.style.display = deveMostrarPainelBichoMilhar ? 'block' : 'none';
     
-    // 5. Lógica para o painel de seleção de Loteria da I.A.
+    // 4. Painel IA
     const iaLotteryContainer = document.getElementById('iaLotterySelectorContainer');
-    if (iaLotteryContainer) {
-        iaLotteryContainer.style.display = (selectedMode === 'ia_bichos') ? 'block' : 'none';
-    }
+    if (iaLotteryContainer) iaLotteryContainer.style.display = (selectedMode === 'ia_bichos') ? 'block' : 'none';
 
-    // =========================================================
-    // === 6. CORREÇÃO: Lógica do Botão Zerar Ciclo ===
-    // =========================================================
+    // 5. Botão Zerar Ciclo
     const btnResetCiclo = document.getElementById('btnResetCiclo');
-    
-    // Pega o sub-modo selecionado (Padrão / Fechamento / Cercar)
     const currentSubMode = document.querySelector('input[name="bichoMilharMethod"]:checked')?.value;
-
     if (btnResetCiclo) {
-        // Mostra o botão SÓ se:
-        // 1. Modo Geral for 'bichos'
-        // 2. Sub-modo for 'cercar_completo'
-        // 3. O painel de opções estiver visível (implica que é Milhar)
         if (selectedMode === 'bichos' && currentSubMode === 'cercar_completo' && deveMostrarPainelBichoMilhar) {
             btnResetCiclo.style.display = 'block';
             btnResetCiclo.style.marginTop = '10px';
@@ -12986,12 +13375,19 @@ async function generateSelectedNumbers() {
         // ---- INÍCIO DO NOVO BLOCO SWITCH ----
         switch (bichoMilharMethod) {
             
-            // --- CASO 1: CERCAR BICHO (400) - CORRIGIDO ---
+            // --- CASO 1: CERCAR BICHO (400) - ORDEM DOS BLOCOS MISTURADA ---
             case 'cercar_completo':
                 if (!typeKeys.includes('milhar')) {
                     showToast('O modo "Cercar Bicho" só gera Milhares. Por favor, selecione o tipo "Milhar".', 'error');
                     return; 
                 }
+
+                // =================================================================
+                // === A MÁGICA ESTÁ AQUI: Mistura a ordem dos bichos selecionados ===
+                // Isso garante que o Grupo 01 não seja sempre o primeiro e o 25 o último.
+                // Os números continuam agrupados, mas a posição dos blocos muda.
+                shuffleArray(selectedBichos); 
+                // =================================================================
 
                 const baseQuantityCercar = Math.floor(totalQuantity / selectedBichos.length);
                 const remainderCercar = totalQuantity % selectedBichos.length;
@@ -13043,20 +13439,13 @@ async function generateSelectedNumbers() {
                     // --- CÁLCULO DOS LEDS ---
                     const sobraEstimada = totalDisponivel - quantidadeParaGerar;
                     
-                    // Lógica: Se a sobra for menor ou igual a X, o LED correspondente fica vermelho (usado)
-                    // 400 total. Cada LED vale 100.
-                    // Led 1 (0-100 gastos): Fica vermelho se sobrar <= 300
-                    // Led 2 (101-200 gastos): Fica vermelho se sobrar <= 200
-                    // Led 3 (201-300 gastos): Fica vermelho se sobrar <= 100
-                    // Led 4 (301-400 gastos): Fica vermelho se sobrar == 0
-                    
                     const ledStyle = "display:inline-block; width:10px; height:10px; border-radius:50%; margin-left:3px; border:1px solid #aaa;";
-                    const green = "#28a745"; // Cor Verde
-                    const red   = "#dc3545"; // Cor Vermelha
+                    const green = "#28a745"; 
+                    const red   = "#dc3545"; 
                     
                     let ledsHTML = '';
                     
-                    // Monta os 4 LEDs
+                    // Leds ajustados para ficarem vermelhos com 100 ou menos
                     ledsHTML += `<span style="${ledStyle} background-color: ${sobraEstimada <= 300 ? red : green};"></span>`;
                     ledsHTML += `<span style="${ledStyle} background-color: ${sobraEstimada <= 200 ? red : green};"></span>`;
                     ledsHTML += `<span style="${ledStyle} background-color: ${sobraEstimada <= 100 ? red : green};"></span>`;
@@ -13067,11 +13456,10 @@ async function generateSelectedNumbers() {
                         summaryParts.push(`  • ⚠️ G${bicho.grupo} ${bicho.animal}: Só restam ${totalDisponivel}x ${ledsHTML}`);
                         showToast(`Restavam apenas ${totalDisponivel} milhares para ${bicho.animal}. Ciclo encerrado.`, 'warning', 5000);
                     } else {
-                        // Mostra: Nome: +100x | Restam: 300 [LEDS]
                         summaryParts.push(`  • G${bicho.grupo} ${bicho.animal}: +${quantidadeParaGerar}x | Restam: ${sobraEstimada} ${ledsHTML}`);
                     }
                     
-                    // Lógica de sorteio (sem alterações)
+                    // Lógica de sorteio (dentro do bloco do bicho)
                     const shuffledPoolArray = Array.from(currentPool);
                     shuffleArray(shuffledPoolArray);
                     const milharesGeradas = shuffledPoolArray.slice(0, quantidadeParaGerar);
@@ -13079,15 +13467,13 @@ async function generateSelectedNumbers() {
                     finalMilharesCercar.push(...milharesGeradas); 
                     totalGeradasCercar += milharesGeradas.length;
                 }); 
-                // =======================================================
-                // === FIM DO BLOCO ===
-                // ===============================
 
                 finalResults.milhar = finalMilharesCercar;
+                // NOTA: Removido o shuffleArray final aqui para manter os blocos separados
                 finalResults.centena = [];
                 finalResults.dezena = [];
 
-                break; 
+                break;
             
             // --- CASO 2: FECHAMENTO M-C (Sem alterações) ---
             case 'fechamento_mc':
@@ -13734,11 +14120,12 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
 
     function updateBichoCycleBadges() {
     // 1. Verifica se estamos no modo "Cercar Bicho"
+    // (Modo de Geração = 'bichos' E Sub-modo = 'cercar_completo')
     const currentMode = document.querySelector('input[name="generationMode"]:checked')?.value;
     const currentSubMode = document.querySelector('input[name="bichoMilharMethod"]:checked')?.value;
     const isCercarMode = (currentMode === 'bichos' && currentSubMode === 'cercar_completo');
 
-    // 2. Loop por todos os bichos
+    // 2. Loop por todos os bichos para mostrar ou esconder o badge
     tabelaDeGrupos.forEach(bicho => {
         const badge = document.getElementById(`cycle-badge-${bicho.grupo}`);
         if (!badge) return;
@@ -13754,22 +14141,26 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
 
             badge.textContent = count;
 
-            // Define a cor baseada na quantidade
+            // --- LÓGICA DE CORES ATUALIZADA ---
             if (count === 0) {
-                badge.style.backgroundColor = '#6c757d'; // Cinza (Esgotado/Reset)
+                badge.style.backgroundColor = '#6c757d'; // Cinza (Esgotado)
+                badge.style.color = 'white';
                 badge.textContent = '0 ♻️';
-            } else if (count <= 50) {
-                badge.style.backgroundColor = '#dc3545'; // Vermelho (Crítico)
+            } else if (count <= 100) { 
+                // AGORA FICA VERMELHO COM 100 OU MENOS
+                badge.style.backgroundColor = '#dc3545'; // Vermelho
+                badge.style.color = 'white';
             } else if (count <= 200) {
                 badge.style.backgroundColor = '#ffc107'; // Amarelo (Médio)
-                badge.style.color = '#333'; // Texto escuro para contraste
+                badge.style.color = '#333'; // Texto escuro
             } else {
                 badge.style.backgroundColor = '#28a745'; // Verde (Cheio)
                 badge.style.color = 'white';
             }
 
         } else {
-            badge.style.display = 'none'; // Esconde se não for modo Cercar
+            // SE NÃO FOR O MODO CERCAR, ESCONDE O BADGE
+            badge.style.display = 'none'; 
         }
     });
 }
