@@ -12154,7 +12154,7 @@ function parseNumbers(inputText) {
 }
 
 // =================================================================
-// === FUNÇÃO PRINCIPAL CORRIGIDA (SUBSTITUA A ANTIGA INTEIRA) ===
+// === FUNÇÃO PRINCIPAL CORRIGIDA (COLE APENAS UMA VEZ) ===
 // =================================================================
 function showMilharesCentenasDezenas() {
     // 1. DEFINIÇÃO CRUCIAL (Deve ser a primeira linha para evitar erros)
@@ -12189,7 +12189,7 @@ function showMilharesCentenasDezenas() {
         const selectedName = document.getElementById('nomePessoaSelect')?.value || '';
         const quantidade = document.getElementById('quantidadeSelect')?.value || '';
 
-        // Função interna para formatar com nome (se necessário para os modos padrão)
+        // Função interna para formatar com nome
         const formatWithName = (arr) => {
             let nomeFormatado = selectedName;
             if (nomeFormatado) {
@@ -12221,7 +12221,7 @@ function showMilharesCentenasDezenas() {
             let todasDezenas = [];
             let listaErros = [];
 
-            // 1. Validação de Entrada (Filtra erros como '323' ou sequências ímpares)
+            // 1. Validação de Entrada
             rawNumbers.forEach(num => {
                 let sNum = String(num).replace(/\D/g, '');
                 if (sNum.length === 0) return;
@@ -12244,7 +12244,7 @@ function showMilharesCentenasDezenas() {
                 }
             });
 
-            // 2. Se a entrada for válida, processa as linhas de 20
+            // 2. Processamento das linhas
             if (!hasError && todasDezenas.length > 0) {
                 const linhasFinais = [];
                 const tamanhoGrupo = 20;
@@ -12254,12 +12254,10 @@ function showMilharesCentenasDezenas() {
                     linhasFinais.push(linha);
                     const numLinha = linhasFinais.length;
 
-                    // Validação de Quantidade
                     if (linha.length < 20) {
                         hasError = true;
                         listaErros.push(`Linha ${numLinha}: Incompleta (${linha.length}/20).`);
                     }
-                    // Validação de Repetição na mesma linha
                     const unicos = new Set(linha);
                     if (unicos.size !== linha.length) {
                         hasError = true;
@@ -12267,7 +12265,6 @@ function showMilharesCentenasDezenas() {
                     }
                 }
 
-                // 3. Renderização (Mostra sempre para conferência, mesmo com erro)
                 const linhasFormatadas = [];
                 let prefixo = selectedName ? (quantidade ? `${quantidade} ${selectedName} - ` : `${selectedName} - `) : '';
                 let sufixo = '';
@@ -12278,10 +12275,7 @@ function showMilharesCentenasDezenas() {
 
                 linhasFinais.forEach((linha) => {
                     let txt = linha.join('/');
-                    // Aplica o nome em TODAS as linhas
-                    if (prefixo) {
-                        txt = `${prefixo}${txt}${sufixo}`;
-                    }
+                    if (prefixo) txt = `${prefixo}${txt}${sufixo}`;
                     linhasFormatadas.push(txt);
                 });
                 
@@ -12291,7 +12285,7 @@ function showMilharesCentenasDezenas() {
                 </section>`;
             }
 
-            // 4. Exibe o Bloco Vermelho de Erros (se houver)
+            // 3. Exibe Erros
             if (hasError && warningElement) {
                 warningElement.style.display = 'block';
                 warningElement.className = 'warning-fixed error';
@@ -12320,7 +12314,6 @@ function showMilharesCentenasDezenas() {
             if (selectedOption === 'bicho') dataSectionsHTML += buildSection('🐾 Bichos', bichos, 'bichos');
         }
 
-        // Adiciona o HTML gerado ao container final
         if (outputElement && dataSectionsHTML) {
             if (outputElement.innerHTML) outputElement.innerHTML += dataSectionsHTML;
             else outputElement.innerHTML = dataSectionsHTML;
@@ -12336,54 +12329,20 @@ function showMilharesCentenasDezenas() {
     const containerSurpresa = document.getElementById('surpresinhaContainer');
 
     const isBarraMode = (selectedOption === 'separado_barra');
-    // Só permite copiar se NÃO estiver vazio E NÃO tiver erros
     const canCopy = !isEmpty && !hasError; 
 
-    // Botões de Ação (Copiar/Listas)
     if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
     if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
     
-    // Barra inferior inteira
-    if (copyButtonsDiv) copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
-
-    // Botão Surpresinha (Só aparece no modo Bolão)
-    if (containerSurpresa) {
-        containerSurpresa.style.display = isBarraMode ? 'block' : 'none';
-    }
-}
-
-    // ============================================================
-    // === LÓGICA CENTRALIZADA DOS BOTÕES (ATUALIZADA) ===
-    // ============================================================
-    const copyButtonsDiv = document.getElementById('copyButtons');
-    const btnCopiar = document.getElementById('btnCopiarTexto');
-    const btnListas = document.getElementById('btnAbrirListas');
-    
-    // Novo container que está dentro do Radio Fieldset
-    const containerSurpresa = document.getElementById('surpresinhaContainer');
-
-    // Regras de Exibição
-    const isBarraMode = (selectedOption === 'separado_barra');
-    const canCopy = !isEmpty && !hasError; // Só copia se tiver texto E não tiver erro
-
-    // 1. Botões de Baixo (Copiar/Listas)
-    if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
-    if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
-    
-    // Mostra a barra de baixo APENAS se os botões de ação estiverem visíveis
-    // (O botão surpresinha saiu daqui, então não influencia mais essa barra)
     if (copyButtonsDiv) {
         copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
     }
 
-    // 2. Botão Surpresinha (Agora embaixo do Radio)
     if (containerSurpresa) {
-        // Mostra o container inteiro se estiver no modo barra
         containerSurpresa.style.display = isBarraMode ? 'block' : 'none';
     }
-
-    // === FIM DO CÓDIGO ATUALIZADO ===
-    
+}
+        
     if (selectedOption === 'both' || selectedOption === 'milhar') dataSectionsHTML += buildSection('📊 Milhares', milhares, 'milhares');
     if (selectedOption === 'both' || selectedOption === 'centena') dataSectionsHTML += buildSection('📊 Centenas', centenas, 'centenas');
     if (selectedOption === 'both' || selectedOption === 'dezena') dataSectionsHTML += buildSection('📊 Dezenas', dezenas, 'dezenas');
