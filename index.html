@@ -5510,15 +5510,9 @@ body.dark-mode .bicho-cycle-badge {
 <script>
 
     // =================================================================
-    // === 1. INICIALIZAÇÃO DO FIREBASE (TEM QUE SER A PRIMEIRA COISA) ===
+    // === 1. INICIALIZAÇÃO DO FIREBASE (CRUCIAL: APENAS UMA VEZ) ===
     // =================================================================
     
-    // 1. Sua configuração do Firebase
-    // =================================================================
-    // === 1. INICIALIZAÇÃO DO FIREBASE (TEM QUE SER A PRIMEIRA COISA) ===
-    // =================================================================
-    
-    // 1. Sua configuração do Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
         authDomain: "meus-recibos-vip.firebaseapp.com",
@@ -5528,20 +5522,19 @@ body.dark-mode .bicho-cycle-badge {
         appId: "1:254959368683:web:80676a26f614040df6c1ae"
     };
 
-    // 2. Inicialize o Firebase
-    // Verifica se já existe um app para não dar erro de duplicidade
+    // Verifica se já existe um app para evitar o erro "Default app already exists"
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     } else {
-        firebase.app(); // se já existe, usa o padrão
+        firebase.app(); 
     }
 
-    // 3. Define as variáveis do Banco de Dados
+    // Define as variáveis do Banco de Dados
     const firestoreDB = firebase.firestore();
     const rtdb = firebase.database();
 
     // =================================================================
-    // === 2. VARIÁVEIS GLOBAIS (LOGO ABAIXO DO FIREBASE) ===
+    // === 2. VARIÁVEIS GLOBAIS (DEFINIDAS NO TOPO) ===
     // =================================================================
 
     // Variáveis de Versão
@@ -5549,14 +5542,14 @@ body.dark-mode .bicho-cycle-badge {
     let newVersionAvailable = false; 
     let updateInterval; 
 
-    // Variáveis de Controle
+    // Variáveis de Controle do App
     let tabelaPuxadasPopulated = false; 
     let bichosPopulated = false;
     let cercarBichoPools = {};
     let originalGeneratedNumbers = { milhar: [], centena: [], dezena: [] };
     let currentSortOrder = 'original';
 
-    // Dados
+    // Variáveis de Dados
     let messageTemplates = [];
     let nomesSalvos = [];
     let savedLists = [];
@@ -5585,10 +5578,10 @@ body.dark-mode .bicho-cycle-badge {
     let choicesNomePessoaModal = null;
     let combinacoesParaConferir = [];
 
-    // Variáveis de Cache de Emoji (Novas)
+    // Cache de Emoji
     let emojiToBichoData = {}; 
 
-    // Variáveis de Tabelas (Prevenção de erro)
+    // Tabelas de Horários (Global para evitar ReferenceError)
     const extractionSchedules = {
        'Rio de Janeiro': [
             { display: '09:20 (PPT)', corteMinutos: 1 }, 
@@ -5627,10 +5620,9 @@ body.dark-mode .bicho-cycle-badge {
     };
 
     // =================================================================
-    // === 3. LISTENER DE AUTH (Pode ficar aqui ou no final) ===
+    // === 3. LISTENER DE AUTH (Monitora Login/Logout) ===
     // =================================================================
     
-    // Esse trecho garante que o Auth comece a ouvir assim que carregar
     firebase.auth().onAuthStateChanged(user => {
         const statusIndicator = document.getElementById('auth-status-indicator');
         const logoutButton = document.getElementById('logout-button');
@@ -5643,11 +5635,11 @@ body.dark-mode .bicho-cycle-badge {
             }
             if(logoutButton) logoutButton.style.display = 'inline-block';
             
-            // Funções que dependem do login
+            // Carrega dados iniciais
             if(typeof carregarNomesSalvos === 'function') carregarNomesSalvos();
             if(typeof getMilharCount === 'function') getMilharCount(user);
 
-            // Verifica Firestore
+            // Verifica Firestore para status de aprovação
             const userDocRef = firestoreDB.collection('users').doc(user.uid);
             userDocRef.get().then(doc => {
                 if (!doc.exists || doc.data().ativo !== true) {
@@ -5665,10 +5657,15 @@ body.dark-mode .bicho-cycle-badge {
                 statusIndicator.className = 'status-logged-out';
             }
             if(logoutButton) logoutButton.style.display = 'none';
+            
+            // Limpa dados sensíveis da memória
             nomesSalvos = [];
             if(typeof atualizarSelectNomes === 'function') atualizarSelectNomes();
             localStorage.removeItem('app_authenticated');
+            
+            // Verifica se precisa mostrar modal de login
             if(typeof checkAuth === 'function') checkAuth();
+            
             const countSpan = document.getElementById('milharTotalCount');
             if(countSpan) countSpan.textContent = 'N/A';
         }
@@ -7883,9 +7880,6 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
     return prefixosQuentes;
 }
 
-//
-// ADICIONE ESTA NOVA FUNÇÃO AO SEU <script>
-//
 async function atualizarHistoricoIA(days) {
     // Fecha o modal de configurações primeiro para o usuário ver o loading
     closeAdvancedFiltersModal();
