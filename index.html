@@ -12022,18 +12022,6 @@ function getDezenaPart(numStr) {
     return '';
 }
 
-function convertToEmojisRealTime() {
-    // 1. Verificação de segurança (se o input existe)
-    const inputElement = document.getElementById('input');
-    if (!inputElement) return;
-
-    // 2. Chama a função principal
-    // (Ela agora já cuida de gerar o texto E de controlar os botões Copiar/Surpresinha)
-    if (typeof showMilharesCentenasDezenas === 'function') {
-        showMilharesCentenasDezenas(); 
-    }
-}
-
 function processNumbers(numbers) {
     const milhares = [], centenas = [], dezenas = [];
     const bichos = [];
@@ -12152,214 +12140,7 @@ function parseNumbers(inputText) {
 
     return finalNumbers;
 }
-
-// =================================================================
-// === FUNÇÃO PRINCIPAL CORRIGIDA (COLE APENAS UMA VEZ) ===
-// =================================================================
-function showMilharesCentenasDezenas() {
-    // 1. DEFINIÇÃO CRUCIAL (Deve ser a primeira linha para evitar erros)
-    const selectedOption = document.querySelector('input[name="viewOption"]:checked')?.value || 'both';
-
-    // 2. Configuração básica dos elementos
-    const inputElement = document.getElementById('input');
-    const outputElement = document.getElementById('emojiOutput');
-    const warningElement = document.getElementById('duplicateWarningMessage');
-    
-    // Reseta estados visuais
-    let hasError = false;
-    let dataSectionsHTML = '';
-    
-    if (outputElement) outputElement.innerHTML = '';
-    if (warningElement) {
-        warningElement.style.display = 'none';
-        warningElement.innerHTML = '';
-        warningElement.className = 'warning-fixed'; 
-    }
-
-    // 3. Extração e validação inicial
-    const rawNumbers = (typeof parseNumbers === 'function') ? parseNumbers(inputElement.value) : [];
-    const isEmpty = rawNumbers.length === 0;
-
-    if (isEmpty) {
-        if (outputElement) outputElement.textContent = 'Aguardando números...';
-    } 
-    else {
-        // --- Processamento Comum ---
-        const { milhares, centenas, dezenas, ternos, duques, bichos } = processNumbers(rawNumbers);
-        const selectedName = document.getElementById('nomePessoaSelect')?.value || '';
-        const quantidade = document.getElementById('quantidadeSelect')?.value || '';
-
-        // Função interna para formatar com nome
-        const formatWithName = (arr) => {
-            let nomeFormatado = selectedName;
-            if (nomeFormatado) {
-                let emojis = '';
-                if (typeof isPinned !== 'undefined' && isPinned) emojis += '📌';
-                if (typeof showCheckEmoji !== 'undefined' && showCheckEmoji) emojis += '✅';
-                if (emojis) nomeFormatado = `${nomeFormatado} ${emojis}`;
-            }
-            const nomeCompleto = quantidade && nomeFormatado ? `${quantidade} ${nomeFormatado}` : nomeFormatado;
-            if (!nomeCompleto || arr.length === 0) return arr;
-            if (arr.length === 1) return [`${arr[0]} ${nomeCompleto}`];
-            const newArr = [...arr];
-            newArr[0] = `${newArr[0]} ${nomeCompleto}`;
-            newArr[newArr.length - 1] = `${newArr[newArr.length - 1]} ${nomeCompleto}`;
-            return newArr;
-        };
-
-        const buildSection = (title, data, type) => {
-            if (data.length === 0) return '';
-            const formattedData = formatWithName(data);
-            const content = (type === 'dezenas' || type === 'bichos' || type === 'barra') ? formattedData.join('<br>') : formattedData.join('\n');
-            return `<section><h3 class="section-title">${title} <span class="count-red">(${type === 'barra' ? rawNumbers.length : data.length})</span>:</h3><div class="emoji-content" data-content-type="${type}">${content}</div></section>`;
-        };
-
-        // =========================================================
-        // === MODO BOLÃO DE DEZENA (LÓGICA ESPECIAL) ===
-        // =========================================================
-        if (selectedOption === 'separado_barra') {
-            let todasDezenas = [];
-            let listaErros = [];
-
-            // 1. Validação de Entrada
-            rawNumbers.forEach(num => {
-                let sNum = String(num).replace(/\D/g, '');
-                if (sNum.length === 0) return;
-
-                if (sNum.length <= 2) { 
-                    todasDezenas.push(sNum.padStart(2, '0')); 
-                } 
-                else if (sNum.length === 3) {
-                    hasError = true;
-                    listaErros.push(`Entrada Inválida: <strong>${num}</strong> (3 dígitos). Digite apenas dezenas.`);
-                }
-                else { 
-                    if (sNum.length % 2 !== 0) {
-                        hasError = true;
-                        listaErros.push(`Sequência Quebrada: <strong>${num}</strong> tem dígitos ímpares.`);
-                    } else {
-                        const pares = sNum.match(/\d{2}/g); 
-                        if (pares) todasDezenas.push(...pares); 
-                    }
-                }
-            });
-
-            // 2. Processamento das linhas
-            if (!hasError && todasDezenas.length > 0) {
-                const linhasFinais = [];
-                const tamanhoGrupo = 20;
-
-                for (let i = 0; i < todasDezenas.length; i += tamanhoGrupo) {
-                    const linha = todasDezenas.slice(i, i + tamanhoGrupo);
-                    linhasFinais.push(linha);
-                    const numLinha = linhasFinais.length;
-
-                    if (linha.length < 20) {
-                        hasError = true;
-                        listaErros.push(`Linha ${numLinha}: Incompleta (${linha.length}/20).`);
-                    }
-                    const unicos = new Set(linha);
-                    if (unicos.size !== linha.length) {
-                        hasError = true;
-                        listaErros.push(`Linha ${numLinha}: Repetição detectada.`);
-                    }
-                }
-
-                const linhasFormatadas = [];
-                let prefixo = selectedName ? (quantidade ? `${quantidade} ${selectedName} - ` : `${selectedName} - `) : '';
-                let sufixo = '';
-                if (selectedName) {
-                    if (typeof isPinned !== 'undefined' && isPinned) sufixo += ' 📌';
-                    if (typeof showCheckEmoji !== 'undefined' && showCheckEmoji) sufixo += ' ✅';
-                }
-
-                linhasFinais.forEach((linha) => {
-                    let txt = linha.join('/');
-                    if (prefixo) txt = `${prefixo}${txt}${sufixo}`;
-                    linhasFormatadas.push(txt);
-                });
-                
-                dataSectionsHTML += `<section>
-                    <h3 class="section-title">🔗 Sequência com Barra:</h3>
-                    <div class="emoji-content" data-content-type="barra">${linhasFormatadas.join('<br>')}</div>
-                </section>`;
-            }
-
-            // 3. Exibe Erros
-            if (hasError && warningElement) {
-                warningElement.style.display = 'block';
-                warningElement.className = 'warning-fixed error';
-                warningElement.innerHTML = `
-                    <div style="font-weight:bold; font-size: 0.9rem; margin-bottom:3px;">⛔ ERROS ENCONTRADOS:</div>
-                    <ul style="margin:0; padding-left:15px; font-size: 0.85rem; line-height: 1.4;">
-                        <li>${listaErros.join('</li><li>')}</li>
-                    </ul>`;
-                
-                if (outputElement) {
-                    outputElement.innerHTML = `<h2 style="text-align:left; font-size: 1rem; margin-top: 10px; border-bottom: 1px solid #dc3545; color: #dc3545; padding-bottom: 3px;">Pré-visualização (Corrija para Copiar)</h2>`;
-                    if (!dataSectionsHTML) outputElement.innerHTML += `<p style="color:#666; font-size: 0.85rem; font-style:italic;">Corrija os números para ver o resultado.</p>`;
-                }
-            }
-        }
-
-        // =========================================================
-        // === MODO PADRÃO (Outras Opções) ===
-        // =========================================================
-        if (!hasError && selectedOption !== 'separado_barra') {
-            if (selectedOption === 'both' || selectedOption === 'milhar') dataSectionsHTML += buildSection('📊 Milhares', milhares, 'milhares');
-            if (selectedOption === 'both' || selectedOption === 'centena') dataSectionsHTML += buildSection('📊 Centenas', centenas, 'centenas');
-            if (selectedOption === 'both' || selectedOption === 'dezena') dataSectionsHTML += buildSection('📊 Dezenas', dezenas, 'dezenas');
-            if (selectedOption === 'terno') dataSectionsHTML += buildSection('📊 Ternos', ternos, 'ternos');
-            if (selectedOption === 'duque') dataSectionsHTML += buildSection('📊 Duques', duques, 'duques');
-            if (selectedOption === 'bicho') dataSectionsHTML += buildSection('🐾 Bichos', bichos, 'bichos');
-        }
-
-        if (outputElement && dataSectionsHTML) {
-            if (outputElement.innerHTML) outputElement.innerHTML += dataSectionsHTML;
-            else outputElement.innerHTML = dataSectionsHTML;
-        }
-    }
-
-    // ============================================================
-    // === CONTROLE CENTRAL DOS BOTÕES (VISIBILIDADE) ===
-    // ============================================================
-    const copyButtonsDiv = document.getElementById('copyButtons');
-    const btnCopiar = document.getElementById('btnCopiarTexto');
-    const btnListas = document.getElementById('btnAbrirListas');
-    const containerSurpresa = document.getElementById('surpresinhaContainer');
-
-    const isBarraMode = (selectedOption === 'separado_barra');
-    const canCopy = !isEmpty && !hasError; 
-
-    if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
-    if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
-    
-    if (copyButtonsDiv) {
-        copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
-    }
-
-    if (containerSurpresa) {
-        containerSurpresa.style.display = isBarraMode ? 'block' : 'none';
-    }
-}
-        
-    if (selectedOption === 'both' || selectedOption === 'milhar') dataSectionsHTML += buildSection('📊 Milhares', milhares, 'milhares');
-    if (selectedOption === 'both' || selectedOption === 'centena') dataSectionsHTML += buildSection('📊 Centenas', centenas, 'centenas');
-    if (selectedOption === 'both' || selectedOption === 'dezena') dataSectionsHTML += buildSection('📊 Dezenas', dezenas, 'dezenas');
-    if (selectedOption === 'terno') dataSectionsHTML += buildSection('📊 Ternos', ternos, 'ternos');
-    if (selectedOption === 'duque') dataSectionsHTML += buildSection('📊 Duques', duques, 'duques');
-    if (selectedOption === 'bicho') dataSectionsHTML += buildSection('🐾 Bichos', bichos, 'bichos');
-
-    if (dataSectionsHTML.trim() === '') {
-        outputElement.textContent = 'Nenhum resultado para a opção selecionada.';
-        document.getElementById('copyButtons').style.display = 'none';
-    } else {
-        const finalOutputHTML = `<h2 style="text-align:left; font-size: 1.2rem; margin-top: 15px; border-bottom: 2px solid rgba(128,128,128,0.4); padding-bottom: 5px;">Resultados</h2>` + dataSectionsHTML;
-        outputElement.innerHTML = finalOutputHTML;
-        document.getElementById('copyButtons').style.display = 'flex';
-    }
-    
-    function getBichoNameByDezena(dezena) {
+        function getBichoNameByDezena(dezena) {
         if (dezena >= 1 && dezena <= 4) return 'Avestruz';
         if (dezena >= 5 && dezena <= 8) return 'Aguia';
         if (dezena >= 9 && dezena <= 12) return 'Burro';
@@ -15749,6 +15530,197 @@ document.querySelectorAll('#atrasadosRealTimeModal .btn-share').forEach(botao =>
         gerarLinkWhatsapp(this, loteria, nomeLoteria);
     });
 });
+
+// =================================================================
+// === BLOCO DE CORREÇÃO DEFINITIVA (COLE ISTO NO FINAL DO SCRIPT) ===
+// =================================================================
+
+// 1. Função Gatilho Segura
+function convertToEmojisRealTime() {
+    const inputElement = document.getElementById('input');
+    if (!inputElement) return;
+    // Chama a função principal se ela existir
+    if (typeof showMilharesCentenasDezenas === 'function') {
+        showMilharesCentenasDezenas(); 
+    }
+}
+
+// 2. Função Principal Corrigida
+function showMilharesCentenasDezenas() {
+    // --- A CORREÇÃO ESTÁ AQUI: Esta linha DEVE ser a primeira ---
+    const radioChecked = document.querySelector('input[name="viewOption"]:checked');
+    const selectedOption = radioChecked ? radioChecked.value : 'both';
+    // -----------------------------------------------------------
+
+    const inputElement = document.getElementById('input');
+    const outputElement = document.getElementById('emojiOutput');
+    const warningElement = document.getElementById('duplicateWarningMessage');
+    
+    // Limpa estados visuais
+    let hasError = false;
+    let dataSectionsHTML = '';
+    
+    if (outputElement) outputElement.innerHTML = '';
+    if (warningElement) {
+        warningElement.style.display = 'none';
+        warningElement.innerHTML = '';
+        warningElement.className = 'warning-fixed'; 
+    }
+
+    // Parse seguro
+    const rawNumbers = (typeof parseNumbers === 'function') ? parseNumbers(inputElement.value) : [];
+    const isEmpty = rawNumbers.length === 0;
+
+    if (isEmpty) {
+        if (outputElement) outputElement.textContent = 'Aguardando números...';
+    } 
+    else {
+        // Processamento Geral
+        const { milhares, centenas, dezenas, ternos, duques, bichos } = processNumbers(rawNumbers);
+        const selectedName = document.getElementById('nomePessoaSelect')?.value || '';
+        const quantidade = document.getElementById('quantidadeSelect')?.value || '';
+
+        // Funções auxiliares de formatação
+        const formatWithName = (arr) => {
+            let nomeFormatado = selectedName;
+            if (nomeFormatado) {
+                let emojis = '';
+                if (typeof isPinned !== 'undefined' && isPinned) emojis += '📌';
+                if (typeof showCheckEmoji !== 'undefined' && showCheckEmoji) emojis += '✅';
+                if (emojis) nomeFormatado = `${nomeFormatado} ${emojis}`;
+            }
+            const nomeCompleto = quantidade && nomeFormatado ? `${quantidade} ${nomeFormatado}` : nomeFormatado;
+            if (!nomeCompleto || arr.length === 0) return arr;
+            if (arr.length === 1) return [`${arr[0]} ${nomeCompleto}`];
+            const newArr = [...arr];
+            newArr[0] = `${newArr[0]} ${nomeCompleto}`;
+            newArr[newArr.length - 1] = `${newArr[newArr.length - 1]} ${nomeCompleto}`;
+            return newArr;
+        };
+
+        const buildSection = (title, data, type) => {
+            if (data.length === 0) return '';
+            const formattedData = formatWithName(data);
+            const content = (type === 'dezenas' || type === 'bichos' || type === 'barra') ? formattedData.join('<br>') : formattedData.join('\n');
+            return `<section><h3 class="section-title">${title} <span class="count-red">(${type === 'barra' ? rawNumbers.length : data.length})</span>:</h3><div class="emoji-content" data-content-type="${type}">${content}</div></section>`;
+        };
+
+        // --- MODO BOLÃO DE DEZENA ---
+        if (selectedOption === 'separado_barra') {
+            let todasDezenas = [];
+            let listaErros = [];
+
+            // Validação de Entrada
+            rawNumbers.forEach(num => {
+                let sNum = String(num).replace(/\D/g, '');
+                if (sNum.length === 0) return;
+
+                if (sNum.length <= 2) { 
+                    todasDezenas.push(sNum.padStart(2, '0')); 
+                } 
+                else if (sNum.length === 3) {
+                    hasError = true;
+                    listaErros.push(`Entrada Inválida: <strong>${num}</strong> (3 dígitos). Digite apenas dezenas.`);
+                }
+                else { 
+                    if (sNum.length % 2 !== 0) {
+                        hasError = true;
+                        listaErros.push(`Sequência Quebrada: <strong>${num}</strong> tem dígitos ímpares.`);
+                    } else {
+                        const pares = sNum.match(/\d{2}/g); 
+                        if (pares) todasDezenas.push(...pares); 
+                    }
+                }
+            });
+
+            // Processamento de Linhas
+            if (!hasError && todasDezenas.length > 0) {
+                const linhasFinais = [];
+                const tamanhoGrupo = 20;
+
+                for (let i = 0; i < todasDezenas.length; i += tamanhoGrupo) {
+                    const linha = todasDezenas.slice(i, i + tamanhoGrupo);
+                    linhasFinais.push(linha);
+                    const numLinha = linhasFinais.length;
+
+                    if (linha.length < 20) {
+                        hasError = true;
+                        listaErros.push(`Linha ${numLinha}: Incompleta (${linha.length}/20).`);
+                    }
+                    const unicos = new Set(linha);
+                    if (unicos.size !== linha.length) {
+                        hasError = true;
+                        listaErros.push(`Linha ${numLinha}: Repetição detectada.`);
+                    }
+                }
+
+                const linhasFormatadas = [];
+                let prefixo = selectedName ? (quantidade ? `${quantidade} ${selectedName} - ` : `${selectedName} - `) : '';
+                let sufixo = '';
+                if (selectedName) {
+                    if (typeof isPinned !== 'undefined' && isPinned) sufixo += ' 📌';
+                    if (typeof showCheckEmoji !== 'undefined' && showCheckEmoji) sufixo += ' ✅';
+                }
+
+                linhasFinais.forEach((linha) => {
+                    let txt = linha.join('/');
+                    if (prefixo) txt = `${prefixo}${txt}${sufixo}`;
+                    linhasFormatadas.push(txt);
+                });
+                
+                dataSectionsHTML += `<section>
+                    <h3 class="section-title">🔗 Sequência com Barra:</h3>
+                    <div class="emoji-content" data-content-type="barra">${linhasFormatadas.join('<br>')}</div>
+                </section>`;
+            }
+
+            // Exibe Erros
+            if (hasError && warningElement) {
+                warningElement.style.display = 'block';
+                warningElement.className = 'warning-fixed error';
+                warningElement.innerHTML = `
+                    <div style="font-weight:bold; font-size: 0.9rem; margin-bottom:3px;">⛔ ERROS ENCONTRADOS:</div>
+                    <ul style="margin:0; padding-left:15px; font-size: 0.85rem; line-height: 1.4;">
+                        <li>${listaErros.join('</li><li>')}</li>
+                    </ul>`;
+                
+                if (outputElement) {
+                    outputElement.innerHTML = `<h2 style="text-align:left; font-size: 1rem; margin-top: 10px; border-bottom: 1px solid #dc3545; color: #dc3545; padding-bottom: 3px;">Pré-visualização (Corrija para Copiar)</h2>`;
+                    if (!dataSectionsHTML) outputElement.innerHTML += `<p style="color:#666; font-size: 0.85rem; font-style:italic;">Corrija os números para ver o resultado.</p>`;
+                }
+            }
+        }
+
+        // --- MODO PADRÃO ---
+        if (!hasError && selectedOption !== 'separado_barra') {
+            if (selectedOption === 'both' || selectedOption === 'milhar') dataSectionsHTML += buildSection('📊 Milhares', milhares, 'milhares');
+            if (selectedOption === 'both' || selectedOption === 'centena') dataSectionsHTML += buildSection('📊 Centenas', centenas, 'centenas');
+            if (selectedOption === 'both' || selectedOption === 'dezena') dataSectionsHTML += buildSection('📊 Dezenas', dezenas, 'dezenas');
+            if (selectedOption === 'terno') dataSectionsHTML += buildSection('📊 Ternos', ternos, 'ternos');
+            if (selectedOption === 'duque') dataSectionsHTML += buildSection('📊 Duques', duques, 'duques');
+            if (selectedOption === 'bicho') dataSectionsHTML += buildSection('🐾 Bichos', bichos, 'bichos');
+        }
+
+        if (outputElement && dataSectionsHTML) {
+            if (outputElement.innerHTML) outputElement.innerHTML += dataSectionsHTML;
+            else outputElement.innerHTML = dataSectionsHTML;
+        }
+    }
+
+    // --- CONTROLE DOS BOTÕES (Final da Função) ---
+    const copyButtonsDiv = document.getElementById('copyButtons');
+    const btnCopiar = document.getElementById('btnCopiarTexto');
+    const btnListas = document.getElementById('btnAbrirListas');
+    const containerSurpresa = document.getElementById('surpresinhaContainer');
+
+    const isBarraMode = (selectedOption === 'separado_barra');
+    const canCopy = !isEmpty && !hasError; 
+
+    if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
+    if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
+    if (copyButtonsDiv) copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
+    if (containerSurpresa) containerSurpresa.style.display = isBarraMode ? 'block' : 'none';
+}
 
 </script>
 </body>
