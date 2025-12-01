@@ -13932,63 +13932,144 @@ async function generateSelectedNumbers() {
         await new Promise(r => setTimeout(r, 200));
 
         const desejaExtrair = await showCustomConfirm(
-            `Geramos <strong>${finalResults.milhar.length}</strong> Milhares.\n\nDeseja extrair Centenas derivadas dessas milhares?`,
-            "Sim, Extrair",
+            `Geramos <strong>${finalResults.milhar.length}</strong> Milhares.\n\nDeseja gerar as Centenas para cercar esses bichos com equilíbrio?`,
+            "Sim, Cercar",
             "Não, pular"
         );
 
         if (desejaExtrair) {
             
-            // --- CARREGA O VALOR SALVO (OU USA 1 COMO PADRÃO) ---
             const savedQty = await getData('lastCentenaQuantity');
-            let defaultQty = 1;
-            if (savedQty) {
+            let defaultQty = 8; // Sugiro 8 para ter 2 de cada dezena
+            if (savedQty !== null && savedQty !== undefined) {
                 const parsed = parseInt(savedQty);
-                if (!isNaN(parsed) && parsed > 0) defaultQty = parsed;
+                if (!isNaN(parsed)) defaultQty = parsed;
             }
 
             const inputQtd = await showCustomInput(
-                "Extrair Centenas",
-                `Digite a quantidade de centenas para extrair <strong>DE CADA BICHO</strong> gerado:`,
-                defaultQty, // Usa o valor salvo como padrão
-                1000
+                "Cercar Centenas (Equilibrado)",
+                `Quantas centenas deseja por bicho?<br><br>💡 <em>O sistema vai tentar distribuir igualmente entre as 4 dezenas do bicho (ex: se pedir 4, vem uma de cada).</em><br>Digite <strong>0</strong> para pegar TODAS as faltantes.`,
+                defaultQty, 
+                40
             );
             
             if (inputQtd !== null) {
-                let qtdPorBicho = inputQtd;
-                
-                if (qtdPorBicho > 0) {
+                let qtdSolicitada = parseInt(inputQtd);
+                if (!isNaN(qtdSolicitada)) saveData('lastCentenaQuantity', qtdSolicitada);
+
+                const milharesPorBicho = {};
+                finalResults.milhar.forEach(milhar => {
+                    const bichoData = getBichoDataFromNumber(milhar);
+                    if(bichoData) {
+                        if(!milharesPorBicho[bichoData.grupo]) milharesPorBicho[bichoData.grupo] = [];
+                        milharesPorBicho[bichoData.grupo].push(milhar);
+                    }
+                });
+
+                let totalExtraidas = 0;
+
+                Object.keys(milharesPorBicho).forEach(grupo => {
+                    const milharesDoGrupo = milharesPorBicho[grupo];
                     
-                    // --- SALVA O NOVO VALOR PARA A PRÓXIMA VEZ ---
-                    saveData('lastCentenaQuantity', qtdPorBicho);
+                    // Identifica ocupadas
+                    const setOcupadas = new Set();
+                    milharesDoGrupo.forEach(m => setOcupadas.add(m.slice(-3)));
+                    
+                    const bichoData = tabelaDeGrupos.find(b => b.grupo === grupo);
+                    
+                    // Separa as centenas em "Baldes" por dezena (01, 02, 03, 04...)
+                    // Isso permite pegar uma de cada vez rotativamente
+                    const baldesFaltantes = {}; 
+                    const baldesExistentes = {};
+                    
+                    // Inicializa baldes
+                    if (bichoData) {
+                        bichoData.dezenas.forEach(dez => {
+                            baldesFaltantes[dez] = [];
+                            baldesExistentes[dez] = [];
+                        });
 
-                    const milharesPorBicho = {};
-                    finalResults.milhar.forEach(milhar => {
-                        const bichoData = getBichoDataFromNumber(milhar);
-                        if(bichoData) {
-                            if(!milharesPorBicho[bichoData.grupo]) milharesPorBicho[bichoData.grupo] = [];
-                            milharesPorBicho[bichoData.grupo].push(milhar);
-                        }
-                    });
+                        // Preenche os baldes
+                        bichoData.dezenas.forEach(dezena => {
+                            for (let i = 0; i <= 9; i++) {
+                                const candidata = i.toString() + dezena;
+                                if (!setOcupadas.has(candidata)) {
+                                    baldesFaltantes[dezena].push(candidata);
+                                } else {
+                                    baldesExistentes[dezena].push(candidata);
+                                }
+                            }
+                        });
+                    }
 
-                    let totalExtraidas = 0;
+                    // Embaralha o conteúdo de cada balde individualmente
+                    Object.values(baldesFaltantes).forEach(arr => shuffleArray(arr));
+                    Object.values(baldesExistentes).forEach(arr => shuffleArray(arr));
 
-                    Object.keys(milharesPorBicho).forEach(grupo => {
-                        const poolDoBicho = [...milharesPorBicho[grupo]]; 
-                        const qtdParaEste = Math.min(qtdPorBicho, poolDoBicho.length);
+                    const selecionadasParaOGrupo = [];
+                    
+                    // Se qtdSolicitada for 0, soma tudo que tem nos baldes faltantes
+                    let alvo = qtdSolicitada;
+                    if (alvo === 0) {
+                        Object.values(baldesFaltantes).forEach(arr => alvo += arr.length);
+                    }
+
+                    // --- ALGORITMO DE SELEÇÃO ROTATIVA (ROUND ROBIN) ---
+                    // Tenta pegar: Dezena1, depois Dezena2, depois Dezena3, depois Dezena4...
+                    // Primeiro dos Faltantes, depois dos Existentes se precisar
+                    
+                    let indiceDezena = 0;
+                    const dezenasKeys = bichoData.dezenas; // ex: ['01','02','03','04']
+                    
+                    // Fase 1: Pegar Faltantes Rotativamente
+                    let tentouRodadaSemSucesso = 0;
+                    while (selecionadasParaOGrupo.length < alvo) {
+                        const dezAtual = dezenasKeys[indiceDezena % 4]; // 0, 1, 2, 3, 0...
+                        const balde = baldesFaltantes[dezAtual];
                         
-                        if (qtdParaEste > 0) {
-                            shuffleArray(poolDoBicho);
-                            const selecionadas = poolDoBicho.slice(0, qtdParaEste);
-                            const novasCentenas = selecionadas.map(m => m.slice(-3));
-                            finalResults.centena.push(...novasCentenas);
-                            totalExtraidas += novasCentenas.length;
+                        if (balde && balde.length > 0) {
+                            selecionadasParaOGrupo.push(balde.pop()); // Tira do balde e põe na lista
+                            tentouRodadaSemSucesso = 0; // Reset contador de falha
+                        } else {
+                            tentouRodadaSemSucesso++;
                         }
-                    });
-                    
+
+                        // Se passou pelas 4 dezenas e todas estavam vazias, sai do loop
+                        if (tentouRodadaSemSucesso >= 4) break;
+                        
+                        indiceDezena++;
+                    }
+
+                    // Fase 2: Completar com Existentes Rotativamente (se o usuário pediu quantidade fixa > disponivel)
+                    // Só entra aqui se qtdSolicitada != 0
+                    if (qtdSolicitada !== 0 && selecionadasParaOGrupo.length < alvo) {
+                        tentouRodadaSemSucesso = 0;
+                        // Continua o indiceDezena de onde parou para manter equilibrio
+                        while (selecionadasParaOGrupo.length < alvo) {
+                            const dezAtual = dezenasKeys[indiceDezena % 4];
+                            const balde = baldesExistentes[dezAtual];
+                            
+                            if (balde && balde.length > 0) {
+                                selecionadasParaOGrupo.push(balde.pop());
+                                tentouRodadaSemSucesso = 0;
+                            } else {
+                                tentouRodadaSemSucesso++;
+                            }
+
+                            if (tentouRodadaSemSucesso >= 4) break; // Acabou tudo (40 centenas do bicho já estão na lista)
+                            indiceDezena++;
+                        }
+                    }
+
+                    finalResults.centena.push(...selecionadasParaOGrupo);
+                    totalExtraidas += selecionadasParaOGrupo.length;
+                });
+                
+                if (totalExtraidas > 0) {
                     if (!typeKeys.includes('centena')) typeKeys.push('centena');
-                    
-                    showToast(`${totalExtraidas} Centenas extraídas (${qtdPorBicho} p/ bicho)!`, 'success');
+                    showToast(`${totalExtraidas} Centenas (Balanceadas) geradas!`, 'success');
+                } else {
+                    showToast('Limite atingido ou todas as centenas já foram geradas.', 'info');
                 }
             }
         }
@@ -14117,32 +14198,33 @@ function showCustomInput(title, message, defaultValue, maxValue) {
         const okBtn = document.getElementById('customInputOk');
         const cancelBtn = document.getElementById('customInputCancel');
 
-        // Configura textos e valores
         titleEl.textContent = title;
-        msgEl.innerHTML = message; // Permite HTML
+        msgEl.innerHTML = message;
         inputEl.value = defaultValue;
-        inputEl.max = maxValue; // Define o máximo para os botões +/-
+        inputEl.max = maxValue;
 
-        // Mostra o modal
         modal.classList.add('active');
-        inputEl.focus();
-        inputEl.select();
+        
+        // FOCO REMOVIDO PARA NÃO ABRIR TECLADO
+        // inputEl.focus(); 
+        // inputEl.select();
 
-        // Handler de Limpeza
         const cleanup = () => {
             modal.classList.remove('active');
             okBtn.replaceWith(okBtn.cloneNode(true));
             cancelBtn.replaceWith(cancelBtn.cloneNode(true));
         };
 
-        // Eventos
-        document.getElementById('customInputOk').addEventListener('click', () => {
+        const newOkBtn = document.getElementById('customInputOk');
+        const newCancelBtn = document.getElementById('customInputCancel');
+
+        newOkBtn.addEventListener('click', () => {
             const val = parseInt(inputEl.value);
             cleanup();
             resolve(val);
         }, { once: true });
 
-        document.getElementById('customInputCancel').addEventListener('click', () => {
+        newCancelBtn.addEventListener('click', () => {
             cleanup();
             resolve(null);
         }, { once: true });
