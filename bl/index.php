@@ -1,21 +1,80 @@
+<?php
+// ==========================================================================
+// 1. CONFIGURAÇÃO DO FIREBASE
+// ==========================================================================
+// COLOQUE AQUI A URL DO SEU BANCO (Mantenha a barra / no final)
+define('FIREBASE_DB_URL', 'https://meu-app-vip-default-rtdb.firebaseio.com/');
+
+date_default_timezone_set('America/Sao_Paulo');
+
+// --- FUNÇÕES DE BANCO DE DADOS (VIA CURL) ---
+function salvarNoFirebase($id, $dados) {
+    $url = FIREBASE_DB_URL . "recibos/$id.json";
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dados));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return $response;
+}
+
+function lerDoFirebase($id) {
+    $url = FIREBASE_DB_URL . "recibos/$id.json";
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($response, true);
+}
+
+// --- LÓGICA DE CONTROLE ---
+$modo_visualizacao = false;
+$dados_salvos = [];
+$mensagem_erro = "";
+
+if (isset($_GET['ver'])) {
+    $id_recibo = preg_replace('/[^a-zA-Z0-9]/', '', $_GET['ver']);
+    $conteudo = lerDoFirebase($id_recibo);
+
+    if ($conteudo && isset($conteudo['timestamp'])) {
+        if ((time() - $conteudo['timestamp']) > 1200) { // 20 min
+            $mensagem_erro = "🚫 Link Expirado.<br><small>Válido por 20 min.</small>";
+        } else {
+            $modo_visualizacao = true;
+            $dados_salvos = $conteudo;
+            $_POST['lista'] = $conteudo['lista'];
+            $_POST['v_terno'] = $conteudo['premios']['terno'];
+            $_POST['v_quadra'] = $conteudo['premios']['quadra'];
+            $_POST['v_quina'] = $conteudo['premios']['quina'];
+            foreach ($conteudo['resultados'] as $sigla => $nums) {
+                $_POST[strtolower($sigla)] = $nums;
+            }
+            $_SERVER['REQUEST_METHOD'] = 'POST';
+        }
+    } else {
+        $mensagem_erro = "❌ Recibo não encontrado.";
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#18181b">
-    <title>Painel Master VIP</title>
+    <title><?php echo $modo_visualizacao ? 'Relatório VIP' : 'Painel Master'; ?></title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    
     <style>
         :root {
-            /* TEMA CINZA CHUMBO */
+            /* PALETA CINZA CHUMBO */
             --bg-body: #18181b;
             --bg-card: #27272a;
             --bg-input: #3f3f46;
@@ -36,51 +95,51 @@
             background-color: var(--bg-body);
             color: var(--text-primary);
             margin: 0;
-            padding: 20px;
-            padding-bottom: 100px;
+            padding: 15px;
+            padding-bottom: <?php echo $modo_visualizacao ? '30px' : '100px'; ?>;
         }
 
-        .container { max-width: 1200px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
 
         /* HEADER & CARDS */
         .header-card {
             background: linear-gradient(145deg, #27272a 0%, #18181b 100%);
-            padding: 25px; border-radius: var(--radius-md);
-            box-shadow: var(--shadow); margin-bottom: 25px;
+            padding: 20px; border-radius: var(--radius-md);
+            box-shadow: var(--shadow); margin-bottom: 20px;
             text-align: center; border: 1px solid rgba(255,255,255,0.08);
         }
-        .header-card h1 { margin: 0; font-weight: 800; font-size: 1.6rem; letter-spacing: -0.5px; }
-        .header-card p { margin: 5px 0 0; color: var(--text-secondary); font-size: 0.9rem; }
+        .header-card h1 { margin: 0; font-weight: 800; font-size: 1.5rem; letter-spacing: -0.5px; }
+        .header-card p { margin: 5px 0 0; color: var(--text-secondary); font-size: 0.85rem; }
         
         .card {
             background: var(--bg-card); border-radius: var(--radius-md);
-            padding: 25px; box-shadow: var(--shadow); margin-bottom: 25px;
+            padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px;
             border: 1px solid var(--border-color);
         }
         .card-title {
-            font-size: 1.1rem; font-weight: 700; margin-bottom: 20px;
+            font-size: 1rem; font-weight: 700; margin-bottom: 15px;
             color: var(--text-primary); border-bottom: 1px solid var(--border-color);
-            padding-bottom: 15px; display: flex; align-items: center; gap: 10px;
+            padding-bottom: 10px; display: flex; align-items: center; gap: 10px;
         }
         .card-title i { color: var(--primary); }
 
         /* INPUTS */
         .grid-bancas {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;
         }
         .banca-box {
-            background: rgba(0,0,0,0.2); padding: 15px;
+            background: rgba(0,0,0,0.2); padding: 12px;
             border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.05);
         }
         .banca-label {
             display: block; text-align: center; font-weight: 800;
-            margin-bottom: 12px; font-size: 0.9rem; padding: 5px;
+            margin-bottom: 10px; font-size: 0.8rem; padding: 4px;
             border-radius: 6px; color: white; text-transform: uppercase;
         }
         .lbl-rj { background: #2563eb; } .lbl-nc { background: #ea580c; }
         .lbl-lk { background: #7c3aed; } .lbl-fd { background: #059669; }
 
-        .inputs-row { display: flex; justify-content: space-between; gap: 8px; }
+        .inputs-row { display: flex; justify-content: space-between; gap: 5px; }
         .input-bola {
             width: 100%; height: 42px; text-align: center; font-size: 18px; font-weight: 700;
             border: 2px solid var(--border-color); border-radius: 10px;
@@ -89,33 +148,34 @@
         .input-bola:focus { border-color: var(--primary); background: #1e3a8a; }
 
         .form-control {
-            width: 100%; padding: 14px; background: var(--bg-input);
+            width: 100%; padding: 12px; background: var(--bg-input);
             border: 1px solid var(--border-color); color: white;
             border-radius: 8px; font-size: 16px; outline: none; margin-bottom: 10px;
         }
         
-        /* BOTÕES */
-        .action-group { display: flex; gap: 10px; margin-top: 25px; }
+        /* BOTÕES DE AÇÃO */
+        .action-group { display: flex; gap: 10px; margin-top: 15px; }
+        
         .btn-action {
             flex: 1; background: var(--primary); color: white; border: none;
-            padding: 16px; font-size: 16px; font-weight: 700; border-radius: var(--radius-md);
-            cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px; font-size: 16px; font-weight: 700; border-radius: var(--radius-md);
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .btn-action:hover { filter: brightness(1.1); }
-        .btn-action:disabled { background: #555; cursor: not-allowed; opacity: 0.7; }
 
         .btn-clear {
             width: 30%; background: transparent; color: var(--danger); 
-            border: 1px solid var(--danger); padding: 16px; font-size: 16px; font-weight: 700; 
+            border: 1px solid var(--danger); padding: 14px; font-size: 16px; font-weight: 700; 
             border-radius: var(--radius-md); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
         }
+        .btn-clear:hover { background: rgba(239, 68, 68, 0.1); }
 
         /* ==================================================================
-           TABELA HÍBRIDA (DESKTOP vs MOBILE)
+           TABELA HÍBRIDA (O PULO DO GATO)
            ================================================================== */
         table { width: 100%; border-collapse: collapse; }
         
-        /* DESKTOP */
+        /* DESKTOP (Tabela Clássica) */
         @media (min-width: 769px) {
             th { 
                 background: #18181b; color: var(--text-secondary); 
@@ -127,7 +187,7 @@
             .lista-resultados { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         }
 
-        /* MOBILE (CARD VIEW) */
+        /* MOBILE (Card View) */
         @media (max-width: 768px) {
             thead { display: none; }
             table, tbody, tr, td { display: block; width: 100%; }
@@ -145,16 +205,18 @@
             .lista-resultados { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         }
 
-        /* VISUAL */
+        /* ELEMENTOS VISUAIS */
         .nome-player { font-weight: 800; color: #60a5fa; font-size: 1.05rem; display: block; margin-bottom: 4px; }
         .contador-jogos { color: #fff; font-size: 11px; font-weight: bold; margin-right: 5px; background: #475569; padding: 2px 6px; border-radius: 4px; }
         .tag-multi { background: #ca8a04; color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+
         .bola-jogo { 
             width: 28px; height: 28px; line-height: 28px; text-align: center; 
             border-radius: 6px; font-size: 12px; background: #3f3f46; 
             color: var(--text-secondary); font-weight: 700;
         }
         .bola-jogo.hit { background: var(--success); color: #022c22; font-weight: 800; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+
         .res-item { 
             display: flex; align-items: center; justify-content: space-between; 
             background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;
@@ -181,417 +243,273 @@
         }
         .fab-whatsapp { background: #25d366; }
         .fab-copy { background: var(--primary); }
-        
-        .loader { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .hidden { display: none !important; }
     </style>
+    
+    <script>
+        function gerenciarInput(field, nextID) {
+            field.value = field.value.replace(/[^0-9]/g, '');
+            if (field.value.length >= 2 && nextID) document.getElementById(nextID).focus();
+        }
+        function formatInput(field) { if (field.value.length === 1) field.value = "0" + field.value; }
+        function limparAoFocar(field) { if(!field.readOnly) field.value = ''; }
+
+        function pegarTexto() { return document.getElementById('texto_oculto').value; }
+        function compartilharZap() {
+            let texto = pegarTexto();
+            let url = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto);
+            window.open(url, '_blank');
+        }
+        function copiarTexto() {
+             let texto = pegarTexto();
+             navigator.clipboard.writeText(texto).then(function() { alert('✨ Relatório copiado!'); });
+        }
+        
+        function limparTudo() {
+            if(confirm("Tem certeza? Isso apagará os resultados e a lista.")) {
+                document.querySelectorAll('.input-bola').forEach(i => i.value = '');
+                document.querySelector('textarea[name="lista"]').value = '';
+                window.location.href = window.location.pathname;
+            }
+        }
+    </script>
 </head>
 <body>
 
 <div class="container">
     
-    <div id="error-box" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #ef4444; display: none;">
-        <h3 id="error-title">⚠️ Link Inválido</h3>
-        <p id="error-msg"></p>
-        <br><a href="?" style="color: white; font-weight: bold;">Voltar</a>
+    <?php if ($mensagem_erro): ?>
+        <div style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #ef4444;">
+            <h3>⚠️ Link Inválido</h3>
+            <?php echo $mensagem_erro; ?>
+            <br><br><a href="?" style="color: white; font-weight: bold;">Voltar</a>
+        </div>
+        <?php exit; ?>
+    <?php endif; ?>
+
+    <div class="header-card">
+        <h1><?php echo $modo_visualizacao ? '📊 RELATÓRIO VIP BOLOES 📊' : 'Painel de Controle VIP'; ?></h1>
+        <?php if ($modo_visualizacao): ?>
+            <div style="margin-top:10px; font-size:0.8rem; opacity:0.7;">
+                <i class="far fa-clock"></i> Expira às: <?php echo date('H:i', $conteudo['timestamp'] + 1200); ?>
+            </div>
+        <?php endif; ?>
     </div>
 
-    <div class="header-card" id="header-card">
-        <h1 id="page-title">Painel de Controle VIP</h1>
-        <div id="timer-display" style="margin-top:10px; font-size:0.8rem; opacity:0.7; display:none;"></div>
-        <p id="page-desc">Validação e gestão de bolões.</p>
-    </div>
-
-    <div id="admin-panel">
+    <form method="POST">
         <div class="card">
             <div class="card-title"><i class="fas fa-dice"></i> Resultados</div>
             <div class="grid-bancas">
+                <?php 
+                $bancas_arr = ['RJ' => 'lbl-rj', 'NC' => 'lbl-nc', 'LK' => 'lbl-lk', 'FD' => 'lbl-fd'];
+                foreach($bancas_arr as $b => $classe): 
+                    $sigla = strtolower($b);
+                ?>
                 <div class="banca-box">
-                    <span class="banca-label lbl-rj">RJ</span>
-                    <div class="inputs-row" id="inputs-rj"></div>
+                    <span class="banca-label <?php echo $classe; ?>"><?php echo $b; ?></span>
+                    <div class="inputs-row">
+                        <?php for($i=1; $i<=5; $i++): 
+                            $curr = "{$sigla}_{$i}";
+                            $next = ($i < 5) ? "{$sigla}_".($i+1) : null;
+                            $val = isset($_POST[$sigla][$i-1]) ? $_POST[$sigla][$i-1] : '';
+                        ?>
+                        <input type="tel" name="<?php echo $sigla; ?>[]" id="<?php echo $curr; ?>" 
+                               class="input-bola" value="<?php echo $val; ?>" autocomplete="off"
+                               <?php echo $modo_visualizacao ? 'readonly' : ''; ?>
+                               onfocus="limparAoFocar(this)"
+                               oninput="gerenciarInput(this, '<?php echo $next; ?>')" 
+                               onblur="formatInput(this)">
+                        <?php endfor; ?>
+                    </div>
                 </div>
-                <div class="banca-box">
-                    <span class="banca-label lbl-nc">NC</span>
-                    <div class="inputs-row" id="inputs-nc"></div>
-                </div>
-                <div class="banca-box">
-                    <span class="banca-label lbl-lk">LK</span>
-                    <div class="inputs-row" id="inputs-lk"></div>
-                </div>
-                <div class="banca-box">
-                    <span class="banca-label lbl-fd">FD</span>
-                    <div class="inputs-row" id="inputs-fd"></div>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
 
+        <?php if (!$modo_visualizacao): ?>
         <div class="card">
             <div class="card-title"><i class="fas fa-sliders-h"></i> Configuração</div>
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:15px;">
-                <input type="number" step="0.01" class="form-control" id="v_terno" value="25.00" placeholder="Terno">
-                <input type="number" step="0.01" class="form-control" id="v_quadra" value="250.00" placeholder="Quadra">
-                <input type="number" step="0.01" class="form-control" id="v_quina" value="2500.00" placeholder="Quina">
+                <input type="number" step="0.01" class="form-control" name="v_terno" value="<?php echo $_POST['v_terno'] ?? '25.00'; ?>" placeholder="Terno">
+                <input type="number" step="0.01" class="form-control" name="v_quadra" value="<?php echo $_POST['v_quadra'] ?? '250.00'; ?>" placeholder="Quadra">
+                <input type="number" step="0.01" class="form-control" name="v_quina" value="<?php echo $_POST['v_quina'] ?? '2500.00'; ?>" placeholder="Quina">
             </div>
-            <textarea id="lista-jogos" class="form-control" placeholder="Cole a lista aqui..."></textarea>
+            <textarea name="lista" class="form-control" placeholder="Cole a lista aqui..."><?php echo isset($_POST['lista']) ? $_POST['lista'] : ''; ?></textarea>
             
             <div class="action-group">
                 <button type="button" onclick="limparTudo()" class="btn-clear">
                     <i class="fas fa-trash-alt"></i> LIMPAR
                 </button>
-                <button type="button" onclick="processarConferencia()" class="btn-action" id="btn-processar">
+                <button type="submit" class="btn-action">
                     <i class="fas fa-check-double"></i> PROCESSAR
                 </button>
             </div>
         </div>
-    </div>
+        <?php endif; ?>
+    </form>
 
-    <div id="results-panel" style="display:none;">
-        <div class="card" style="padding:0; border:none; background:transparent; box-shadow:none;">
-            <h3 style="margin:0 0 15px 0; font-size:1.1rem; color:var(--text-primary);"><i class="fas fa-list-check"></i> Conferência</h3>
-            <div class="table-container">
-                <table id="tabela-resultados">
-                    <thead>
-                        <tr><th width="30%">Participante</th><th width="40%">Dezenas</th><th width="30%">Conferência</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
+    <?php
+    $texto_final = "";
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['lista'])) {
+        function cleanNum($n) { return str_pad(preg_replace('/\D/', '', $n), 2, '0', STR_PAD_LEFT); }
 
-        <div class="total-box" id="total-box">
-            </div>
-    </div>
+        $res_bancas = []; $res_bancas_save = []; $texto_resultados_dia = "";
+        
+        foreach(['rj','nc','lk','fd'] as $sigla) {
+            if(isset($_POST[$sigla])) {
+                $limpos = array_map('cleanNum', array_filter($_POST[$sigla]));
+                if(count($limpos) == 5) {
+                    $banca_nome = strtoupper($sigla);
+                    $res_bancas[$banca_nome] = $limpos;
+                    $res_bancas_save[$banca_nome] = $limpos;
+                    $icone = ($banca_nome == 'RJ') ? "🔵" : (($banca_nome == 'NC') ? "🟠" : (($banca_nome == 'LK') ? "🟣" : "🟢"));
+                    $texto_resultados_dia .= "{$icone} *{$banca_nome}:* " . implode(' ', $limpos) . "\n";
+                }
+            }
+        }
 
-    <div class="fab-container" id="fab-container" style="display:none;">
-        <button onclick="copiarTexto()" class="fab fab-copy"><i class="fas fa-copy"></i> Copiar</button>
-        <button onclick="compartilharZap()" class="fab fab-whatsapp"><i class="fab fa-whatsapp"></i> Enviar</button>
-    </div>
+        $link_gerado = "";
+        if (!$modo_visualizacao) {
+            $id_unico = bin2hex(random_bytes(4));
+            $dados = [
+                'timestamp' => time(), 'lista' => $_POST['lista'],
+                'premios' => ['terno' => $_POST['v_terno'], 'quadra' => $_POST['v_quadra'], 'quina' => $_POST['v_quina']],
+                'resultados' => $res_bancas_save
+            ];
+            salvarNoFirebase($id_unico, $dados);
+            $protocolo = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+            $link_gerado = "$protocolo://$_SERVER[HTTP_HOST]$_SERVER[PHP_SELF]?ver=$id_unico";
+        }
 
+        echo "<div class='card' style='padding:0; border:none; background:transparent; box-shadow:none;'>";
+        echo "<h3 style='margin:0 0 15px 0; font-size:1.1rem; color:var(--text-primary);'><i class='fas fa-list-check'></i> Conferência</h3>";
+        
+        echo "<table style='width:100%'>";
+        echo "<thead><tr><th width='30%'>Participante</th><th width='40%'>Dezenas</th><th width='30%'>Conferência</th></tr></thead><tbody>";
+
+        $linhas = explode("\n", $_POST['lista']);
+        $total_do_dia = 0;
+        $v_terno = floatval($_POST['v_terno']); $v_quadra = floatval($_POST['v_quadra']); $v_quina = floatval($_POST['v_quina']);
+        $ultimo_nome = "Desconhecido"; $ultimo_multi = 1; $ultimas_bancas = []; $contador_geral = 0; $tem_ganhador = false;
+        $texto_zap_ganhadores = ""; $texto_zap_geral = "";
+
+        foreach ($linhas as $linha) {
+            preg_match_all('/\b\d{1,2}\b/', $linha, $m_nums); $jogo_nums = array_map('cleanNum', $m_nums[0]);
+            if (count($jogo_nums) > 20) $jogo_nums = array_slice($jogo_nums, -20);
+            $multi_linha = 0; if (preg_match('/(\d+)[xX]/', $linha, $m_mult)) $multi_linha = intval($m_mult[1]);
+            
+            $bancas_nesta_linha = []; $str_up = strtoupper($linha);
+            if (strpos($str_up, 'RJ') !== false) $bancas_nesta_linha[] = 'RJ';
+            if (strpos($str_up, 'NC') !== false) $bancas_nesta_linha[] = 'NC';
+            if (strpos($str_up, 'LK') !== false) $bancas_nesta_linha[] = 'LK';
+            if (strpos($str_up, 'FD') !== false) $bancas_nesta_linha[] = 'FD';
+            if (!empty($bancas_nesta_linha)) $ultimas_bancas = $bancas_nesta_linha;
+
+            $nome_processado = preg_replace('/[\d\/\.\-\s]{15,}/', '', $linha); 
+            $nome_processado = preg_replace('/\d+[xX]/', '', $nome_processado); 
+            $nome_processado = str_ireplace(['RJ', 'NC', 'LK', 'FD', 'LOOK', 'FED'], '', $nome_processado); 
+            $nome_processado = str_replace(['✅', '➡', '-', '/', '🔟'], ' ', $nome_processado); 
+            $nome_processado = preg_replace('/[\p{No}]/u', '', $nome_processado); 
+            $nome_processado = preg_replace('/\x{20E3}/u', '', $nome_processado); 
+            $nome_processado = preg_replace('/^\s*\d+[\.\)]?\s*/', '', $nome_processado); 
+            $nome_limpo = trim($nome_processado);
+            if (mb_strlen($nome_limpo) > 0) { $ultimo_nome = $nome_limpo; if($multi_linha > 0) $ultimo_multi = $multi_linha; }
+            if (count($jogo_nums) < 10) continue;
+
+            $contador_geral++;
+            $nome_final = $ultimo_nome;
+            $multi_final = ($multi_linha > 0) ? $multi_linha : $ultimo_multi;
+            $bancas_alvo = !empty($bancas_nesta_linha) ? $bancas_nesta_linha : $ultimas_bancas;
+            if(empty($bancas_alvo)) $bancas_alvo = ['ND'];
+
+            $html_detalhes = "<div class='lista-resultados'>";
+            $total_linha = 0; $numeros_acertados_global = []; $resumos_linha_zap = []; $jogo_premiado = false;
+
+            foreach($bancas_alvo as $banca) {
+                if($banca == 'ND' || !isset($res_bancas[$banca])) {
+                    $html_detalhes .= "<div class='res-item'><span class='res-banca'>{$banca}:</span> <span style='color:#666'>...</span></div>";
+                    $resumos_linha_zap[] = "{$banca}: ..."; continue;
+                }
+                $intersecao = array_intersect($jogo_nums, $res_bancas[$banca]);
+                $qtd = count($intersecao);
+                $numeros_acertados_global = array_merge($numeros_acertados_global, $intersecao);
+
+                $premio = 0; $txt_premio = "";
+                if($qtd == 3) { $premio = $v_terno * $multi_final; $txt_premio = "TERNO 🥉"; }
+                if($qtd == 4) { $premio = $v_quadra * $multi_final; $txt_premio = "QUADRA 🥈"; }
+                if($qtd >= 5) { $premio = $v_quina * $multi_final; $txt_premio = "QUINA 🥇"; }
+                $total_linha += $premio;
+                
+                $classe_qtd = ($qtd > 0) ? 'hit' : 'zero';
+                $html_detalhes .= "<div class='res-item'>
+                    <span><span class='res-banca'>{$banca}</span> <span class='res-qtd $classe_qtd'>{$qtd}x</span></span>
+                    ".($premio > 0 ? "<span class='premio-tag'>$txt_premio</span>" : "")."
+                </div>";
+                
+                $txt_resumo = "{$banca}: {$qtd}x";
+                if($premio > 0) {
+                    $tem_ganhador = true; $jogo_premiado = true;
+                    $val_format = number_format($premio, 2, ',', '.');
+                    $texto_zap_ganhadores .= "👤  *{$nome_final}*\n   ✅ {$qtd}x Acertos ({$banca}) ⏩ {$txt_premio} - R$ {$val_format}\n\n";
+                    $txt_resumo .= " 🏆"; 
+                }
+                $resumos_linha_zap[] = $txt_resumo;
+            }
+            $html_detalhes .= "</div>";
+
+            $count_fmt = str_pad($contador_geral, 2, '0', STR_PAD_LEFT);
+            $str_acertos = implode(" | ", $resumos_linha_zap);
+            $texto_zap_geral .= "▫ #{$count_fmt} {$nome_final} ({$multi_final}x) ➡ {$str_acertos}" . ($jogo_premiado ? " (Cota Ganhadora)" : "") . "\n";
+
+            $bg_tr = $jogo_premiado ? 'class="tr-ganhador"' : '';
+
+            echo "<tr $bg_tr>";
+            echo "<td>
+                    <span class='nome-player'>$nome_final</span>
+                    <div style='margin-top:2px;'>
+                        <span class='contador-jogos'>#$count_fmt</span>
+                        <span class='tag-multi'>{$multi_final}x</span>
+                    </div>
+                  </td>";
+            
+            echo "<td><div class='grade-dezenas'>";
+            foreach($jogo_nums as $n) {
+                $classe = in_array($n, $numeros_acertados_global) ? 'hit' : '';
+                echo "<div class='bola-jogo $classe'>$n</div>";
+            }
+            echo "</div></td>";
+            echo "<td>$html_detalhes</td>";
+            echo "</tr>";
+        }
+        echo "</tbody></table>";
+
+        // TOTAIS
+        if($total_do_dia > 0) {
+            echo "<div class='total-box'>
+                    <div><span style='color:var(--text-secondary)'>Jogos</span><br><strong>$contador_geral</strong></div>
+                    <div style='text-align:right'><span style='color:var(--text-secondary)'>Pagar</span><br><span class='total-valor'>R$ ".number_format($total_do_dia, 2, ',', '.')."</span></div>
+                  </div>";
+        }
+
+        // TEXTO ZAP
+        $data_hoje = date('d/m/Y'); $hora_agora = date('H:i');
+        $texto_final = "📊 *RELATÓRIO VIP BOLOES* 📊\n🗓 {$data_hoje}   ⏰ {$hora_agora}\n\n";
+        $texto_final .= "━━━━━━━━━━━━━━━━━━\n🏆 *LISTA DE GANHADORES* 🏆\n━━━━━━━━━━━━━━━━━━\n\n";
+        $texto_final .= ($tem_ganhador ? $texto_zap_ganhadores : "🐢 *Sem ganhadores nesta rodada*\n      Acumulou para a próxima!\n\n");
+        $texto_final .= "━━━━━━━━━━━━━━━━━━\n🔢 *RESULTADOS DO DIA*\n\n{$texto_resultados_dia}";
+        $texto_final .= "\n━━━━━━━━━━━━━━━━━━\n📋 *CONFERÊNCIA GERAL*\n\nJogos:\n{$texto_zap_geral}";
+        $texto_final .= "\n━━━━━━━━━━━━━━━━━━\n🍀 *Boa sorte na próxima!*\n_Gerado em: {$data_hoje} às {$hora_agora}_";
+        if ($link_gerado) { $texto_final .= "\n\n🔗 *Link do Recibo (Válido 20min):*\n$link_gerado"; }
+        
+        echo "<textarea id='texto_oculto' style='display:none;'>" . htmlspecialchars($texto_final) . "</textarea>";
+
+        if (!$modo_visualizacao) {
+            echo "<div class='fab-container'>
+                    <button onclick=\"copiarTexto()\" class='fab fab-copy'><i class='fas fa-copy'></i> Copiar</button>
+                    <button onclick=\"compartilharZap()\" class='fab fab-whatsapp'><i class='fab fa-whatsapp'></i> Enviar</button>
+                  </div>";
+        }
+    }
+    ?>
 </div>
-
-<script>
-    // --- CONFIGURAÇÃO FIREBASE ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
-        authDomain: "meus-recibos-vip.firebaseapp.com",
-        projectId: "meus-recibos-vip",
-        storageBucket: "meus-recibos-vip.firebasestorage.app",
-        messagingSenderId: "254959368683",
-        appId: "1:254959368683:web:80676a26f614040df6c1ae"
-    };
-    
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-    const db = firebase.firestore();
-
-    // --- VARIÁVEIS ---
-    let isVisualizacao = false;
-    let textoZapFinal = "";
-    const bancasArr = ['rj', 'nc', 'lk', 'fd'];
-
-    // --- INICIALIZAÇÃO ---
-    window.onload = function() {
-        gerarInputsBancas();
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        const verId = urlParams.get('ver');
-
-        if (verId) {
-            carregarRecibo(verId);
-        }
-    };
-
-    function gerarInputsBancas() {
-        bancasArr.forEach(sigla => {
-            const container = document.getElementById(`inputs-${sigla}`);
-            for(let i=0; i<5; i++) {
-                const input = document.createElement('input');
-                input.type = 'tel';
-                input.className = 'input-bola';
-                input.maxLength = 2;
-                input.dataset.banca = sigla;
-                input.dataset.index = i;
-                
-                input.oninput = function() {
-                    this.value = this.value.replace(/[^0-9]/g, '');
-                    if(this.value.length === 2) {
-                        const next = document.querySelector(`input[data-banca="${sigla}"][data-index="${i+1}"]`);
-                        if(next) next.focus();
-                    }
-                };
-                input.onblur = function() {
-                    if(this.value.length === 1) this.value = "0" + this.value;
-                };
-                input.onfocus = function() { if(!this.readOnly) this.value = ''; };
-                
-                container.appendChild(input);
-            }
-        });
-    }
-
-    async function processarConferencia() {
-        const btn = document.getElementById('btn-processar');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loader"></span> Processando...';
-
-        // 1. Coleta Dados
-        const dados = {
-            lista: document.getElementById('lista-jogos').value,
-            premios: {
-                terno: document.getElementById('v_terno').value,
-                quadra: document.getElementById('v_quadra').value,
-                quina: document.getElementById('v_quina').value
-            },
-            resultados: {}
-        };
-
-        bancasArr.forEach(sigla => {
-            const inputs = document.querySelectorAll(`input[data-banca="${sigla}"]`);
-            const numeros = Array.from(inputs).map(i => i.value).filter(v => v.length === 2);
-            if(numeros.length === 5) dados.resultados[sigla.toUpperCase()] = numeros;
-        });
-
-        if(!dados.lista) {
-            alert("Cole a lista de jogos!");
-            btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-double"></i> PROCESSAR';
-            return;
-        }
-
-        // 2. Salva no Firebase
-        try {
-            const docRef = await db.collection('recibos_temp').add({
-                ...dados,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            
-            // Redireciona para o link gerado
-            window.location.href = `?ver=${docRef.id}`;
-            
-        } catch (e) {
-            alert("Erro ao salvar: " + e.message);
-            btn.disabled = false;
-        }
-    }
-
-    async function carregarRecibo(id) {
-        isVisualizacao = true;
-        document.getElementById('page-title').innerText = '📊 RELATÓRIO VIP BOLOES 📊';
-        document.getElementById('page-desc').innerText = 'Visualização segura.';
-        document.getElementById('admin-panel').style.display = 'none'; // Esconde painel de edição
-        
-        // Mostra Painel de Resultados
-        document.getElementById('results-panel').style.display = 'block';
-
-        try {
-            const doc = await db.collection('recibos_temp').doc(id).get();
-            
-            if (!doc.exists) {
-                mostrarErro("Recibo não encontrado.");
-                return;
-            }
-
-            const data = doc.data();
-            const created = data.timestamp.toDate(); // Converte timestamp firebase
-            const now = new Date();
-            const diffMinutes = (now - created) / 1000 / 60;
-
-            if (diffMinutes > 20) {
-                mostrarErro("Link Expirado (Válido por 20 min).");
-                return;
-            }
-
-            // Preencher Inputs (ReadOnly)
-            document.getElementById('timer-display').style.display = 'block';
-            const expiraEm = new Date(created.getTime() + 20*60000);
-            document.getElementById('timer-display').innerHTML = `<i class="far fa-clock"></i> Expira às: ${expiraEm.getHours()}:${String(expiraEm.getMinutes()).padStart(2,'0')}`;
-
-            // Renderizar Tabela
-            renderizarConferencia(data);
-
-        } catch (e) {
-            mostrarErro("Erro ao carregar: " + e.message);
-        }
-    }
-
-    function renderizarConferencia(data) {
-        // Preenche visualmente os inputs de resultado (apenas leitura)
-        const headerInputs = document.querySelector('.grid-bancas'); // Reutiliza o HTML existente se quiser, ou recria
-        // Para simplificar, vamos criar uma versão "visualizacao" dos inputs
-        // ... (Código similar ao gerarInputsBancas, mas preenchendo com data.resultados) ...
-        // Como o usuário pediu "Visualizar link sem botões", focaremos na tabela.
-
-        // Limpa tabela
-        const tbody = document.querySelector('#tabela-resultados tbody');
-        tbody.innerHTML = '';
-        
-        const linhas = data.lista.split('\n');
-        let totalPago = 0;
-        let contador = 0;
-        let temGanhador = false;
-        
-        let zapGanhadores = "";
-        let zapGeral = "";
-        let zapResultados = "";
-
-        // Prepara resultados para texto
-        Object.keys(data.resultados).forEach(b => {
-            let ico = b==='RJ'?'🔵':(b==='NC'?'🟠':(b==='LK'?'🟣':'🟢'));
-            zapResultados += `${ico} *${b}:* ${data.resultados[b].join(' ')}\n`;
-        });
-
-        linhas.forEach(linha => {
-            // Regex simples para extrair dados (adaptado do seu script original)
-            const nums = linha.match(/\b\d{2}\b/g) || [];
-            // Filtra numeros que parecem dezenas (ignorando multiplicadores 1x, 2x no inicio se possivel)
-            // ... (Lógica simplificada de limpeza) ...
-            // Para o exemplo funcionar rápido, assumiremos que a linha é limpa na origem ou aqui
-            
-            // Extrai multiplicador
-            let multi = 1;
-            const matchMulti = linha.match(/(\d+)[xX]/);
-            if(matchMulti) multi = parseInt(matchMulti[1]);
-
-            // Limpa nome
-            let nome = linha.replace(/[\d\/\.\-\s]{10,}/, '').replace(/\d+[xX]/, '').replace(/RJ|NC|LK|FD/gi, '').replace(/[✅➡\/]/g,'').trim();
-            if(nome.length === 0) nome = "Desconhecido";
-
-            // Verifica Acertos
-            let htmlDetalhes = "<div class='lista-resultados'>";
-            let textoResumoLinha = [];
-            let ganhouLinha = false;
-
-            // Identifica bancas jogadas (RJ, NC...)
-            let bancasJogadas = [];
-            if(linha.toUpperCase().includes('RJ')) bancasJogadas.push('RJ');
-            if(linha.toUpperCase().includes('NC')) bancasJogadas.push('NC');
-            if(linha.toUpperCase().includes('LK')) bancasJogadas.push('LK');
-            if(linha.toUpperCase().includes('FD')) bancasJogadas.push('FD');
-            if(bancasJogadas.length === 0) bancasJogadas.push('ND');
-
-            bancasJogadas.forEach(banca => {
-                const resultadoBanca = data.resultados[banca];
-                let qtd = 0;
-                if(resultadoBanca) {
-                    // Conta acertos
-                    const acertos = nums.filter(n => resultadoBanca.includes(n));
-                    qtd = acertos.length;
-                }
-
-                // Calcula Premio
-                let premio = 0;
-                let nomePremio = "";
-                if(qtd >= 3) {
-                    if(qtd==3) { premio = data.premios.terno * multi; nomePremio="TERNO 🥉"; }
-                    if(qtd==4) { premio = data.premios.quadra * multi; nomePremio="QUADRA 🥈"; }
-                    if(qtd>=5) { premio = data.premios.quina * multi; nomePremio="QUINA 🥇"; }
-                    
-                    totalPago += premio;
-                    ganhouLinha = true;
-                    temGanhador = true;
-                    
-                    // Texto Zap Ganhador
-                    zapGanhadores += `👤 *${nome}*\n   ✅ ${qtd}x Acertos (${banca}) ⏩ ${nomePremio} - R$ ${premio.toFixed(2).replace('.',',')}\n\n`;
-                }
-
-                // HTML
-                const classHit = qtd > 0 ? 'hit' : 'zero';
-                const tagPremio = premio > 0 ? `<span class="premio-tag">${nomePremio}</span>` : '';
-                
-                htmlDetalhes += `<div class="res-item">
-                    <span><span class="res-banca">${banca}</span> <span class="res-qtd ${classHit}">${qtd}x</span></span>
-                    ${tagPremio}
-                </div>`;
-                
-                let txtRes = `${banca}: ${qtd}x`;
-                if(premio > 0) txtRes += " 🏆";
-                textoResumoLinha.push(txtRes);
-            });
-            htmlDetalhes += "</div>";
-
-            if(nums.length >= 10) {
-                contador++;
-                const tr = document.createElement('tr');
-                if(ganhouLinha) tr.className = 'tr-ganhador';
-
-                // Nome e Meta
-                const td1 = document.createElement('td');
-                td1.innerHTML = `<div class="player-info">
-                    <div class="nome-player">${nome}</div>
-                    <div class="meta-badges"><span class="badge-counter">#${String(contador).padStart(2,'0')}</span><span class="badge-multi">${multi}x</span></div>
-                </div>`;
-
-                // Dezenas
-                const td2 = document.createElement('td');
-                let htmlBolas = '<div class="grade-dezenas">';
-                nums.forEach(n => htmlBolas += `<div class="bola-jogo">${n}</div>`);
-                htmlBolas += '</div>';
-                td2.innerHTML = htmlBolas;
-
-                // Resultados
-                const td3 = document.createElement('td');
-                td3.innerHTML = htmlDetalhes;
-
-                tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
-                tbody.appendChild(tr);
-                
-                // Zap Geral
-                let linhaZap = `▫ #${String(contador).padStart(2,'0')} ${nome} (${multi}x) ➡ ${textoResumoLinha.join(' | ')}`;
-                if(ganhouLinha) linhaZap += " (Cota Ganhadora)";
-                zapGeral += linhaZap + "\n";
-            }
-        });
-
-        // Totais
-        document.getElementById('total-box').innerHTML = `
-            <div><span style='color:var(--text-secondary)'>Jogos</span><br><strong>${contador}</strong></div>
-            <div style='text-align:right'><span style='color:var(--text-secondary)'>Pagar</span><br><span class='total-valor'>R$ ${totalPago.toFixed(2).replace('.',',')}</span></div>
-        `;
-
-        // Monta Texto Final Zap (fica oculto para copia)
-        const hoje = new Date().toLocaleDateString('pt-BR');
-        const hora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-        
-        textoZapFinal = `📊 *RELATÓRIO VIP BOLOES* 📊\n🗓 ${hoje}   ⏰ ${hora}\n\n`;
-        textoZapFinal += `━━━━━━━━━━━━━━━━━━\n🏆 *LISTA DE GANHADORES* 🏆\n━━━━━━━━━━━━━━━━━━\n\n`;
-        textoZapFinal += temGanhador ? zapGanhadores : "🐢 *Sem ganhadores nesta rodada*\n      Acumulou para a próxima!\n\n";
-        textoZapFinal += `━━━━━━━━━━━━━━━━━━\n🔢 *RESULTADOS DO DIA*\n\n${zapResultados}`;
-        textoZapFinal += `\n━━━━━━━━━━━━━━━━━━\n📋 *CONFERÊNCIA GERAL*\n\nJogos:\n${zapGeral}`;
-        textoZapFinal += `\n━━━━━━━━━━━━━━━━━━\n🍀 *Boa sorte na próxima!*\n_Gerado em: ${hoje} às ${hora}_`;
-        
-        // Link (se não for visualizacao, ou seja, acabou de gerar)
-        // Como estamos na visualização, o link é a propria URL
-        if(!isVisualizacao) {
-             // Se for admin gerando, mostra os botões flutuantes
-             document.getElementById('fab-container').style.display = 'flex';
-        }
-    }
-
-    function mostrarErro(msg) {
-        document.getElementById('admin-panel').style.display = 'none';
-        document.getElementById('results-panel').style.display = 'none';
-        const box = document.getElementById('error-box');
-        box.style.display = 'block';
-        document.getElementById('error-msg').innerHTML = msg;
-    }
-
-    function limparTudo() {
-        if(confirm("Limpar tudo?")) {
-            document.getElementById('lista-jogos').value = '';
-            document.querySelectorAll('.input-bola').forEach(i => i.value = '');
-        }
-    }
-    
-    // Funções de Copiar/Zap
-    function copiarTexto() {
-        navigator.clipboard.writeText(textoZapFinal + `\n\n🔗 *Link do Recibo:*\n${window.location.href}`).then(() => alert("Relatório copiado!"));
-    }
-    function compartilharZap() {
-        const texto = textoZapFinal + `\n\n🔗 *Link do Recibo:*\n${window.location.href}`;
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
-    }
-
-</script>
-
 </body>
 </html>
