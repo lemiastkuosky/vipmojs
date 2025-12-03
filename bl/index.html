@@ -6,17 +6,14 @@
     <meta name="theme-color" content="#18181b">
     <title>Painel Master VIP</title>
     
-    <!-- Fontes e Ícones -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
-    <!-- FIREBASE SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
     <style>
         :root {
-            /* TEMA CINZA CHUMBO (Lead/Zinc) */
             --bg-body: #18181b;       
             --bg-card: #27272a;       
             --bg-input: #3f3f46;      
@@ -195,41 +192,34 @@
 
 <div class="container">
 
-    <!-- Mensagem de Erro -->
     <div id="error-box" class="hidden" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #ef4444;">
         <h3 id="error-title">⚠️ Link Inválido</h3>
         <p id="error-msg"></p>
         <br><a href="?" style="color: white; font-weight: bold;">Voltar</a>
     </div>
 
-    <!-- HEADER -->
     <div class="header-card" id="header-card">
         <h1 id="page-title">Painel de Controle VIP</h1>
         <div id="timer-display" class="hidden" style="margin-top:10px; font-size:0.8rem; opacity:0.7;"></div>
         <p id="page-desc">Validação e gestão de bolões.</p>
     </div>
 
-    <!-- PAINEL ADMIN -->
     <div id="admin-panel">
         <div class="card">
             <div class="card-title"><i class="fas fa-dice"></i> Resultados</div>
             <div class="grid-bancas">
-                <!-- RJ -->
                 <div class="banca-box">
                     <span class="banca-label lbl-rj">RJ</span>
                     <div class="inputs-row" id="inputs-rj"></div>
                 </div>
-                <!-- NC -->
                 <div class="banca-box">
                     <span class="banca-label lbl-nc">NC</span>
                     <div class="inputs-row" id="inputs-nc"></div>
                 </div>
-                <!-- LK -->
                 <div class="banca-box">
                     <span class="banca-label lbl-lk">LK</span>
                     <div class="inputs-row" id="inputs-lk"></div>
                 </div>
-                <!-- FD -->
                 <div class="banca-box">
                     <span class="banca-label lbl-fd">FD</span>
                     <div class="inputs-row" id="inputs-fd"></div>
@@ -257,7 +247,6 @@
         </div>
     </div>
 
-    <!-- RESULTADOS -->
     <div id="results-panel" class="hidden">
         <div class="card" style="padding:0; border:none; background:transparent; box-shadow:none;">
             <h3 style="margin:0 0 15px 0; font-size:1.1rem; color:var(--text-primary);"><i class="fas fa-list-check"></i> Conferência</h3>
@@ -274,7 +263,6 @@
         <div class="total-box" id="total-box"></div>
     </div>
 
-    <!-- BOTÕES FLUTUANTES -->
     <div class="fab-container hidden" id="fab-container">
         <button onclick="copiarTexto()" class="fab fab-copy"><i class="fas fa-copy"></i> Copiar</button>
         <button onclick="compartilharZap()" class="fab fab-whatsapp"><i class="fab fa-whatsapp"></i> Enviar</button>
@@ -283,9 +271,6 @@
 </div>
 
 <script>
-    // ============================================================
-    // 1. SUA CONFIGURAÇÃO DO FIREBASE
-    // ============================================================
     const firebaseConfig = {
       apiKey: "AIzaSyAP5P08sBQ7A79wP37b-PLhCBO591YJPpY",
       authDomain: "vipmojs-836f9.firebaseapp.com",
@@ -296,23 +281,19 @@
       appId: "1:187496268275:web:53e57c82ef90fc603f1286"
     };
     
-    // Inicializa
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
 
-    // --- VARIÁVEIS GLOBAIS ---
-    let isVisualizacao = false;
+    let currentReceiptId = null; 
     let textoZapFinal = "";
     const bancasArr = ['rj', 'nc', 'lk', 'fd'];
 
-    // --- INICIALIZAÇÃO ---
     window.onload = function() {
         gerarInputsBancas();
-        
-        // Verifica se tem parâmetro na URL
         const urlParams = new URLSearchParams(window.location.search);
         const verId = urlParams.get('ver');
-
         if (verId) {
             carregarRecibo(verId);
         }
@@ -328,8 +309,6 @@
                 input.maxLength = 2;
                 input.dataset.banca = sigla;
                 input.dataset.index = i;
-                
-                // Lógica de pular input
                 input.oninput = function() {
                     this.value = this.value.replace(/[^0-9]/g, '');
                     if(this.value.length === 2) {
@@ -341,7 +320,6 @@
                     if(this.value.length === 1) this.value = "0" + this.value;
                 };
                 input.onfocus = function() { if(!this.readOnly) this.value = ''; };
-                
                 container.appendChild(input);
             }
         });
@@ -352,7 +330,6 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="loader"></span> Processando...';
 
-        // 1. Coleta Dados da Tela
         const dados = {
             lista: document.getElementById('lista-jogos').value,
             premios: {
@@ -360,10 +337,10 @@
                 quadra: document.getElementById('v_quadra').value,
                 quina: document.getElementById('v_quina').value
             },
-            resultados: {}
+            resultados: {},
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         };
 
-        // Coleta resultados das bancas
         bancasArr.forEach(sigla => {
             const inputs = document.querySelectorAll(`input[data-banca="${sigla}"]`);
             const numeros = Array.from(inputs).map(i => i.value).filter(v => v.length === 2);
@@ -377,15 +354,15 @@
         }
 
         try {
-            // 2. Salva no Firestore (Coleção 'recibos_temp')
-            const docRef = await db.collection('recibos_temp').add({
-                ...dados,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            
-            // 3. Recarrega a página com o ID gerado
-            window.location.href = `?ver=${docRef.id}`;
-            
+            const novoRef = db.ref('recibos_temp').push();
+            await novoRef.set(dados);
+            currentReceiptId = novoRef.key;
+            renderizarConferencia(dados);
+            const resultsPanel = document.getElementById('results-panel');
+            resultsPanel.classList.remove('hidden');
+            resultsPanel.scrollIntoView({ behavior: 'smooth' });
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-double"></i> PROCESSAR';
         } catch (e) {
             console.error(e);
             alert("Erro ao salvar: " + e.message);
@@ -395,42 +372,32 @@
     }
 
     async function carregarRecibo(id) {
-        isVisualizacao = true;
         document.getElementById('page-title').innerText = '📊 RELATÓRIO VIP BOLOES 📊';
         document.getElementById('page-desc').innerText = 'Visualização segura.';
         document.getElementById('admin-panel').classList.add('hidden'); 
         document.getElementById('results-panel').classList.remove('hidden');
-
+        currentReceiptId = id;
         try {
-            const doc = await db.collection('recibos_temp').doc(id).get();
-            
-            if (!doc.exists) {
+            const snapshot = await db.ref('recibos_temp/' + id).once('value');
+            if (!snapshot.exists()) {
                 mostrarErro("Recibo não encontrado ou já expirado.");
                 return;
             }
-
-            const data = doc.data();
-            const created = data.timestamp ? data.timestamp.toDate() : new Date();
-            const now = new Date();
+            const data = snapshot.val();
+            const created = data.timestamp;
+            const now = Date.now();
             const diffMinutes = (now - created) / 1000 / 60;
-
-            // 20 minutos de validade
             if (diffMinutes > 20) {
                 mostrarErro("🚫 Link Expirado (Válido por 20 min).");
                 return;
             }
-
-            // Mostra o Timer
             const timerDisplay = document.getElementById('timer-display');
             timerDisplay.classList.remove('hidden');
-            const expiraEm = new Date(created.getTime() + 20*60000);
+            const expiraEm = new Date(created + 20*60000);
             const horaExp = expiraEm.getHours().toString().padStart(2,'0');
             const minExp = expiraEm.getMinutes().toString().padStart(2,'0');
             timerDisplay.innerHTML = `<i class="far fa-clock"></i> Expira às: ${horaExp}:${minExp}`;
-
-            // Renderiza a tabela
             renderizarConferencia(data);
-
         } catch (e) {
             console.error(e);
             mostrarErro("Erro ao carregar: " + e.message);
@@ -450,40 +417,36 @@
         let zapGeral = "";
         let zapResultados = "";
 
-        // 1. Prepara string de resultados para o Zap
-        Object.keys(data.resultados).forEach(b => {
-            let ico = b==='RJ'?'🔵':(b==='NC'?'🟠':(b==='LK'?'🟣':'🟢'));
-            zapResultados += `${ico} *${b}:* ${data.resultados[b].join(' ')}\n`;
-        });
+        if (data.resultados) {
+            Object.keys(data.resultados).forEach(b => {
+                let ico = b==='RJ'?'🔵':(b==='NC'?'🟠':(b==='LK'?'🟣':'🟢'));
+                zapResultados += `${ico} *${b}:* ${data.resultados[b].join(' ')}\n`;
+            });
+        }
 
         linhas.forEach(linha => {
-            // Regex para extrair dezenas (2 dígitos)
             const nums = linha.match(/\b\d{2}\b/g) || [];
-            
-            // Extrai multiplicador (ex: 2x)
             let multi = 1;
             const matchMulti = linha.match(/(\d+)[xX]/);
             if(matchMulti) multi = parseInt(matchMulti[1]);
 
-            // Limpa nome
             let nome = linha.replace(/[\d\/\.\-\s]{10,}/, '').replace(/\d+[xX]/, '').replace(/RJ|NC|LK|FD/gi, '').replace(/[✅➡\/]/g,'').trim();
             if(nome.length === 0) nome = "Desconhecido";
 
-            // Processa Acertos
             let htmlDetalhes = "<div class='lista-resultados'>";
             let textoResumoLinha = [];
             let ganhouLinha = false;
 
-            // Detecta bancas na linha
             let bancasJogadas = [];
-            if(linha.toUpperCase().includes('RJ')) bancasJogadas.push('RJ');
-            if(linha.toUpperCase().includes('NC')) bancasJogadas.push('NC');
-            if(linha.toUpperCase().includes('LK')) bancasJogadas.push('LK');
-            if(linha.toUpperCase().includes('FD')) bancasJogadas.push('FD');
+            const lineUp = linha.toUpperCase();
+            if(lineUp.includes('RJ') || lineUp.includes('RIO') || lineUp.includes('PT')) bancasJogadas.push('RJ');
+            if(lineUp.includes('NC')) bancasJogadas.push('NC');
+            if(lineUp.includes('LK') || lineUp.includes('LOOK')) bancasJogadas.push('LK');
+            if(lineUp.includes('FD') || lineUp.includes('FED') || lineUp.includes('FEDERAL')) bancasJogadas.push('FD');
             if(bancasJogadas.length === 0) bancasJogadas.push('ND');
 
             bancasJogadas.forEach(banca => {
-                const resultadoBanca = data.resultados[banca];
+                const resultadoBanca = data.resultados ? data.resultados[banca] : null;
                 let qtd = 0;
                 if(resultadoBanca) {
                     const acertos = nums.filter(n => resultadoBanca.includes(n));
@@ -502,7 +465,8 @@
                     temGanhador = true;
                     
                     const valFmt = premio.toFixed(2).replace('.',',');
-                    zapGanhadores += `👤 *${nome}*\n   ✅ ${qtd}x Acertos (${banca}) ⏩ ${nomePremio} - R$ ${valFmt}\n\n`;
+                    // FORMATO EXATO PEDIDO PARA O GANHADOR
+                    zapGanhadores += `👤 *${nome}*\n   ${qtd}x Acertos (${banca}) ⏩ ${nomePremio} - R$ ${valFmt}\n\n`;
                 }
 
                 const classHit = qtd > 0 ? 'hit' : 'zero';
@@ -524,7 +488,6 @@
                 const tr = document.createElement('tr');
                 if(ganhouLinha) tr.className = 'tr-ganhador';
 
-                // HTML Tabela
                 const td1 = document.createElement('td');
                 td1.innerHTML = `<div class="nome-player">${nome}</div>
                                  <div style="margin-top:2px;">
@@ -532,9 +495,20 @@
                                     <span class="tag-multi">${multi}x</span>
                                  </div>`;
 
+                let numerosSorteadosLine = [];
+                bancasJogadas.forEach(b => {
+                    if(data.resultados && data.resultados[b]) {
+                        numerosSorteadosLine = [...numerosSorteadosLine, ...data.resultados[b]];
+                    }
+                });
+
                 const td2 = document.createElement('td');
                 let htmlBolas = '<div class="grade-dezenas">';
-                nums.forEach(n => htmlBolas += `<div class="bola-jogo">${n}</div>`);
+                nums.forEach(n => {
+                    const isHit = numerosSorteadosLine.includes(n);
+                    const className = isHit ? 'bola-jogo hit' : 'bola-jogo';
+                    htmlBolas += `<div class="${className}">${n}</div>`;
+                });
                 htmlBolas += '</div>';
                 td2.innerHTML = htmlBolas;
 
@@ -544,34 +518,36 @@
                 tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
                 tbody.appendChild(tr);
                 
-                // Zap Geral
+                // FORMATO EXATO PEDIDO PARA A LISTA GERAL
                 let linhaZap = `▫ #${String(contador).padStart(2,'0')} ${nome} (${multi}x) ➡ ${textoResumoLinha.join(' | ')}`;
                 if(ganhouLinha) linhaZap += " (Cota Ganhadora)";
                 zapGeral += linhaZap + "\n";
             }
         });
 
-        // Exibe Totais
         document.getElementById('total-box').innerHTML = `
             <div><span style='color:var(--text-secondary)'>Jogos</span><br><strong>${contador}</strong></div>
             <div style='text-align:right'><span style='color:var(--text-secondary)'>Pagar</span><br><span class='total-valor'>R$ ${totalPago.toFixed(2).replace('.',',')}</span></div>
         `;
 
-        // Gera Texto Final
         const hoje = new Date().toLocaleDateString('pt-BR');
         const hora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
         
-        textoZapFinal = `📊 *RELATÓRIO VIP BOLOES* 📊\n🗓 ${hoje}   ⏰ ${hora}\n\n`;
-        textoZapFinal += `━━━━━━━━━━━━━━━━━━\n🏆 *LISTA DE GANHADORES* 🏆\n━━━━━━━━━━━━━━━━━━\n\n`;
-        textoZapFinal += temGanhador ? zapGanhadores : "🐢 *Sem ganhadores nesta rodada*\n      Acumulou para a próxima!\n\n";
+        // GERAÇÃO DO LINK DENTRO DA FUNÇÃO PARA FICAR PRONTO
+        const baseUrl = window.location.origin + window.location.pathname;
+        const linkRecibo = currentReceiptId ? `${baseUrl}?ver=${currentReceiptId}` : baseUrl;
+
+        // MONTAGEM DO TEXTO FINAL (FORMATO EXATO PEDIDO)
+        textoZapFinal = `📊 *RELATÓRIO VIP BOLOES* 📊\n\n`;
+        textoZapFinal += `━━━━━━━━━━━━━━━━━━\n🏆 *LISTA DE GANHADORES* 🏆\n\n`;
+        textoZapFinal += temGanhador ? zapGanhadores : "🐢 *Sem ganhadores nesta rodada*\n\n";
         textoZapFinal += `━━━━━━━━━━━━━━━━━━\n🔢 *RESULTADOS DO DIA*\n\n${zapResultados}`;
         textoZapFinal += `\n━━━━━━━━━━━━━━━━━━\n📋 *CONFERÊNCIA GERAL*\n\nJogos:\n${zapGeral}`;
-        textoZapFinal += `\n━━━━━━━━━━━━━━━━━━\n🍀 *Boa sorte na próxima!*\n_Gerado em: ${hoje} às ${hora}_`;
+        textoZapFinal += `\n━━━━━━━━━━━━━━━━━━\n🍀 *Boa sorte na próxima!*\n\n`;
+        textoZapFinal += `🔗 *Link do Recibo (Válido 20min):*\n${linkRecibo}\n\n`;
+        textoZapFinal += `_Gerado em: ${hoje} às ${hora}_`;
         
-        // Se for Admin (não visualização), mostra botões
-        if(!isVisualizacao) {
-             document.getElementById('fab-container').classList.remove('hidden');
-        }
+        document.getElementById('fab-container').classList.remove('hidden');
     }
 
     function mostrarErro(msg) {
@@ -586,19 +562,19 @@
         if(confirm("Limpar tudo?")) {
             document.getElementById('lista-jogos').value = '';
             document.querySelectorAll('.input-bola').forEach(i => i.value = '');
-            window.location.href = window.location.pathname; // Recarrega para limpar url
+            window.history.replaceState({}, document.title, window.location.pathname);
+            location.reload();
         }
     }
     
     function copiarTexto() {
-        const link = window.location.href;
-        navigator.clipboard.writeText(textoZapFinal + `\n\n🔗 *Link do Recibo:*\n${link}`).then(() => alert("Relatório copiado!"));
+        // Copia exatamente o texto gerado
+        navigator.clipboard.writeText(textoZapFinal).then(() => alert("Relatório copiado!"));
     }
     
     function compartilharZap() {
-        const link = window.location.href;
-        const texto = textoZapFinal + `\n\n🔗 *Link do Recibo:*\n${link}`;
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+        // Envia exatamente o texto gerado
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoZapFinal)}`, '_blank');
     }
 </script>
 
