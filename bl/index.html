@@ -97,16 +97,9 @@
         
         /* BOTÕES */
         .action-group { display: flex; gap: 10px; margin-top: 25px; }
-        .btn-action {
-            flex: 1; background: var(--primary); color: white; border: none;
-            padding: 16px; font-size: 16px; font-weight: 700; border-radius: var(--radius-md);
-            cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-        .btn-action:hover { filter: brightness(1.1); }
-        .btn-action:disabled { opacity: 0.7; cursor: not-allowed; }
-
+        
         .btn-clear {
-            width: 30%; background: transparent; color: var(--danger); 
+            width: 100%; background: transparent; color: var(--danger); 
             border: 1px solid var(--danger); padding: 16px; font-size: 16px; font-weight: 700; 
             border-radius: var(--radius-md); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
         }
@@ -230,7 +223,7 @@
 
     <div id="admin-panel">
         <div class="card">
-            <div class="card-title"><i class="fas fa-dice"></i> Resultados</div>
+            <div class="card-title"><i class="fas fa-dice"></i> Resultados (Tempo Real)</div>
             <div class="grid-bancas">
                 <div class="banca-box">
                     <span class="banca-label lbl-rj">RJ</span>
@@ -267,14 +260,12 @@
                     <input type="number" step="0.01" class="form-control" id="v_quina" value="2500.00">
                 </div>
             </div>
-            <textarea id="lista-jogos" class="form-control" placeholder="Cole a lista aqui..."></textarea>
+            
+            <textarea id="lista-jogos" class="form-control" placeholder="Cole a lista aqui..." style="min-height: 150px;"></textarea>
             
             <div class="action-group">
                 <button type="button" onclick="limparTudo()" class="btn-clear">
-                    <i class="fas fa-trash-alt"></i> LIMPAR
-                </button>
-                <button type="button" onclick="processarConferencia()" class="btn-action" id="btn-processar">
-                    <i class="fas fa-check-double"></i> PROCESSAR
+                    <i class="fas fa-trash-alt"></i> LIMPAR TUDO
                 </button>
             </div>
         </div>
@@ -298,12 +289,12 @@
 
     <footer class="app-footer">
         <div>Criado by <strong>Le Miastkuosky</strong> <i class="fas fa-code"></i></div>
-        <span class="footer-ver">Versão 1.3</span>
+        <span class="footer-ver">Versão 1.6 (Live)</span>
     </footer>
 
     <div class="fab-container hidden" id="fab-container">
-        <button onclick="copiarTexto()" class="fab fab-copy"><i class="fas fa-copy"></i> Copiar</button>
-        <button onclick="compartilharZap()" class="fab fab-whatsapp"><i class="fab fa-whatsapp"></i> Enviar</button>
+        <button onclick="copiarTexto()" class="fab fab-copy" id="btn-copy"><i class="fas fa-copy"></i> Copiar</button>
+        <button onclick="compartilharZap()" class="fab fab-whatsapp" id="btn-zap"><i class="fab fa-whatsapp"></i> Enviar</button>
     </div>
 
 </div>
@@ -330,6 +321,10 @@
 
     window.onload = function() {
         gerarInputsBancas();
+        
+        // Ativar Tempo Real
+        setupRealTimeListeners();
+
         const urlParams = new URLSearchParams(window.location.search);
         const verId = urlParams.get('ver');
         if (verId) {
@@ -347,29 +342,46 @@
                 input.maxLength = 2;
                 input.dataset.banca = sigla;
                 input.dataset.index = i;
-                input.oninput = function() {
+                
+                // Adiciona evento de tempo real nas bolinhas
+                input.addEventListener('input', atualizarConferenciaEmTempoReal);
+
+                input.oninput = function(e) {
                     this.value = this.value.replace(/[^0-9]/g, '');
                     if(this.value.length === 2) {
                         const next = document.querySelector(`input[data-banca="${sigla}"][data-index="${i+1}"]`);
                         if(next) next.focus();
                     }
+                    atualizarConferenciaEmTempoReal(); // Chama a atualização
                 };
                 input.onblur = function() {
                     if(this.value.length === 1) this.value = "0" + this.value;
+                    atualizarConferenciaEmTempoReal(); // Garante atualização ao sair
                 };
                 input.onfocus = function() { if(!this.readOnly) this.value = ''; };
+                
                 container.appendChild(input);
             }
         });
     }
 
-    async function processarConferencia() {
-        const btn = document.getElementById('btn-processar');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loader"></span> Processando...';
+    function setupRealTimeListeners() {
+        // Escuta digitação na lista
+        document.getElementById('lista-jogos').addEventListener('input', atualizarConferenciaEmTempoReal);
+        
+        // Escuta mudança nos prêmios
+        document.getElementById('v_terno').addEventListener('input', atualizarConferenciaEmTempoReal);
+        document.getElementById('v_quadra').addEventListener('input', atualizarConferenciaEmTempoReal);
+        document.getElementById('v_quina').addEventListener('input', atualizarConferenciaEmTempoReal);
+    }
+
+    function gerarDadosObjeto() {
+        let rawLista = document.getElementById('lista-jogos').value;
+        // Correção de linhas quebradas
+        rawLista = rawLista.replace(/\n(?=\d{2}\/)/g, ' ');
 
         const dados = {
-            lista: document.getElementById('lista-jogos').value,
+            lista: rawLista,
             premios: {
                 terno: document.getElementById('v_terno').value,
                 quadra: document.getElementById('v_quadra').value,
@@ -385,27 +397,38 @@
             if(numeros.length === 5) dados.resultados[sigla.toUpperCase()] = numeros;
         });
 
-        if(!dados.lista) {
-            alert("Cole a lista de jogos!");
-            btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-double"></i> PROCESSAR';
+        return dados;
+    }
+
+    function atualizarConferenciaEmTempoReal() {
+        // Apenas gera os dados e desenha a tela (NÃO SALVA NO FIREBASE AINDA)
+        const dados = gerarDadosObjeto();
+        
+        if (!dados.lista.trim()) {
+            document.getElementById('results-panel').classList.add('hidden');
+            document.getElementById('fab-container').classList.add('hidden');
             return;
         }
 
+        renderizarConferencia(dados);
+        
+        // Mostra painel se tiver dados
+        document.getElementById('results-panel').classList.remove('hidden');
+    }
+
+    async function salvarReciboNoFirebase() {
+        const dados = gerarDadosObjeto();
         try {
             const novoRef = db.ref('recibos_temp').push();
             await novoRef.set(dados);
             currentReceiptId = novoRef.key;
-            renderizarConferencia(dados);
-            const resultsPanel = document.getElementById('results-panel');
-            resultsPanel.classList.remove('hidden');
-            resultsPanel.scrollIntoView({ behavior: 'smooth' });
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check-double"></i> PROCESSAR';
+            // Atualiza a renderização para incluir o link novo no textoZapFinal
+            renderizarConferencia(dados); 
+            return true;
         } catch (e) {
             console.error(e);
-            alert("Erro ao salvar: " + e.message);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check-double"></i> PROCESSAR';
+            alert("Erro ao gerar link: " + e.message);
+            return false;
         }
     }
 
@@ -468,16 +491,15 @@
             const matchMulti = linha.match(/(\d+)[xX]/);
             if(matchMulti) multi = parseInt(matchMulti[1]);
 
-            // === ATUALIZAÇÃO: REMOÇÃO DE EMOJIS, ÍNDICES E HÍFEN FINAL ===
             let nome = linha
-                .replace(/[\d\/\.\-\s]{10,}/, '')    // Remove números longos (telefone/data)
-                .replace(/\d+[xX]/, '')              // Remove multiplicador (2x)
-                .replace(/RJ|NC|LK|FD|RIO|FED|LOOK|FEDERAL/gi, '') // Remove bancas
-                .replace(/[✅➡\/]/g,'')              // Remove setas e checks
-                .replace(/[\u0030-\u0039]\uFE0F?\u20E3/g, '') // Remove emojis 0️⃣ a 9️⃣
-                .replace(/🔟/g, '')                  // Remove emoji 10
-                .replace(/^[\d\s\.\-\)]+/, '')       // Remove índices do início (ex: "01 - ", "1.")
-                .replace(/\s*-\s*$/, '')             // NOVO: Remove hífen solto no final do nome
+                .replace(/[\d\/\.\-\s]{10,}/, '')    
+                .replace(/\d+[xX]/, '')              
+                .replace(/RJ|NC|LK|FD|RIO|FED|LOOK|FEDERAL/gi, '') 
+                .replace(/[✅➡\/]/g,'')              
+                .replace(/[\u0030-\u0039]\uFE0F?\u20E3/g, '') 
+                .replace(/🔟/g, '')                  
+                .replace(/^[\d\s\.\-\)]+/, '')       
+                .replace(/\s*-\s*$/, '')             
                 .trim();
             
             if(nome.length === 0) nome = "Desconhecido";
@@ -607,16 +629,35 @@
         if(confirm("Limpar tudo?")) {
             document.getElementById('lista-jogos').value = '';
             document.querySelectorAll('.input-bola').forEach(i => i.value = '');
+            currentReceiptId = null; // Reseta ID
             window.history.replaceState({}, document.title, window.location.pathname);
-            location.reload();
+            atualizarConferenciaEmTempoReal(); // Limpa visualização
         }
     }
     
-    function copiarTexto() {
-        navigator.clipboard.writeText(textoZapFinal).then(() => alert("Relatório copiado!"));
+    async function copiarTexto() {
+        const btn = document.getElementById('btn-copy');
+        const original = btn.innerHTML;
+        btn.innerHTML = '<span class="loader"></span> Gerando Link...';
+        
+        // Salva e gera link antes de copiar
+        await salvarReciboNoFirebase();
+        
+        navigator.clipboard.writeText(textoZapFinal).then(() => {
+            btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+            setTimeout(() => btn.innerHTML = original, 2000);
+        });
     }
     
-    function compartilharZap() {
+    async function compartilharZap() {
+        const btn = document.getElementById('btn-zap');
+        const original = btn.innerHTML;
+        btn.innerHTML = '<span class="loader"></span> Gerando Link...';
+        
+        // Salva e gera link antes de enviar
+        await salvarReciboNoFirebase();
+        
+        btn.innerHTML = original;
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoZapFinal)}`, '_blank');
     }
 </script>
