@@ -6594,7 +6594,30 @@ function generateSurpresinha() {
     // convertToEmojisRealTime(); // O dispatchEvent acima já chama isso, mas se quiser garantir, pode descomentar.
 }
 
-// --- Funções Reais para o NOVO Modal de Palpites ---
+function getBichoFromNumber(numStr) {
+    const n = parseInt(numStr, 10);
+    if (isNaN(n)) return null;
+
+    // Tabela simplificada (00 é vacas, 99 é vaca, etc)
+    // A lógica matemática é: Math.ceil(n / 4)
+    // Exceção: 00 é 25 (Vaca)
+    
+    let grupo = Math.ceil(n / 4);
+    if (n === 0) grupo = 25; // 00 é Vaca
+
+    const nomesBichos = [
+        "", "Avestruz", "Águia", "Burro", "Borboleta", "Cachorro", // 1-5
+        "Cabra", "Carneiro", "Camelo", "Cobra", "Coelho",         // 6-10
+        "Cavalo", "Elefante", "Galo", "Gato", "Jacaré",           // 11-15
+        "Leão", "Macaco", "Porco", "Pavão", "Peru",               // 16-20
+        "Touro", "Tigre", "Urso", "Veado", "Vaca"                 // 21-25
+    ];
+
+    return {
+        grupo: grupo,
+        nome: nomesBichos[grupo] || "Desconhecido"
+    };
+}
 
 function showPalpitesIAModal() {
     const modal = document.getElementById('palpitesIAModal');
@@ -12635,10 +12658,48 @@ function displayResultsWithSummary(type, resultsArray) {
         return textToReturn.trim();
     }
 
-    function copyOnlyEmojisToClipboard() {
+    async function copyOnlyEmojisToClipboard() {
+    // 1. Verifica se estamos no modo "Apenas Bolão" (com barra)
+    const isBolaoMode = document.querySelector('input[name="viewOption"][value="separado_barra"]')?.checked;
+
+    if (isBolaoMode) {
+        // --- LÓGICA ESPECIAL PARA O MODO BOLÃO ---
+
+        // Pega as caixinhas marcadas na tela principal
+        const checkboxes = document.querySelectorAll('input[name="bolaoExtracaoView"]:checked');
+        const extracoesSelecionadas = Array.from(checkboxes).map(cb => cb.value);
+
+        // Monta a mensagem de confirmação
+        let mensagem = '';
+        if (extracoesSelecionadas.length > 0) {
+            mensagem = `Você selecionou as extrações: <strong>${extracoesSelecionadas.join(', ')}</strong>.\n\nO texto será copiado com essa informação. Está correto?`;
+        } else {
+            mensagem = `⚠️ <strong>Atenção:</strong> Nenhuma extração (RJ, LK, etc.) foi marcada.\n\nDeseja copiar o texto sem a informação da extração?`;
+        }
+
+        // Mostra a confirmação
+        const usuarioConfirmou = await showCustomConfirm(mensagem, 'Sim, Copiar', 'Cancelar');
+
+        if (!usuarioConfirmou) {
+            return; // Se cancelar, para aqui e não copia nem limpa nada
+        }
+
+        // Copia o texto
+        const textToCopy = getFormattedOutputForCopying();
+        copyToClipboard(textToCopy, document.querySelector('#copyButtons button'));
+
+        // LIMPEZA: Desmarca as caixas e atualiza a tela
+        checkboxes.forEach(cb => cb.checked = false);
+        
+        // Chama a função de conversão para atualizar o visual (remover as siglas da tela também)
+        convertToEmojisRealTime(); 
+
+    } else {
+        // --- LÓGICA PADRÃO PARA OUTROS MODOS (Milhar, Centena, etc.) ---
         const textToCopy = getFormattedOutputForCopying();
         copyToClipboard(textToCopy, document.querySelector('#copyButtons button'));
     }
+}
 
     const emojiToNumber = { 
       '0️⃣': '0', '1️⃣': '1', '2️⃣': '2', '3️⃣': '3', '4️⃣': '4',
@@ -15057,19 +15118,20 @@ function checkCentenaRepetition(numStr, rule) {
     return true; // Se a regra for inválida ou 'any'
 }
     function toggleQuickShortcuts() {
-    const container = document.getElementById('quickShortcutsContainer');
-    const button = document.getElementById('toggleShortcutsBtn');
+    // Tenta achar o elemento pelo ID (verifique se no seu HTML o ID é este mesmo)
+    const shortcutsContainer = document.getElementById('quickShortcutsWrapper'); 
     
-    const isHidden = container.style.display === 'none' || container.style.display === '';
+    // Se o elemento não existir, para a função para não dar erro
+    if (!shortcutsContainer) {
+        console.warn('Elemento "quickShortcutsWrapper" não encontrado no HTML.');
+        return; 
+    }
 
-    if (isHidden) {
-        container.style.display = 'flex';
-        button.innerHTML = '🔼 Esconder Bichos'; 
-        button.setAttribute('aria-expanded', 'true');
+    // Se existir, faz a troca de visibilidade
+    if (shortcutsContainer.style.display === 'none' || shortcutsContainer.style.display === '') {
+        shortcutsContainer.style.display = 'block'; // ou 'flex', dependendo do seu layout
     } else {
-        container.style.display = 'none';
-        button.innerHTML = '🔽 Mostrar Bichos'; 
-        button.setAttribute('aria-expanded', 'false');
+        shortcutsContainer.style.display = 'none';
     }
 }
 
@@ -16182,7 +16244,7 @@ function showMilharesCentenasDezenas() {
         const selectedName = document.getElementById('nomePessoaSelect')?.value || '';
         const quantidade = document.getElementById('quantidadeSelect')?.value || '';
 
-        // --- Função Auxiliar para Formatar Nome (Padrão Antigo) ---
+        // --- 1. LÓGICA PARA MODOS NORMAIS (SEM EMOJI ▫) ---
         const formatWithName = (arr) => {
             let nomeFormatado = selectedName;
             if (nomeFormatado) {
@@ -16191,6 +16253,7 @@ function showMilharesCentenasDezenas() {
                 if (typeof showCheckEmoji !== 'undefined' && showCheckEmoji) emojis += '✅';
                 if (emojis) nomeFormatado = `${nomeFormatado} ${emojis}`;
             }
+            // AQUI: Note que NÃO tem o ▫
             const nomeCompleto = quantidade && nomeFormatado ? `${quantidade} ${nomeFormatado}` : nomeFormatado;
             
             if (!nomeCompleto || arr.length === 0) return arr;
@@ -16213,7 +16276,7 @@ function showMilharesCentenasDezenas() {
             return `<section style="margin-bottom: 5px;"><h3 class="section-title" style="margin: 0; padding: 0;">${title} <span class="count-red">(${type === 'barra' ? rawNumbers.length : data.length})</span>:</h3><div class="emoji-content" data-content-type="${type}" style="line-height: 1.2; margin-top: 2px;">${content}</div></section>`;
         };
 
-        // --- Lógica do Modo Barra (Apenas Bolão) ---
+        // --- 2. LÓGICA PARA MODO BOLÃO (COM EMOJI ▫) ---
         if (selectedOption === 'separado_barra') {
             let todasDezenas = [];
             let listaErros = [];
@@ -16242,39 +16305,32 @@ function showMilharesCentenasDezenas() {
                 if(!hasError) {
                     const linhasFormatadas = [];
                     
-                    // === CONSTRUÇÃO DO PREFIXO ===
+                    // === AQUI É ONDE O EMOJI ▫ É ADICIONADO (SÓ PRO BOLÃO) ===
                     let prefixoFinal = '';
                     
                     if (selectedName) {
-                        // 1. Quantidade e Nome: "1x Romário"
-                        prefixoFinal = quantidade ? `${quantidade} ${selectedName}` : `${selectedName}`;
+                        // Adiciona o ▫ no início
+                        prefixoFinal = quantidade ? `▫${quantidade} ${selectedName}` : `▫${selectedName}`;
 
-                        // 2. Extrações Selecionadas: " - NC / LK"
+                        // Extrações
                         const checkedExtractions = Array.from(document.querySelectorAll('input[name="bolaoExtracaoView"]:checked')).map(cb => cb.value);
-                        
                         if (checkedExtractions.length > 0) {
                             prefixoFinal += ` - ${checkedExtractions.join(' / ')}`;
                         }
 
-                        // 3. Emoji de Pago/Fixo: " ✅"
+                        // Fixos/Pagos
                         if (typeof isPinned !== 'undefined' && isPinned) prefixoFinal += ' 📌';
                         if (typeof showCheckEmoji !== 'undefined' && showCheckEmoji) prefixoFinal += ' ✅';
                     }
 
                     linhasFinais.forEach((linha) => {
-                        // Junta os números com barra
                         let txt = linha.join('/');
-                        
-                        // Adiciona o prefixo formatado COM QUEBRA DE LINHA (<br>)
                         if (prefixoFinal) {
-                            // AQUI ESTÁ A MUDANÇA: <br> força a quebra de linha visual e na cópia
                             txt = `<strong>${prefixoFinal}</strong><br>${txt}`; 
                         }
-                        
                         linhasFormatadas.push(txt);
                     });
                     
-                    // Adiciona espaçamento extra entre os jogos (<br><br>)
                     dataSectionsHTML += `<section style="margin-bottom: 5px;"><h3 class="section-title" style="margin: 0;">🔗 Sequência com Barra:</h3><div class="emoji-content" data-content-type="barra" style="line-height: 1.4; margin-top: 5px;">${linhasFormatadas.join('<br><br>')}</div></section>`;
                 }
             }
@@ -16287,7 +16343,7 @@ function showMilharesCentenasDezenas() {
             }
         }
 
-        // --- MODO PADRÃO (Mostrar Todos / Milhar / Centena...) ---
+        // --- EXIBIÇÃO DOS MODOS NORMAIS ---
         if (!hasError && selectedOption !== 'separado_barra') {
             if (selectedOption === 'both' || selectedOption === 'milhar') dataSectionsHTML += buildSection('📊 Milhares', milhares, 'milhares');
             if (selectedOption === 'both' || selectedOption === 'centena') dataSectionsHTML += buildSection('📊 Centenas', centenas, 'centenas');
@@ -16303,6 +16359,17 @@ function showMilharesCentenasDezenas() {
         }
     }
 
+    // Controle dos botões
+    const copyButtonsDiv = document.getElementById('copyButtons');
+    const btnCopiar = document.getElementById('btnCopiarTexto');
+    const btnListas = document.getElementById('btnAbrirListas');
+    const canCopy = !isEmpty && !hasError; 
+
+    if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
+    if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
+    if (copyButtonsDiv) copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
+}
+
     // Controle dos botões de copiar
     const copyButtonsDiv = document.getElementById('copyButtons');
     const btnCopiar = document.getElementById('btnCopiarTexto');
@@ -16313,7 +16380,6 @@ function showMilharesCentenasDezenas() {
     if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
     if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
     if (copyButtonsDiv) copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
-}
 
 </script>
 </body>
