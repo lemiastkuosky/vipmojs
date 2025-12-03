@@ -4533,6 +4533,42 @@ body.dark-mode .fav-value-btn {
     font-size: 1rem;
 }
 
+/* Estilo para os checkboxes de extração do Bolão (Visualização) */
+#bolaoExtractionsWrapper label {
+    background-color: #e9ecef;
+    border: 1px solid #ccc;
+    border-radius: 20px; /* Borda arredondada */
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#bolaoExtractionsWrapper label:hover {
+    background-color: #dbe2e8;
+}
+
+#bolaoExtractionsWrapper label:has(input:checked) {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+#bolaoExtractionsWrapper input {
+    margin-right: 5px;
+    transform: scale(1.1);
+}
+
+body.dark-mode #bolaoExtractionsWrapper label {
+    background-color: #3a3f44;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode #bolaoExtractionsWrapper label:has(input:checked) {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
 </style>
 
 </head>
@@ -4971,7 +5007,14 @@ body.dark-mode .fav-value-btn {
             🎲 GERAR SURPRESINHA
         </button>
     </div>
-</fieldset>
+
+    <div id="bolaoExtractionsWrapper" style="display: none; width: 100%; grid-column: 1 / -1; margin-top: 5px; justify-content: center; gap: 10px; flex-wrap: wrap;">
+        <label style="width: auto; padding: 5px 10px; display: inline-flex; font-size: 0.9rem;"><input type="checkbox" name="bolaoExtracaoView" value="RJ"> RJ</label>
+        <label style="width: auto; padding: 5px 10px; display: inline-flex; font-size: 0.9rem;"><input type="checkbox" name="bolaoExtracaoView" value="LK"> LK</label>
+        <label style="width: auto; padding: 5px 10px; display: inline-flex; font-size: 0.9rem;"><input type="checkbox" name="bolaoExtracaoView" value="NC"> NC</label>
+        <label style="width: auto; padding: 5px 10px; display: inline-flex; font-size: 0.9rem;"><input type="checkbox" name="bolaoExtracaoView" value="FD"> FD</label>
+    </div>
+    </fieldset>
 
      <div id="wrapperRepetition">
     <label for="allowRepetitionToggle">
@@ -11085,6 +11128,11 @@ async function getUnidadesAtrasadasIA(loteria) {
     await loadMcdSmartQuantities();
     setupPWA();
 
+    const bolaoCheckboxes = document.querySelectorAll('input[name="bolaoExtracaoView"]');
+    bolaoCheckboxes.forEach(cb => {
+    cb.addEventListener('change', convertToEmojisRealTime);
+});
+
     const nomeSelect = document.getElementById('nomePessoaSelect');
     if (nomeSelect) {
         choicesNomePessoa = new Choices(nomeSelect, {
@@ -16085,10 +16133,18 @@ function showMilharesCentenasDezenas() {
     const outputElement = document.getElementById('emojiOutput');
     const warningElement = document.getElementById('duplicateWarningMessage');
     
-    // CORREÇÃO IMEDIATA DO CSS VIA JS
+    // Controle de visibilidade dos elementos extras do Bolão
+    const extractionsWrapper = document.getElementById('bolaoExtractionsWrapper');
+    const surpresinhaContainer = document.getElementById('surpresinhaContainer');
+    const isBarraMode = (selectedOption === 'separado_barra');
+
+    if (extractionsWrapper) extractionsWrapper.style.display = isBarraMode ? 'flex' : 'none';
+    if (surpresinhaContainer) surpresinhaContainer.style.display = isBarraMode ? 'block' : 'none';
+
+    // Limpeza inicial
     if (outputElement) {
         outputElement.innerHTML = '';
-        outputElement.style.whiteSpace = 'normal'; // Força o navegador a ignorar espaços em branco do código
+        outputElement.style.whiteSpace = 'normal';
     }
 
     if (warningElement) {
@@ -16107,7 +16163,7 @@ function showMilharesCentenasDezenas() {
         if (outputElement) outputElement.textContent = 'Aguardando números...';
     } 
     else {
-        // --- Lógica do Aviso (Mantida) ---
+        // --- Lógica do Aviso de Repetição ---
         const allowRepetition = document.getElementById('allowRepetitionToggle').checked;
         if (!allowRepetition && warningElement) {
             const counts = {};
@@ -16126,7 +16182,7 @@ function showMilharesCentenasDezenas() {
         const selectedName = document.getElementById('nomePessoaSelect')?.value || '';
         const quantidade = document.getElementById('quantidadeSelect')?.value || '';
 
-        // --- Nome APENAS no PRIMEIRO e no ÚLTIMO ---
+        // --- Função Auxiliar para Formatar Nome (Padrão Antigo) ---
         const formatWithName = (arr) => {
             let nomeFormatado = selectedName;
             if (nomeFormatado) {
@@ -16151,14 +16207,13 @@ function showMilharesCentenasDezenas() {
             if (data.length === 0) return '';
             
             const formattedData = formatWithName(data);
-            const separator = '<br>'; // Lista Vertical
+            const separator = '<br>';
             const content = formattedData.join(separator);
             
-            // HTML COMPACTADO (Sem quebras de linha no código para evitar o problema do pre-wrap)
             return `<section style="margin-bottom: 5px;"><h3 class="section-title" style="margin: 0; padding: 0;">${title} <span class="count-red">(${type === 'barra' ? rawNumbers.length : data.length})</span>:</h3><div class="emoji-content" data-content-type="${type}" style="line-height: 1.2; margin-top: 2px;">${content}</div></section>`;
         };
 
-        // --- Lógica do Modo Barra (Mantida) ---
+        // --- Lógica do Modo Barra (Apenas Bolão) ---
         if (selectedOption === 'separado_barra') {
             let todasDezenas = [];
             let listaErros = [];
@@ -16186,21 +16241,41 @@ function showMilharesCentenasDezenas() {
 
                 if(!hasError) {
                     const linhasFormatadas = [];
-                    let prefixo = selectedName ? (quantidade ? `${quantidade} ${selectedName} - ` : `${selectedName} - `) : '';
-                    let sufixo = '';
+                    
+                    // === CONSTRUÇÃO DO PREFIXO ===
+                    let prefixoFinal = '';
+                    
                     if (selectedName) {
-                        if (typeof isPinned !== 'undefined' && isPinned) sufixo += ' 📌';
-                        if (typeof showCheckEmoji !== 'undefined' && showCheckEmoji) sufixo += ' ✅';
+                        // 1. Quantidade e Nome: "1x Romário"
+                        prefixoFinal = quantidade ? `${quantidade} ${selectedName}` : `${selectedName}`;
+
+                        // 2. Extrações Selecionadas: " - NC / LK"
+                        const checkedExtractions = Array.from(document.querySelectorAll('input[name="bolaoExtracaoView"]:checked')).map(cb => cb.value);
+                        
+                        if (checkedExtractions.length > 0) {
+                            prefixoFinal += ` - ${checkedExtractions.join(' / ')}`;
+                        }
+
+                        // 3. Emoji de Pago/Fixo: " ✅"
+                        if (typeof isPinned !== 'undefined' && isPinned) prefixoFinal += ' 📌';
+                        if (typeof showCheckEmoji !== 'undefined' && showCheckEmoji) prefixoFinal += ' ✅';
                     }
 
                     linhasFinais.forEach((linha) => {
+                        // Junta os números com barra
                         let txt = linha.join('/');
-                        if (prefixo) txt = `${prefixo}${txt}${sufixo}`;
+                        
+                        // Adiciona o prefixo formatado COM QUEBRA DE LINHA (<br>)
+                        if (prefixoFinal) {
+                            // AQUI ESTÁ A MUDANÇA: <br> força a quebra de linha visual e na cópia
+                            txt = `<strong>${prefixoFinal}</strong><br>${txt}`; 
+                        }
+                        
                         linhasFormatadas.push(txt);
                     });
                     
-                    // HTML Compactado
-                    dataSectionsHTML += `<section style="margin-bottom: 5px;"><h3 class="section-title" style="margin: 0;">🔗 Sequência com Barra:</h3><div class="emoji-content" data-content-type="barra" style="line-height: 1.2; margin-top: 2px;">${linhasFormatadas.join('<br>')}</div></section>`;
+                    // Adiciona espaçamento extra entre os jogos (<br><br>)
+                    dataSectionsHTML += `<section style="margin-bottom: 5px;"><h3 class="section-title" style="margin: 0;">🔗 Sequência com Barra:</h3><div class="emoji-content" data-content-type="barra" style="line-height: 1.4; margin-top: 5px;">${linhasFormatadas.join('<br><br>')}</div></section>`;
                 }
             }
 
@@ -16212,7 +16287,7 @@ function showMilharesCentenasDezenas() {
             }
         }
 
-        // --- MODO PADRÃO ---
+        // --- MODO PADRÃO (Mostrar Todos / Milhar / Centena...) ---
         if (!hasError && selectedOption !== 'separado_barra') {
             if (selectedOption === 'both' || selectedOption === 'milhar') dataSectionsHTML += buildSection('📊 Milhares', milhares, 'milhares');
             if (selectedOption === 'both' || selectedOption === 'centena') dataSectionsHTML += buildSection('📊 Centenas', centenas, 'centenas');
@@ -16228,19 +16303,16 @@ function showMilharesCentenasDezenas() {
         }
     }
 
-    // Controle dos botões
+    // Controle dos botões de copiar
     const copyButtonsDiv = document.getElementById('copyButtons');
     const btnCopiar = document.getElementById('btnCopiarTexto');
     const btnListas = document.getElementById('btnAbrirListas');
-    const containerSurpresa = document.getElementById('surpresinhaContainer');
 
-    const isBarraMode = (selectedOption === 'separado_barra');
     const canCopy = !isEmpty && !hasError; 
 
     if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
     if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
     if (copyButtonsDiv) copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
-    if (containerSurpresa) containerSurpresa.style.display = isBarraMode ? 'block' : 'none';
 }
 
 </script>
