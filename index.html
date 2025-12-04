@@ -8603,6 +8603,55 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
     return prefixosQuentes;
 }
 
+// --- NOVA FUNÇÃO: Analisa quais dezenas dos bichos selecionados são mais quentes ---
+async function analisarDezenasQuentesIA(selectedBichos, loteria) {
+    if (!selectedBichos || selectedBichos.length === 0) return [];
+    
+    const bichoGroups = selectedBichos.map(b => b.grupo);
+    const dezenaCounts = {};
+    
+    // Inicializa contagem com 0 para as dezenas dos bichos selecionados
+    selectedBichos.forEach(bicho => {
+        bicho.dezenas.forEach(d => dezenaCounts[d] = 0);
+    });
+
+    try {
+        // Busca os últimos 2000 resultados para essa loteria e esses bichos
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('bichoGrupo', 'in', bichoGroups)
+            .where('loteria', '==', loteria)
+            .orderBy('data', 'desc')
+            .limit(2000) 
+            .get();
+
+        if (!querySnapshot.empty) {
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                // Verifica a dezena final da milhar ou a dezena salva
+                let dezena = data.dezena; 
+                if (!dezena && data.milhar) dezena = data.milhar.slice(-2);
+                
+                if (dezena && dezenaCounts.hasOwnProperty(dezena)) {
+                    dezenaCounts[dezena]++;
+                }
+            });
+        }
+        
+        // Transforma em array e ordena da mais frequente para a menos frequente
+        let dezenasOrdenadas = Object.keys(dezenaCounts).sort((a, b) => dezenaCounts[b] - dezenaCounts[a]);
+        
+        console.log(`[I.A. Dezenas] Top dezenas para ${loteria}:`, dezenasOrdenadas.slice(0, 10));
+        return dezenasOrdenadas;
+
+    } catch (error) {
+        console.error("Erro ao analisar dezenas quentes:", error);
+        // Em caso de erro, retorna as dezenas padrão dos bichos embaralhadas
+        let fallback = selectedBichos.flatMap(b => b.dezenas);
+        shuffleArray(fallback);
+        return fallback;
+    }
+}
+
 async function atualizarHistoricoIA(days) {
     // Fecha o modal de configurações primeiro para o usuário ver o loading
     closeAdvancedFiltersModal();
@@ -13875,12 +13924,14 @@ async function generateSelectedNumbers() {
     // ==========================================
     
     // --- MODO I.A. ---
+// --- MODO I.A. (ATUALIZADO) ---
     if (mode === 'ia_bichos') {
         const selectedBichos = Array.from(document.querySelectorAll('input[name="selectedBichos"]:checked'))
             .map(cb => tabelaDeGrupos.find(b => b.grupo === cb.value)).filter(Boolean);
 
-        if (selectedBichos.length === 0 || !typeKeys.includes('milhar')) {
-            showToast('Para I.A., selecione Bichos e o tipo Milhar.', 'error'); return;
+        // --- ALTERAÇÃO 1: Permite Milhar OU Dezena ---
+        if (selectedBichos.length === 0 || (!typeKeys.includes('milhar') && !typeKeys.includes('dezena'))) {
+            showToast('Para I.A., selecione Bichos e o tipo Milhar ou Dezena.', 'error'); return;
         }
         
         const loteriaSelecionada = iaLotterySelect.value;
@@ -13891,43 +13942,96 @@ async function generateSelectedNumbers() {
         summaryParts.push(`<strong>- Bichos:</strong> ${bichoNames}`);
         
         showLoadingIndicator(`Analisando I.A...`);
-        let iaGeneratedThousands = new Set();
-        let extraRandoms = [];
-        const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
         
         try {
-            const prefixosQuentes = await analisarHistoricoIA(selectedBichos, loteriaSelecionada);
-            if (prefixosQuentes.length > 0) {
-                for (const prefixo of prefixosQuentes) {
-                    for (const dezena of dezenasPool) {
-                        const milharGerada = prefixo + dezena;
-                        if (applyAdvancedFilters(milharGerada, 'milhar')) iaGeneratedThousands.add(milharGerada);
+            // === GERAÇÃO DE MILHAR I.A. (Lógica de Prefixos) ===
+            if (typeKeys.includes('milhar')) {
+                let iaGeneratedThousands = new Set();
+                const prefixosQuentes = await analisarHistoricoIA(selectedBichos, loteriaSelecionada);
+                const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
+
+                if (prefixosQuentes.length > 0) {
+                    // Cruza os prefixos quentes com as dezenas dos bichos
+                    for (const prefixo of prefixosQuentes) {
+                        for (const dezena of dezenasPool) {
+                            const milharGerada = prefixo + dezena;
+                            if (applyAdvancedFilters(milharGerada, 'milhar')) iaGeneratedThousands.add(milharGerada);
+                        }
                     }
                 }
-            }
-        } catch (error) { console.error(error); } finally { hideLoadingIndicator(); }
 
-        let finalIaArray = Array.from(iaGeneratedThousands);
-        summaryParts.push(`<strong>- Total Encontrado:</strong> ${finalIaArray.length} milhares`);
-        
-        if (totalQuantity > finalIaArray.length) {
-             const diff = totalQuantity - finalIaArray.length;
-             const randomResultSet = new Set();
-             let attempts = 0;
-             while (randomResultSet.size < diff && attempts < (diff * 100)) {
-                attempts++;
-                let randomPrefix = String(Math.floor(Math.random() * 100)).padStart(2, '0');
-                let gen = randomPrefix + dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
-                if (applyAdvancedFilters(gen, 'milhar') && !iaGeneratedThousands.has(gen)) randomResultSet.add(gen);
-             }
-             extraRandoms = Array.from(randomResultSet);
-             summaryParts.push(`(+ ${diff} aleatórias para completar)`);
-        } else if (totalQuantity < finalIaArray.length) {
-             shuffleArray(finalIaArray);
-             finalIaArray = finalIaArray.slice(0, totalQuantity);
+                let finalIaArray = Array.from(iaGeneratedThousands);
+                
+                // Preenchimento se faltar números
+                if (totalQuantity > finalIaArray.length) {
+                     const diff = totalQuantity - finalIaArray.length;
+                     const randomResultSet = new Set();
+                     let attempts = 0;
+                     while (randomResultSet.size < diff && attempts < (diff * 100)) {
+                        attempts++;
+                        let randomPrefix = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+                        let gen = randomPrefix + dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
+                        if (applyAdvancedFilters(gen, 'milhar') && !iaGeneratedThousands.has(gen)) randomResultSet.add(gen);
+                     }
+                     finalIaArray.push(...Array.from(randomResultSet));
+                } else if (totalQuantity < finalIaArray.length) {
+                     shuffleArray(finalIaArray);
+                     finalIaArray = finalIaArray.slice(0, totalQuantity);
+                }
+                
+                finalResults.milhar = finalIaArray;
+                shuffleArray(finalResults.milhar);
+            }
+
+            // === ALTERAÇÃO 2: GERAÇÃO DE DEZENA I.A. (Lógica de Frequência) ===
+            if (typeKeys.includes('dezena')) {
+                // 1. Busca as dezenas mais quentes no banco de dados
+                const dezenasQuentes = await analisarDezenasQuentesIA(selectedBichos, loteriaSelecionada);
+                
+                // 2. Cria um Set (Lista que não aceita duplicatas)
+                let dezenasUnicas = new Set();
+
+                // 3. Tenta preencher a meta com as dezenas mais quentes primeiro
+                for (const d of dezenasQuentes) {
+                    if (dezenasUnicas.size >= totalQuantity) break; // Para se atingir a quantidade
+                    if (applyAdvancedFilters(d, 'dezena')) {
+                        dezenasUnicas.add(d);
+                    }
+                }
+
+                // 4. Se ainda não atingiu a quantidade (ex: histórico curto), completa com as outras dezenas dos bichos
+                if (dezenasUnicas.size < totalQuantity) {
+                    const poolReserva = selectedBichos.flatMap(b => b.dezenas);
+                    shuffleArray(poolReserva); // Mistura as reservas
+                    
+                    for (const d of poolReserva) {
+                        if (dezenasUnicas.size >= totalQuantity) break; // Para se atingir a quantidade
+                        if (applyAdvancedFilters(d, 'dezena')) {
+                            dezenasUnicas.add(d); // O Set ignora se já tiver adicionado antes
+                        }
+                    }
+                }
+
+                // 5. Converte para lista final
+                // OBS: Se você pedir 100 números, mas selecionar 1 bicho (4 dezenas), ele retornará apenas 4.
+                finalResults.dezena = Array.from(dezenasUnicas);
+            }
+
+            // Se Centena estiver marcado no modo I.A., geramos aleatoriamente com base nas dezenas do bicho
+            if (typeKeys.includes('centena')) {
+                 const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
+                 for(let i=0; i<totalQuantity; i++) {
+                    let d = dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
+                    finalResults.centena.push(String(Math.floor(Math.random()*10)) + d);
+                 }
+            }
+
+        } catch (error) { 
+            console.error(error); 
+            showToast('Erro na análise I.A.', 'error');
+        } finally { 
+            hideLoadingIndicator(); 
         }
-        finalResults.milhar = [...finalIaArray, ...extraRandoms];
-        shuffleArray(finalResults.milhar);
     }
     
     // --- MODO BICHOS ---
