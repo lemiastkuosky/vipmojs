@@ -995,7 +995,158 @@
         
         document.getElementById('fab-container').classList.remove('hidden');
     }
-    
+    // ===============================================
+    //      FUNÇÕES QUE FALTAVAM (BOTÕES E RECIBO)
+    // ===============================================
+
+    async function carregarRecibo(id) {
+        document.getElementById('page-desc').innerText = "Carregando recibo...";
+        try {
+            const snapshot = await db.ref('recibos_temp/' + id).once('value');
+            if (!snapshot.exists()) {
+                mostrarErro("Recibo não encontrado ou expirado.");
+                return;
+            }
+            const dados = snapshot.val();
+            
+            // Preencher valores
+            document.getElementById('lista-jogos').value = dados.lista || "";
+            document.getElementById('v_terno').value = dados.premios.terno;
+            document.getElementById('v_quadra').value = dados.premios.quadra;
+            document.getElementById('v_quina').value = dados.premios.quina;
+
+            // Preencher resultados (bolas)
+            if (dados.resultados) {
+                Object.keys(dados.resultados).forEach(sigla => {
+                    const nums = dados.resultados[sigla];
+                    nums.forEach((n, i) => {
+                        const input = document.querySelector(`input[data-banca="${sigla.toLowerCase()}"][data-index="${i}"]`);
+                        if (input) input.value = n;
+                    });
+                });
+            }
+
+            // Trava edição
+            document.getElementById('admin-panel').classList.add('hidden');
+            document.getElementById('page-title').innerText = "RECIBO SALVO";
+            document.getElementById('page-desc').innerText = "Visualização de conferência fixa.";
+            
+            // Atualiza tela
+            renderizarConferencia(dados);
+
+        } catch (e) {
+            mostrarErro("Erro ao ler recibo: " + e.message);
+        }
+    }
+
+    function mostrarErro(msg) {
+        document.getElementById('admin-panel').classList.add('hidden');
+        document.getElementById('results-panel').classList.add('hidden');
+        const errBox = document.getElementById('error-box');
+        document.getElementById('error-msg').innerText = msg;
+        errBox.classList.remove('hidden');
+    }
+
+    // Atualiza o visual dos números sorteados no topo (Placar)
+    function montarPlacarPublico() {
+        const placarDiv = document.getElementById('placar-publico');
+        placarDiv.innerHTML = '';
+        
+        // Verifica se há inputs preenchidos para mostrar
+        let temResultado = false;
+        
+        let html = '<div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">';
+        
+        bancasArr.forEach(sigla => {
+            const inputs = document.querySelectorAll(`input[data-banca="${sigla}"]`);
+            const nums = Array.from(inputs).map(i => i.value).filter(v => v.length === 2);
+            
+            if(nums.length === 5) {
+                temResultado = true;
+                let corBanca = '';
+                if(sigla === 'rj') corBanca = 'var(--color-rj)';
+                else if(sigla === 'nc') corBanca = 'var(--color-nc)';
+                else if(sigla === 'lk') corBanca = 'var(--color-lk)';
+                else if(sigla === 'fd') corBanca = 'var(--color-fd)';
+
+                html += `
+                <div style="background:#27272a; border:1px solid #3f3f46; border-radius:8px; padding:10px; min-width:140px; text-align:center;">
+                    <div style="background:${corBanca}; color:white; font-weight:bold; font-size:0.8rem; padding:2px 8px; border-radius:4px; display:inline-block; margin-bottom:5px; text-transform:uppercase;">${sigla}</div>
+                    <div style="display:flex; gap:4px; justify-content:center;">
+                        ${nums.map(n => `<div style="width:24px; height:24px; line-height:24px; background:#18181b; border-radius:50%; font-size:12px; font-weight:700; color:#fff;">${n}</div>`).join('')}
+                    </div>
+                </div>`;
+            }
+        });
+        
+        html += '</div>';
+        
+        if(temResultado) {
+            placarDiv.innerHTML = html;
+        }
+    }
+
+    // ===============================================
+    //          BOTÕES DE AÇÃO (SHARE / COPY)
+    // ===============================================
+
+    async function garantirLink() {
+        // Se já tiver ID (link gerado), não faz nada
+        if (currentReceiptId) return true;
+
+        // Se não tiver, tenta salvar no Firebase
+        const btnCopy = document.getElementById('btn-copy');
+        const btnZap = document.getElementById('btn-zap');
+        
+        // Feedback visual
+        const textoOriginalCopy = btnCopy.innerHTML;
+        const textoOriginalZap = btnZap.innerHTML;
+        btnCopy.innerHTML = '<div class="loader"></div>';
+        btnZap.innerHTML = '<div class="loader"></div>';
+
+        const sucesso = await salvarReciboNoFirebase();
+        
+        if (sucesso) {
+            // Recalcula o texto final para incluir o novo link gerado
+            const dados = gerarDadosObjeto();
+            renderizarConferencia(dados); 
+        }
+
+        // Restaura botões
+        btnCopy.innerHTML = textoOriginalCopy;
+        btnZap.innerHTML = textoOriginalZap;
+        
+        return sucesso;
+    }
+
+    async function copiarTexto() {
+        await garantirLink(); // Garante que o link existe antes de copiar
+        
+        try {
+            await navigator.clipboard.writeText(textoZapFinal);
+            
+            // Feedback visual no botão
+            const btn = document.getElementById('btn-copy');
+            const original = btn.innerHTML;
+            btn.style.background = "#10b981"; // Verde
+            btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+            
+            setTimeout(() => {
+                btn.style.background = ""; // Volta cor original
+                btn.innerHTML = original;
+            }, 2000);
+            
+        } catch (err) {
+            alert('Erro ao copiar: ' + err);
+        }
+    }
+
+    async function compartilharZap() {
+        await garantirLink(); // Garante que o link existe antes de enviar
+        
+        const url = `https://wa.me/?text=${encodeURIComponent(textoZapFinal)}`;
+        window.open(url, '_blank');
+    }
     // ... (funções carregarRecibo, mostrarErro, montarPlacarPublico, gerarImagem, copiarTexto, compartilharZap) ...
     
     // (Resto das funções originais para não estender demais, mas a lógica do histórico já está completa acima)
