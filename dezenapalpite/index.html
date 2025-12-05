@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados do Bicho - Consulta Rápida</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; text-align: center; }
+        .card { background: white; max-width: 600px; margin: 0 auto; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        select, button, input[type="date"] { padding: 10px; margin: 5px 0; font-size: 16px; width: 100%; box-sizing: border-box; }
+        button { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background: #218838; }
+        .resultado-lista { text-align: left; margin-top: 20px; }
+        .item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 8px 0; }
+        .premio { font-weight: bold; color: #555; width: 30%; }
+        .numero { font-weight: bold; color: #000; font-size: 1.1em; width: 30%; text-align: center; }
+        .grupo { width: 40%; text-align: right; }
+        .erro { color: red; margin-top: 10px; padding: 10px; background: #ffebeb; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>🍀 Consulta de Resultados</h2>
+        
+        <label for="data" style="display: block; text-align: left; margin-top: 10px;">Selecione a Data:</label>
+        <input type="date" id="data">
+
+        <label for="loteria" style="display: block; text-align: left; margin-top: 10px;">Selecione a Loteria:</label>
+        <select id="loteria">
+            <option value="rj">Rio de Janeiro (RJ)</option>
+            <option value="pt">Para Todos (PT)</option>
+            <option value="federal">Federal</option>
+        </select>
+
+        <button onclick="buscarResultado()">Filtrar Resultados</button>
+        
+        <div id="output" class="resultado-lista"></div>
+    </div>
+    
+    <script>
+        // 📚 BASE DE DADOS SIMULADA
+        const dadosResultados = [
+            // Resultados para 04/12/2025 - RJ (Múltiplas extrações no dia)
+            {
+                data: "2025-12-04",
+                loteria: "rj",
+                nome: "RJ - 11:00 (P.T.M.)",
+                resultados: [
+                    { premio: "1º Prêmio", numero: "4789", grupo: "23 - Urso" },
+                    { premio: "2º Prêmio", numero: "1123", grupo: "6 - Cabra" },
+                    { premio: "3º Prêmio", numero: "9050", grupo: "13 - Galo" },
+                ]
+            },
+            {
+                data: "2025-12-04",
+                loteria: "rj",
+                nome: "RJ - 14:00 (P.T.)",
+                resultados: [
+                    { premio: "1º Prêmio", numero: "8745", grupo: "12 - Elefante" },
+                    { premio: "2º Prêmio", numero: "5123", grupo: "6 - Cabra" },
+                    { premio: "3º Prêmio", numero: "1987", grupo: "22 - Tigre" }
+                ]
+            },
+            {
+                data: "2025-12-04",
+                loteria: "rj",
+                nome: "RJ - 18:00 (P.T.V.)",
+                resultados: [
+                    { premio: "1º Prêmio", numero: "0011", grupo: "3 - Burro" },
+                    { premio: "2º Prêmio", numero: "9988", grupo: "25 - Vaca" }
+                ]
+            },
+            
+            // Resultados para 04/12/2025 - Federal
+            {
+                data: "2025-12-04",
+                loteria: "federal",
+                nome: "Federal - 19:00",
+                resultados: [
+                    { premio: "1º Prêmio", numero: "12345", grupo: "12 - Elefante" },
+                    { premio: "2º Prêmio", numero: "67890", grupo: "15 - Jacaré" },
+                ]
+            },
+
+            // Exemplo de dia anterior
+            {
+                data: "2025-12-03",
+                loteria: "pt",
+                nome: "Para Todos (PT) - 13:00",
+                resultados: [
+                    { premio: "1º Prêmio", numero: "4567", grupo: "17 - Macaco" },
+                ]
+            },
+        ];
+
+
+        function buscarResultado() {
+            const loteriaSelecionada = document.getElementById('loteria').value;
+            const dataSelecionada = document.getElementById('data').value;
+            const output = document.getElementById('output');
+            
+            output.innerHTML = '';
+
+            if (!dataSelecionada) {
+                 output.innerHTML = `<div class="erro">Por favor, selecione uma data.</div>`;
+                 return;
+            }
+
+            // 1. FILTRAR DADOS: Usa FILTER para obter TODAS as extrações
+            const resultadosDoDia = dadosResultados.filter(item => 
+                item.loteria === loteriaSelecionada && item.data === dataSelecionada
+            );
+
+
+            if (resultadosDoDia.length === 0) {
+                const dataFormatada = dataSelecionada.split('-').reverse().join('/');
+                output.innerHTML = `<div class="erro">Nenhum resultado encontrado para a loteria **${loteriaSelecionada.toUpperCase()}** na data **${dataFormatada}**.</div>`;
+                return;
+            }
+
+            // 2. MONTAR O HTML (SUCCESS)
+            const dataFormatada = dataSelecionada.split('-').reverse().join('/');
+            let html = `<h3>Resultados de ${resultadosDoDia[0].loteria.toUpperCase()} em ${dataFormatada}</h3>`; 
+            
+            // Itera sobre CADA EXTRAÇÃO (sorteio) do dia
+            resultadosDoDia.forEach(extracao => {
+                html += `<h4 style="margin-top: 15px; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px;">${extracao.nome}</h4>`;
+                
+                // Itera sobre cada prêmio dentro da extração
+                extracao.resultados.forEach(linha => {
+                    html += `
+                        <div class="item">
+                            <span class="premio">${linha.premio}</span>
+                            <span class="numero">${linha.numero}</span>
+                            <span class="grupo">${linha.grupo}</span>
+                        </div>
+                    `;
+                });
+            });
+            
+            output.innerHTML = html;
+        }
+
+        // 🚀 INICIALIZAÇÃO: Executa ao carregar a página
+        document.addEventListener('DOMContentLoaded', () => {
+            // Define a data dos dados simulados como padrão para que algo apareça
+            document.getElementById('data').value = "2025-12-04"; 
+            document.getElementById('loteria').value = "rj";
+            
+            // Exibe os resultados do dia 04/12/2025 (RJ) ao carregar
+            buscarResultado(); 
+        });
+
+    </script>
+
+</body>
+</html>
