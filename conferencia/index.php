@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#18181b">
+    <title>Painel Master VIP</title>
+    
+    <!-- Fontes e Ícones -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- FIREBASE SDK (Realtime Database) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <style>
+        :root {
+            /* TEMA CINZA CHUMBO (Lead/Zinc) */
+            --bg-body: #18181b;       
+            --bg-card: #27272a;       
+            --bg-input: #3f3f46;      
+            --border-color: #3f3f46;
+            --text-primary: #f4f4f5;  
+            --text-secondary: #a1a1aa;
+            
+            --primary: #3b82f6;       
+            --success: #10b981;       
+            --danger: #ef4444;
+            
+            --radius-md: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 15px;
+            padding-bottom: 100px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+        .hidden { display: none !important; }
+
+        /* HEADER & CARDS */
+        .header-card {
+            background: linear-gradient(145deg, #27272a 0%, #18181b 100%);
+            padding: 25px; border-radius: var(--radius-md);
+            box-shadow: var(--shadow); margin-bottom: 25px;
+            text-align: center; border: 1px solid rgba(255,255,255,0.08);
+        }
+        .header-card h1 { margin: 0; font-weight: 800; font-size: 1.6rem; letter-spacing: -0.5px; }
+        .header-card p { margin: 5px 0 0; color: var(--text-secondary); font-size: 0.85rem; }
+        
+        .card {
+            background: var(--bg-card); border-radius: var(--radius-md);
+            padding: 25px; box-shadow: var(--shadow); margin-bottom: 25px;
+            border: 1px solid var(--border-color);
+        }
+        .card-title {
+            font-size: 1.1rem; font-weight: 700; margin-bottom: 20px;
+            color: var(--text-primary); border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px; display: flex; align-items: center; gap: 10px;
+        }
+        .card-title i { color: var(--primary); }
+
+        /* INPUTS */
+        .grid-bancas {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px;
+        }
+        .banca-box {
+            background: rgba(0,0,0,0.2); padding: 15px;
+            border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.05);
+        }
+        .banca-label {
+            display: block; text-align: center; font-weight: 800;
+            margin-bottom: 12px; font-size: 0.9rem; padding: 5px;
+            border-radius: 6px; color: white; text-transform: uppercase;
+        }
+        .lbl-rj { background: #2563eb; } .lbl-nc { background: #ea580c; }
+        .lbl-lk { background: #7c3aed; } .lbl-fd { background: #059669; }
+
+        .inputs-row { display: flex; justify-content: space-between; gap: 8px; }
+        .input-bola {
+            width: 100%; height: 42px; text-align: center; font-size: 18px; font-weight: 700;
+            border: 2px solid var(--border-color); border-radius: 10px;
+            background: var(--bg-input); color: white; outline: none; -moz-appearance: textfield;
+        }
+        .input-bola:focus { border-color: var(--primary); background: #1e3a8a; }
+
+        .form-control {
+            width: 100%; padding: 14px; background: var(--bg-input);
+            border: 1px solid var(--border-color); color: white;
+            border-radius: 8px; font-size: 16px; outline: none; margin-bottom: 10px;
+        }
+        
+        /* BOTÕES */
+        .action-group { display: flex; gap: 10px; margin-top: 25px; }
+        .btn-action {
+            flex: 1; background: var(--primary); color: white; border: none;
+            padding: 16px; font-size: 16px; font-weight: 700; border-radius: var(--radius-md);
+            cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-action:hover { filter: brightness(1.1); }
+        .btn-action:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .btn-clear {
+            width: 30%; background: transparent; color: var(--danger); 
+            border: 1px solid var(--danger); padding: 16px; font-size: 16px; font-weight: 700; 
+            border-radius: var(--radius-md); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-clear:hover { background: rgba(239, 68, 68, 0.1); }
+
+        /* TABELA HÍBRIDA */
+        table { width: 100%; border-collapse: collapse; }
+        
+        /* DESKTOP */
+        @media (min-width: 769px) {
+            th { 
+                background: #18181b; color: var(--text-secondary); 
+                padding: 15px; font-size: 0.85rem; text-transform: uppercase; text-align: left; 
+            }
+            td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+            .tr-ganhador { background-color: rgba(16, 185, 129, 0.08); }
+            .grade-dezenas { display: flex; flex-wrap: wrap; gap: 6px; max-width: 450px; }
+            .lista-resultados { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        }
+
+        /* MOBILE */
+        @media (max-width: 768px) {
+            thead { display: none; }
+            table, tbody, tr, td { display: block; width: 100%; }
+            tr {
+                background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
+                border-radius: 12px; margin-bottom: 15px; padding: 15px; position: relative;
+            }
+            .tr-ganhador { 
+                background: rgba(16, 185, 129, 0.08) !important;
+                border: 1px solid rgba(16, 185, 129, 0.3) !important;
+            }
+            td { padding: 5px 0; border: none; text-align: left; }
+            td:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; padding-bottom: 8px; }
+            .grade-dezenas { display: flex; flex-wrap: wrap; gap: 5px; }
+            .lista-resultados { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        }
+
+        /* VISUAL */
+        .nome-player { font-weight: 800; color: #60a5fa; font-size: 1.05rem; display: block; margin-bottom: 4px; }
+        .contador-jogos { color: #fff; font-size: 11px; font-weight: bold; margin-right: 5px; background: #475569; padding: 2px 6px; border-radius: 4px; }
+        .tag-multi { background: #ca8a04; color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+
+        .bola-jogo { 
+            width: 28px; height: 28px; line-height: 28px; text-align: center; 
+            border-radius: 6px; font-size: 12px; background: #3f3f46; 
+            color: var(--text-secondary); font-weight: 700;
+        }
+        .bola-jogo.hit { background: var(--success); color: #022c22; font-weight: 800; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+
+        .res-item { 
+            display: flex; align-items: center; justify-content: space-between; 
+            background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;
+        }
+        .res-banca { font-weight: 700; color: var(--text-secondary); margin-right: 5px; }
+        .res-qtd { font-weight: 700; }
+        .res-qtd.hit { color: var(--success); }
+        .res-qtd.zero { color: #52525b; }
+        .premio-tag { color: var(--success); font-weight: 800; font-size: 0.7rem; margin-left: auto; }
+
+        .total-box {
+            background: #09090b; border: 1px solid var(--border-color); padding: 20px;
+            border-radius: var(--radius-md); margin-top: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .total-valor { font-size: 1.6rem; color: var(--success); font-weight: 800; }
+
+        .fab-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 100; }
+        .fab {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 14px 24px; border-radius: 50px; color: white; 
+            font-weight: 700; font-size: 14px; border: none; cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        .fab-whatsapp { background: #25d366; }
+        .fab-copy { background: var(--primary); }
+
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Mensagem de Erro -->
+    <div id="error-box" class="hidden" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #ef4444;">
+        <h3 id="error-title">⚠️ Link Inválido</h3>
+        <p id="error-msg"></p>
+        <br><a href="?" style="color: white; font-weight: bold;">Voltar</a>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header-card" id="header-card">
+        <h1 id="page-title">Painel de Controle VIP</h1>
+        <div id="timer-display" class="hidden" style="margin-top:10px; font-size:0.8rem; opacity:0.7;"></div>
+        <p id="page-desc">Validação e gestão de bolões.</p>
+    </div>
+
+    <!-- PAINEL ADMIN -->
+    <div id="admin-panel">
+        <div class="card">
+            <div class="card-title"><i class="fas fa-dice"></i> Resultados</div>
+            <div class="grid-bancas">
+                <!-- RJ -->
+                <div class="banca-box">
+                    <span class="banca-label lbl-rj">RJ</span>
+                    <div class="inputs-row" id="inputs-rj"></div>
+                </div>
+                <!-- NC -->
+                <div class="banca-box">
+                    <span class="banca-label lbl-nc">NC</span>
+                    <div class="inputs-row" id="inputs-nc"></div>
+                </div>
+                <!-- LK -->
+                <div class="banca-box">
+                    <span class="banca-label lbl-lk">LK</span>
+                    <div class="inputs-row" id="inputs-lk"></div>
+                </div>
+                <!-- FD -->
+                <div class="banca-box">
+                    <span class="banca-label lbl-fd">FD</span>
+                    <div class="inputs-row" id="inputs-fd"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-sliders-h"></i> Configuração</div>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:15px;">
+                <input type="number" step="0.01" class="form-control" id="v_terno" value="25.00" placeholder="Terno">
+                <input type="number" step="0.01" class="form-control" id="v_quadra" value="250.00" placeholder="Quadra">
+                <input type="number" step="0.01" class="form-control" id="v_quina" value="2500.00" placeholder="Quina">
+            </div>
+            <textarea id="lista-jogos" class="form-control" placeholder="Cole a lista aqui..."></textarea>
+            
+            <div class="action-group">
+                <button type="button" onclick="limparTudo()" class="btn-clear">
+                    <i class="fas fa-trash-alt"></i> LIMPAR
+                </button>
+                <button type="button" onclick="processarConferencia()" class="btn-action" id="btn-processar">
+                    <i class="fas fa-check-double"></i> PROCESSAR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULTADOS -->
+    <div id="results-panel" class="hidden">
+        <div class="card" style="padding:0; border:none; background:transparent; box-shadow:none;">
+            <h3 style="margin:0 0 15px 0; font-size:1.1rem; color:var(--text-primary);"><i class="fas fa-list-check"></i> Conferência</h3>
+            <div class="table-container">
+                <table id="tabela-resultados">
+                    <thead>
+                        <tr><th width="30%">Participante</th><th width="40%">Dezenas</th><th width="30%">Conferência</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="total-box" id="total-box"></div>
+    </div>
+
+    <!-- BOTÕES FLUTUANTES -->
+    <div class="fab-container hidden" id="fab-container">
+        <button onclick="copiarTexto()" class="fab fab-copy"><i class="fas fa-copy"></i> Copiar</button>
+        <button onclick="compartilharZap()" class="fab fab-whatsapp"><i class="fab fa-whatsapp"></i> Enviar</button>
+    </div>
+
+</div>
+
+<script>
+    // ============================================================
+    // 1. CONFIGURAÇÃO DO FIREBASE (JÁ COM SUAS CHAVES)
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyAP5P08sBQ7A79wP37b-PLhCBO591YJPpY",
+      authDomain: "vipmojs-836f9.firebaseapp.com",
+      databaseURL: "https://vipmojs-836f9-default-rtdb.firebaseio.com",
+      projectId: "vipmojs-836f9",
+      storageBucket: "vipmojs-836f9.firebasestorage.app",
+      messagingSenderId: "187496268275",
+      appId: "1:187496268275:web:53e57c82ef90fc603f1286"
+    };
+    
+    // Inicializa Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    // USA REALTIME DATABASE
+    const db = firebase.database();
+
+    // --- VARIÁVEIS GLOBAIS ---
+    let isVisualizacao = false;
+    let textoZapFinal = "";
+    const bancasArr = ['rj', 'nc', 'lk', 'fd'];
+
+    // --- INICIALIZAÇÃO ---
+    window.onload = function() {
+        gerarInputsBancas();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const verId = urlParams.get('ver');
+
+        if (verId) {
+            carregarRecibo(verId);
+        }
+    };
+
+    function gerarInputsBancas() {
+        bancasArr.forEach(sigla => {
+            const container = document.getElementById(`inputs-${sigla}`);
+            for(let i=0; i<5; i++) {
+                const input = document.createElement('input');
+                input.type = 'tel';
+                input.className = 'input-bola';
+                input.maxLength = 2;
+                input.dataset.banca = sigla;
+                input.dataset.index = i;
+                
+                input.oninput = function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    if(this.value.length === 2) {
+                        const next = document.querySelector(`input[data-banca="${sigla}"][data-index="${i+1}"]`);
+                        if(next) next.focus();
+                    }
+                };
+                input.onblur = function() {
+                    if(this.value.length === 1) this.value = "0" + this.value;
+                };
+                input.onfocus = function() { if(!this.readOnly) this.value = ''; };
+                
+                container.appendChild(input);
+            }
+        });
+    }
+
+    async function processarConferencia() {
+        const btn = document.getElementById('btn-processar');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loader"></span> Processando...';
+
+        const dados = {
+            lista: document.getElementById('lista-jogos').value,
+            premios: {
+                terno: document.getElementById('v_terno').value,
+                quadra: document.getElementById('v_quadra').value,
+                quina: document.getElementById('v_quina').value
+            },
+            resultados: {},
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        bancasArr.forEach(sigla => {
+            const inputs = document.querySelectorAll(`input[data-banca="${sigla}"]`);
+            const numeros = Array.from(inputs).map(i => i.value).filter(v => v.length === 2);
+            if(numeros.length === 5) dados.resultados[sigla.toUpperCase()] = numeros;
+        });
+
+        if(!dados.lista) {
+            alert("Cole a lista de jogos!");
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-double"></i> PROCESSAR';
+            return;
+        }
+
+        try {
+            // Salva no REALTIME DATABASE (recibos_temp)
+            const novoRef = db.ref('recibos_temp').push();
+            await novoRef.set(dados);
+            
+            // Redireciona
+            window.location.href = `?ver=${novoRef.key}`;
+            
+        } catch (e) {
+            console.error(e);
+            // Se cair aqui, é CERTEZA que as regras do Firebase estão bloqueadas
+            alert("Erro de Permissão no Firebase! Verifique as regras do Realtime Database.");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-double"></i> PROCESSAR';
+        }
+    }
+
+    async function carregarRecibo(id) {
+        isVisualizacao = true;
+        document.getElementById('page-title').innerText = '📊 RELATÓRIO VIP BOLOES 📊';
+        document.getElementById('page-desc').innerText = 'Visualização segura.';
+        document.getElementById('admin-panel').classList.add('hidden'); 
+        document.getElementById('results-panel').classList.remove('hidden');
+
+        try {
+            const snapshot = await db.ref('recibos_temp/' + id).once('value');
+            
+            if (!snapshot.exists()) {
+                mostrarErro("Recibo não encontrado ou já expirado.");
+                return;
+            }
+
+            const data = snapshot.val();
+            const created = data.timestamp;
+            const now = Date.now();
+            const diffMinutes = (now - created) / 1000 / 60;
+
+            if (diffMinutes > 20) {
+                mostrarErro("🚫 Link Expirado (Válido por 20 min).");
+                return;
+            }
+
+            const timerDisplay = document.getElementById('timer-display');
+            timerDisplay.classList.remove('hidden');
+            const expiraEm = new Date(created + 20*60000);
+            const horaExp = expiraEm.getHours().toString().padStart(2,'0');
+            const minExp = expiraEm.getMinutes().toString().padStart(2,'0');
+            timerDisplay.innerHTML = `<i class="far fa-clock"></i> Expira às: ${horaExp}:${minExp}`;
+
+            renderizarConferencia(data);
+
+        } catch (e) {
+            console.error(e);
+            mostrarErro("Erro ao carregar: " + e.message);
+        }
+    }
+
+    function renderizarConferencia(data) {
+        const tbody = document.querySelector('#tabela-resultados tbody');
+        tbody.innerHTML = '';
+        
+        const linhas = data.lista.split('\n');
+        let totalPago = 0;
+        let contador = 0;
+        let temGanhador = false;
+        
+        let zapGanhadores = "";
+        let zapGeral = "";
+        let zapResultados = "";
+
+        if (data.resultados) {
+            Object.keys(data.resultados).forEach(b => {
+                let ico = b==='RJ'?'🔵':(b==='NC'?'🟠':(b==='LK'?'🟣':'🟢'));
+                zapResultados += `${ico} *${b}:* ${data.resultados[b].join(' ')}\n`;
+            });
+        }
+
+        linhas.forEach(linha => {
+            const nums = linha.match(/\b\d{2}\b/g) || [];
+            let multi = 1;
+            const matchMulti = linha.match(/(\d+)[xX]/);
+            if(matchMulti) multi = parseInt(matchMulti[1]);
+
+            let nome = linha.replace(/[\d\/\.\-\s]{10,}/, '').replace(/\d+[xX]/, '').replace(/RJ|NC|LK|FD/gi, '').replace(/[✅➡\/]/g,'').trim();
+            if(nome.length === 0) nome = "Desconhecido";
+
+            let htmlDetalhes = "<div class='lista-resultados'>";
+            let textoResumoLinha = [];
+            let ganhouLinha = false;
+
+            let bancasJogadas = [];
+            if(linha.toUpperCase().includes('RJ')) bancasJogadas.push('RJ');
+            if(linha.toUpperCase().includes('NC')) bancasJogadas.push('NC');
+            if(linha.toUpperCase().includes('LK')) bancasJogadas.push('LK');
+            if(linha.toUpperCase().includes('FD')) bancasJogadas.push('FD');
+            if(bancasJogadas.length === 0) bancasJogadas.push('ND');
+
+            bancasJogadas.forEach(banca => {
+                const resultadoBanca = data.resultados ? data.resultados[banca] : null;
+                let qtd = 0;
+                if(resultadoBanca) {
+                    const acertos = nums.filter(n => resultadoBanca.includes(n));
+                    qtd = acertos.length;
+                }
+
+                let premio = 0;
+                let nomePremio = "";
+                if(qtd >= 3) {
+                    if(qtd==3) { premio = data.premios.terno * multi; nomePremio="TERNO 🥉"; }
+                    if(qtd==4) { premio = data.premios.quadra * multi; nomePremio="QUADRA 🥈"; }
+                    if(qtd>=5) { premio = data.premios.quina * multi; nomePremio="QUINA 🥇"; }
+                    
+                    totalPago += premio;
+                    ganhouLinha = true;
+                    temGanhador = true;
+                    
+                    const valFmt = premio.toFixed(2).replace('.',',');
+                    zapGanhadores += `👤 *${nome}*\n   ✅ ${qtd}x Acertos (${banca}) ⏩ ${nomePremio} - R$ ${valFmt}\n\n`;
+                }
+
+                const classHit = qtd > 0 ? 'hit' : 'zero';
+                const tagPremio = premio > 0 ? `<span class="premio-tag">${nomePremio}</span>` : '';
+                
+                htmlDetalhes += `<div class="res-item">
+                    <span><span class="res-banca">${banca}</span> <span class="res-qtd ${classHit}">${qtd}x</span></span>
+                    ${tagPremio}
+                </div>`;
+                
+                let txtRes = `${banca}: ${qtd}x`;
+                if(premio > 0) txtRes += " 🏆";
+                textoResumoLinha.push(txtRes);
+            });
+            htmlDetalhes += "</div>";
+
+            if(nums.length >= 10) {
+                contador++;
+                const tr = document.createElement('tr');
+                if(ganhouLinha) tr.className = 'tr-ganhador';
+
+                const td1 = document.createElement('td');
+                td1.innerHTML = `<div class="nome-player">${nome}</div>
+                                 <div style="margin-top:2px;">
+                                    <span class="contador-jogos">#${String(contador).padStart(2,'0')}</span>
+                                    <span class="tag-multi">${multi}x</span>
+                                 </div>`;
+
+                const td2 = document.createElement('td');
+                let htmlBolas = '<div class="grade-dezenas">';
+                nums.forEach(n => htmlBolas += `<div class="bola-jogo">${n}</div>`);
+                htmlBolas += '</div>';
+                td2.innerHTML = htmlBolas;
+
+                const td3 = document.createElement('td');
+                td3.innerHTML = htmlDetalhes;
+
+                tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+                tbody.appendChild(tr);
+                
+                let linhaZap = `▫ #${String(contador).padStart(2,'0')} ${nome} (${multi}x) ➡ ${textoResumoLinha.join(' | ')}`;
+                if(ganhouLinha) linhaZap += " (Cota Ganhadora)";
+                zapGeral += linhaZap + "\n";
+            }
+        });
+
+        document.getElementById('total-box').innerHTML = `
+            <div><span style='color:var(--text-secondary)'>Jogos</span><br><strong>${contador}</strong></div>
+            <div style='text-align:right'><span style='color:var(--text-secondary)'>Pagar</span><br><span class='total-valor'>R$ ${totalPago.toFixed(2).replace('.',',')}</span></div>
+        `;
+
+        const hoje = new Date().toLocaleDateString('pt-BR');
+        const hora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+        
+        textoZapFinal = `📊 *RELATÓRIO VIP BOLOES* 📊\n🗓 ${hoje}   ⏰ ${hora}\n\n`;
+        textoZapFinal += `━━━━━━━━━━━━━━━━━━\n🏆 *LISTA DE GANHADORES* 🏆\n━━━━━━━━━━━━━━━━━━\n\n`;
+        textoZapFinal += temGanhador ? zapGanhadores : "🐢 *Sem ganhadores nesta rodada*\n      Acumulou para a próxima!\n\n";
+        textoZapFinal += `━━━━━━━━━━━━━━━━━━\n🔢 *RESULTADOS DO DIA*\n\n${zapResultados}`;
+        textoZapFinal += `\n━━━━━━━━━━━━━━━━━━\n📋 *CONFERÊNCIA GERAL*\n\nJogos:\n${zapGeral}`;
+        textoZapFinal += `\n━━━━━━━━━━━━━━━━━━\n🍀 *Boa sorte na próxima!*\n_Gerado em: ${hoje} às ${hora}_`;
+        
+        document.getElementById('fab-container').classList.remove('hidden');
+    }
+
+    function mostrarErro(msg) {
+        document.getElementById('admin-panel').classList.add('hidden');
+        document.getElementById('results-panel').classList.add('hidden');
+        const box = document.getElementById('error-box');
+        box.classList.remove('hidden');
+        document.getElementById('error-msg').innerHTML = msg;
+    }
+
+    function limparTudo() {
+        if(confirm("Limpar tudo?")) {
+            document.getElementById('lista-jogos').value = '';
+            document.querySelectorAll('.input-bola').forEach(i => i.value = '');
+            window.history.replaceState({}, document.title, window.location.pathname);
+            location.reload();
+        }
+    }
+    
+    function copiarTexto() {
+        const link = window.location.href;
+        navigator.clipboard.writeText(textoZapFinal + `\n\n🔗 *Link do Recibo:*\n${link}`).then(() => alert("Relatório copiado!"));
+    }
+    
+    function compartilharZap() {
+        const link = window.location.href;
+        const texto = textoZapFinal + `\n\n🔗 *Link do Recibo:*\n${link}`;
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+    }
+</script>
+
+</body>
+</html>
