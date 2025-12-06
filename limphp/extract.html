@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Digitador Pro - Modern Dark</title>
+    <style>
+        :root {
+            /* Paleta Modern Slate */
+            --bg-body: #1e2024;       /* Fundo da página (Cinza escuro suave) */
+            --bg-container: #262930;  /* Fundo do container principal */
+            --bg-card: #30343d;       /* Fundo dos cartões */
+            --bg-input: #3a3f4b;      /* Fundo do input */
+            
+            --text-primary: #e4e6eb;
+            --text-secondary: #b0b3b8;
+            
+            --primary-gradient: linear-gradient(135deg, #3b82f6, #2563eb);
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            
+            --border-radius: 12px;
+            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-body); 
+            color: var(--text-primary);
+            padding: 15px; 
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .container { 
+            max-width: 850px; 
+            margin: 0 auto; 
+            background-color: var(--bg-container);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border: 1px solid #3a3f4b;
+        }
+
+        h2 { 
+            text-align: center; 
+            margin-top: 0; 
+            font-weight: 800; 
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.8rem;
+        }
+        
+        .instruction { 
+            font-size: 0.95rem; 
+            color: var(--text-secondary); 
+            text-align: center; 
+            margin-bottom: 20px;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 12px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: none;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Área de Texto */
+        textarea {
+            width: 100%; 
+            height: 120px; 
+            padding: 15px; 
+            background-color: var(--bg-input);
+            color: #fff;
+            border: 1px solid transparent;
+            border-radius: var(--border-radius); 
+            font-family: 'Consolas', monospace; 
+            font-size: 14px; 
+            margin-bottom: 20px;
+            resize: vertical; 
+            outline: none;
+            transition: border 0.2s;
+        }
+        textarea:focus { border: 1px solid #60a5fa; }
+
+        /* Botões de Ação */
+        .actions-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 16px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: transform 0.1s, opacity 0.2s;
+            flex: 1; /* Ocupam espaço igual */
+        }
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-danger {
+            background: transparent;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            flex: 0.3; /* Botão limpar menor */
+        }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.1); }
+
+        /* Estilo Macro das Bancas */
+        .banca-wrapper {
+            margin-bottom: 30px;
+            border-radius: 16px;
+            overflow: hidden;
+            background-color: var(--bg-card);
+            box-shadow: var(--shadow-soft);
+            border: 1px solid #40444f;
+        }
+
+        .banca-header {
+            padding: 12px; 
+            color: white; 
+            font-size: 1.1rem; 
+            font-weight: 700;
+            text-transform: uppercase; 
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        /* Cores das Bancas - Tons mais vibrantes mas elegantes */
+        .header-RJ { background: linear-gradient(135deg, #1e3c72, #2a5298); }
+        .header-LK { background: linear-gradient(135deg, #8e2de2, #4a00e0); }
+        .header-NC { background: linear-gradient(135deg, #00b09b, #96c93d); }
+        .header-FD { background: linear-gradient(135deg, #f857a6, #ff5858); }
+        .header-PT { background: linear-gradient(135deg, #cb2d3e, #ef473a); }
+        .header-GERAL { background: linear-gradient(135deg, #4b6cb7, #182848); }
+
+        /* Grupos de Jogos */
+        .game-group { 
+            background-color: rgba(0,0,0,0.2); /* Um pouco mais escuro que o card */
+            margin: 15px; 
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        /* ESTILO COPIADO */
+        .game-group.checked {
+            opacity: 0.5;
+            filter: grayscale(0.8);
+            border: 1px solid var(--success-color);
+        }
+
+        .game-group-header {
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap; 
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .group-title { 
+            font-weight: 600; 
+            color: var(--text-primary); 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
+        
+        /* Destaque 2x, 5x... */
+        .highlight-bg { border: 1px solid rgba(255, 193, 7, 0.3); }
+        .highlight-bg .group-title { color: #fcd34d; }
+
+        .card-list { padding: 10px; }
+
+        .card {
+            padding: 8px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 6px;
+            justify-content: center; 
+            border-bottom: 1px dashed #444; 
+        }
+        .card:last-child { border-bottom: none; }
+        
+        .ball {
+            display: flex; justify-content: center; align-items: center;
+            width: 32px; height: 32px; 
+            /* Gradiente na bola para efeito 3D suave */
+            background: radial-gradient(circle at 30% 30%, #4a505c, #2a2d35);
+            border-radius: 50%; 
+            font-size: 14px; font-weight: 700; 
+            color: #fff; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Botão Copiar (Pequeno) */
+        .copy-group-btn {
+            background-color: rgba(16, 185, 129, 0.2); 
+            color: #34d399; 
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 6px 16px;
+            border-radius: 20px; /* Redondo */
+            cursor: pointer; 
+            font-size: 0.85rem; 
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .copy-group-btn:hover { 
+            background-color: var(--success-color); 
+            color: white;
+        }
+        
+        .game-group.checked .copy-group-btn {
+            background-color: transparent;
+            border-color: transparent;
+            color: var(--success-color);
+            cursor: default;
+        }
+
+        /* Rodapé */
+        .footer-credits {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #6b7280;
+            padding-top: 20px;
+            border-top: 1px solid #3a3f4b;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 480px) {
+            .container { padding: 15px; border-radius: 0; border: none; }
+            .ball { width: 28px; height: 28px; font-size: 12px; margin: 1px; }
+            .game-group-header { flex-direction: column; text-align: center; }
+            .copy-group-btn { width: 100%; justify-content: center; padding: 12px; }
+            .actions-row { flex-direction: column; }
+            .btn-danger { flex: 1; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>DIGITADOR <span style="font-weight:300; opacity:0.8;">PRO</span></h2>
+    <p class="instruction">Organização profissional de apostas.</p>
+    
+    <div id="statsPanel" class="stats-panel"></div>
+
+    <textarea id="inputArea" placeholder="Cole sua lista aqui...&#10;Exemplo:&#10;RJ 10x&#10;01 02 03..."></textarea>
+    
+    <div class="actions-row">
+        <button class="btn btn-primary" onclick="processarLista()">PROCESSAR LISTA</button>
+        <button class="btn btn-danger" onclick="limparTudo()">🗑️ LIMPAR</button>
+    </div>
+    
+    <div id="output"></div>
+
+    <div class="footer-credits">
+        Design & Lógica por <strong>Le Miastkuosky</strong><br>
+        Versão 1.0.3
+    </div>
+</div>
+
+<script>
+    function limparTudo() {
+        if(confirm('Tem certeza que deseja limpar tudo?')) {
+            document.getElementById('inputArea').value = '';
+            document.getElementById('output').innerHTML = '';
+            document.getElementById('statsPanel').style.display = 'none';
+        }
+    }
+
+    function processarLista() {
+        const input = document.getElementById('inputArea').value;
+        if (!input.trim()) {
+            alert('Por favor, cole uma lista primeiro.');
+            return;
+        }
+
+        const lines = input.split('\n');
+        
+        const bancas = {}; 
+        const jogosUnicosGlobais = new Set(); 
+
+        let multiplicadorPendente = 1;
+        let tagsPendentes = []; 
+        const regexExtracts = /\b(RJ|LK|NC|FD|PT|PTV|PTN|COR|FED|NAC|L-BR)\b/gi;
+
+        lines.forEach(line => {
+            const lineTrimmed = line.trim();
+
+            // Lógica para detectar multiplicador e banca
+            if (lineTrimmed.includes('▫') || lineTrimmed.match(/[a-z]/i)) {
+                const matchQtd = lineTrimmed.match(/(\d+)x/i);
+                if (matchQtd) multiplicadorPendente = parseInt(matchQtd[1], 10);
+                else if (lineTrimmed.includes('▫')) multiplicadorPendente = 1;
+
+                const foundTags = lineTrimmed.match(regexExtracts);
+                if (foundTags) tagsPendentes = foundTags.map(t => t.toUpperCase());
+            }
+
+            // Extração dos números
+            let numbers = lineTrimmed.match(/\d+/g);
+
+            if (numbers) {
+                numbers = numbers.map(n => parseInt(n, 10));
+
+                if (numbers.length === 20) {
+                    numbers.sort((a, b) => a - b);
+                    const key = numbers.map(n => n.toString().padStart(2, '0')).join(' ');
+                    
+                    jogosUnicosGlobais.add(key);
+
+                    let qtdAtual = multiplicadorPendente > 0 ? multiplicadorPendente : 1;
+                    const tagsParaSalvar = tagsPendentes.length > 0 ? tagsPendentes : ['GERAL'];
+
+                    tagsParaSalvar.forEach(tag => {
+                        let cleanTag = tag;
+                        if(tag === 'NAC') cleanTag = 'NC';
+                        if(tag === 'FED') cleanTag = 'FD';
+                        if(tag === 'L-BR') cleanTag = 'LK';
+
+                        if (!bancas[cleanTag]) bancas[cleanTag] = {};
+                        if (!bancas[cleanTag][key]) {
+                            bancas[cleanTag][key] = { qtd: 0, nums: numbers, formatted: key };
+                        }
+                        bancas[cleanTag][key].qtd += qtdAtual;
+                    });
+
+                    // Reseta para a próxima linha
+                    multiplicadorPendente = 1;
+                    tagsPendentes = [];
+                }
+            }
+        });
+
+        // Painel de Status
+        const statsPanel = document.getElementById('statsPanel');
+        if (jogosUnicosGlobais.size > 0) {
+            statsPanel.style.display = 'block';
+            statsPanel.innerHTML = `✨ ${jogosUnicosGlobais.size} JOGOS ÚNICOS IDENTIFICADOS`;
+        } else {
+            statsPanel.style.display = 'none';
+        }
+
+        renderizarBancas(bancas);
+    }
+
+    function renderizarBancas(bancas) {
+        const outputDiv = document.getElementById('output');
+        outputDiv.innerHTML = '';
+        const keys = Object.keys(bancas);
+
+        if (keys.length === 0) {
+            outputDiv.innerHTML = '<p style="text-align:center; padding:30px; color:#6b7280;">Nenhum padrão de jogo válido encontrado.</p>';
+            return;
+        }
+
+        // Ordem de exibição preferencial
+        const ordem = ['RJ', 'LK', 'NC', 'FD', 'PT', 'PTV', 'PTN', 'GERAL'];
+        const bancasOrdenadas = keys.sort((a, b) => {
+            const idxA = ordem.indexOf(a) === -1 ? 99 : ordem.indexOf(a);
+            const idxB = ordem.indexOf(b) === -1 ? 99 : ordem.indexOf(b);
+            return idxA - idxB;
+        });
+
+        bancasOrdenadas.forEach(tag => {
+            const jogosDaBanca = bancas[tag];
+            const chavesJogos = Object.keys(jogosDaBanca);
+            
+            const groupsByQty = {};
+            let totalCotasBanca = 0;
+
+            chavesJogos.forEach(key => {
+                const jogo = jogosDaBanca[key];
+                if (!groupsByQty[jogo.qtd]) groupsByQty[jogo.qtd] = [];
+                groupsByQty[jogo.qtd].push(jogo);
+                totalCotasBanca += jogo.qtd;
+            });
+
+            // Container da Banca
+            const section = document.createElement('div');
+            section.className = 'banca-wrapper';
+
+            const headerClass = `header-${tag}` in { 'header-RJ':1, 'header-LK':1, 'header-NC':1, 'header-FD':1, 'header-PT':1 } ? `header-${tag}` : 'header-GERAL';
+
+            section.innerHTML = `
+                <div class="banca-header ${headerClass}">
+                    ${getTagNome(tag)} <span style="font-size:0.75em; opacity:0.9; margin-left:5px">(${totalCotasBanca} cotas)</span>
+                </div>
+            `;
+
+            const sortedQtds = Object.keys(groupsByQty).sort((a, b) => b - a);
+
+            // Cria Blocos Separados
+            sortedQtds.forEach(qtd => {
+                const listaJogos = groupsByQty[qtd];
+                const isHighlight = parseInt(qtd) > 1;
+                const textToCopy = listaJogos.map(j => j.formatted).join('\n');
+
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'game-group';
+                if(isHighlight) groupDiv.classList.add('highlight-bg');
+                
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'game-group-header';
+                
+                headerDiv.innerHTML = `
+                    <div class="group-title">
+                        ${isHighlight ? '🔥' : '🔹'} BLOCO DE ${qtd}x <small style="margin-left:5px; opacity:0.6;">(${listaJogos.length} jogos)</small>
+                    </div>
+                `;
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-group-btn';
+                copyBtn.innerHTML = `COPIAR`;
+                
+                copyBtn.onclick = function() { marcarComoCopiado(this, groupDiv, textToCopy); };
+                
+                headerDiv.appendChild(copyBtn);
+                groupDiv.appendChild(headerDiv);
+
+                const listDiv = document.createElement('div');
+                listDiv.className = 'card-list';
+
+                listaJogos.forEach(jogo => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    // Adicionada classe .ball para estilo 3D
+                    const balls = jogo.nums.map(n => `<span class="ball">${n.toString().padStart(2,'0')}</span>`).join('');
+                    card.innerHTML = balls;
+                    listDiv.appendChild(card);
+                });
+
+                groupDiv.appendChild(listDiv);
+                section.appendChild(groupDiv);
+            });
+
+            outputDiv.appendChild(section);
+        });
+    }
+
+    function getTagNome(tag) {
+        const nomes = { 'RJ': 'RIO DE JANEIRO', 'LK': 'LOOK', 'NC': 'NACIONAL', 'FD': 'FEDERAL', 'PT': 'PT RIO', 'GERAL': 'OUTROS' };
+        return nomes[tag] || tag;
+    }
+
+    function marcarComoCopiado(btn, groupDiv, text) {
+        navigator.clipboard.writeText(text).then(() => {
+            btn.innerHTML = "✅ FEITO";
+            groupDiv.classList.add('checked');
+        }).catch(err => {
+            alert('Erro ao copiar');
+        });
+    }
+</script>
+
+</body>
+</html>
