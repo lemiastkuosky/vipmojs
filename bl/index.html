@@ -334,9 +334,9 @@
     <div class="header-card" id="header-card">
         <h1 id="page-title">VIP BOLOES PRO</h1>
         <p id="page-desc">Validação, gestão e estatísticas.</p>
-        <button type="button" class="btn-primary" style="margin-top:15px; width:100%; padding:10px;" onclick="togglePanel('history-panel')">
-            <i class="fas fa-history"></i> Abrir Histórico de Ganhadores
-        </button>
+        <button type="button" id="btn-hist-toggle" class="btn-primary" style="margin-top:15px; width:100%; padding:10px;" onclick="togglePanel('history-panel')">
+    <i class="fas fa-history"></i> Abrir Histórico de Ganhadores
+</button>
     </div>
 
     <div id="admin-panel">
@@ -541,11 +541,15 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const verId = urlParams.get('ver');
-        if (verId) {
-            carregarRecibo(verId);
-        }
         
-        carregarHistorico();
+        // --- ALTERAÇÃO AQUI ---
+        if (verId) {
+            // Se for link de recibo, carrega o recibo
+            carregarRecibo(verId);
+        } else {
+            // Se NÃO for recibo (é o admin), carrega o histórico
+            carregarHistorico();
+        }
     };
     
     function togglePanel(panelId) {
@@ -1142,6 +1146,7 @@
             }
             const dados = snapshot.val();
             
+            // ... (código existente de preencher inputs) ...
             document.getElementById('lista-jogos').value = dados.lista || "";
             document.getElementById('v_terno').value = dados.premios.terno;
             document.getElementById('v_quadra').value = dados.premios.quadra;
@@ -1157,11 +1162,18 @@
                 });
             }
 
+            // --- ALTERAÇÕES VISUAIS AQUI ---
             document.getElementById('admin-panel').classList.add('hidden');
             document.getElementById('page-title').innerText = "RECIBO SALVO";
             document.getElementById('page-desc').innerText = "Visualização fixa.";
-            document.getElementById('btn-save-db').style.display = 'none'; // Esconde botão de salvar no histórico em recibos
             
+            // Ocultar botão de salvar histórico
+            document.getElementById('btn-save-db').style.display = 'none'; 
+            
+            // NOVO: Ocultar botão de abrir histórico
+            const btnHist = document.getElementById('btn-hist-toggle');
+            if(btnHist) btnHist.style.display = 'none';
+
             renderizarConferencia(dados);
 
         } catch (e) {
