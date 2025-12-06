@@ -1,0 +1,204 @@
+/* =========================================
+   1. RESET E GERAL
+   ========================================= */
+* { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0d0d0d;
+    color: #fff;
+    height: 100vh;
+    overflow: hidden; /* Nada de scroll na janela principal */
+}
+a { text-decoration: none; color: inherit; transition: 0.2s; }
+
+/* =========================================
+   2. ESTRUTURA (FUNDO DE MAPA)
+   ========================================= */
+.layout-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    /* Imagem de Fundo do Mapa */
+    background: #0f0f0f url('../img/mapa_bg.jpg') no-repeat center center;
+    background-size: cover;
+    position: relative;
+}
+
+/* Camada escura sobre o mapa para o texto brilhar mais */
+.map-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.4); /* Escurece o fundo em 40% */
+    pointer-events: none; /* Permite clicar nos pins através da sombra */
+    z-index: 1;
+}
+
+/* =========================================
+   3. BARRA SUPERIOR (HEADER ESTILO HUD)
+   ========================================= */
+.top-bar {
+    height: 60px;
+    background: rgba(16, 16, 16, 0.9); /* Semi-transparente */
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+    position: relative;
+    z-index: 100; /* Fica acima do mapa */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.logo-area { display: flex; align-items: center; gap: 15px; }
+.logo-img { font-weight: 800; font-size: 1.4em; letter-spacing: 1px; color: #fff; text-transform: uppercase; }
+.logo-img span { color: #d32f2f; }
+
+/* Info Central (Relógio, Clima, Jogadores) */
+.hud-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 0.9em;
+    color: #aaa;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid #333;
+}
+.hud-item { display: flex; align-items: center; gap: 8px; }
+.hud-icon { color: #ffd700; }
+
+/* Área Direita (Status Jogador + Botões) */
+.user-controls { display: flex; align-items: center; gap: 20px; }
+
+/* Status de Dinheiro e Nível */
+.player-status { text-align: right; line-height: 1.2; }
+.p-money { color: #4caf50; font-weight: bold; font-size: 1.1em; text-shadow: 0 0 5px rgba(76,175,80,0.4); }
+.p-level { color: #2196f3; font-size: 0.8em; }
+
+/* Botões Circulares (Menu, Sair) */
+.circle-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #222;
+    border: 1px solid #444;
+    display: flex; align-items: center; justify-content: center;
+    color: #ccc; font-size: 1.2em;
+    cursor: pointer;
+}
+.circle-btn:hover { background: #d32f2f; border-color: #d32f2f; color: white; transform: scale(1.1); }
+.circle-btn.admin { color: #d9534f; border-color: #5c2b2b; }
+.circle-btn.admin:hover { background: #d9534f; color: white; }
+
+/* =========================================
+   4. PINS DO MAPA (OS ÍCONES ESPALHADOS)
+   ========================================= */
+.game-area {
+    position: relative;
+    flex: 1;
+    z-index: 10; /* Acima do overlay */
+    overflow: hidden; /* Pins não saem da tela */
+}
+
+.map-pin {
+    position: absolute;
+    width: 55px; height: 55px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 2px solid #555;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 1.5em;
+    box-shadow: 0 0 10px rgba(0,0,0,0.8);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Tooltip (Texto que aparece ao passar o mouse) */
+.map-pin::after {
+    content: attr(data-label); /* Pega o texto do HTML */
+    position: absolute;
+    bottom: -30px;
+    left: 50%; transform: translateX(-50%);
+    background: #000; color: #fff;
+    padding: 4px 8px; font-size: 0.75em;
+    border-radius: 4px;
+    opacity: 0; white-space: nowrap;
+    transition: 0.3s; pointer-events: none;
+    border: 1px solid #333;
+}
+
+.map-pin:hover { transform: scale(1.2); z-index: 99; }
+.map-pin:hover::after { opacity: 1; bottom: -35px; }
+
+/* Cores e Posições Específicas */
+/* Loja - Amarelo */
+.pin-shop { border-color: #ffd700; color: #ffd700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+.pin-shop:hover { background: #ffd700; color: #000; }
+
+/* Corrida - Vermelho */
+.pin-race { border-color: #d32f2f; color: #d32f2f; box-shadow: 0 0 15px rgba(211, 47, 47, 0.3); }
+.pin-race:hover { background: #d32f2f; color: #fff; }
+
+/* Garagem - Azul */
+.pin-garage { border-color: #2196f3; color: #2196f3; box-shadow: 0 0 15px rgba(33, 150, 243, 0.3); }
+.pin-garage:hover { background: #2196f3; color: #fff; }
+
+/* Mercado - Verde */
+.pin-market { border-color: #4caf50; color: #4caf50; box-shadow: 0 0 15px rgba(76, 175, 80, 0.3); }
+.pin-market:hover { background: #4caf50; color: #fff; }
+
+/* Admin - Roxo */
+.pin-admin { border-color: #9c27b0; color: #9c27b0; }
+
+/* =========================================
+   5. BREAKING NEWS (RODAPÉ ANIMADO)
+   ========================================= */
+.breaking-news-bar {
+    height: 40px;
+    background: #000;
+    display: flex;
+    align-items: center;
+    border-top: 2px solid #d32f2f;
+    position: relative;
+    z-index: 100;
+}
+
+.bn-label {
+    background: #d32f2f;
+    color: #fff;
+    font-weight: 800;
+    padding: 0 20px;
+    height: 100%;
+    display: flex; align-items: center;
+    font-size: 0.9em; letter-spacing: 1px;
+    box-shadow: 5px 0 10px rgba(0,0,0,0.5);
+    z-index: 2;
+}
+
+.bn-ticker {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+}
+
+.bn-ticker span {
+    display: inline-block;
+    padding-left: 100%;
+    animation: marquee 20s linear infinite;
+    font-size: 0.9em;
+    color: #ddd;
+    text-transform: uppercase;
+}
+.bn-ticker span b { color: #fff; }
+
+@keyframes marquee {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(-100%, 0); }
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .hud-stats { display: none; } /* Esconde relógio no celular */
+    .map-pin { width: 45px; height: 45px; font-size: 1.2em; }
+}
