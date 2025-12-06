@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Bet Manager v4.0 (IA + Gráfico)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <style>
+        /* --- ESTILOS GERAIS --- */
+        :root { 
+            --bg-body: #131517; 
+            --bg-panel: #1e2024; 
+            --bg-hover: #2a2d33; 
+            --text-main: #e1e1e6; 
+            --text-muted: #a8a8b3; 
+            --accent: #3b82f6; 
+            --green: #10b981; 
+            --red: #ef4444; 
+            --yellow: #f59e0b; 
+            --purple: #8b5cf6; 
+            --border: #2d3036; 
+        }
+        * { box-sizing: border-box; outline: none; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* SIDEBAR */
+        aside { width: 250px; background-color: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; }
+        .logo { font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .menu-item { padding: 12px 15px; border-radius: 8px; color: var(--text-muted); cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 10px; text-decoration: none; margin-bottom: 5px; }
+        .menu-item:hover, .menu-item.active { background-color: var(--bg-hover); color: var(--text-main); }
+        
+        /* MAIN CONTENT */
+        main { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px; }
+        
+        /* STATS CARDS */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat-card { background-color: var(--bg-panel); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .stat-card h4 { margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+        .stat-card p { margin: 10px 0 0; font-size: 1.5rem; font-weight: 700; }
+        .text-green { color: var(--green); } .text-red { color: var(--red); } .text-blue { color: var(--accent); }
+        
+        /* TOOLBAR & INPUTS */
+        .toolbar { display: flex; gap: 15px; background-color: var(--bg-panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+        .search-box { flex: 1; min-width: 200px; position: relative; }
+        .search-box input { width: 100%; background: var(--bg-body); border: 1px solid var(--border); padding: 10px 15px 10px 35px; border-radius: 6px; color: white; }
+        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        select, input[type="date"], input[type="number"], input[type="text"] { background: var(--bg-body); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 6px; cursor: pointer; }
+        
+        /* BUTTONS */
+        button { border: none; cursor: pointer; font-family: inherit; transition: 0.2s; }
+        .btn-new { background-color: var(--accent); color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .btn-sync { background-color: var(--yellow); color: #131517; padding: 10px 20px; border-radius: 6px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        
+        /* AI BUTTON */
+        .btn-ai { 
+            background-color: var(--purple); 
+            color: white; 
+            padding: 10px; 
+            border-radius: 6px; 
+            font-size: 0.9rem; 
+            font-weight: 600; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            gap: 8px; 
+            width: 100%;
+            margin-top: 5px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-ai:hover { background-color: #7c3aed; }
+        .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* CHART CONTAINER */
+        .chart-container { background-color: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border); padding: 20px; height: 300px; position: relative; }
+
+        /* TABLE */
+        .table-container { background-color: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        th { background-color: rgba(0,0,0,0.2); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+        tr:hover { background-color: var(--bg-hover); }
+        
+        /* BADGES */
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .badge-green { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+        .badge-red { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+        .badge-pending { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
+
+        /* MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 999; }
+        .modal { background: var(--bg-panel); width: 90%; max-width: 500px; border-radius: 12px; padding: 25px; border: 1px solid var(--border); position: relative; max-height: 90vh; overflow-y: auto; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9rem; }
+        .form-group input, .form-group select { width: 100%; }
+        .btn-close { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; }
+        .btn-save { width: 100%; background: var(--green); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        
+        /* PREDICTION BOX (IA) */
+        .prediction-box {
+            background: rgba(139, 92, 246, 0.08);
+            border: 1px solid var(--purple);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .pred-header { color: var(--purple); font-weight: bold; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .pred-advice { font-size: 1rem; font-weight: 700; margin-bottom: 12px; color: white; text-align: center; border-bottom: 1px solid rgba(139, 92, 246, 0.3); padding-bottom: 8px;}
+        
+        .pred-stats-container { display: flex; flex-direction: column; gap: 8px; }
+        .stat-row { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; }
+        .stat-label { width: 60px; color: var(--text-muted); }
+        .bar-bg { flex: 1; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease-in-out; }
+        .stat-value { width: 40px; text-align: right; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="logo"><i class="fas fa-robot"></i> BET AI MANAGER</div>
+        <nav>
+            <a href="#" class="menu-item active"><i class="fas fa-home"></i> Dashboard</a>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="stats-grid">
+            <div class="stat-card"><h4>Banca Atual (Real)</h4><p id="displayBanca" class="text-blue">R$ 0,00</p></div>
+            <div class="stat-card"><h4>Lucro Líquido (Real)</h4><p id="displayLucro">R$ 0,00</p></div>
+            <div class="stat-card"><h4>ROI (Real)</h4><p id="displayROI">0%</p></div>
+            <div class="stat-card"><h4>Winrate (Real)</h4><p id="displayWinrate">0%</p></div>
+        </div>
+
+        <div class="toolbar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="filterSearch" placeholder="Buscar..." onkeyup="aplicarFiltros()">
+            </div>
+            
+            <select id="filterStatus" onchange="aplicarFiltros()">
+                <option value="all">Todos Status</option>
+                <option value="green">✅ Green</option>
+                <option value="red">❌ Red</option>
+                <option value="pending">⏳ Pendente</option>
+            </select>
+
+            <select id="filterTipoAposta" onchange="aplicarFiltros()">
+                <option value="all">Todos os Tipos</option>
+                <option value="real">💵 Real</option>
+                <option value="simulacao">🧠 Simulação</option>
+            </select>
+            
+            <button class="btn-sync" onclick="validarResultadosAPI()">
+                <i class="fas fa-sync-alt"></i> Validar
+            </button>
+
+            <button class="btn-new" onclick="iniciarNovaAposta()">
+                <i class="fas fa-plus"></i> Nova Aposta
+            </button>
+        </div>
+
+        <div class="chart-container">
+            <h3 style="margin-top:0; color: var(--text-main); font-size: 1rem;">Evolução do Lucro</h3>
+            <div style="position: relative; height: 240px; width: 100%;">
+                <canvas id="profitChart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th> <th>Jogo / Time</th>
+                        <th>Mercado</th>
+                        <th>Odd</th>
+                        <th>Valor</th>
+                        <th>Retorno</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo"></tbody>
+            </table>
+            <div id="noData" style="display:none; text-align:center; padding:20px; color:var(--text-muted);">Nenhuma aposta encontrada.</div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="modalAposta">
+        <div class="modal">
+            <button class="btn-close" onclick="fecharModal()">&times;</button>
+            <h2 id="modalTitle">Nova Aposta</h2>
+            
+            <div class="form-group">
+                <label>Data do Jogo</label>
+                <input type="date" id="inputData" onchange="buscarJogosDoDia()">
+            </div>
+
+            <div class="form-group">
+                <label>Tipo de Aposta</label>
+                <select id="inputTipoAposta">
+                    <option value="real">💵 Real</option>
+                    <option value="simulacao">🧠 Simulação</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Selecione o Jogo</label>
+                <select id="selectJogoAPI">
+                    <option value="">Aguardando data...</option>
+                </select>
+                <button type="button" class="btn-ai" id="btnConsultarIA" onclick="consultarPrevisaoIA()" style="display:none;">
+                    <i class="fas fa-brain"></i> Consultar Inteligência Artificial
+                </button>
+            </div>
+
+            <div id="predictionArea" class="prediction-box">
+                <div class="pred-header">
+                    <span><i class="fas fa-microchip"></i> ANÁLISE DA IA</span>
+                </div>
+                <div class="pred-advice" id="predAdvice">--</div>
+                
+                <div class="pred-stats-container">
+                    <div class="stat-row">
+                        <span class="stat-label">Casa</span>
+                        <div class="bar-bg"><div id="barHome" class="bar-fill" style="background:var(--green); width:0%"></div></div>
+                        <span id="lblHome" class="stat-value">0%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Empate</span>
+                        <div class="bar-bg"><div id="barDraw" class="bar-fill" style="background:var(--text-muted); width:0%"></div></div>
+                        <span id="lblDraw" class="stat-value">0%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Fora</span>
+                        <div class="bar-bg"><div id="barAway" class="bar-fill" style="background:var(--red); width:0%"></div></div>
+                        <span id="lblAway" class="stat-value">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Mercado</label>
+                <select id="inputMercado">
+                    <option value="Match Winner - Home">Vencedor: Casa (1)</option>
+                    <option value="Match Winner - Away">Vencedor: Fora (2)</option>
+                    <option value="Match Winner - Draw">Empate (X)</option>
+                    <option value="Over 0.5 Goals">Over 0.5 Gols</option>
+                    <option value="Over 1.5 Goals">Over 1.5 Gols</option>
+                    <option value="Over 2.5 Goals">Over 2.5 Gols</option>
+                    <option value="Under 2.5 Goals">Under 2.5 Gols</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Odd (@)</label>
+                    <input type="number" step="0.01" id="inputOdd" placeholder="1.80">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Valor (R$)</label>
+                    <input type="number" step="0.01" id="inputValor" placeholder="100.00">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Status Inicial</label>
+                <select id="inputStatus">
+                    <option value="pending">⏳ Pendente</option>
+                    <option value="green">✅ Green</option>
+                    <option value="red">❌ Red</option>
+                </select>
+            </div>
+
+            <input type="hidden" id="hiddenFixtureId">
+            <input type="hidden" id="hiddenTimeCasa">
+            <input type="hidden" id="hiddenTimeFora">
+
+            <button class="btn-save" onclick="salvarAposta()" id="btnSalvar">Salvar Aposta</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        // ==========================================
+        //  1. CONFIGURAÇÃO FIREBASE
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
+            authDomain: "meus-recibos-vip.firebaseapp.com",
+            projectId: "meus-recibos-vip",
+            storageBucket: "meus-recibos-vip.firebasestorage.app",
+            messagingSenderId: "254959368683",
+            appId: "1:254959368683:web:80676a26f614040df6c1ae"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ==========================================
+        //  2. CONFIGURAÇÃO API FUTEBOL
+        // ==========================================
+        const API_KEY = "0b48ae993afe2d7029f915ddab0c6bdf"; 
+        const API_DOMAIN = "api-football-v1.p.rapidapi.com";
+
+        // Variáveis de Estado
+        let allApostas = [];
+        let bancaInicial = 1000.00;
+        let profitChartInstance = null; // Variável para o gráfico
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            ouvirBancoDeDados();
+        });
+
+        // ==========================================
+        //  3. FUNÇÃO GENÉRICA DE API
+        // ==========================================
+        async function chamarAPI(endpoint, params = "") {
+            const url = `https://${API_DOMAIN}/v3/${endpoint}${params}`;
+            const options = {
+                method: "GET",
+                headers: {
+                    "x-rapidapi-host": API_DOMAIN, 
+                    "x-rapidapi-key": API_KEY
+                }
+            };
+
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) throw new Error(`Erro API: ${response.status}`);
+                const json = await response.json();
+                return json.response;
+            } catch (err) {
+                console.error("Falha na requisição:", err);
+                alert("Erro ao conectar com a API. Verifique sua chave.");
+                return [];
+            }
+        }
+
+        // ==========================================
+        //  4. LÓGICA DE JOGOS E PREVISÕES
+        // ==========================================
+        async function buscarJogosDoDia() {
+            const data = document.getElementById('inputData').value;
+            if(!data) return;
+
+            const select = document.getElementById('selectJogoAPI');
+            select.innerHTML = '<option>Carregando jogos...</option>';
+            select.disabled = true;
+            
+            document.getElementById('btnConsultarIA').style.display = 'none';
+            document.getElementById('predictionArea').style.display = 'none';
+
+            const jogos = await chamarAPI("fixtures", `?date=${data}`);
+
+            select.innerHTML = '<option value="">Selecione um jogo...</option>';
+            
+            jogos.slice(0, 100).forEach(game => {
+                const option = document.createElement('option');
+                option.value = game.fixture.id;
+                const hora = game.fixture.date.split('T')[1].slice(0,5);
+                option.text = `${hora} | ${game.league.name} | ${game.teams.home.name} x ${game.teams.away.name}`;
+                
+                option.dataset.timeCasa = game.teams.home.name;
+                option.dataset.timeFora = game.teams.away.name;
+                
+                select.appendChild(option);
+            });
+            
+            select.disabled = false;
+        }
+
+        document.getElementById('selectJogoAPI').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if(selectedOption.value) {
+                document.getElementById('hiddenFixtureId').value = selectedOption.value;
+                document.getElementById('hiddenTimeCasa').value = selectedOption.dataset.timeCasa;
+                document.getElementById('hiddenTimeFora').value = selectedOption.dataset.timeFora;
+                
+                document.getElementById('btnConsultarIA').style.display = 'flex';
+                document.getElementById('predictionArea').style.display = 'none';
+            } else {
+                document.getElementById('btnConsultarIA').style.display = 'none';
+            }
+        });
+
+        async function consultarPrevisaoIA() {
+            const fixtureId = document.getElementById('hiddenFixtureId').value;
+            if(!fixtureId) return;
+
+            const btn = document.getElementById('btnConsultarIA');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Analisando...`;
+            btn.disabled = true;
+            
+            const dados = await chamarAPI("predictions", `?fixture=${fixtureId}`);
+
+            if(dados.length > 0) {
+                const p = dados[0].predictions;
+                const percent = p.percent;
+
+                document.getElementById('predictionArea').style.display = 'block';
+                document.getElementById('predAdvice').innerText = `💡 DICA: ${p.advice}`;
+                
+                document.getElementById('barHome').style.width = percent.home;
+                document.getElementById('lblHome').innerText = percent.home;
+
+                document.getElementById('barDraw').style.width = percent.draw;
+                document.getElementById('lblDraw').innerText = percent.draw;
+
+                document.getElementById('barAway').style.width = percent.away;
+                document.getElementById('lblAway').innerText = percent.away;
+            } else {
+                alert("A IA não tem dados suficientes para este jogo.");
+            }
+
+            btn.innerHTML = textoOriginal;
+            btn.disabled = false;
+        }
+
+        // ==========================================
+        //  5. GERENCIAMENTO DE APOSTAS
+        // ==========================================
+        function salvarAposta() {
+            const fixtureId = document.getElementById('hiddenFixtureId').value;
+            let timeStr = "";
+
+            if(fixtureId) {
+                timeStr = `${document.getElementById('hiddenTimeCasa').value} vs ${document.getElementById('hiddenTimeFora').value}`;
+            } else {
+                alert("Por favor, selecione um jogo da lista para salvar."); 
+                return;
+            }
+
+            const dados = {
+                data: document.getElementById('inputData').value,
+                time: timeStr,
+                tipoAposta: document.getElementById('inputTipoAposta').value, // NOVO CAMPO
+                fixture_id: fixtureId,
+                mercado: document.getElementById('inputMercado').value,
+                odd: parseFloat(document.getElementById('inputOdd').value),
+                valor: parseFloat(document.getElementById('inputValor').value),
+                status: document.getElementById('inputStatus').value,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if(!dados.data || !dados.valor || !dados.odd) {
+                alert("Preencha todos os campos!"); return;
+            }
+
+            db.collection("apostas").add(dados).then(() => {
+                fecharModal();
+            }).catch(e => {
+                console.error(e);
+                alert("Erro ao salvar no banco.");
+            });
+        }
+
+        async function validarResultadosAPI() {
+            const btn = document.querySelector('.btn-sync');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Verificando...`;
+            btn.disabled = true;
+
+            const pendentes = allApostas.filter(a => a.status === 'pending' && a.fixture_id);
+
+            if(pendentes.length === 0) {
+                alert("Nenhuma aposta pendente vinculada à API.");
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+                return;
+            }
+
+            let atualizados = 0;
+
+            for (const aposta of pendentes) {
+                const dados = await chamarAPI("fixtures", `?id=${aposta.fixture_id}`);
+                
+                if(dados.length > 0) {
+                    const jogo = dados[0];
+                    if (["FT", "AET", "PEN"].includes(jogo.fixture.status.short)) {
+                        const novoStatus = calcularGreenRed(aposta.mercado, jogo.goals.home, jogo.goals.away);
+                        
+                        if (novoStatus !== 'pending') {
+                            await db.collection("apostas").doc(aposta.id).update({
+                                status: novoStatus,
+                                resultado_final: `${jogo.goals.home} x ${jogo.goals.away}`
+                            });
+                            atualizados++;
+                        }
+                    }
+                }
+            }
+
+            btn.innerHTML = textoOriginal;
+            btn.disabled = false;
+            alert(`${atualizados} aposta(s) atualizada(s) com sucesso!`);
+        }
+
+        function calcularGreenRed(mercado, golsCasa, golsFora) {
+            const total = golsCasa + golsFora;
+            if (mercado === "Match Winner - Home") return golsCasa > golsFora ? 'green' : 'red';
+            if (mercado === "Match Winner - Away") return golsFora > golsCasa ? 'green' : 'red';
+            if (mercado === "Match Winner - Draw") return golsCasa === golsFora ? 'green' : 'red';
+            if (mercado.includes("Over")) {
+                const linha = parseFloat(mercado.split(" ")[1]);
+                return total > linha ? 'green' : 'red';
+            }
+            if (mercado.includes("Under")) {
+                const linha = parseFloat(mercado.split(" ")[1]);
+                return total < linha ? 'green' : 'red';
+            }
+            return 'pending';
+        }
+
+        // ==========================================
+        //  6. UI E DADOS
+        // ==========================================
+        function ouvirBancoDeDados() {
+            db.collection("apostas").orderBy("data", "desc").onSnapshot((snapshot) => {
+                allApostas = [];
+                snapshot.forEach(doc => allApostas.push({ id: doc.id, ...doc.data() }));
+                aplicarFiltros();
+            });
+        }
+
+        function aplicarFiltros() {
+            const busca = document.getElementById('filterSearch').value.toLowerCase();
+            const status = document.getElementById('filterStatus').value;
+            const tipoAposta = document.getElementById('filterTipoAposta').value; // FILTRO NOVO
+            
+            const filtradas = allApostas.filter(a => {
+                const matchTexto = a.time.toLowerCase().includes(busca);
+                const matchStatus = status === 'all' ? true : a.status === status;
+                // Se aposta antiga não tiver campo 'tipoAposta', considera 'real' para o filtro
+                const tipoAtual = a.tipoAposta || 'real';
+                const matchTipo = tipoAposta === 'all' ? true : tipoAtual === tipoAposta;
+                
+                return matchTexto && matchStatus && matchTipo;
+            });
+            
+            renderizarTabela(filtradas);
+            calcularStats(filtradas);
+            renderizarGrafico(filtradas); // ATUALIZA GRÁFICO
+        }
+
+        function renderizarTabela(lista) {
+            const tbody = document.getElementById('tabelaCorpo');
+            tbody.innerHTML = '';
+            
+            if(lista.length === 0) {
+                document.getElementById('noData').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('noData').style.display = 'none';
+            }
+
+            lista.forEach(a => {
+                let lucro = 0;
+                let classeLucro = '';
+                
+                if(a.status === 'green') { 
+                    lucro = (a.valor * a.odd) - a.valor; 
+                    classeLucro = 'text-green'; 
+                } else if(a.status === 'red') { 
+                    lucro = -a.valor; 
+                    classeLucro = 'text-red'; 
+                }
+
+                let badgeClass = a.status === 'green' ? 'badge-green' : (a.status === 'red' ? 'badge-red' : 'badge-pending');
+                const placarInfo = a.resultado_final ? `<div style='font-size:0.75rem; color:var(--text-muted); margin-top:2px;'>(${a.resultado_final})</div>` : '';
+
+                // Badge Tipo Aposta
+                const tipo = a.tipoAposta || 'real'; // default para antigos
+                const tipoBadge = tipo === 'real' 
+                    ? '<span class="badge badge-green">REAL</span>' 
+                    : '<span class="badge badge-pending">SIMUL</span>';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${formatarData(a.data)}</td>
+                    <td>${tipoBadge}</td>
+                    <td style="font-weight:600;">${a.time}</td>
+                    <td>${a.mercado}</td>
+                    <td>${a.odd.toFixed(2)}</td>
+                    <td>R$ ${a.valor.toFixed(2)}</td>
+                    <td class="${classeLucro}">R$ ${lucro.toFixed(2)}</td>
+                    <td><span class="badge ${badgeClass}">${a.status}</span>${placarInfo}</td>
+                    <td><i class="fas fa-trash" style="cursor:pointer; color:var(--text-muted)" onclick="deletarAposta('${a.id}')"></i></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function calcularStats(lista) {
+            // Filtra apenas apostas 'REAIS' para o cálculo da banca e ROI
+            const listaReais = lista.filter(a => !a.tipoAposta || a.tipoAposta === 'real');
+            
+            let banca = bancaInicial;
+            let lucroTotal = 0;
+            let wins = 0;
+            let totalFinalizadas = 0;
+
+            listaReais.forEach(a => {
+                if(a.status !== 'pending') {
+                    totalFinalizadas++;
+                    if(a.status === 'green') { 
+                        const l = (a.valor * a.odd) - a.valor; 
+                        lucroTotal += l; 
+                        banca += l; 
+                        wins++; 
+                    }
+                    if(a.status === 'red') { 
+                        lucroTotal -= a.valor; 
+                        banca -= a.valor; 
+                    }
+                }
+            });
+
+            document.getElementById('displayBanca').innerText = `R$ ${banca.toFixed(2)}`;
+            document.getElementById('displayLucro').innerText = `R$ ${lucroTotal.toFixed(2)}`;
+            document.getElementById('displayLucro').className = lucroTotal >= 0 ? 'text-green' : 'text-red';
+            
+            const winrate = totalFinalizadas > 0 ? ((wins/totalFinalizadas)*100).toFixed(1) : 0;
+            document.getElementById('displayWinrate').innerText = `${winrate}%`;
+            
+            const roi = totalFinalizadas > 0 ? ((lucroTotal / bancaInicial) * 100).toFixed(1) : 0;
+            document.getElementById('displayROI').innerText = `${roi}%`;
+        }
+
+        // ==========================================
+        //  7. GRÁFICO (CHART.JS)
+        // ==========================================
+        function renderizarGrafico(lista) {
+            // Filtra pendentes e ordena por data (mais antiga -> mais nova)
+            // Também respeita o filtro atual da tela (se estiver vendo só simulação, o gráfico será da simulação)
+            const finalizadas = lista
+                .filter(a => a.status !== 'pending')
+                .sort((a, b) => new Date(a.data) - new Date(b.data));
+
+            const ctx = document.getElementById('profitChart').getContext('2d');
+
+            if (finalizadas.length === 0) {
+                if (profitChartInstance) {
+                    profitChartInstance.destroy();
+                    profitChartInstance = null;
+                }
+                return;
+            }
+
+            // Calcula lucro acumulado
+            let cumulativeProfit = 0;
+            const labels = [];
+            const dataPoints = [];
+
+            finalizadas.forEach(a => {
+                let lucro = 0;
+                if (a.status === 'green') lucro = (a.valor * a.odd) - a.valor;
+                if (a.status === 'red') lucro = -a.valor;
+                
+                cumulativeProfit += lucro;
+                
+                labels.push(formatarData(a.data));
+                dataPoints.push(cumulativeProfit);
+            });
+
+            // Destrói gráfico anterior se existir
+            if (profitChartInstance) {
+                profitChartInstance.destroy();
+            }
+
+            // Cria novo gráfico
+            profitChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Lucro Acumulado (R$)',
+                        data: dataPoints,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `R$ ${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false, color: '#2d3036' },
+                            ticks: { color: '#a8a8b3', font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: '#2d3036' },
+                            ticks: { color: '#a8a8b3', font: { size: 10 } }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // Helpers
+        function formatarData(d) { if(!d) return "-"; const [y,m,day] = d.split('-'); return `${day}/${m}`; }
+        
+        function iniciarNovaAposta() {
+            document.getElementById('modalTitle').innerText = "Nova Aposta";
+            document.getElementById('inputData').valueAsDate = new Date();
+            document.getElementById('inputTipoAposta').value = 'real'; // Default
+            document.getElementById('selectJogoAPI').innerHTML = '<option value="">Selecione a data primeiro</option>';
+            document.getElementById('btnConsultarIA').style.display = 'none';
+            document.getElementById('predictionArea').style.display = 'none';
+            document.getElementById('inputValor').value = '';
+            document.getElementById('inputOdd').value = '';
+            abrirModal();
+            buscarJogosDoDia();
+        }
+        
+        function deletarAposta(id) {
+            if(confirm("Tem certeza que deseja excluir?")) {
+                db.collection('apostas').doc(id).delete();
+            }
+        }
+        
+        function abrirModal() { document.getElementById('modalAposta').style.display = 'flex'; }
+        function fecharModal() { document.getElementById('modalAposta').style.display = 'none'; }
+        window.onclick = e => { if(e.target == document.getElementById('modalAposta')) fecharModal(); }
+
+    </script>
+</body>
+</html>
