@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FUT META PRO</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+        :root {
+            --bg-body: #0b0c10;
+            --bg-card: #15171c;
+            --accent-brand: #00f2ff;
+            --accent-green: #00e676;
+            --accent-red: #ff3d00;
+            --text-main: #ffffff;
+            --text-muted: #8b9bb4;
+            --border-light: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            padding-bottom: 90px;
+        }
+
+        /* --- LOGO & NAVBAR --- */
+        .navbar-custom {
+            background: rgba(11, 12, 16, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-light);
+            padding: 15px 0;
+        }
+        .brand-logo {
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            font-size: 1.2rem;
+            color: white;
+        }
+        .brand-logo span { color: var(--accent-brand); }
+
+        /* --- KPI CARDS (CENTRALIZADOS) --- */
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center; /* Centraliza os itens no meio do card */
+            text-align: center;  /* Centraliza o texto */
+        }
+        
+        /* Garante que elementos internos (como barra de meta e headers) preencham o espaço */
+        .glass-card > div, 
+        .glass-card .progress-meta-bg {
+            width: 100%;
+        }
+        .kpi-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .kpi-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+        }
+        
+        .progress-meta-bg {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .progress-meta-bar {
+            height: 100%;
+            background: var(--accent-brand);
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px var(--accent-brand);
+        }
+
+        /* --- CARD DE APOSTA --- */
+        .bet-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s;
+            padding-bottom: 10px; /* Espaço para não colar no fundo */
+        }
+        
+        .bet-card::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+        }
+        .bet-card.status-Green::before { background: var(--accent-green); box-shadow: 2px 0 15px rgba(0, 230, 118, 0.4); }
+        .bet-card.status-Red::before { background: var(--accent-red); box-shadow: 2px 0 15px rgba(255, 61, 0, 0.4); }
+        .bet-card.status-Pendente::before { background: #ffd700; }
+        
+        .bet-card.status-Green { background: linear-gradient(90deg, rgba(0, 230, 118, 0.03), transparent); }
+        .bet-card.status-Red { background: linear-gradient(90deg, rgba(255, 61, 0, 0.03), transparent); }
+
+        .bet-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bet-date { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+        .bet-league { 
+            font-size: 0.7rem; text-transform: uppercase; 
+            background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: #ccc; 
+        }
+
+        .bet-content { padding: 16px 16px 5px 16px; }
+        
+        /* Grid do Confronto - Times Destacados */
+        .match-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px; /* Mais espaço abaixo dos times */
+        }
+        .team-name { 
+            font-size: 1.2rem; /* Aumentado */
+            font-weight: 800; /* Mais negrito */
+            color: white; 
+            line-height: 1.1;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5); /* Sombra para destaque */
+        }
+        .team-home { text-align: right; }
+        .team-away { text-align: left; }
+        
+        .score-box {
+            background: #000;
+            border: 1px solid var(--border-light);
+            color: white;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 1rem;
+            min-width: 55px;
+            text-align: center;
+        }
+
+        /* Grid de Informações */
+        .info-grid {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+        }
+        .info-item label { display: block; font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+        .info-item span { display: block; font-size: 0.95rem; font-weight: 600; color: white; }
+        .info-value.green { color: var(--accent-green); }
+        .info-value.red { color: var(--accent-red); }
+
+        /* Botões de Ação - ARRUMADO */
+        .bet-actions {
+            position: relative; /* Mudado de absolute para relative */
+            margin-top: 15px;
+            padding: 0 16px;
+            display: flex;
+            justify-content: flex-end; /* Alinha a direita */
+            gap: 8px;
+            border-top: 1px solid rgba(255,255,255,0.03); /* Divisoria sutil */
+            padding-top: 10px;
+        }
+        .action-btn {
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border-light);
+            background: rgba(40,40,45,0.8);
+            color: var(--text-muted);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .action-btn:hover { background: white; color: black; transform: scale(1.05); }
+
+        /* --- FAB & INPUTS --- */
+        .fab-btn {
+            position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; border-radius: 50%;
+            background: var(--accent-brand); color: #000; border: none; font-size: 24px;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.4); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .form-control-dark {
+            background: #1f2129; border: 1px solid var(--border-light); color: white;
+            padding: 12px; border-radius: 8px;
+        }
+        .form-control-dark:focus { background: #252830; border-color: var(--accent-brand); color: white; box-shadow: none; }
+        
+        .text-green { color: var(--accent-green) !important; }
+        .text-red { color: var(--accent-red) !important; }
+        
+        @media(min-width: 992px) { .container-main { max-width: 1000px; margin: 0 auto; } }
+
+/* Grid do Confronto - Times Destacados (VISUAL PRO) */
+        .match-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 5px 0;
+        }
+
+        .team-name { 
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem; /* Ajustado para mobile */
+            font-weight: 900; /* Extra bold para impacto */
+            color: #ffffff; 
+            text-transform: uppercase; /* Caixa alta estilo TV */
+            letter-spacing: -0.5px; /* Letras mais juntas e modernas */
+            
+            /* Garante que nomes longos fiquem com "..." e não quebrem */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        /* Aumenta a fonte levemente em celulares maiores */
+        @media (min-width: 380px) {
+            .team-name { font-size: 1.1rem; }
+        }
+
+        .team-home { text-align: right; }
+        .team-away { text-align: left; }
+        
+        .score-box {
+            background: rgba(21, 23, 28, 0.8); /* Fundo escuro */
+            border: 0px solid var(--accent-brand); /* Borda com a cor da marca */
+            color: #f5ff00; /* Texto neon */
+            font-weight: 800;
+            padding: 4px 7px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            width: 65px; /* Largura fixa para alinhar */
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.15); /* Glow sutil */
+            text-shadow: 0 0 8px rgba(0, 242, 255, 0.4); /* Brilho no texto */
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:#050505; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="mt-3 text-secondary small font-monospace">CARREGANDO SISTEMA...</div>
+</div>
+
+<nav class="navbar navbar-custom sticky-top">
+    <div class="container px-3">
+        <a class="navbar-brand brand-logo" href="#">FUT <span>META PRO</span></a>
+        <button class="btn btn-sm btn-outline-secondary rounded-circle" onclick="abrirConfiguracoes()" style="width: 32px; height: 32px; padding: 0;">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+</nav>
+
+<div class="container container-main px-3 py-4">
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="glass-card">
+                <span class="kpi-label">Banca Total</span>
+                <h3 id="bancaAtualDisplay" class="kpi-value text-white">R$ 0,00</h3>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="glass-card">
+                <span class="kpi-label">Lucro Geral</span>
+                <h3 id="lucroLiquidoDisplay" class="kpi-value">R$ 0,00</h3>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="glass-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="kpi-label text-info">Meta Hoje</span>
+                    <i class="fas fa-crosshairs text-secondary small"></i>
+                </div>
+                <h3 id="metaHojeDisplay" class="kpi-value">R$ 0,00</h3>
+                <div class="progress-meta-bg">
+                    <div id="progressBarMeta" class="progress-meta-bar"></div>
+                </div>
+                <div class="d-flex justify-content-between mt-1">
+                    <small id="statusMetaTexto" class="text-muted" style="font-size: 0.6rem;">Alvo: R$ 0,00</small>
+                    <small id="metaPercent" class="text-white fw-bold" style="font-size: 0.6rem;">0%</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="glass-card">
+                <span class="kpi-label">Winrate</span>
+                <h3 id="winrateDisplay" class="kpi-value text-warning">0%</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-card p-3 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="m-0 text-secondary text-uppercase fw-bold" style="font-size: 0.75rem;">Evolução da Banca</h6>
+            <button class="btn btn-sm btn-dark rounded-pill px-3 border border-secondary" onclick="window.gerarAnaliseInteligente()">
+                <i class="fas fa-brain text-warning me-1"></i> IA
+            </button>
+        </div>
+        <div style="height: 250px; width: 100%;">
+            <canvas id="lucroChart"></canvas>
+        </div>
+    </div>
+
+    <div class="d-grid mb-3">
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+            <i class="fas fa-filter me-2"></i> Filtros Avançados
+        </button>
+    </div>
+
+    <div class="collapse mb-4" id="advancedFilters">
+        <div class="glass-card p-3">
+            <div class="row g-2">
+                <div class="col-12"><input type="text" id="filtroBusca" class="form-control form-control-dark" placeholder="Buscar time..."></div>
+                <div class="col-6">
+                    <select id="filtroStatus" class="form-select form-control-dark">
+                        <option value="Todos">Status: Todos</option>
+                        <option value="Green">Green</option>
+                        <option value="Red">Red</option>
+                        <option value="Pendente">Pendente</option>
+                    </select>
+                </div>
+                <div class="col-6"><input type="text" id="filtroMercado" class="form-control form-control-dark" placeholder="Mercado..."></div>
+                <div class="col-6"><input type="date" id="filtroDataIni" class="form-control form-control-dark"></div>
+                <div class="col-6"><input type="date" id="filtroDataFim" class="form-control form-control-dark"></div>
+                <div class="col-12 d-flex gap-2">
+                    <button class="btn btn-info w-100 fw-bold" onclick="renderizarPainel()" style="background:var(--accent-brand); border:none; color:black;">Filtrar</button>
+                    <button class="btn btn-outline-light" onclick="limparFiltros()"><i class="fas fa-eraser"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-end mb-3 px-1">
+        <span class="kpi-label" style="font-size: 0.8rem;">Histórico Recente</span>
+        <small class="text-muted" style="font-size: 0.7rem;" id="totalCountDisplay">0 registros</small>
+    </div>
+    
+    <div id="listaApostasContainer"></div>
+    
+</div>
+
+<button class="fab-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasForm"><i class="fas fa-plus"></i></button>
+
+<div class="offcanvas offcanvas-end bg-dark text-white" tabindex="-1" id="offcanvasForm" style="border-left: 1px solid #333;">
+    <div class="offcanvas-header border-bottom border-secondary">
+        <h5 class="offcanvas-title fw-bold" id="offcanvasTitle">Novo Registro</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form id="betForm" autocomplete="off">
+            <input type="hidden" id="editId">
+            <datalist id="listaTimes"></datalist> <datalist id="listaCampeonatos"></datalist>
+
+            <div class="mb-3">
+                <label class="kpi-label mb-1">Campeonato</label>
+                <input type="text" id="campeonato" list="listaCampeonatos" class="form-control form-control-dark" required>
+            </div>
+            <div class="mb-3">
+                <label class="kpi-label mb-1">Confronto</label>
+                <div class="input-group">
+                    <input type="text" id="timeCasa" list="listaTimes" class="form-control form-control-dark" placeholder="Casa" required>
+                    <span class="input-group-text bg-secondary border-secondary text-white">x</span>
+                    <input type="text" id="timeFora" list="listaTimes" class="form-control form-control-dark" placeholder="Fora" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="kpi-label mb-1">Mercado</label>
+                <select class="form-select form-control-dark" id="mercado" required>
+                    <option value="" disabled selected>Selecione...</option>
+                    <option value="Casa Vence (ML)">Casa Vence</option>
+                    <option value="Fora Vence (ML)">Fora Vence</option>
+                    <option value="Empate">Empate</option>
+                    <option value="Over 2.5 Gols">Over 2.5 Gols</option>
+                    <option value="Under 2.5 Gols">Under 2.5 Gols</option>
+                    <option value="Ambas Marcam">Ambas Marcam</option>
+                </select>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="kpi-label mb-1">Odd</label>
+                    <input type="text" inputmode="decimal" id="odd" class="form-control form-control-dark odd-mask text-center text-warning fw-bold" placeholder="0,00" required>
+                </div>
+                <div class="col-6">
+                    <label class="kpi-label mb-1">Valor</label>
+                    <input type="text" inputmode="numeric" id="valor" class="form-control form-control-dark money-mask text-center" placeholder="R$ 0,00" required>
+                </div>
+            </div>
+            <div class="row g-2 mb-4">
+                <div class="col-6">
+                    <label class="kpi-label mb-1">Status</label>
+                    <select id="novoStatus" class="form-select form-control-dark">
+                        <option value="Pendente">Pendente</option>
+                        <option value="Green">Green</option>
+                        <option value="Red">Red</option>
+                        <option value="Reembolso">Reembolso</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="kpi-label mb-1">Placar</label>
+                    <input type="text" id="novoPlacar" class="form-control form-control-dark text-center" placeholder="0x0">
+                </div>
+            </div>
+            <div class="mb-4">
+                 <label class="kpi-label mb-1">Tipo</label>
+                 <select id="tipo" class="form-select form-control-dark">
+                     <option value="Real">Aposta Real</option>
+                     <option value="Teste">Teste</option>
+                 </select>
+            </div>
+            <button type="submit" class="btn btn-light w-100 fw-bold py-3 rounded-3">SALVAR</button>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-secondary text-white">
+            <div class="modal-header border-bottom border-secondary">
+                <h6 class="modal-title">Configurações</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs nav-justified border-secondary mb-3">
+                    <li class="nav-item"><button class="nav-link active text-white" data-bs-toggle="tab" data-bs-target="#tabCaixa">Caixa</button></li>
+                    <li class="nav-item"><button class="nav-link text-secondary" data-bs-toggle="tab" data-bs-target="#tabTimes" onclick="window.listarDadosGerenciamento('times')">Times</button></li>
+                    <li class="nav-item"><button class="nav-link text-secondary" data-bs-toggle="tab" data-bs-target="#tabCamps" onclick="window.listarDadosGerenciamento('camps')">Ligas</button></li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tabCaixa">
+                        <div class="mb-3">
+                            <label class="kpi-label mb-1">Banca Inicial</label>
+                            <input type="text" id="configBancaInput" class="form-control form-control-dark money-mask">
+                        </div>
+                        <div class="mb-4">
+                            <label class="kpi-label mb-1 text-info">Meta Diária</label>
+                            <input type="text" id="configMetaInput" class="form-control form-control-dark money-mask">
+                        </div>
+                        <button class="btn btn-success w-100 mb-3" id="btnSalvarBanca">Salvar Alterações</button>
+                        <hr class="border-secondary">
+                        <button class="btn btn-outline-info w-100 btn-sm" onclick="window.location.href='importador.html'">Importar da API</button>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabTimes">
+                         <div class="input-group mb-2">
+                            <input type="text" id="novoTimeInput" class="form-control form-control-dark form-control-sm" placeholder="Add Time...">
+                            <button class="btn btn-primary btn-sm" onclick="window.adicionarItemManual('times')">+</button>
+                        </div>
+                         <div class="input-group mb-2">
+                            <input type="text" id="searchTime" class="form-control form-control-dark form-control-sm" placeholder="Buscar..." onkeyup="window.filtrarListaGerenciamento('listaGerenciaTimes', this.value)">
+                        </div>
+                        <div id="listaGerenciaTimes" class="list-group list-group-flush border border-secondary rounded" style="max-height: 250px; overflow-y: auto;"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabCamps">
+                         <div class="input-group mb-2">
+                            <input type="text" id="novoCampInput" class="form-control form-control-dark form-control-sm" placeholder="Add Liga...">
+                            <button class="btn btn-primary btn-sm" onclick="window.adicionarItemManual('camps')">+</button>
+                        </div>
+                         <div class="input-group mb-2">
+                            <input type="text" id="searchCamp" class="form-control form-control-dark form-control-sm" placeholder="Buscar..." onkeyup="window.filtrarListaGerenciamento('listaGerenciaCamps', this.value)">
+                        </div>
+                        <div id="listaGerenciaCamps" class="list-group list-group-flush border border-secondary rounded" style="max-height: 250px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resolveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bg-dark border border-secondary text-white position-relative">
+             <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-2" style="z-index: 10;" data-bs-dismiss="modal"></button>
+             <div class="modal-body text-center p-4">
+                <h6 class="kpi-label mb-3">Definir Resultado</h6>
+                <input type="hidden" id="resolveId"> <input type="hidden" id="resolveValor"> <input type="hidden" id="resolveOdd"> <input type="hidden" id="resolveMercado">
+                
+                <input type="text" id="resolvePlacar" class="form-control text-center bg-transparent text-white border-0 fs-1 fw-bold mb-2" placeholder="0x0" maxlength="3">
+                <small class="text-muted d-block mb-3" id="sugestaoResultado">Digite o placar</small>
+                
+                <div class="row g-2">
+                    <div class="col-6"><input type="radio" class="btn-check" name="btnRes" id="btnGreen" onclick="window.setStatusManual('Green')"><label class="btn btn-outline-success w-100 btn-sm" for="btnGreen">Win</label></div>
+                    <div class="col-6"><input type="radio" class="btn-check" name="btnRes" id="btnRed" onclick="window.setStatusManual('Red')"><label class="btn btn-outline-danger w-100 btn-sm" for="btnRed">Loss</label></div>
+                </div>
+                <button class="btn btn-light w-100 mt-3 btn-sm fw-bold" onclick="window.confirmarResolucao()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="analiseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-secondary text-white">
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title small">IA Insights</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-6 text-center border-end border-secondary">
+                        <small class="text-muted d-block" style="font-size:0.7rem">Winrate (Filtro)</small>
+                        <span class="fs-3 fw-bold text-white" id="analiseWinrate">0%</span>
+                    </div>
+                    <div class="col-6 text-center">
+                        <small class="text-muted d-block" style="font-size:0.7rem">Resultado (Filtro)</small>
+                        <span class="fs-3 fw-bold" id="analiseLucroTotal">R$ 0</span>
+                    </div>
+                </div>
+                <div class="row mt-3 g-3">
+                    <div class="col-md-6"><canvas id="chartTopTeams" height="150"></canvas></div>
+                    <div class="col-md-6"><canvas id="chartBadTeams" height="150"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc, setDoc, writeBatch } 
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAP5P08sBQ7A79wP37b-PLhCBO591YJPpY",
+        authDomain: "vipmojs-836f9.firebaseapp.com",
+        projectId: "vipmojs-836f9",
+        storageBucket: "vipmojs-836f9.firebasestorage.app",
+        messagingSenderId: "187496268275",
+        appId: "1:187496268275:web:53e57c82ef90fc603f1286"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const apostasRef = collection(db, "apostas");
+    const timesRef = collection(db, "times_cadastrados");
+    const configRef = doc(db, "config", "geral");
+    
+    // Globals
+    let mainChart = null, chartTop = null, chartBad = null;
+    let dadosCache = [];
+    let bancaInicial = 0, metaDiaria = 0, statusResolucao = '';
+
+    const modalResolve = new bootstrap.Modal(document.getElementById('resolveModal'));
+    const offcanvasForm = new bootstrap.Offcanvas(document.getElementById('offcanvasForm'));
+    const modalConfig = new bootstrap.Modal(document.getElementById('configModal'));
+    const modalAnalise = new bootstrap.Modal(document.getElementById('analiseModal'));
+    const fmtMoney = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    // Mascaras
+    document.querySelectorAll('.money-mask, .odd-mask').forEach(i => i.addEventListener('input', e => {
+        let v = e.target.value.replace(/\D/g,"");
+        if(v === "") { e.target.value = ""; return; }
+        e.target.value = (Number(v)/100).toLocaleString("pt-BR", {minimumFractionDigits: 2});
+    }));
+    
+    const formatarPlacar = (e) => {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 2) v = v.slice(0, 2);
+        if (v.length >= 2) e.target.value = `${v[0]}x${v[1]}`; else e.target.value = v;
+    };
+    document.getElementById('resolvePlacar').addEventListener('input', (e) => {
+        formatarPlacar(e);
+        let v = e.target.value.replace(/\D/g, '');
+        if(v.length===2) sugerirResultado(parseInt(v[0]), parseInt(v[1]), document.getElementById('resolveMercado').value);
+    });
+    document.getElementById('novoPlacar').addEventListener('input', formatarPlacar);
+
+    function sugerirResultado(c, f, m) {
+        let s = 'Red';
+        if(m.includes('Casa') && c>f) s='Green';
+        else if(m.includes('Fora') && f>c) s='Green';
+        else if(m.includes('Empate') && c===f) s='Green';
+        else if(m.includes('Over 2.5') && (c+f)>2) s='Green';
+        else if(m.includes('Ambas') && c>0 && f>0) s='Green';
+        document.getElementById(`btn${s}`).checked = true;
+        statusResolucao = s;
+        document.getElementById('sugestaoResultado').innerText = `Sugestão: ${s}`;
+    }
+
+    // Load Config
+    onSnapshot(configRef, (s) => {
+        if(s.exists()) {
+            bancaInicial = Number(s.data().bancaInicial) || 0;
+            metaDiaria = Number(s.data().metaDiaria) || 0;
+            document.getElementById('configBancaInput').value = bancaInicial.toLocaleString("pt-BR", {minimumFractionDigits:2});
+            document.getElementById('configMetaInput').value = metaDiaria.toLocaleString("pt-BR", {minimumFractionDigits:2});
+        }
+        renderizarPainel();
+    });
+
+    // Load Bets
+    onSnapshot(query(apostasRef, orderBy("data", "asc")), (snap) => {
+        dadosCache = [];
+        const times = new Set(), camps = new Set();
+        snap.forEach(d => {
+            const dt = {id: d.id, ...d.data()};
+            dadosCache.push(dt);
+            times.add(dt.timeCasa); times.add(dt.timeFora); camps.add(dt.campeonato);
+        });
+        
+        const dlT = document.getElementById('listaTimes'); dlT.innerHTML='';
+        Array.from(times).sort().forEach(t => dlT.innerHTML += `<option value="${t}">`);
+        const dlC = document.getElementById('listaCampeonatos'); dlC.innerHTML='';
+        Array.from(camps).sort().forEach(c => dlC.innerHTML += `<option value="${c}">`);
+        
+        document.getElementById('loadingOverlay').style.display = 'none';
+        renderizarPainel();
+    });
+
+    // Main Render
+    window.renderizarPainel = () => {
+        const busca = document.getElementById('filtroBusca').value.toLowerCase();
+        const status = document.getElementById('filtroStatus').value;
+        const mercado = document.getElementById('filtroMercado').value.toLowerCase();
+        const dtIni = document.getElementById('filtroDataIni').value;
+        const dtFim = document.getElementById('filtroDataFim').value;
+        
+        let dados = dadosCache.filter(b => {
+            const betDate = new Date(b.data).toISOString().split('T')[0];
+            if(status !== 'Todos' && b.status !== status) return false;
+            if(dtIni && betDate < dtIni) return false;
+            if(dtFim && betDate > dtFim) return false;
+            if(mercado && !b.mercado.toLowerCase().includes(mercado)) return false;
+            if(busca && !(b.campeonato+b.timeCasa+b.timeFora).toLowerCase().includes(busca)) return false;
+            return true;
+        });
+
+        let lucro = 0, invest = 0, greens = 0, reds = 0, lucroHoje = 0;
+        let labels = ['Inicio'], dataC = [bancaInicial], acc = bancaInicial;
+        const hojeStr = new Date().toLocaleDateString('pt-BR');
+
+        dados.forEach((b) => {
+            if(b.tipo === 'Real' && b.status !== 'Pendente') {
+                lucro += b.lucro; invest += b.valor;
+                if(b.status === 'Green') greens++; if(b.status === 'Red') reds++;
+                acc += b.lucro;
+                labels.push(new Date(b.data).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})); 
+                dataC.push(acc);
+                if(new Date(b.data).toLocaleDateString('pt-BR') === hojeStr) lucroHoje += b.lucro;
+            }
+        });
+
+        // Update KPIs
+        document.getElementById('bancaAtualDisplay').innerText = fmtMoney(bancaInicial + lucro);
+        const elL = document.getElementById('lucroLiquidoDisplay');
+        elL.innerText = (lucro>=0?'+':'') + fmtMoney(lucro);
+        elL.className = lucro >= 0 ? 'kpi-value mt-1 text-green' : 'kpi-value mt-1 text-red';
+        
+        // Update Meta
+        const elMeta = document.getElementById('metaHojeDisplay');
+        elMeta.innerText = (lucroHoje>=0?'+':'') + fmtMoney(lucroHoje);
+        let perc = (metaDiaria > 0 && lucroHoje > 0) ? Math.min((lucroHoje / metaDiaria) * 100, 100) : 0;
+        document.getElementById('progressBarMeta').style.width = `${perc}%`;
+        document.getElementById('metaPercent').innerText = `${perc.toFixed(0)}%`;
+        
+        if(lucroHoje >= metaDiaria && metaDiaria > 0) {
+            elMeta.className = 'kpi-value mt-1 text-green';
+            document.getElementById('progressBarMeta').style.backgroundColor = '#00e676';
+        } else if (lucroHoje < 0) {
+            elMeta.className = 'kpi-value mt-1 text-red';
+            document.getElementById('progressBarMeta').style.backgroundColor = '#ff3d00';
+            document.getElementById('progressBarMeta').style.width = '100%';
+        } else {
+            elMeta.className = 'kpi-value mt-1 text-white';
+            document.getElementById('progressBarMeta').style.backgroundColor = '#00f2ff';
+        }
+
+        document.getElementById('winrateDisplay').innerText = (greens+reds)>0 ? ((greens/(greens+reds))*100).toFixed(0)+'%' : '0%';
+        document.getElementById('totalCountDisplay').innerText = `${dados.length} reg.`;
+
+        // Render List (Aligned Layout)
+        const container = document.getElementById('listaApostasContainer');
+        container.innerHTML = '';
+
+        [...dados].reverse().forEach(bet => {
+            let statusColor = bet.status==='Green'?'text-green':(bet.status==='Red'?'text-red':'text-white');
+            let valorDisplay = bet.status==='Green' ? `+${fmtMoney(bet.lucro)}` : (bet.status==='Red' ? `-${fmtMoney(Math.abs(bet.lucro))}` : fmtMoney(bet.valor));
+            let placarShow = (bet.status !== 'Pendente' && bet.placar) ? `<span class="score-box">${bet.placar}</span>` : `<span class="text-muted small">vs</span>`;
+
+            const div = document.createElement('div');
+            div.className = `bet-card status-${bet.status}`;
+            div.innerHTML = `
+                <div class="bet-header">
+                    <span class="bet-league">${bet.campeonato || 'LIGA'}</span>
+                    <span class="bet-date">${new Date(bet.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span>
+                </div>
+                
+                <div class="bet-content">
+                    <div class="match-grid">
+                        <div class="team-name team-home">${bet.timeCasa}</div>
+                        <div>${placarShow}</div>
+                        <div class="team-name team-away">${bet.timeFora}</div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Mercado</label>
+                            <span>${bet.mercado}</span>
+                        </div>
+                        <div class="info-item text-center">
+                            <label>Odd</label>
+                            <span class="text-warning">@${bet.odd.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item text-end">
+                            <label>${bet.status === 'Pendente' ? 'Investido' : 'Retorno'}</label>
+                            <span class="info-value ${statusColor}">${valorDisplay}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bet-actions">
+                    ${bet.status === 'Pendente' ? 
+                        `<button class="action-btn text-success" style="border-color:var(--accent-green)" onclick="window.prepararResolucao('${bet.id}',${bet.valor},${bet.odd}, '${bet.mercado}', '${bet.placar||''}')"><i class="fas fa-check"></i></button>` 
+                        : `<button class="action-btn" onclick="window.prepararResolucao('${bet.id}',${bet.valor},${bet.odd}, '${bet.mercado}', '${bet.placar||''}')"><i class="fas fa-undo"></i></button>`
+                    }
+                    <button class="action-btn" onclick="window.editarAposta('${bet.id}')"><i class="fas fa-pen"></i></button>
+                    <button class="action-btn text-danger" style="border-color:rgba(255,0,0,0.3)" onclick="window.deletarAposta('${bet.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        // Chart Update
+        const ctx = document.getElementById('lucroChart').getContext('2d');
+        if(mainChart) mainChart.destroy();
+        let gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, lucro>=0 ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 61, 0, 0.4)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+        mainChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: [{ label: 'Banca', data: dataC, borderColor: lucro>=0 ? '#00e676' : '#ff3d00', backgroundColor: gradient, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, interaction: { mode: 'nearest', axis: 'x', intersect: false }, scales: { x: { display: true, grid: {color: 'rgba(255,255,255,0.05)'}, ticks: { color: '#888', maxTicksLimit: 10 } }, y: { grid: {color:'rgba(255,255,255,0.05)'}, ticks:{ display:false } } } }
+        });
+    };
+
+    window.limparFiltros = () => {
+        document.getElementById('filtroBusca').value = '';
+        document.getElementById('filtroStatus').value = 'Todos';
+        renderizarPainel();
+    };
+
+    // --- FORMULARIO (Submit) ---
+    document.getElementById('betForm').addEventListener('submit', async(e)=>{
+        e.preventDefault();
+        const editId = document.getElementById('editId').value;
+        const oddVal = parseFloat(document.getElementById('odd').value.replace('.','').replace(',','.'));
+        const valorVal = parseFloat(document.getElementById('valor').value.replace('.','').replace(',','.'));
+        const statusVal = document.getElementById('novoStatus').value;
+        
+        let lucroCalculado = 0;
+        if(statusVal === 'Green') lucroCalculado = (valorVal * oddVal) - valorVal;
+        else if(statusVal === 'Red') lucroCalculado = -valorVal;
+
+        const dados = {
+            campeonato: document.getElementById('campeonato').value,
+            timeCasa: document.getElementById('timeCasa').value,
+            timeFora: document.getElementById('timeFora').value,
+            mercado: document.getElementById('mercado').value,
+            odd: oddVal,
+            valor: valorVal,
+            tipo: document.getElementById('tipo').value,
+            status: statusVal,
+            placar: document.getElementById('novoPlacar').value,
+            lucro: lucroCalculado
+        };
+
+        if(editId) await updateDoc(doc(db, "apostas", editId), dados);
+        else await addDoc(apostasRef, { ...dados, data: new Date().toISOString() });
+        
+        document.getElementById('betForm').reset();
+        document.getElementById('editId').value = '';
+        document.getElementById('novoStatus').value = 'Pendente';
+        offcanvasForm.hide();
+    });
+
+    window.deletarAposta = async(id) => { if(confirm("Apagar?")) await deleteDoc(doc(db,"apostas",id)); };
+
+    window.editarAposta = (id) => {
+        const bet = dadosCache.find(a => a.id === id);
+        document.getElementById('editId').value = id;
+        document.getElementById('campeonato').value = bet.campeonato;
+        document.getElementById('timeCasa').value = bet.timeCasa;
+        document.getElementById('timeFora').value = bet.timeFora;
+        document.getElementById('mercado').value = bet.mercado;
+        document.getElementById('odd').value = bet.odd.toLocaleString("pt-BR", {minimumFractionDigits:2});
+        document.getElementById('valor').value = bet.valor.toLocaleString("pt-BR", {minimumFractionDigits:2});
+        document.getElementById('novoStatus').value = bet.status;
+        document.getElementById('novoPlacar').value = bet.placar || '';
+        document.getElementById('offcanvasTitle').innerText = "Editar Aposta";
+        offcanvasForm.show();
+    };
+
+    document.getElementById('offcanvasForm').addEventListener('hidden.bs.offcanvas', () => {
+        document.getElementById('offcanvasTitle').innerText = "Nova Entrada";
+        document.getElementById('betForm').reset();
+        document.getElementById('editId').value = '';
+        document.getElementById('novoStatus').value = 'Pendente';
+    });
+
+    // --- RESOLUÇÃO ---
+    window.prepararResolucao = (id,v,o,m,p) => {
+        document.getElementById('resolveId').value = id;
+        document.getElementById('resolveValor').value = v;
+        document.getElementById('resolveOdd').value = o;
+        document.getElementById('resolveMercado').value = m;
+        document.getElementById('resolvePlacar').value = p || '';
+        document.getElementById('sugestaoResultado').innerText = "Digite o placar...";
+        document.querySelectorAll('.btn-check').forEach(c => c.checked = false);
+        statusResolucao = '';
+        modalResolve.show();
+    };
+
+    window.setStatusManual = (s) => { statusResolucao = s; }
+
+    window.confirmarResolucao = async() => {
+        const id = document.getElementById('resolveId').value;
+        const v = Number(document.getElementById('resolveValor').value);
+        const o = Number(document.getElementById('resolveOdd').value);
+        const placar = document.getElementById('resolvePlacar').value;
+        if(!statusResolucao) return alert("Selecione um status!");
+        let l = 0;
+        if(statusResolucao === 'Green') l = (v * o) - v;
+        if(statusResolucao === 'Red') l = -v;
+        await updateDoc(doc(db,"apostas",id), { status: statusResolucao, lucro: l, placar: placar });
+        modalResolve.hide();
+    };
+
+    // --- GERENCIAMENTO E CONFIG ---
+    window.abrirConfiguracoes = () => { modalConfig.show(); };
+
+    document.getElementById('btnSalvarBanca').addEventListener('click', async()=>{
+        let v = parseFloat(document.getElementById('configBancaInput').value.replace('.','').replace(',','.'));
+        let m = parseFloat(document.getElementById('configMetaInput').value.replace('.','').replace(',','.'));
+        await setDoc(configRef, { bancaInicial: v||0, metaDiaria: m||0 }, { merge: true });
+        modalConfig.hide();
+    });
+
+    window.adicionarItemManual = async (tipo) => {
+        const idInput = tipo === 'times' ? 'novoTimeInput' : 'novoCampInput';
+        const valor = document.getElementById(idInput).value;
+        if(!valor) return alert("Digite algo.");
+        const docId = `manual_${Date.now()}`;
+        const data = tipo === 'times' ? { nome: valor } : { liga_nome: valor, nome: valor };
+        await setDoc(doc(timesRef, docId), data);
+        document.getElementById(idInput).value = '';
+        window.listarDadosGerenciamento(tipo);
+    };
+
+    window.listarDadosGerenciamento = (tipo) => {
+        const listaId = tipo === 'times' ? 'listaGerenciaTimes' : 'listaGerenciaCamps';
+        const container = document.getElementById(listaId);
+        container.innerHTML = '<div class="text-center p-3 small text-muted">Carregando...</div>';
+        setTimeout(() => {
+            const setItens = new Set();
+            dadosCache.forEach(bet => {
+                if(tipo === 'times') { setItens.add(bet.timeCasa); setItens.add(bet.timeFora); }
+                else setItens.add(bet.campeonato);
+            });
+            const arr = Array.from(setItens).sort();
+            container.innerHTML = '';
+            if(!arr.length) return container.innerHTML = '<div class="p-3 text-center small text-muted">Vazio.</div>';
+            arr.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'list-group-item bg-dark text-white border-secondary d-flex justify-content-between p-2';
+                div.innerHTML = `
+                    <span class="text-truncate me-2 item-name small">${item}</span>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="window.gerenciarItem('renomear', '${tipo}', '${item}')"><i class="fas fa-pen"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="window.gerenciarItem('excluir', '${tipo}', '${item}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }, 100);
+    };
+
+    window.filtrarListaGerenciamento = (listaId, texto) => {
+        const val = texto.toLowerCase();
+        document.querySelectorAll(`#${listaId} .list-group-item`).forEach(el => {
+            el.style.display = el.querySelector('.item-name').innerText.toLowerCase().includes(val) ? 'flex' : 'none';
+        });
+    };
+
+    window.gerenciarItem = async (acao, tipo, valorAntigo) => {
+        if(acao === 'renomear') {
+            const novoNome = prompt(`Renomear "${valorAntigo}" para:`, valorAntigo);
+            if(!novoNome || novoNome === valorAntigo) return;
+            if(!confirm(`Alterar em TODO histórico?`)) return;
+            const updates = [];
+            dadosCache.forEach(bet => {
+                let pup = false, uData = {};
+                if(tipo === 'times') {
+                    if(bet.timeCasa === valorAntigo) { uData.timeCasa = novoNome; pup = true; }
+                    if(bet.timeFora === valorAntigo) { uData.timeFora = novoNome; pup = true; }
+                } else {
+                    if(bet.campeonato === valorAntigo) { uData.campeonato = novoNome; pup = true; }
+                }
+                if(pup) updates.push(updateDoc(doc(db, "apostas", bet.id), uData));
+            });
+            await Promise.all(updates);
+            alert("Feito!");
+            window.listarDadosGerenciamento(tipo);
+        } else if(acao === 'excluir') {
+            if(!confirm(`Apagar TODAS apostas de "${valorAntigo}"?`)) return;
+            const deletes = [];
+            dadosCache.forEach(bet => {
+                let del = false;
+                if(tipo === 'times' && (bet.timeCasa === valorAntigo || bet.timeFora === valorAntigo)) del = true;
+                if(tipo === 'camps' && bet.campeonato === valorAntigo) del = true;
+                if(del) deletes.push(deleteDoc(doc(db, "apostas", bet.id)));
+            });
+            await Promise.all(deletes);
+            alert("Feito!");
+            window.listarDadosGerenciamento(tipo);
+        }
+    };
+
+    window.gerarAnaliseInteligente = () => {
+        const dados = dadosCache.filter(b => b.status === 'Green' || b.status === 'Red');
+        if(!dados.length) return alert("Sem dados.");
+        let stats = {}, lucro = 0, greens = 0;
+        dados.forEach(b => { 
+            lucro += b.lucro;
+            if(b.status === 'Green') greens++;
+            [b.timeCasa, b.timeFora].forEach(t => { stats[t] = (stats[t]||0) + b.lucro; }); 
+        });
+        const sorted = Object.entries(stats).sort((a,b)=>b[1]-a[1]);
+        const top = sorted.slice(0,3);
+        const bad = sorted.slice(-3).reverse();
+        
+        document.getElementById('analiseWinrate').innerText = ((greens/dados.length)*100).toFixed(0)+'%';
+        const elLucro = document.getElementById('analiseLucroTotal');
+        elLucro.innerText = fmtMoney(lucro);
+        elLucro.className = lucro >= 0 ? "fs-3 fw-bold text-success" : "fs-3 fw-bold text-danger";
+        
+        renderBar('chartTopTeams', top, '#00e676', chartTop, (c)=>chartTop=c);
+        renderBar('chartBadTeams', bad, '#ff3d00', chartBad, (c)=>chartBad=c);
+        modalAnalise.show();
+    };
+
+    function renderBar(id, dArr, color, inst, setInst) {
+        if(inst) inst.destroy();
+        const ctx = document.getElementById(id).getContext('2d');
+        setInst(new Chart(ctx, {
+            type: 'bar',
+            data: { labels: dArr.map(x=>x[0]), datasets: [{ data: dArr.map(x=>x[1]), backgroundColor: color, borderRadius: 2 }] },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: {display:false} }, scales: { x:{display:false}, y:{ticks:{color:'#8b9bb4', font:{size:9}}} } }
+        }));
+    }
+</script>
+</body>
+</html>
