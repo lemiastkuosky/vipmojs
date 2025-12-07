@@ -1,187 +1,972 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Apostas Firebase</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fut Book</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
-        /* Estilos básicos para ficar bonito */
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #f0f2f5; 
-            display: flex; 
-            justify-content: center; 
-            padding-top: 50px; 
-        }
-        .container { 
-            background: white; 
-            padding: 30px; 
-            border-radius: 10px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-            width: 100%; 
-            max-width: 500px; 
-        }
-        h2 { text-align: center; color: #333; }
-        
-        input { 
-            width: 100%; 
-            padding: 12px; 
-            margin: 8px 0; 
-            border: 1px solid #ddd; 
-            border-radius: 5px; 
-            box-sizing: border-box; 
-        }
-        
-        button { 
-            width: 100%; 
-            padding: 12px; 
-            background-color: #007bff; 
-            color: white; 
-            border: none; 
-            border-radius: 5px; 
-            font-size: 16px; 
-            cursor: pointer; 
-            margin-top: 10px;
-        }
-        button:hover { background-color: #0056b3; }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
-        hr { margin: 30px 0; border: 0; border-top: 1px solid #eee; }
+        :root {
+            --bg-gradient: radial-gradient(circle at top left, #1a237e, #000000);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --accent-color: #00f2ff;
+            --accent-green: #00e676;
+            --accent-red: #ff1744;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b3c5;
+        }
 
-        ul { list-style: none; padding: 0; }
-        li { 
-            background: #fff; 
-            border: 1px solid #ddd; 
-            padding: 15px; 
-            margin-bottom: 10px; 
-            border-radius: 8px; 
-            display: flex; 
-            justify-content: space-between; 
+        body {
+            background: #050505;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%), 
+                radial-gradient(circle at 85% 30%, rgba(0, 242, 255, 0.1), transparent 25%);
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-primary);
+            padding-bottom: 80px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- GLASS CARDS --- */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- CARD VISUAL STATES (PINTURA DO CARD) --- */
+        .card-green {
+            background: linear-gradient(145deg, rgba(0, 230, 118, 0.15), rgba(0, 230, 118, 0.02)) !important;
+            border: 1px solid rgba(0, 230, 118, 0.3) !important;
+            box-shadow: 0 4px 15px rgba(0, 230, 118, 0.1) !important;
+        }
+        .card-red {
+            background: linear-gradient(145deg, rgba(255, 23, 68, 0.15), rgba(255, 23, 68, 0.02)) !important;
+            border: 1px solid rgba(255, 23, 68, 0.3) !important;
+        }
+        .card-pending {
+            border-left: 3px solid #ffd700 !important;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), transparent) !important;
+        }
+
+        /* --- NAVBAR --- */
+        .navbar-premium {
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 15px 0;
+        }
+        .brand-logo {
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #fff, var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* --- KPI GRID --- */
+        .kpi-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 0; }
+        .kpi-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px; }
+        .btn-edit-banca {
+            background: rgba(255,255,255,0.1);
+            border: none; color: var(--text-secondary);
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-edit-banca:hover { background: var(--accent-color); color: #000; }
+
+        /* --- LISTA DE APOSTAS --- */
+        .bet-item {
+            padding: 14px;
+            margin-bottom: 12px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .bet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+        }
+        
+        .bet-title {
+            font-size: 0.95rem; font-weight: 600; color: #fff; line-height: 1.2;
+        }
+        .bet-meta {
+            font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        
+        /* PLACAR BADGE */
+        .score-badge {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin: 0 5px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .bet-details {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+            margin-top: 4px;
         }
-        .match-info { font-weight: bold; color: #333; }
-        .bet-value { color: #28a745; font-weight: bold; }
+        
+        .bet-market {
+            font-size: 0.8rem; color: #ddd; background: rgba(0,0,0,0.3); 
+            padding: 2px 8px; border-radius: 4px; display: inline-block;
+        }
+
+        .bet-values {
+            text-align: right;
+        }
+        .bet-amount { font-weight: 700; font-size: 1rem; }
+        .bet-odd { font-size: 0.75rem; color: var(--text-secondary); margin-right: 5px; }
+
+        /* --- BOTÕES PEQUENOS (Ação Direta) --- */
+        .mini-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .btn-mini {
+            width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .btn-mini:hover { background: rgba(255,255,255,0.2); color: #fff; transform: translateY(-2px); }
+        .btn-mini.btn-resolve { color: #00e676; border-color: rgba(0, 230, 118, 0.3); }
+        .btn-mini.btn-trash { color: #ff1744; border-color: rgba(255, 23, 68, 0.3); }
+        .btn-mini.btn-edit { color: #ffd700; border-color: rgba(255, 215, 0, 0.3); }
+
+        /* --- FAB --- */
+        .fab-btn {
+            position: fixed; bottom: 25px; right: 25px;
+            width: 60px; height: 60px; border-radius: 50%;
+            background: linear-gradient(135deg, #00f2ff, #0051ff);
+            color: white; border: none;
+            box-shadow: 0 4px 20px rgba(0, 242, 255, 0.4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; z-index: 1000; transition: transform 0.2s;
+        }
+        .fab-btn:active { transform: scale(0.9); }
+
+        /* --- OFFCANVAS & INPUTS --- */
+        .offcanvas-glass { background: #0f0f13; border-left: 1px solid rgba(255,255,255,0.1); }
+        
+        .form-control-glass, .form-select-glass {
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: white !important;
+            padding: 10px 12px;
+            font-size: 0.9rem;
+        }
+        .form-control-glass:focus, .form-select-glass:focus {
+            background: rgba(255,255,255,0.1) !important;
+            border-color: var(--accent-color) !important;
+            color: white !important;
+            box-shadow: none;
+        }
+        select.form-select-glass option { background-color: #000; color: white; }
+
+        .app-footer {
+            margin-top: auto; padding: 20px; text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.3);
+            color: var(--text-secondary); font-size: 0.8rem;
+        }
+        .app-footer span { color: var(--accent-color); font-weight: 600; }
+
+        /* --- UTILS --- */
+        .text-green { color: var(--accent-green) !important; }
+        .text-red { color: var(--accent-red) !important; }
+        .money-input { font-size: 1.2rem; font-weight: bold; letter-spacing: 1px; color: var(--accent-color); }
+
+        @media(min-width: 992px) {
+            .container-main { max-width: 1000px; margin: 0 auto; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>Cadastrar Aposta</h2>
-        
-        <form id="formAposta">
-            <input type="text" id="timeA" placeholder="Time da Casa (ex: Brasil)" required>
-            <input type="text" id="timeB" placeholder="Time Visitante (ex: Argentina)" required>
-            <input type="number" id="valor" placeholder="Valor da Aposta (R$)" required>
-            <button type="submit">Salvar no Firebase</button>
-        </form>
+<div id="loadingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; display:flex; justify-content:center; align-items:center; background:#000;">
+    <div class="spinner-grow text-info" role="status"></div>
+</div>
 
-        <hr>
+<nav class="navbar navbar-premium sticky-top">
+    <div class="container px-3">
+        <a class="navbar-brand brand-logo" href="#">
+            <i class="fas fa-bolt me-2"></i>FUT BOOK
+        </a>
+        <button class="btn btn-sm btn-outline-light rounded-pill border-0" onclick="abrirConfiguracoes()">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+</nav>
 
-        <h2>Lista de Jogos</h2>
-        <ul id="listaJogos">
-            <li style="text-align:center; color: #777;">Carregando apostas...</li>
-        </ul>
+<div class="container container-main px-3 py-4">
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="glass-card p-3 h-100 position-relative">
+                <div class="d-flex justify-content-between align-items-start">
+                    <span class="kpi-label">Banca</span>
+                    <button class="btn-edit-banca" onclick="abrirConfiguracoes()"><i class="fas fa-pen"></i></button>
+                </div>
+                <h3 id="bancaAtualDisplay" class="kpi-value text-white mt-1">R$ 0,00</h3>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card p-3 h-100">
+                <span class="kpi-label">Lucro</span>
+                <h3 id="lucroLiquidoDisplay" class="kpi-value mt-1">R$ 0,00</h3>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card p-3 h-100">
+                <span class="kpi-label">ROI</span>
+                <h3 id="roiDisplay" class="kpi-value text-info mt-1">0%</h3>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card p-3 h-100">
+                <span class="kpi-label">Winrate</span>
+                <h3 id="winrateDisplay" class="kpi-value text-warning mt-1">0%</h3>
+            </div>
+        </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <div class="glass-card p-3 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="m-0 text-secondary text-uppercase fw-bold text-small">
+                <i class="fas fa-chart-area me-2"></i>Balanço Financeiro
+            </h6>
+            <button class="btn btn-sm btn-dark rounded-pill px-3" onclick="window.gerarAnaliseInteligente()">
+                <i class="fas fa-magic text-warning me-1"></i> IA
+            </button>
+        </div>
+        <div style="height: 300px; width: 100%;">
+            <canvas id="lucroChart"></canvas>
+        </div>
+    </div>
 
-    <script>
-        // ============================================================
-        // 1. CONFIGURAÇÃO (VOCÊ PRECISA PREENCHER ISSO)
-        // ============================================================
+    <div class="d-grid mb-3">
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+            <i class="fas fa-filter me-2"></i> Filtros & Busca Avançada
+        </button>
+    </div>
+
+    <div class="collapse mb-4" id="advancedFilters">
+        <div class="glass-card p-3">
+            <div class="row g-2">
+                <div class="col-12 col-md-6">
+                    <label class="kpi-label mb-1">Busca (Time/Liga)</label>
+                    <input type="text" id="filtroBusca" class="form-control form-control-glass" placeholder="Ex: Flamengo...">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="kpi-label mb-1">Status</label>
+                    <select id="filtroStatus" class="form-select form-select-glass">
+                        <option value="Todos">Todos</option>
+                        <option value="Green">Green</option>
+                        <option value="Red">Red</option>
+                        <option value="Pendente">Pendente</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="kpi-label mb-1">Mercado</label>
+                    <input type="text" id="filtroMercado" class="form-control form-control-glass" placeholder="Ex: Over...">
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <label class="kpi-label mb-1">Data Início</label>
+                    <input type="date" id="filtroDataIni" class="form-control form-control-glass">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="kpi-label mb-1">Data Fim</label>
+                    <input type="date" id="filtroDataFim" class="form-control form-control-glass">
+                </div>
+                <div class="col-12 col-md-6 d-flex align-items-end gap-2">
+                    <button class="btn btn-info w-100" style="background: var(--accent-color); border:none; color:#000; font-weight:bold;" onclick="renderizarPainel()">
+                        Aplicar Filtros
+                    </button>
+                    <button class="btn btn-outline-light" onclick="limparFiltros()">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <h6 class="text-secondary text-uppercase fw-bold text-small m-0 ps-1">Histórico</h6>
+        <small class="text-muted" id="totalCountDisplay">0 registros</small>
+    </div>
+    
+    <div id="listaApostasContainer">
+        </div>
+    
+</div>
+
+<footer class="app-footer">
+    <div class="container">
+        Criado por <span>Le Miastkusky</span> • Versão 5.8
+        <div class="mt-1 small opacity-50">&copy; 2024 Gestão Pro. Todos os direitos reservados.</div>
+    </div>
+</footer>
+
+<button class="fab-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasForm">
+    <i class="fas fa-plus"></i>
+</button>
+
+<div class="offcanvas offcanvas-end offcanvas-glass text-white" tabindex="-1" id="offcanvasForm">
+    <div class="offcanvas-header border-bottom border-secondary">
+        <h5 class="offcanvas-title fw-bold" id="offcanvasTitle">Nova Entrada</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form id="betForm" autocomplete="off">
+            <input type="hidden" id="editId">
+            <datalist id="listaTimes"></datalist>
+            <datalist id="listaCampeonatos"></datalist>
+
+            <div class="mb-4">
+                <label class="text-secondary small mb-1">Campeonato</label>
+                <input type="text" id="campeonato" list="listaCampeonatos" class="form-control form-control-glass rounded-3" placeholder="Ex: Premier League" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="text-secondary small mb-1">Confronto</label>
+                <div class="input-group">
+                    <input type="text" id="timeCasa" list="listaTimes" class="form-control form-control-glass" placeholder="Casa" required>
+                    <span class="input-group-text bg-dark border-secondary text-secondary">vs</span>
+                    <input type="text" id="timeFora" list="listaTimes" class="form-control form-control-glass" placeholder="Fora" required>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="text-secondary small mb-1">Mercado</label>
+                <select class="form-select form-select-glass rounded-3" id="mercado" required>
+                    <option value="" disabled selected>Selecione o mercado...</option>
+                    <option value="Casa Vence (ML)">Casa Vence (ML)</option>
+                    <option value="Fora Vence (ML)">Fora Vence (ML)</option>
+                    <option value="Empate">Empate</option>
+                    <option value="Over 2.5 Gols">Over 2.5 Gols</option>
+                    <option value="Under 2.5 Gols">Under 2.5 Gols</option>
+                    <option value="Ambas Marcam">Ambas Marcam</option>
+                </select>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <label class="text-secondary small mb-1">Odd</label>
+                    <input type="text" inputmode="decimal" id="odd" class="form-control form-control-glass odd-mask text-center fw-bold text-warning" placeholder="0,00" required>
+                </div>
+                <div class="col-6">
+                    <label class="text-secondary small mb-1">Investimento</label>
+                    <input type="text" inputmode="numeric" id="valor" class="form-control form-control-glass money-mask text-center" placeholder="0,00" required>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                 <label class="text-secondary small mb-1">Tipo de Registro</label>
+                 <select id="tipo" class="form-select form-select-glass">
+                     <option value="Real" selected>Aposta Real</option>
+                     <option value="Teste">Simulação (Teste)</option>
+                 </select>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-info fw-bold py-3 rounded-pill" style="background: var(--accent-color); border:none; color:#000;">
+                    <i class="fas fa-check me-2"></i>SALVAR REGISTRO
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-secondary text-white">
+            <div class="modal-header border-bottom border-secondary">
+                <h6 class="modal-title"><i class="fas fa-cog me-2"></i>Configurações & Dados</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs nav-justified border-secondary" id="configTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active text-white" data-bs-toggle="tab" data-bs-target="#tabCaixa" type="button">Caixa</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-secondary" data-bs-toggle="tab" data-bs-target="#tabTimes" type="button" onclick="window.listarDadosGerenciamento('times')">Times</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-secondary" data-bs-toggle="tab" data-bs-target="#tabCamps" type="button" onclick="window.listarDadosGerenciamento('camps')">Ligas</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-4">
+                    <div class="tab-pane fade show active" id="tabCaixa">
+                        <label class="small text-secondary mb-2">Banca Inicial (Caixa)</label>
+                        <div class="input-group mb-4">
+                            <span class="input-group-text bg-dark border-secondary text-secondary">R$</span>
+                            <input type="text" id="configBancaInput" class="form-control bg-dark text-white border-secondary money-mask fs-5 fw-bold">
+                            <button class="btn btn-success" id="btnSalvarBanca">Salvar</button>
+                        </div>
+                        
+                        <hr class="border-secondary my-4">
+                        
+                        <h6 class="small text-secondary fw-bold mb-2">Ferramentas</h6>
+                        <button class="btn btn-outline-info w-100 py-2 d-flex justify-content-between align-items-center" onclick="window.location.href='importador.html'">
+                            <span><i class="fas fa-cloud-download-alt me-2"></i>Importar Times da API</span>
+                            <i class="fas fa-chevron-right small"></i>
+                        </button>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabTimes">
+                        <div class="input-group mb-3">
+                            <input type="text" id="searchTime" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Buscar time..." onkeyup="window.filtrarListaGerenciamento('listaGerenciaTimes', this.value)">
+                        </div>
+                        <div id="listaGerenciaTimes" class="list-group list-group-flush border border-secondary rounded" style="max-height: 300px; overflow-y: auto;">
+                            </div>
+                        <small class="text-muted mt-2 d-block">*Renomear altera em todas as apostas. Excluir apaga todas as apostas desse time.</small>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabCamps">
+                        <div class="input-group mb-3">
+                            <input type="text" id="searchCamp" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Buscar liga..." onkeyup="window.filtrarListaGerenciamento('listaGerenciaCamps', this.value)">
+                        </div>
+                        <div id="listaGerenciaCamps" class="list-group list-group-flush border border-secondary rounded" style="max-height: 300px; overflow-y: auto;">
+                            </div>
+                        <small class="text-muted mt-2 d-block">*Renomear altera em todas as apostas. Excluir apaga todas as apostas dessa liga.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resolveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bg-dark border border-secondary text-white shadow-lg position-relative">
+             
+             <button type="button" 
+                     class="btn-close btn-close-white position-absolute top-0 end-0 m-3" 
+                     style="z-index: 10; cursor: pointer;"
+                     data-bs-dismiss="modal" 
+                     aria-label="Close"></button>
+
+             <div class="modal-body text-center p-4">
+                <h5 class="mb-4">Resultado Final</h5>
+                <input type="hidden" id="resolveId">
+                <input type="hidden" id="resolveValor">
+                <input type="hidden" id="resolveOdd">
+                
+                <input type="text" id="resolvePlacar" class="form-control text-center fw-bold fs-1 bg-transparent text-white border-0 mb-3" placeholder="0x0" maxlength="3">
+                <small class="text-muted d-block mb-3">Digite o placar (ex: 2x1)</small>
+                
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button onclick="window.finalizarAposta('Green')" class="btn btn-success w-100 fw-bold py-2">GREEN</button>
+                    </div>
+                    <div class="col-6">
+                        <button onclick="window.finalizarAposta('Red')" class="btn btn-danger w-100 fw-bold py-2">RED</button>
+                    </div>
+                    <div class="col-12">
+                        <button onclick="window.finalizarAposta('Reembolso')" class="btn btn-outline-secondary w-100 btn-sm mt-1">Anular/Reembolso</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="analiseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-secondary text-white">
+            <div class="modal-header border-bottom border-secondary">
+                <h6 class="modal-title"><i class="fas fa-brain me-2 text-primary"></i>Inteligência de Dados</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="p-3 bg-dark border border-secondary rounded text-center">
+                            <small class="text-secondary text-uppercase fw-bold">Winrate</small>
+                            <h3 class="text-white mb-0" id="analiseWinrate">0%</h3>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 bg-dark border border-secondary rounded text-center">
+                            <small class="text-secondary text-uppercase fw-bold">Resultado (Filtro)</small>
+                            <h3 class="text-white mb-0" id="analiseLucroTotal">R$ 0,00</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border border-secondary rounded bg-dark h-100">
+                            <h6 class="text-success small fw-bold mb-3"><i class="fas fa-arrow-up me-1"></i>Maiores Lucros</h6>
+                            <canvas id="chartTopTeams" height="180"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                         <div class="p-3 border border-secondary rounded bg-dark h-100">
+                             <h6 class="text-danger small fw-bold mb-3"><i class="fas fa-arrow-down me-1"></i>Maiores Prejuízos</h6>
+                            <canvas id="chartBadTeams" height="180"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc, setDoc, writeBatch } 
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAP5P08sBQ7A79wP37b-PLhCBO591YJPpY",
+        authDomain: "vipmojs-836f9.firebaseapp.com",
+        databaseURL: "https://vipmojs-836f9-default-rtdb.firebaseio.com",
+        projectId: "vipmojs-836f9",
+        storageBucket: "vipmojs-836f9.firebasestorage.app",
+        messagingSenderId: "187496268275",
+        appId: "1:187496268275:web:53e57c82ef90fc603f1286"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const apostasRef = collection(db, "apostas");
+    const configRef = doc(db, "config", "geral");
+    
+    // Globals
+    let mainChart = null, chartTop = null, chartBad = null;
+    let dadosCache = [];
+    let bancaInicial = 0;
+
+    const modalResolve = new bootstrap.Modal(document.getElementById('resolveModal'));
+    const offcanvasForm = new bootstrap.Offcanvas(document.getElementById('offcanvasForm'));
+    const modalConfig = new bootstrap.Modal(document.getElementById('configModal'));
+    const modalAnalise = new bootstrap.Modal(document.getElementById('analiseModal'));
+
+    const fmtMoney = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    // --- MÁSCARAS ---
+    document.querySelectorAll('.money-mask, .odd-mask').forEach(i => i.addEventListener('input', e => {
+        let v = e.target.value.replace(/\D/g,"");
+        if(v === "") { e.target.value = ""; return; }
+        e.target.value = (Number(v)/100).toLocaleString("pt-BR", {minimumFractionDigits: 2});
+    }));
+
+    // Placar NxN
+    const inputPlacar = document.getElementById('resolvePlacar');
+    inputPlacar.addEventListener('input', (e) => {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 2) v = v.slice(0, 2);
+        if (v.length >= 2) e.target.value = `${v[0]}x${v[1]}`;
+        else e.target.value = v;
+    });
+
+    // --- FIREBASE ---
+    onSnapshot(configRef, (s) => {
+        if(s.exists()) {
+            bancaInicial = Number(s.data().bancaInicial) || 0;
+            document.getElementById('configBancaInput').value = bancaInicial.toLocaleString("pt-BR", {minimumFractionDigits:2});
+        }
+        renderizarPainel();
+    });
+
+    onSnapshot(query(apostasRef, orderBy("data", "asc")), (snap) => {
+        dadosCache = [];
+        const times = new Set(), camps = new Set();
+        snap.forEach(d => {
+            const dt = {id: d.id, ...d.data()};
+            dadosCache.push(dt);
+            times.add(dt.timeCasa); times.add(dt.timeFora); camps.add(dt.campeonato);
+        });
+
+        document.getElementById('listaTimes').innerHTML = Array.from(times).sort().map(t=>`<option value="${t}">`).join('');
+        document.getElementById('listaCampeonatos').innerHTML = Array.from(camps).sort().map(c=>`<option value="${c}">`).join('');
+
+        document.getElementById('loadingOverlay').style.display = 'none';
+        renderizarPainel();
+    });
+
+    // --- RENDER ---
+    window.renderizarPainel = () => {
+        const busca = document.getElementById('filtroBusca').value.toLowerCase();
+        const status = document.getElementById('filtroStatus').value;
+        const mercado = document.getElementById('filtroMercado').value.toLowerCase();
+        const dtIni = document.getElementById('filtroDataIni').value;
+        const dtFim = document.getElementById('filtroDataFim').value;
         
-        const firebaseConfig = {
-            // --- COLE ABAIXO AS SUAS CHAVES DO FIREBASE ---
-            apiKey: "AIzaSy...", 
-            authDomain: "seu-projeto.firebaseapp.com",
-            projectId: "seu-id-do-projeto",
-            storageBucket: "seu-projeto.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456:web:abcdef"
-            // ----------------------------------------------
+        let dados = dadosCache.filter(b => {
+            const betDate = new Date(b.data).toISOString().split('T')[0];
+            if(status !== 'Todos' && b.status !== status) return false;
+            if(dtIni && betDate < dtIni) return false;
+            if(dtFim && betDate > dtFim) return false;
+            if(mercado && !b.mercado.toLowerCase().includes(mercado)) return false;
+            if(busca) {
+                const match = (b.campeonato||'').toLowerCase().includes(busca) || 
+                              b.timeCasa.toLowerCase().includes(busca) || 
+                              b.timeFora.toLowerCase().includes(busca);
+                if(!match) return false;
+            }
+            return true;
+        });
+
+        // KPIs
+        let lucro = 0, invest = 0, greens = 0, reds = 0;
+        let labels = ['Início'], dataC = [bancaInicial], acc = bancaInicial;
+
+        dados.forEach((b) => {
+            if(b.tipo === 'Real' && b.status !== 'Pendente') {
+                lucro += b.lucro; invest += b.valor;
+                if(b.status === 'Green') greens++;
+                if(b.status === 'Red') reds++;
+                acc += b.lucro;
+                labels.push(new Date(b.data).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})); 
+                dataC.push(acc);
+            }
+        });
+
+        document.getElementById('bancaAtualDisplay').innerText = fmtMoney(bancaInicial + lucro);
+        const elL = document.getElementById('lucroLiquidoDisplay');
+        elL.innerText = (lucro>=0?'+':'') + fmtMoney(lucro);
+        elL.className = lucro >= 0 ? 'kpi-value mt-1 text-green' : 'kpi-value mt-1 text-red';
+        
+        document.getElementById('roiDisplay').innerText = invest>0 ? ((lucro/invest)*100).toFixed(2)+'%' : '0%';
+        document.getElementById('winrateDisplay').innerText = (greens+reds)>0 ? ((greens/(greens+reds))*100).toFixed(0)+'%' : '0%';
+        document.getElementById('totalCountDisplay').innerText = `${dados.length} registros`;
+
+        // Lista Cards
+        const container = document.getElementById('listaApostasContainer');
+        container.innerHTML = '';
+
+        [...dados].reverse().forEach(bet => {
+            let cardClass = 'glass-card bet-item ';
+            if(bet.status === 'Green') cardClass += 'card-green';
+            else if(bet.status === 'Red') cardClass += 'card-red';
+            else cardClass += 'card-pending';
+
+            let valorDisplay = bet.status==='Green' ? `+${fmtMoney(bet.lucro)}` : (bet.status==='Red' ? `-${fmtMoney(Math.abs(bet.lucro))}` : fmtMoney(bet.valor));
+            let valColor = bet.status==='Green' ? 'text-green' : (bet.status==='Red' ? 'text-red' : 'text-white');
+
+            let centerDisplay = `<span class="text-secondary opacity-50 mx-1">vs</span>`;
+            if(bet.status !== 'Pendente' && bet.placar) {
+                centerDisplay = `<span class="score-badge">${bet.placar}</span>`;
+            }
+
+            const div = document.createElement('div');
+            div.className = cardClass;
+            div.innerHTML = `
+                <div class="bet-header">
+                    <div>
+                        <span class="bet-meta">${bet.campeonato} • ${new Date(bet.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span>
+                        <h6 class="bet-title mt-1">${bet.timeCasa} ${centerDisplay} ${bet.timeFora}</h6>
+                    </div>
+                </div>
+
+                <div class="bet-details">
+                    <div>
+                         <span class="bet-market">${bet.mercado}</span>
+                    </div>
+                    <div class="bet-values">
+                        <span class="bet-odd">@${bet.odd.toFixed(2)}</span>
+                        <span class="bet-amount ${valColor}">${valorDisplay}</span>
+                    </div>
+                </div>
+
+                <div class="mini-actions">
+                    ${bet.status === 'Pendente' ? 
+                        `<button onclick="window.prepararResolucao('${bet.id}',${bet.valor},${bet.odd})" class="btn-mini btn-resolve" title="Resolver"><i class="fas fa-check"></i></button>` : ''
+                    }
+                    <button class="btn-mini btn-edit" onclick="window.editarAposta('${bet.id}')" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button class="btn-mini btn-trash" onclick="window.deletarAposta('${bet.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        // Chart
+        const ctx = document.getElementById('lucroChart').getContext('2d');
+        if(mainChart) mainChart.destroy();
+        
+        let gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, lucro>=0 ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 23, 68, 0.4)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+        mainChart = new Chart(ctx, {
+            type: 'line',
+            data: { 
+                labels: labels, 
+                datasets: [{ 
+                    label: 'Saldo',
+                    data: dataC, 
+                    borderColor: lucro>=0 ? '#00e676' : '#ff1744', 
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#fff'
+                }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: {display: false}, tooltip: {mode: 'index', intersect: false} }, 
+                interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                scales: { 
+                    x: { display: true, grid: {color: 'rgba(255,255,255,0.05)'}, ticks: { color: '#888', maxTicksLimit: 10 } }, 
+                    y: { grid: {color:'rgba(255,255,255,0.05)'}, ticks:{ display:false } } 
+                } 
+            }
+        });
+    };
+
+    window.limparFiltros = () => {
+        document.getElementById('filtroBusca').value = '';
+        document.getElementById('filtroStatus').value = 'Todos';
+        document.getElementById('filtroMercado').value = '';
+        document.getElementById('filtroDataIni').value = '';
+        document.getElementById('filtroDataFim').value = '';
+        renderizarPainel();
+    };
+
+    document.getElementById('betForm').addEventListener('submit', async(e)=>{
+        e.preventDefault();
+        const editId = document.getElementById('editId').value;
+        const oddVal = parseFloat(document.getElementById('odd').value.replace('.','').replace(',','.'));
+        const valorVal = parseFloat(document.getElementById('valor').value.replace('.','').replace(',','.'));
+
+        const dados = {
+            campeonato: document.getElementById('campeonato').value,
+            timeCasa: document.getElementById('timeCasa').value,
+            timeFora: document.getElementById('timeFora').value,
+            mercado: document.getElementById('mercado').value,
+            odd: oddVal,
+            valor: valorVal,
+            tipo: document.getElementById('tipo').value
         };
 
-        // Inicializa o Firebase
-        try {
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            console.log("Firebase conectado com sucesso!");
-        } catch (error) {
-            console.error("Erro ao conectar no Firebase. Verifique a firebaseConfig.", error);
-            alert("Erro na configuração do Firebase. Abra o console (F12) para ver.");
+        if(editId) {
+            await updateDoc(doc(db, "apostas", editId), dados);
+        } else {
+            await addDoc(apostasRef, { ...dados, status: 'Pendente', lucro: 0, data: new Date().toISOString() });
         }
+        
+        document.getElementById('betForm').reset();
+        document.getElementById('editId').value = '';
+        offcanvasForm.hide();
+    });
 
-        // ============================================================
-        // 2. FUNÇÃO DE SALVAR (CREATE)
-        // ============================================================
-        document.getElementById('formAposta').addEventListener('submit', function(event) {
-            event.preventDefault(); // Não deixa a página recarregar
+    window.deletarAposta = async(id) => { if(confirm("Remover entrada?")) await deleteDoc(doc(db,"apostas",id)); };
 
-            // Pega os valores dos inputs
-            const timeA = document.getElementById('timeA').value;
-            const timeB = document.getElementById('timeB').value;
-            const valor = document.getElementById('valor').value;
+    window.editarAposta = (id) => {
+        const bet = dadosCache.find(a => a.id === id);
+        document.getElementById('editId').value = id;
+        document.getElementById('campeonato').value = bet.campeonato;
+        document.getElementById('timeCasa').value = bet.timeCasa;
+        document.getElementById('timeFora').value = bet.timeFora;
+        document.getElementById('mercado').value = bet.mercado;
+        document.getElementById('odd').value = bet.odd.toLocaleString("pt-BR", {minimumFractionDigits:2});
+        document.getElementById('valor').value = bet.valor.toLocaleString("pt-BR", {minimumFractionDigits:2});
+        document.getElementById('tipo').value = bet.tipo;
+        
+        document.getElementById('offcanvasTitle').innerText = "Editar Aposta";
+        offcanvasForm.show();
+    };
 
-            // Salva na coleção "apostas"
-            db.collection("apostas").add({
-                timeCasa: timeA,
-                timeFora: timeB,
-                valor: parseFloat(valor), // Salva como número
-                dataCriacao: firebase.firestore.FieldValue.serverTimestamp() // Salva a hora exata
-            })
-            .then(() => {
-                alert("Aposta salva!");
-                document.getElementById('formAposta').reset(); // Limpa o formulário
-            })
-            .catch((error) => {
-                console.error("Erro ao salvar: ", error);
-                alert("Erro ao salvar: " + error.message);
+    document.getElementById('offcanvasForm').addEventListener('hidden.bs.offcanvas', () => {
+        document.getElementById('offcanvasTitle').innerText = "Nova Entrada";
+        document.getElementById('betForm').reset();
+        document.getElementById('editId').value = '';
+    });
+
+    window.prepararResolucao = (id,v,o) => {
+        document.getElementById('resolveId').value = id;
+        document.getElementById('resolveValor').value = v;
+        document.getElementById('resolveOdd').value = o;
+        document.getElementById('resolvePlacar').value = ''; 
+        modalResolve.show();
+    };
+
+    window.finalizarAposta = async(s) => {
+        const id = document.getElementById('resolveId').value;
+        const v = Number(document.getElementById('resolveValor').value);
+        const o = Number(document.getElementById('resolveOdd').value);
+        const placar = document.getElementById('resolvePlacar').value;
+        
+        let l = 0;
+        if(s === 'Green') l = (v * o) - v;
+        if(s === 'Red') l = -v;
+        
+        await updateDoc(doc(db,"apostas",id), { status: s, lucro: l, placar: placar });
+        modalResolve.hide();
+    };
+
+    window.abrirConfiguracoes = () => {
+        modalConfig.show(); // Sem senha
+    };
+
+    document.getElementById('btnSalvarBanca').addEventListener('click', async()=>{
+        let v = parseFloat(document.getElementById('configBancaInput').value.replace('.','').replace(',','.'));
+        await setDoc(configRef, { bancaInicial: v||0 }, { merge: true });
+        modalConfig.hide();
+    });
+
+    // --- FUNÇÕES DE GERENCIAMENTO (TIMES/LIGAS) ---
+    window.listarDadosGerenciamento = (tipo) => {
+        const listaId = tipo === 'times' ? 'listaGerenciaTimes' : 'listaGerenciaCamps';
+        const container = document.getElementById(listaId);
+        container.innerHTML = '<div class="text-center p-3 text-secondary">Carregando...</div>';
+
+        setTimeout(() => {
+            const setItens = new Set();
+            dadosCache.forEach(bet => {
+                if(tipo === 'times') { setItens.add(bet.timeCasa); setItens.add(bet.timeFora); }
+                else setItens.add(bet.campeonato);
             });
-        });
 
-        // ============================================================
-        // 3. FUNÇÃO DE LISTAR (READ EM TEMPO REAL)
-        // ============================================================
-        const lista = document.getElementById('listaJogos');
+            const arr = Array.from(setItens).sort();
+            container.innerHTML = '';
 
-        // O onSnapshot fica "escutando" o banco. Se mudar lá, muda aqui na hora.
-        db.collection("apostas")
-          .orderBy("dataCriacao", "desc") // Ordena do mais novo para o mais antigo
-          .onSnapshot((querySnapshot) => {
-            
-            lista.innerHTML = ""; // Limpa a lista atual
+            if(!arr.length) return container.innerHTML = '<div class="p-3 text-center text-muted">Vazio.</div>';
 
-            if (querySnapshot.empty) {
-                lista.innerHTML = "<li style='justify-content:center'>Nenhuma aposta encontrada.</li>";
-                return;
-            }
-
-            querySnapshot.forEach((doc) => {
-                const dados = doc.data();
-                
-                // Monta o HTML de cada item
-                const itemHTML = `
-                    <div class="match-info">
-                        ${dados.timeCasa} <span style="color:#aaa">vs</span> ${dados.timeFora}
-                    </div>
-                    <div class="bet-value">
-                        R$ ${dados.valor}
+            arr.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'list-group-item bg-dark text-white border-secondary d-flex justify-content-between p-2';
+                div.innerHTML = `
+                    <span class="text-truncate me-2 item-name">${item}</span>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="window.gerenciarItem('renomear', '${tipo}', '${item}')"><i class="fas fa-pen"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="window.gerenciarItem('excluir', '${tipo}', '${item}')"><i class="fas fa-trash"></i></button>
                     </div>
                 `;
-
-                const li = document.createElement('li');
-                li.innerHTML = itemHTML;
-                lista.appendChild(li);
+                container.appendChild(div);
             });
+        }, 100);
+    };
 
-        }, (error) => {
-            console.error("Erro ao buscar dados: ", error);
-            // Se der erro de permissão, avisa o usuário
-            if (error.code === 'permission-denied') {
-                lista.innerHTML = "<li style='color:red'>Erro de Permissão: Verifique as Regras do Firestore.</li>";
+    window.filtrarListaGerenciamento = (listaId, texto) => {
+        const val = texto.toLowerCase();
+        document.querySelectorAll(`#${listaId} .list-group-item`).forEach(el => {
+            el.style.display = el.querySelector('.item-name').innerText.toLowerCase().includes(val) ? 'flex' : 'none';
+        });
+    };
+
+    window.gerenciarItem = async (acao, tipo, valorAntigo) => {
+        if(acao === 'renomear') {
+            const novoNome = prompt(`Renomear "${valorAntigo}" para:`, valorAntigo);
+            if(!novoNome || novoNome === valorAntigo) return;
+            if(!confirm(`Confirmar alteração em TODO histórico?`)) return;
+            
+            const updates = [];
+            dadosCache.forEach(bet => {
+                let pup = false, uData = {};
+                if(tipo === 'times') {
+                    if(bet.timeCasa === valorAntigo) { uData.timeCasa = novoNome; pup = true; }
+                    if(bet.timeFora === valorAntigo) { uData.timeFora = novoNome; pup = true; }
+                } else {
+                    if(bet.campeonato === valorAntigo) { uData.campeonato = novoNome; pup = true; }
+                }
+                if(pup) updates.push(updateDoc(doc(db, "apostas", bet.id), uData));
+            });
+            await Promise.all(updates);
+            alert("Atualizado!");
+            window.listarDadosGerenciamento(tipo);
+        } else if(acao === 'excluir') {
+            if(!confirm(`Apagar TODAS apostas com "${valorAntigo}"?`)) return;
+            const deletes = [];
+            dadosCache.forEach(bet => {
+                let del = false;
+                if(tipo === 'times' && (bet.timeCasa === valorAntigo || bet.timeFora === valorAntigo)) del = true;
+                if(tipo === 'camps' && bet.campeonato === valorAntigo) del = true;
+                if(del) deletes.push(deleteDoc(doc(db, "apostas", bet.id)));
+            });
+            await Promise.all(deletes);
+            alert("Apagado!");
+            window.listarDadosGerenciamento(tipo);
+        }
+    };
+
+    window.gerarAnaliseInteligente = () => {
+        const txt = document.getElementById('filtroBusca').value.toLowerCase();
+        const status = document.getElementById('filtroStatus').value;
+        
+        let dadosFiltrados = dadosCache.filter(b => {
+            if(status !== 'Todos' && b.status !== status) return false;
+            if(txt) {
+                const match = (b.campeonato||'').toLowerCase().includes(txt) || 
+                              b.timeCasa.toLowerCase().includes(txt) || 
+                              b.timeFora.toLowerCase().includes(txt);
+                if(!match) return false;
             }
+            return true;
         });
 
-    </script>
+        const finalData = dadosFiltrados.filter(b => b.status === 'Green' || b.status === 'Red');
+        if(!finalData.length) { alert("Sem dados finalizados."); return; }
+
+        let stats = {}, lucroTotal = 0, greens = 0;
+        finalData.forEach(b => { 
+            lucroTotal += b.lucro;
+            if(b.status === 'Green') greens++;
+            [b.timeCasa, b.timeFora].forEach(t => { stats[t] = (stats[t]||0) + b.lucro; }); 
+        });
+        
+        const sorted = Object.entries(stats).sort((a,b)=>b[1]-a[1]);
+        const top = sorted.slice(0,5);
+        const bad = sorted.slice(-5).reverse();
+
+        document.getElementById('analiseWinrate').innerText = ((greens/finalData.length)*100).toFixed(1)+'%';
+        const elLucro = document.getElementById('analiseLucroTotal');
+        elLucro.innerText = fmtMoney(lucroTotal);
+        elLucro.className = lucroTotal >= 0 ? "text-white mb-0 text-success" : "text-white mb-0 text-danger";
+
+        renderBar('chartTopTeams', top, '#00e676', chartTop, (c)=>chartTop=c);
+        renderBar('chartBadTeams', bad, '#ff1744', chartBad, (c)=>chartBad=c);
+        
+        modalAnalise.show();
+    };
+
+    function renderBar(id, dataArr, color, inst, setInst) {
+        if(inst) inst.destroy();
+        const ctx = document.getElementById(id).getContext('2d');
+        setInst(new Chart(ctx, {
+            type: 'bar',
+            data: { labels: dataArr.map(x=>x[0]), datasets: [{ data: dataArr.map(x=>x[1]), backgroundColor: color, borderRadius: 4 }] },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: {display:false} }, scales: { x:{display:false}, y:{ticks:{color:'#ccc', font:{size:10}}} } }
+        }));
+    }
+</script>
 </body>
 </html>
