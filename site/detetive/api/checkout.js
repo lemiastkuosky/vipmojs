@@ -1,7 +1,7 @@
-// api/checkout.js
+// Arquivo: api/checkout.js
 
 export default async function handler(req, res) {
-    // 1. Configuração de CORS (Para aceitar requisição do seu HTML)
+    // 1. Configuração de CORS (Permite que seu HTML converse com essa API)
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -10,30 +10,31 @@ export default async function handler(req, res) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
 
-    // Responde ao "Preflight" do navegador
+    // Responde ao "sinal" do navegador antes do envio
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
 
+    // Só aceita POST
     if (req.method !== 'POST') {
-        return res.status(405).json({ sucesso: false, mensagem: 'Método não permitido.' });
+        return res.status(405).json({ sucesso: false, mensagem: 'Método não permitido na Vercel.' });
     }
 
     try {
         const dados = req.body;
 
-        // --- DADOS DA YAMPI ---
+        // --- SUAS CREDENCIAIS YAMPI ---
         const ALIAS = "store39";
         const TOKEN = "YuxLCumxFftaA1LlGzdInxFPqpLYnrODvL0BMHnG";
         const SECRET_KEY = "sk_jGBmqP1AWTKsxHlNtrVOmjVCGrkske08M5X6F";
         const API_URL = "https://api.yampi.com.br/v1/orders";
 
-        // Formatação simples
+        // Limpeza de dados
         const cpfLimpo = dados.cpf.replace(/\D/g, '');
         const telLimpo = dados.telefone.replace(/\D/g, '');
 
-        // 2. Monta o Payload
+        // 2. Monta os dados para a Yampi
         const payload = {
             customer: {
                 name: dados.nome,
@@ -68,7 +69,7 @@ export default async function handler(req, res) {
             payments: []
         };
 
-        // Adiciona Pagamento
+        // Configura PIX ou Cartão
         if (dados.metodo === 'pix') {
             payload.payments.push({ payment_method: "pix" });
         } else {
@@ -85,36 +86,38 @@ export default async function handler(req, res) {
             });
         }
 
-        // 3. Envia para Yampi (Fetch Nativo do Node.js)
-        const response = await fetch(API_URL, {
+        // 3. Envia para a Yampi
+        const response = await fetch('/api/checkout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Alias': ALIAS,
-                'Token': TOKEN,
-                'Key': SECRET_KEY
+                'Alias': store39,
+                'Token': YuxLCumxFftaA1LlGzdInxFPqpLYnrODvL0BMHnG,
+                'Key': sk_jGBmqP1AWTKsxHlNtrVOmjVCGrkske08M5X6F
             },
             body: JSON.stringify(payload)
         });
 
         const resYampi = await response.json();
 
-        // 4. Retorna para o HTML
-        if (response.ok) { // Status 200-299
+        // 4. Responde para o seu HTML
+        if (response.ok) { // Sucesso (200 ou 201)
             const retorno = { sucesso: true, metodo: dados.metodo };
             
             if (dados.metodo === 'pix') {
+                // Tenta encontrar o QR Code na resposta da Yampi
                 const transaction = resYampi.data?.resource?.transactions?.[0];
                 retorno.qrcode_imagem = transaction?.pix_qrcode_url || '';
                 retorno.qrcode_copicola = transaction?.pix_qrcode_text || '';
             } else {
+                // Se for cartão, manda para a página de obrigado ou URL de checkout
                 retorno.redirect_url = resYampi.data?.resource?.checkout_url || "obrigado.html";
             }
             
             return res.status(200).json(retorno);
         } else {
             // Erro da Yampi
-            const msgErro = resYampi.errors?.[0]?.message || resYampi.message || 'Erro no processamento';
+            const msgErro = resYampi.errors?.[0]?.message || resYampi.message || 'Erro no processamento Yampi';
             return res.status(400).json({ sucesso: false, mensagem: msgErro, debug: resYampi });
         }
 
