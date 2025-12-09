@@ -12,7 +12,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
     <style>
-        /* (MANTIVE O MESMO CSS ESTILOSO DO ANTERIOR PARA ECONOMIZAR ESPAÇO) */
         :root { --bg-dark: #0a0a0a; --bg-panel: #141414; --border-color: #333; --accent-red: #d90429; --accent-green: #2b9348; --accent-yellow: #ffd60a; --text-main: #e0e0e0; --text-muted: #888; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; align-items: center; background-image: radial-gradient(circle at top, #1a0505 0%, #000 60%); padding-bottom: 50px; }
@@ -202,15 +201,15 @@
     </div>
 
     <script>
-        // --- JAVASCRIPT: ENVIO PARA PHP ---
+        // --- JAVASCRIPT: ENVIO PARA API (Serverless Vercel) ---
         document.querySelector('.btn-checkout').addEventListener('click', function(e) {
             e.preventDefault();
             const btn = this;
             const originalText = btn.innerHTML;
             
-            // Validações Básicas
+            // Validações
             if(!document.getElementById('nome_cliente').value || !document.getElementById('cpf_cliente').value || !document.getElementById('email_cliente').value) {
-                alert('Preencha Nome, CPF e E-mail para processar na Yampi.');
+                alert('Preencha Nome, CPF e E-mail para liberar o acesso.');
                 return;
             }
 
@@ -234,6 +233,7 @@
                 } : null
             };
 
+            // CHAMA A API NODE.JS (Vercel)
             fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -243,30 +243,35 @@
             .then(data => {
                 if (data.sucesso) {
                     if(data.metodo === 'pix') {
-                        document.getElementById('pix-placeholder').style.display = 'none';
-                        const pixReal = document.getElementById('pix-real');
-                        pixReal.style.display = 'block';
-                        pixReal.innerHTML = `
-                            <p style="color:#fff; margin-bottom:10px; font-weight:bold;">Seu QR Code Yampi:</p>
-                            <img src="${data.qrcode_imagem}" style="width:200px; border: 4px solid #fff; border-radius: 5px;">
-                            <p style="margin-top:10px; font-size:0.8rem;">Copia e Cola:</p>
-                            <textarea style="width:100%; background:#222; color:#fff; border:1px solid #444; padding:10px; height:80px;">${data.qrcode_copicola}</textarea>
-                        `;
-                        btn.innerHTML = 'AGUARDANDO PAGAMENTO...';
+                        // Verifica se o QR Code veio
+                        if (data.qrcode_imagem && data.qrcode_copicola) {
+                            document.getElementById('pix-placeholder').style.display = 'none';
+                            const pixReal = document.getElementById('pix-real');
+                            pixReal.style.display = 'block';
+                            pixReal.innerHTML = `
+                                <p style="color:#fff; margin-bottom:10px; font-weight:bold;">Seu QR Code Yampi:</p>
+                                <img src="${data.qrcode_imagem}" style="width:200px; border: 4px solid #fff; border-radius: 5px;">
+                                <p style="margin-top:10px; font-size:0.8rem;">Copia e Cola:</p>
+                                <textarea style="width:100%; background:#222; color:#fff; border:1px solid #444; padding:10px; height:80px;">${data.qrcode_copicola}</textarea>
+                            `;
+                            btn.innerHTML = 'AGUARDANDO PAGAMENTO...';
+                        } else {
+                            // Se não veio QR Code, redireciona para o checkout da Yampi
+                            window.location.href = data.redirect_url;
+                        }
                     } else {
-                        // Se Cartão Aprovado
-                        alert('Pagamento Aprovado com Sucesso!');
-                        window.location.href = data.redirect_url || "obrigado.html";
+                        // Cartão Aprovado ou Redirecionamento
+                        window.location.href = data.redirect_url;
                     }
                 } else {
-                    alert('Yampi Recusou: ' + (data.mensagem || 'Verifique os dados'));
+                    alert('Erro na Yampi: ' + (data.mensagem || 'Verifique seus dados'));
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
             })
             .catch(error => {
                 console.error('Erro:', error);
-                alert('Erro de comunicação com o servidor.');
+                alert('Erro de conexão. Tente novamente.');
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             });
