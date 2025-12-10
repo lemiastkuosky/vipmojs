@@ -10,6 +10,7 @@
   <meta name="theme-color" content="#f0f8ff">
   <meta name="description" content="Conversor de números para emojis">
   <title>Vip Emojs</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
   <link rel="manifest" href="manifest.json">
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
@@ -16101,48 +16102,50 @@ function extrairDadosDoHTML(htmlString) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlString, 'text/html');
         
-        // CORREÇÃO 1: Usa um seletor genérico para pegar TODAS as linhas de qualquer tabela na página
+        // 1. Pega TODAS as linhas da página (ignora se é tabela listrada ou não)
+        // Isso resolve o problema de vir "pela metade"
         const linhas = doc.querySelectorAll('tr'); 
 
         linhas.forEach(linha => {
-            // Limpa o texto para remover espaços extras e quebras de linha
+            // Limpa o texto: remove espaços duplos e quebras de linha
             const texto = linha.innerText.replace(/\s+/g, ' ').trim();
             
-            // CORREÇÃO 2: Regex mais poderosa e flexível
-            // Procura: Digito + º + Emoji + Texto + (Status)
-            // Ex: "1º 🦅 Águia atrasado a 30 dias"
-            const regex = /(\d+)º\s*(\p{Emoji})\s*[-–]?\s*([A-ZÁ-Úa-zá-ú]+)\s*((?:atrasado|saiu).*?)$/ui;
+            // 2. NOVA REGEX (O Segredo do Quebra-Galho)
+            // Ela entende: "1º" + Emoji + (Opcional: Numeros e traço) + Nome do Bicho + Status
+            // Exemplo que ela lê: "1º 🐈 14 - Gato atrasado a 11 dias"
+            const regex = /(\d+)º\s*(\p{Emoji})\s*(?:[\d]+\s*-\s*)?([A-Za-zÀ-ÿ]+)\s*((?:atrasado|saiu).*)/ui;
             
             const match = texto.match(regex);
 
             if (match) {
-                // Tratamento do status para ficar bonito (remove numeros excessivos se for data)
+                // Tratamento do status para ficar bonito
                 let statusLimpo = match[4].trim();
                 
-                // Se for "atrasado a X dias", formata melhor
+                // Se for "atrasado a X dias", deixa só os números
                 if(statusLimpo.toLowerCase().includes('atrasado')) {
                     const dias = statusLimpo.replace(/\D/g, '');
                     statusLimpo = `${dias} dias`;
                 } else {
-                    // Se for "saiu ontem/hoje", coloca entre parenteses
-                    statusLimpo = statusLimpo.replace(/\(|\)/g, ''); // limpa parenteses antigos
+                    // Se for "saiu ontem/hoje", limpa parênteses extras
+                    statusLimpo = statusLimpo.replace(/\(|\)/g, ''); 
+                    statusLimpo = `(${statusLimpo})`; // Adiciona parênteses limpos
                 }
 
                 const item = {
-                    posicao: parseInt(match[1], 10), // Garante que é número para ordenar
+                    posicao: parseInt(match[1], 10), // Força virar número para ordenar depois
                     emoji: match[2],
                     nome: match[3],
-                    status: `(${statusLimpo})`
+                    status: statusLimpo
                 };
                 
-                // Evita duplicatas se o site repetir a tabela
+                // Evita duplicatas (caso o site tenha versões mobile/desktop da tabela)
                 if (!dadosExtraidos.some(d => d.nome === item.nome)) {
                     dadosExtraidos.push(item);
                 }
             }
         });
         
-        // CORREÇÃO 3: Ordena a lista do 1º ao 25º antes de devolver
+        // 3. Ordena do 1º ao 25º garantido
         dadosExtraidos.sort((a, b) => a.posicao - b.posicao);
 
     } catch (error) {
@@ -16537,17 +16540,6 @@ function showMilharesCentenasDezenas() {
     if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
     if (copyButtonsDiv) copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
 }
-
-    // Controle dos botões de copiar
-    const copyButtonsDiv = document.getElementById('copyButtons');
-    const btnCopiar = document.getElementById('btnCopiarTexto');
-    const btnListas = document.getElementById('btnAbrirListas');
-
-    const canCopy = !isEmpty && !hasError; 
-
-    if (btnCopiar) btnCopiar.style.display = canCopy ? 'inline-flex' : 'none';
-    if (btnListas) btnListas.style.display = canCopy ? 'inline-flex' : 'none';
-    if (copyButtonsDiv) copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
 
 </script>
 </body>
