@@ -5081,7 +5081,7 @@ body.dark-mode #bolaoExtractionsWrapper label:has(input:checked) {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V3.29</strong>
+            <strong>V3.39</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -5089,7 +5089,7 @@ body.dark-mode #bolaoExtractionsWrapper label:has(input:checked) {
             <strong id="milharTotalCount">...</strong>
         </div>
     </div>
-    <div>👨‍💻 Criado por: Le Miastkuosky by VIP</div><br>
+    <div>👨‍💻 Criado por: Le Miastkuosky</div><br>
      <div style="text-align: center; margin-bottom: 15px; padding: 0 10px;">
         <span id="auth-status-indicator">Verificando status...</span>
         <button id="logout-button" style="display: none; margin-left: 2px;" onclick="handleLogout()">Sair</button>
@@ -5376,6 +5376,14 @@ body.dark-mode #bolaoExtractionsWrapper label:has(input:checked) {
 
         <fieldset class="generator-options" style="text-align: left; margin-bottom: 15px;">
             <legend>🛠️ Gerais</legend>
+
+<div class="digit-checkboxes" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+    <label style="width: 100%; display: flex; align-items: center; justify-content: flex-start; padding: 12px; margin: 0; box-sizing: border-box;">
+        <input type="checkbox" id="settingOfferCentenas" onchange="toggleOfferCentenasPref(this.checked)">
+        Perguntar se deseja "Cercar Centenas" após gerar Milhar
+    </label>
+    </div>
+
             <div class="digit-checkboxes" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
                 <label style="width: 100%; display: flex; align-items: center; justify-content: flex-start; padding: 12px; margin: 0; box-sizing: border-box;">
                     <input type="checkbox" id="settingShowRepetition" onchange="toggleMainScreenElement('wrapperRepetition', this.checked)">
@@ -6042,7 +6050,7 @@ body.dark-mode #bolaoExtractionsWrapper label:has(input:checked) {
     let cercarBichoPools = {};
     let originalGeneratedNumbers = { milhar: [], centena: [], dezena: [] };
     let currentSortOrder = 'original';
-
+    
     // Variáveis de Dados
     let messageTemplates = [];
     let nomesSalvos = [];
@@ -6071,6 +6079,7 @@ body.dark-mode #bolaoExtractionsWrapper label:has(input:checked) {
     let choicesNomePessoa = null;
     let choicesNomePessoaModal = null;
     let combinacoesParaConferir = [];
+    let offerCentenasAfterMilhar = true;
 
     // Cache de Emoji
     let emojiToBichoData = {}; 
@@ -6281,6 +6290,15 @@ async function toggleMainScreenElement(elementId, isVisible) {
         // Salva a preferência (ex: "pref_wrapperRepetition")
         await saveData('pref_' + elementId, isVisible);
     }
+}
+
+async function toggleOfferCentenasPref(isChecked) {
+    offerCentenasAfterMilhar = isChecked;
+    // Usa a chave correta do STORAGE_KEYS
+    await saveData(STORAGE_KEYS.OFFER_CENTENAS_PREF, isChecked); 
+    
+    console.log("Preferência de centenas salva:", isChecked); // Para depuração
+    showToast(isChecked ? 'Pergunta de centenas ativada!' : 'Pergunta de centenas desativada.', 'info');
 }
 
 // Carrega as preferências ao iniciar o App
@@ -6768,7 +6786,7 @@ async function generateIAPalpites(loteria, loteriaNome) { // <-- MUDANÇA AQUI
     }
 
     // --- BLOCO DE MENSAGEM (Sem alteração) ---
-    window.iaPalpiteShareText = `🔮 *VIP Palpites da I.A. - ${loteriaNome.toUpperCase()}* 🔮\n\n` +
+    window.iaPalpiteShareText = `🔮 *Le Palpites da I.A. - ${loteriaNome.toUpperCase()}* 🔮\n\n` +
         
         `_${"Gerado dia"} ${dataSimplesFormatada} ${"às:"} ${horaFormatada}_\n\n` +
         
@@ -7753,7 +7771,7 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
         textoMensagem = `🌟 *Resultado ${nomeLoteriaDisplay.toUpperCase()} ${horarioCurto ? horarioCurto + ' ' : ''}- 1º ao 5º* 🌟\n\n`;
         
         // --- LINHAS ADICIONADAS ---
-        textoMensagem += `*GRUPO APP VIP OFICIAL*\n`;
+        textoMensagem += `*GRUPO APP OFICIAL*\n`;
         textoMensagem += `━━━━━━━━━━━━━━━\n\n`;
         // --- FIM DAS LINHAS ADICIONADAS ---
 
@@ -9905,13 +9923,14 @@ function monitorDatabaseConnection() {
     LAST_GEN_MODE: 'lastGenerationMode',
     LAST_GAME_TYPE: 'lastGameTypeSelection',
     QUANTITY_HISTORY: 'quantityUsageHistory',
-    LAST_BICHO_MILHAR_MODE: 'lastBichoMilharMode', // <-- ADICIONE ESTA LINHA
-    LAST_CALC_METHOD: 'lastCalcMethod'
+    LAST_BICHO_MILHAR_MODE: 'lastBichoMilharMode', 
+    LAST_CALC_METHOD: 'lastCalcMethod',
+    OFFER_CENTENAS_PREF: 'offerCentenasPreference',
    };
 
            
     document.addEventListener('DOMContentLoaded', () => {
-    checkAuth(); // <-- ADICIONE ESTA LINHA
+    checkAuth(); 
     
     initApp(); 
 
@@ -11327,6 +11346,24 @@ document.querySelectorAll('input[name="generationMode"]').forEach(radio => {
 
      async function loadPersistedData() {
     await loadThemePreference();
+
+    // --- CORREÇÃO: CARREGAR PREFERÊNCIA DE CENTENAS ---
+        // Tenta ler o valor salvo
+        const savedCentenaPref = await window.getData(STORAGE_KEYS.OFFER_CENTENAS_PREF);
+        
+        // Se for diferente de null (ou seja, existe algo salvo), usa o valor.
+        // Se for null (nunca salvou), usa true (padrão).
+        if (savedCentenaPref !== null) {
+            offerCentenasAfterMilhar = savedCentenaPref;
+        } else {
+            offerCentenasAfterMilhar = true;
+        }
+
+        // Atualiza o checkbox visualmente para refletir o valor carregado
+        const offerCheckbox = document.getElementById('settingOfferCentenas');
+        if(offerCheckbox) {
+            offerCheckbox.checked = offerCentenasAfterMilhar;
+        }
 
     // ... (código existente para showCheckEmoji e allowRepetition) ...
     const savedRepetitionState = await window.getData(STORAGE_KEYS.ALLOW_REPETITION);
@@ -14053,22 +14090,44 @@ async function generateSelectedNumbers() {
             selectedBichos.forEach((bicho, index) => {
                 const qtd = baseQuantity + (index < remainder ? 1 : 0);
                 if (qtd === 0) return;
+                
                 const bichoGrupo = bicho.grupo;
+                
+                // Cria o pool de 400 milhares se não existir ou estiver vazio
                 if (!cercarBichoPools[bichoGrupo] || cercarBichoPools[bichoGrupo].size === 0) {
                     const newPool = new Set();
-                    bicho.dezenas.forEach(dez => { for(let i=0; i<100; i++) newPool.add(String(i).padStart(2,'0') + dez); });
+                    bicho.dezenas.forEach(dez => { 
+                        for(let i=0; i<100; i++) {
+                            newPool.add(String(i).padStart(2,'0') + dez); 
+                        }
+                    });
                     cercarBichoPools[bichoGrupo] = newPool;
                 }
+                
                 const pool = cercarBichoPools[bichoGrupo];
                 const disponivel = pool.size;
+                
+                // Garante que não tenta pegar mais do que existe
                 const realQtd = Math.min(qtd, disponivel);
                 const sobra = disponivel - realQtd;
+                
                 summaryParts.push(`• G${bicho.grupo} ${bicho.animal}: ${realQtd}x (Restam: ${sobra})`);
+                
                 const arr = Array.from(pool);
                 shuffleArray(arr);
-                finalResults.milhar.push(...arr.slice(0, realQtd));
+                
+                // --- CORREÇÃO AQUI ---
+                // 1. Separa os números sorteados
+                const selecionados = arr.slice(0, realQtd);
+                
+                // 2. Adiciona ao resultado final para exibir
+                finalResults.milhar.push(...selecionados);
+                
+                // 3. Remove do Pool para que a contagem baixe e não repitam
+                selecionados.forEach(num => pool.delete(num));
+                // ---------------------
             });
-        } 
+        }
         else {
             if(bichoMilharMethod === 'fechamento_mc') summaryParts.push(`(Fechamento M-C)`);
             selectedBichos.forEach((bicho, index) => {
@@ -14141,7 +14200,8 @@ async function generateSelectedNumbers() {
     // ==========================================
     // 4. EXTRAÇÃO DE CENTENAS COM MEMÓRIA
     // ==========================================
-    if (finalResults.milhar && finalResults.milhar.length > 0) {
+    if (finalResults.milhar && finalResults.milhar.length > 0 && offerCentenasAfterMilhar) {
+        
         await new Promise(r => setTimeout(r, 200));
 
         const desejaExtrair = await showCustomConfirm(
@@ -14151,13 +14211,9 @@ async function generateSelectedNumbers() {
         );
 
         if (desejaExtrair) {
-            
-            const savedQty = await getData('lastCentenaQuantity');
-            let defaultQty = 8; // Sugiro 8 para ter 2 de cada dezena
-            if (savedQty !== null && savedQty !== undefined) {
-                const parsed = parseInt(savedQty);
-                if (!isNaN(parsed)) defaultQty = parsed;
-            }
+            // ... (todo o código de geração de centenas continua igual aqui dentro) ...
+             const savedQty = await getData('lastCentenaQuantity');
+             let defaultQty = 8;
 
             const inputQtd = await showCustomInput(
                 "Cercar Centenas (Equilibrado)",
@@ -14542,7 +14598,7 @@ Mas se você não lembra do sonho ou a intuição está quieta, sem problemas se
 
         if (includeFullMessage) {
             if (mode === 'bichos') {
-                fullMessage = `*🔥 Atrasados da Vip 🔥*\n-----------------------------------\n\n`;
+                fullMessage = `*🔥 Atrasados 🔥*\n-----------------------------------\n\n`;
                 if (customMessage) { fullMessage += `📝 ${customMessage}\n\n`; }
 
                 const selectedBichos = Array.from(document.querySelectorAll('input[name="selectedBichos"]:checked'))
@@ -16044,43 +16100,51 @@ function extrairDadosDoHTML(htmlString) {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlString, 'text/html');
-        // O seletor correto para encontrar as linhas da tabela
-        const linhas = doc.querySelectorAll('table.table-striped tbody tr');
-
-        if (linhas.length === 0) {
-            console.error("Nenhuma linha <tr> encontrada. A estrutura pode ter mudado.");
-            return [];
-        }
+        
+        // CORREÇÃO 1: Usa um seletor genérico para pegar TODAS as linhas de qualquer tabela na página
+        const linhas = doc.querySelectorAll('tr'); 
 
         linhas.forEach(linha => {
-            const celula = linha.querySelector('td');
-            if (!celula) return;
-
-            const textoCompleto = celula.innerText.trim();
-            // Regex atualizada para a nova estrutura de texto
-            const regex = /(\d+º)\s*(\p{Emoji})\s*.*?-\s*([A-ZÁ-Úa-zá-ú]+)\s*(atrasado a \d+ dias|saiu \w+)/ui;
-            const match = textoCompleto.match(regex);
+            // Limpa o texto para remover espaços extras e quebras de linha
+            const texto = linha.innerText.replace(/\s+/g, ' ').trim();
+            
+            // CORREÇÃO 2: Regex mais poderosa e flexível
+            // Procura: Digito + º + Emoji + Texto + (Status)
+            // Ex: "1º 🦅 Águia atrasado a 30 dias"
+            const regex = /(\d+)º\s*(\p{Emoji})\s*[-–]?\s*([A-ZÁ-Úa-zá-ú]+)\s*((?:atrasado|saiu).*?)$/ui;
+            
+            const match = texto.match(regex);
 
             if (match) {
-                const statusOriginal = match[4];
-                let statusAbreviado = '';
-
-                if (statusOriginal.toLowerCase().includes('atrasado a')) {
-                    const dias = statusOriginal.replace(/\D/g, ''); // Extrai apenas os números
-                    statusAbreviado = `(${dias} dias)`;
+                // Tratamento do status para ficar bonito (remove numeros excessivos se for data)
+                let statusLimpo = match[4].trim();
+                
+                // Se for "atrasado a X dias", formata melhor
+                if(statusLimpo.toLowerCase().includes('atrasado')) {
+                    const dias = statusLimpo.replace(/\D/g, '');
+                    statusLimpo = `${dias} dias`;
                 } else {
-                    statusAbreviado = `(${statusOriginal})`;
+                    // Se for "saiu ontem/hoje", coloca entre parenteses
+                    statusLimpo = statusLimpo.replace(/\(|\)/g, ''); // limpa parenteses antigos
                 }
 
                 const item = {
-                    posicao: match[1],
+                    posicao: parseInt(match[1], 10), // Garante que é número para ordenar
                     emoji: match[2],
                     nome: match[3],
-                    status: statusAbreviado
+                    status: `(${statusLimpo})`
                 };
-                dadosExtraidos.push(item);
+                
+                // Evita duplicatas se o site repetir a tabela
+                if (!dadosExtraidos.some(d => d.nome === item.nome)) {
+                    dadosExtraidos.push(item);
+                }
             }
         });
+        
+        // CORREÇÃO 3: Ordena a lista do 1º ao 25º antes de devolver
+        dadosExtraidos.sort((a, b) => a.posicao - b.posicao);
+
     } catch (error) {
         console.error("Erro ao processar o HTML da tabela:", error);
         return [];
@@ -16118,7 +16182,7 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         if (dadosDosAtrasados.length === 0) {
             showToast("Não foi possível extrair os dados. O site de origem pode ter mudado.", "error");
         } else {
-            let textoMensagem = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n*GRUPO APP VIP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
+            let textoMensagem = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n*GRUPO APP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
             dadosDosAtrasados.forEach(bicho => {
                 textoMensagem += `*${bicho.posicao}*: ${bicho.emoji} *${bicho.nome}* ${bicho.status}\n`;
             });
