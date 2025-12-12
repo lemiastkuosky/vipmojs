@@ -5083,7 +5083,7 @@ body.dark-mode #bolaoExtractionsWrapper label:has(input:checked) {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V3.39</strong>
+            <strong>V3.49</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -16122,14 +16122,22 @@ function extrairDadosDoHTML(htmlString) {
                 // Tratamento do status para ficar bonito
                 let statusLimpo = match[4].trim();
                 
-                // Se for "atrasado a X dias", deixa só os números
                 if(statusLimpo.toLowerCase().includes('atrasado')) {
                     const dias = statusLimpo.replace(/\D/g, '');
                     statusLimpo = `${dias} dias`;
                 } else {
-                    // Se for "saiu ontem/hoje", limpa parênteses extras
-                    statusLimpo = statusLimpo.replace(/\(|\)/g, ''); 
-                    statusLimpo = `(${statusLimpo})`; // Adiciona parênteses limpos
+                    // --- MODIFICAÇÃO PARA LIMPAR TEXTO ---
+                    const textoBaixo = statusLimpo.toLowerCase();
+                    
+                    if (textoBaixo.includes('ontem')) {
+                        statusLimpo = '(saiu ontem)';
+                    } else if (textoBaixo.includes('hoje')) {
+                        statusLimpo = '(saiu hj)';
+                    } else {
+                        // Caso genérico (remove parênteses extras e mantém o texto)
+                        statusLimpo = statusLimpo.replace(/\(|\)/g, ''); 
+                        statusLimpo = `(${statusLimpo})`; 
+                    }
                 }
 
                 const item = {
