@@ -5205,6 +5205,8 @@ body.dark-mode .password-display {
       <button id="themeToggle" class="shortcut-btn" onclick="toggleTheme()" title="Alternar Tema"></button>
    </div>
 
+   <div id="quickShortcutsContainer" class="button-group" style="display: none; flex-wrap: wrap; margin-top: 10px;"></div>
+
     <div id="fechamentoModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="fechamentoModalTitle">
         <div class="modal-content">
         <span class="close-modal" onclick="closeFechamentoModal()" aria-label="Fechar">×</span>
@@ -5404,7 +5406,7 @@ body.dark-mode .password-display {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V5.00</strong>
+            <strong>V5.01</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -6970,58 +6972,46 @@ function changeSurpresinhaQtd(delta) {
     input.value = val;
 }
 
-// === FUNÇÃO ATUALIZADA: SURPRESINHA (ADICIONA AO INVÉS DE SUBSTITUIR) ===
 function generateSurpresinha() {
     const qtd = parseInt(document.getElementById('qtdSurpresinha').value) || 1;
     const textarea = document.getElementById('input');
     const jogos = [];
 
     for (let i = 0; i < qtd; i++) {
-        // 1. Cria um pool de 00 a 99
+        // 1. Cria o pool de 00 a 99
         const pool = [];
         for (let n = 0; n <= 99; n++) {
             pool.push(String(n).padStart(2, '0'));
         }
 
-        // 2. Embaralha o pool (Algoritmo Fisher-Yates)
-        for (let j = pool.length - 1; j > 0; j--) {
-            const k = Math.floor(Math.random() * (j + 1));
-            [pool[j], pool[k]] = [pool[k], pool[j]];
-        }
+        // 2. MUDANÇA: Usa o Shuffle Seguro Global
+        shuffleArray(pool);
 
-        // 3. Pega os primeiros 20 números (garantido sem repetição)
+        // 3. Pega os primeiros 20 (garantido sem repetição e sem vício)
         const selecionados = pool.slice(0, 20);
         
-        // 4. Junta com espaços (formato padrão de entrada)
+        // 4. Ordena para ficar bonito na lista (opcional, mas padrão em surpresinha)
+        selecionados.sort(); 
+        
         jogos.push(selecionados.join(' '));
     }
 
     const novosJogosTexto = jogos.join('\n');
 
-    // === A MUDANÇA ESTÁ AQUI: VERIFICA SE JÁ TEM TEXTO ===
     if (textarea.value.trim() !== '') {
-        // Se já tem texto, pula uma linha e adiciona os novos jogos embaixo
         textarea.value += '\n' + novosJogosTexto;
     } else {
-        // Se está vazio, apenas adiciona
         textarea.value = novosJogosTexto;
     }
 
-    // 6. Configura a tela
     closeSurpresinhaModal();
     
-    // Força a seleção do rádio "Bolão de dezena"
+    // Ativa o modo Bolão visualmente
     const radioBarra = document.querySelector('input[name="viewOption"][value="separado_barra"]');
-    if (radioBarra) {
-        radioBarra.checked = true;
-    }
+    if (radioBarra) radioBarra.checked = true;
 
-    // 7. Dispara a conversão e validação
-    showToast(`${qtd} jogo(s) adicionado(s) à lista!`, 'success');
-    
-    // Força o evento de input para que a validação (barras vermelhas de erro) rode imediatamente
+    showToast(`${qtd} jogo(s) adicionado(s)!`, 'success');
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    // convertToEmojisRealTime(); // O dispatchEvent acima já chama isso, mas se quiser garantir, pode descomentar.
 }
 
 function getBichoFromNumber(numStr) {
@@ -8258,7 +8248,7 @@ async function getPuxadaDoDiaIA(loteria) {
         const gruposPuxados = puxadas[ultimoGrupo];
         
         // 3. Sorteia UM grupo da lista de puxadas
-        const grupoPuxadoSorteado = gruposPuxados[Math.floor(Math.random() * gruposPuxados.length)];
+const grupoPuxadoSorteado = gruposPuxados[getSecureRandomInt(gruposPuxados.length)];
 
         // 4. Busca os dados dos dois bichos
         const bichoQueSaiu = tabelaDeGrupos.find(b => b.grupo === ultimoGrupo);
@@ -8277,12 +8267,13 @@ async function getPuxadaDoDiaIA(loteria) {
     }
 }
 
+// --- PALPITES I.A. (VERSÃO CRIPTOGRAFADA) ---
 function getPalpitesMisturadosIA(analise) {
     const palpites = {
         milhar: [],
         centena: [],
         dezena: [],
-        unidade: [] // <-- 1. ADICIONADO UNIDADE AQUI
+        unidade: [] 
     };
     
     const analiseFontes = {
@@ -8298,9 +8289,9 @@ function getPalpitesMisturadosIA(analise) {
     const milharSet = new Set();
     const centenaSet = new Set();
     const dezenaSet = new Set();
-    const unidadeSet = new Set(); // <-- 2. ADICIONADO SET DE UNIDADE
+    const unidadeSet = new Set(); 
 
-    // --- Estratégia 1: Bicho Mais Atrasado (FRIO) ---
+    // --- Estratégia 1: Bicho Mais Atrasado ---
     if (analise.bichosAtrasados.length > 0) {
         const bicho1 = analise.bichosAtrasados[0];
         const dezenas = bicho1.dezenas;
@@ -8310,7 +8301,7 @@ function getPalpitesMisturadosIA(analise) {
         analiseFontes.bichoFrio = `${bicho1.emoji} ${bicho1.animal} (G${bicho1.grupo})`;
     }
 
-    // --- Estratégia 2: Bicho Mais Frequente (QUENTE) ---
+    // --- Estratégia 2: Bicho Mais Frequente ---
     if (analise.bichosFrequentes.length > 0) {
         const bichoQuente1 = analise.bichosFrequentes[0];
         const dezenas = bichoQuente1.dezenas;
@@ -8319,40 +8310,46 @@ function getPalpitesMisturadosIA(analise) {
         analiseFontes.bichoQuente = `${bichoQuente1.emoji} ${bichoQuente1.animal} (G${bichoQuente1.grupo})`;
     }
 
-    // --- Estratégia 3: Dezena Mais Atrasada (FRIA) ---
+    // --- Estratégia 3: Dezena Mais Atrasada ---
     if (analise.dezenasAtrasadas.length > 0) {
         const dezena1 = analise.dezenasAtrasadas[0].numero;
-        centenaSet.add(JSON.stringify({ palpite: `${dezena1.slice(-1)}${dezena1}`, tipo: 'Dezena Fria' }));
+        // CORREÇÃO: Prefixo seguro para centena
+        const prefixoSeguro = getSecureRandomInt(10); 
+        centenaSet.add(JSON.stringify({ palpite: `${prefixoSeguro}${dezena1}`, tipo: 'Dezena Fria' }));
         dezenaSet.add(JSON.stringify({ palpite: dezena1, tipo: 'A mais Fria' }));
         analiseFontes.dezena = dezena1; 
     }
     
-    // --- Estratégia 4: Centena Mais Atrasada (FRIA) ---
+    // --- Estratégia 4: Centena Mais Atrasada ---
     if (analise.centenasAtrasadas.length > 0) {
         const centena1 = analise.centenasAtrasadas[0].numero;
-        milharSet.add(JSON.stringify({ palpite: `${Math.floor(Math.random() * 10)}${centena1}`, tipo: 'Centena Fria' }));
+        // CORREÇÃO: Prefixo seguro para milhar
+        const prefixoSeguro = getSecureRandomInt(10);
+        milharSet.add(JSON.stringify({ palpite: `${prefixoSeguro}${centena1}`, tipo: 'Centena Fria' }));
         analiseFontes.centenaFria = centena1; 
     }
 
-    // --- Estratégia 5: Unidade Mais Atrasada (FRIA) ---
+    // --- Estratégia 5: Unidade Mais Atrasada ---
     if (analise.unidadesAtrasadas.length > 0) {
         const unidade1 = analise.unidadesAtrasadas[0].numero;
         analiseFontes.unidadeFria = unidade1; 
-        unidadeSet.add(JSON.stringify({ palpite: unidade1, tipo: 'Unidade Fria' })); // <-- 3. PALPITE DE UNIDADE ADICIONADO
+        unidadeSet.add(JSON.stringify({ palpite: unidade1, tipo: 'Unidade Fria' })); 
     }
 
-    // --- Estratégia 6: Data do Dia (NEUTRA) ---
+    // --- Estratégia 6: Data do Dia ---
     if (analise.dataDoDia.length >= 3) {
         const [dia, mes, ano] = analise.dataDoDia;
         milharSet.add(JSON.stringify({ palpite: `${dia}${ano}`, tipo: 'Data do Dia' }));
         analiseFontes.data = `${dia}/${mes}/${ano}`;
     }
 
-    // --- Estratégia 7: Puxada do Dia (QUENTE/RELACIONADO) ---
+    // --- Estratégia 7: Puxada do Dia ---
     if (analise.puxada) {
         const bichoPuxado = analise.puxada.bichoPuxado;
         const dezenasPuxadas = bichoPuxado.dezenas;
-        centenaSet.add(JSON.stringify({ palpite: `${Math.floor(Math.random() * 10)}${dezenasPuxadas[0]}`, tipo: 'Puxada' }));
+        // CORREÇÃO: Prefixo seguro
+        const prefixoSeguro = getSecureRandomInt(10);
+        centenaSet.add(JSON.stringify({ palpite: `${prefixoSeguro}${dezenasPuxadas[0]}`, tipo: 'Puxada' }));
         const bSaiu = analise.puxada.bichoSaiu;
         analiseFontes.puxada = `${bSaiu.emoji} ${bSaiu.animal} (Saiu) ⇢ ${bichoPuxado.emoji} ${bichoPuxado.animal}`;
     }
@@ -8360,26 +8357,38 @@ function getPalpitesMisturadosIA(analise) {
     palpites.milhar = Array.from(milharSet).map(JSON.parse);
     palpites.centena = Array.from(centenaSet).map(JSON.parse);
     palpites.dezena = Array.from(dezenaSet).map(JSON.parse);
-    palpites.unidade = Array.from(unidadeSet).map(JSON.parse); // <-- 4. SET DE UNIDADE CONVERTIDO
+    palpites.unidade = Array.from(unidadeSet).map(JSON.parse); 
 
-    // --- Preenchimento (Gera 5 / 5 / 5 / 5) ---
+    // --- Preenchimento Seguro (Gera 5 / 5 / 5 / 5) ---
     const preencherPalpites = (tipo, alvo, len) => {
         let palpitesUnicos = new Set(palpites[tipo].map(p => p.palpite));
-        while (palpites[tipo].length < alvo) {
-            let num = String(Math.floor(Math.random() * Math.pow(10, len))).padStart(len, '0');
+        
+        // Proteção contra loop infinito
+        let attempts = 0; 
+        
+        while (palpites[tipo].length < alvo && attempts < 100) {
+            attempts++;
+            
+            // CORREÇÃO: Geração Segura usando Criptografia
+            let maxRange = Math.pow(10, len); // Ex: 10000 para milhar
+            let num = String(getSecureRandomInt(maxRange)).padStart(len, '0');
+            
             if (!palpitesUnicos.has(num)) {
                 palpites[tipo].push({ palpite: num, tipo: 'Aleatório' });
                 palpitesUnicos.add(num);
             }
         }
+        
+        // Mistura final segura
         shuffleArray(palpites[tipo]);
+        
         palpites[tipo] = palpites[tipo].slice(0, alvo);
     };
 
     preencherPalpites('milhar', 5, 4);
     preencherPalpites('centena', 5, 3);
     preencherPalpites('dezena', 5, 2);
-    preencherPalpites('unidade', 5, 1); // <-- 5. PREENCHIMENTO DE UNIDADE ADICIONADO
+    preencherPalpites('unidade', 5, 1); 
 
     return { palpites, analiseFontes };
 }
@@ -8414,8 +8423,34 @@ const puxadas = {
 
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]]; // Troca os elementos de lugar
+        let j;
+        // Verifica se o navegador suporta criptografia forte (Chrome, Safari, Firefox modernos)
+        if (window.crypto && window.crypto.getRandomValues) {
+            const array32 = new Uint32Array(1);
+            window.crypto.getRandomValues(array32);
+            // Gera um índice aleatório real usando entropia do sistema
+            const random = array32[0] / (0xFFFFFFFF + 1);
+            j = Math.floor(random * (i + 1));
+        } else {
+            // Fallback para navegadores muito antigos
+            j = Math.floor(Math.random() * (i + 1));
+        }
+        // Troca os elementos de lugar
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// --- FUNÇÃO AUXILIAR: SORTEIO CRIPTOGRAFADO (ANTI-VÍCIO) ---
+// Gera um número aleatório entre 0 e (max - 1) usando criptografia
+function getSecureRandomInt(max) {
+    if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        window.crypto.getRandomValues(array);
+        // O operador % (módulo) garante que o número fique dentro do limite 'max'
+        return array[0] % max;
+    } else {
+        // Fallback para navegadores muito antigos
+        return Math.floor(Math.random() * max);
     }
 }
 
@@ -10624,17 +10659,29 @@ function generateCombinations() {
         if (bichoData) dezenasDosBichos.push(...bichoData.dezenas);
     });
     let baseNumbers = [...new Set([...dezenasManuais, ...dezenasDosBichos])].map(n => n.padStart(2, '0'));
-    if (baseNumbers.length === 0) {
-        const randomQty = parseInt(document.getElementById('fechamentoRandomQuantity').value, 10);
-        if (!isNaN(randomQty) && randomQty > 0 && randomQty <= 100) {
-            const randomNumbersSet = new Set();
-            while (randomNumbersSet.size < randomQty) {
-                randomNumbersSet.add(String(Math.floor(Math.random() * 100)).padStart(2, '0'));
-            }
-            baseNumbers = Array.from(randomNumbersSet);
-            showToast(`${randomQty} dezenas aleatórias foram geradas!`, 'info');
+    
+                // NOVO (DENTRO DA FUNÇÃO generateCombinations)
+
+if (baseNumbers.length === 0) {
+    const randomQty = parseInt(document.getElementById('fechamentoRandomQuantity').value, 10);
+    if (!isNaN(randomQty) && randomQty > 0 && randomQty <= 100) {
+        const randomNumbersSet = new Set();
+        
+        // Proteção contra loop infinito
+        let attempts = 0;
+        
+        while (randomNumbersSet.size < randomQty && attempts < randomQty * 50) {
+            attempts++;
+            // MUDANÇA: Usa sorteio seguro 0-99
+            const numSeguro = String(getSecureRandomInt(100)).padStart(2, '0');
+            randomNumbersSet.add(numSeguro);
         }
+        
+        baseNumbers = Array.from(randomNumbersSet);
+        showToast(`${randomQty} dezenas aleatórias geradas (Cripto)!`, 'info');
     }
+}
+        
 
     // 3. Validação final
     if (baseNumbers.length === 0) {
@@ -14429,6 +14476,7 @@ async function generateSelectedNumbers() {
     // 1. Configurações Iniciais
     const quantityInput = document.getElementById('randomQuantityInput');
     let totalQuantity = parseInt(quantityInput.value, 10);
+    currentSortOrder = 'original';
 
     if (isNaN(totalQuantity) || totalQuantity <= 0 || totalQuantity > 10000) {
         showToast('Por favor, insira uma quantidade válida (1-10000).', 'error');
@@ -14457,13 +14505,11 @@ async function generateSelectedNumbers() {
     // LÓGICA DE GERAÇÃO (IA, BICHOS, OFFLINE)
     // ==========================================
     
-    // --- MODO I.A. ---
-// --- MODO I.A. (ATUALIZADO) ---
+    // --- MODO I.A. (ATUALIZADO COM CRIPTOGRAFIA) ---
     if (mode === 'ia_bichos') {
         const selectedBichos = Array.from(document.querySelectorAll('input[name="selectedBichos"]:checked'))
             .map(cb => tabelaDeGrupos.find(b => b.grupo === cb.value)).filter(Boolean);
 
-        // --- ALTERAÇÃO 1: Permite Milhar OU Dezena ---
         if (selectedBichos.length === 0 || (!typeKeys.includes('milhar') && !typeKeys.includes('dezena'))) {
             showToast('Para I.A., selecione Bichos e o tipo Milhar ou Dezena.', 'error'); return;
         }
@@ -14474,11 +14520,12 @@ async function generateSelectedNumbers() {
         
         summaryParts.push(`\n<strong>- Modo:</strong> 🔮 I.A. (${nomeLoteria})`);
         summaryParts.push(`<strong>- Bichos:</strong> ${bichoNames}`);
-        
+        summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity}`);
+
         showLoadingIndicator(`Analisando I.A...`);
         
         try {
-            // === GERAÇÃO DE MILHAR I.A. (Lógica de Prefixos) ===
+            // === GERAÇÃO DE MILHAR I.A. ===
             if (typeKeys.includes('milhar')) {
                 let iaGeneratedThousands = new Set();
                 const prefixosQuentes = await analisarHistoricoIA(selectedBichos, loteriaSelecionada);
@@ -14496,68 +14543,78 @@ async function generateSelectedNumbers() {
 
                 let finalIaArray = Array.from(iaGeneratedThousands);
                 
-                // Preenchimento se faltar números
+                // Preenchimento Seguro se faltar números
                 if (totalQuantity > finalIaArray.length) {
                      const diff = totalQuantity - finalIaArray.length;
                      const randomResultSet = new Set();
                      let attempts = 0;
-                     while (randomResultSet.size < diff && attempts < (diff * 100)) {
+                     // Aumentei o limite de tentativas para garantir preenchimento
+                     const maxAttempts = diff * 200; 
+
+                     while (randomResultSet.size < diff && attempts < maxAttempts) {
                         attempts++;
-                        let randomPrefix = String(Math.floor(Math.random() * 100)).padStart(2, '0');
-                        let gen = randomPrefix + dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
-                        if (applyAdvancedFilters(gen, 'milhar') && !iaGeneratedThousands.has(gen)) randomResultSet.add(gen);
+                        
+                        // 1. Prefixo Criptografado (00-99)
+                        let randomPrefix = String(getSecureRandomInt(100)).padStart(2, '0');
+                        
+                        // 2. Dezena Criptografada (Sorteio justo entre as disponíveis)
+                        let randomDezena = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+                        
+                        let gen = randomPrefix + randomDezena;
+                        
+                        if (applyAdvancedFilters(gen, 'milhar') && !iaGeneratedThousands.has(gen)) {
+                            randomResultSet.add(gen);
+                        }
                      }
                      finalIaArray.push(...Array.from(randomResultSet));
                 } else if (totalQuantity < finalIaArray.length) {
-                     shuffleArray(finalIaArray);
+                     shuffleArray(finalIaArray); // Mistura Segura
                      finalIaArray = finalIaArray.slice(0, totalQuantity);
                 }
                 
                 finalResults.milhar = finalIaArray;
-                shuffleArray(finalResults.milhar);
+                shuffleArray(finalResults.milhar); // Mistura Final Segura
             }
 
-            // === ALTERAÇÃO 2: GERAÇÃO DE DEZENA I.A. (Lógica de Frequência) ===
+            // === GERAÇÃO DE DEZENA I.A. ===
             if (typeKeys.includes('dezena')) {
-                // 1. Busca as dezenas mais quentes no banco de dados
                 const dezenasQuentes = await analisarDezenasQuentesIA(selectedBichos, loteriaSelecionada);
-                
-                // 2. Cria um Set (Lista que não aceita duplicatas)
                 let dezenasUnicas = new Set();
 
-                // 3. Tenta preencher a meta com as dezenas mais quentes primeiro
+                // Tenta preencher com as quentes
                 for (const d of dezenasQuentes) {
-                    if (dezenasUnicas.size >= totalQuantity) break; // Para se atingir a quantidade
-                    if (applyAdvancedFilters(d, 'dezena')) {
-                        dezenasUnicas.add(d);
-                    }
+                    if (dezenasUnicas.size >= totalQuantity) break;
+                    if (applyAdvancedFilters(d, 'dezena')) dezenasUnicas.add(d);
                 }
 
-                // 4. Se ainda não atingiu a quantidade (ex: histórico curto), completa com as outras dezenas dos bichos
+                // Completa com reserva se precisar (usando Mistura Segura)
                 if (dezenasUnicas.size < totalQuantity) {
                     const poolReserva = selectedBichos.flatMap(b => b.dezenas);
-                    shuffleArray(poolReserva); // Mistura as reservas
+                    shuffleArray(poolReserva); // Mistura o pool de reserva
                     
                     for (const d of poolReserva) {
-                        if (dezenasUnicas.size >= totalQuantity) break; // Para se atingir a quantidade
-                        if (applyAdvancedFilters(d, 'dezena')) {
-                            dezenasUnicas.add(d); // O Set ignora se já tiver adicionado antes
-                        }
+                        if (dezenasUnicas.size >= totalQuantity) break;
+                        if (applyAdvancedFilters(d, 'dezena')) dezenasUnicas.add(d);
                     }
                 }
-
-                // 5. Converte para lista final
-                // OBS: Se você pedir 100 números, mas selecionar 1 bicho (4 dezenas), ele retornará apenas 4.
                 finalResults.dezena = Array.from(dezenasUnicas);
             }
 
-            // Se Centena estiver marcado no modo I.A., geramos aleatoriamente com base nas dezenas do bicho
+            // === GERAÇÃO DE CENTENA I.A. (ATUALIZADO) ===
+            // Gera centenas aleatórias baseadas nas dezenas do bicho
             if (typeKeys.includes('centena')) {
                  const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
                  for(let i=0; i<totalQuantity; i++) {
-                    let d = dezenasPool[Math.floor(Math.random() * dezenasPool.length)];
-                    finalResults.centena.push(String(Math.floor(Math.random()*10)) + d);
+                    // 1. Dezena segura
+                    let d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+                    
+                    // 2. Dígito da centena seguro (0-9)
+                    let cDigit = String(getSecureRandomInt(10));
+                    
+                    finalResults.centena.push(cDigit + d);
                  }
+                 // Mistura final para garantir ordem aleatória
+                 shuffleArray(finalResults.centena);
             }
 
         } catch (error) { 
@@ -14635,60 +14692,162 @@ async function generateSelectedNumbers() {
                 const qtd = baseQuantity + (index < remainder ? 1 : 0);
                 if (qtd === 0) return;
                 if (bichoMilharMethod === 'padrao') {
-                    const dezenasPool = bicho.dezenas;
-                    typeKeys.forEach(typeKey => {
-                        const set = new Set();
-                        let attempts = 0;
-                        while(set.size < qtd && attempts < qtd*50) {
-                            attempts++;
-                            const d = dezenasPool[Math.floor(Math.random()*4)];
-                            let num = '';
-                            if(typeKey==='milhar') num = String(Math.floor(Math.random()*100)).padStart(2,'0')+d;
-                            if(typeKey==='centena') num = String(Math.floor(Math.random()*10))+d;
-                            if(typeKey==='dezena') num = d;
-                            if(applyAdvancedFilters(num, typeKey)) set.add(num);
-                        }
-                        finalResults[typeKey].push(...Array.from(set));
-                    });
-                }
-                else if (bichoMilharMethod === 'fechamento_mc' && typeKeys.includes('milhar')) {
-                    const hotDigits = new Set();
-                    bicho.dezenas.forEach(d => { hotDigits.add(d[0]); hotDigits.add(d[1]); });
-                    const arrDigits = Array.from(hotDigits);
-                    const allCombos = [];
-                    arrDigits.forEach(d1 => arrDigits.forEach(d2 => bicho.dezenas.forEach(dez => allCombos.push(d1+d2+dez))));
-                    shuffleArray(allCombos);
-                    if(qtd > allCombos.length) {
-                        finalResults.milhar.push(...allCombos);
-                        for(let i=0; i<(qtd-allCombos.length); i++) finalResults.milhar.push(String(Math.floor(Math.random()*100)).padStart(2,'0')+bicho.dezenas[Math.floor(Math.random()*4)]);
-                    } else {
-                        finalResults.milhar.push(...allCombos.slice(0, qtd));
-                    }
-                }
+    const dezenasPool = bicho.dezenas;
+    
+    typeKeys.forEach(typeKey => {
+        const set = new Set();
+        let attempts = 0;
+        
+        // Proteção contra loop infinito
+        const maxAttempts = qtd * 100; 
+
+        while(set.size < qtd && attempts < maxAttempts) {
+            attempts++;
+            
+            // 1. Sorteia uma das 4 dezenas do bicho de forma SEGURA (sem vício)
+            // Antes usava Math.random() que podia repetir muito a mesma dezena.
+            const d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+            
+            let num = '';
+            
+            // 2. Gera o número baseado no tipo, usando Criptografia para o prefixo
+            if (typeKey === 'milhar') {
+                // Prefixo 00 a 99 seguro
+                const prefixo = String(getSecureRandomInt(100)).padStart(2, '0');
+                num = prefixo + d;
+            } 
+            else if (typeKey === 'centena') {
+                // Digito 0 a 9 seguro
+                const digito = String(getSecureRandomInt(10));
+                num = digito + d;
+            } 
+            else if (typeKey === 'dezena') {
+                num = d;
+            }
+
+            // 3. Aplica filtros e adiciona
+            if (applyAdvancedFilters(num, typeKey)) {
+                set.add(num);
+            }
+        }
+        
+        // Transforma em array
+        const resultadoDoBicho = Array.from(set);
+        
+        // MISTURA FINAL (Crucial para não parecer ordenado)
+        shuffleArray(resultadoDoBicho);
+        
+        finalResults[typeKey].push(...resultadoDoBicho);
+    });
+}
+              
+
+// --- BLOCO FECHAMENTO M-C (CORREÇÃO DEFINITIVA DA MISTURA) ---
+else if (bichoMilharMethod === 'fechamento_mc' && typeKeys.includes('milhar')) {
+    // 1. Identifica os dígitos das dezenas do bicho (Ex: Burro -> 0, 1, 2, 9)
+    const hotDigits = new Set();
+    bicho.dezenas.forEach(d => { hotDigits.add(d[0]); hotDigits.add(d[1]); });
+    const arrDigits = Array.from(hotDigits);
+    
+    // 2. Gera TODAS as combinações possíveis do fechamento (Pool fechado)
+    const closureCombos = [];
+    arrDigits.forEach(d1 => {
+        arrDigits.forEach(d2 => {
+            bicho.dezenas.forEach(dez => {
+                closureCombos.push(d1 + d2 + dez);
+            });
+        });
+    });
+
+    // 3. Prepara o "Balde" único para este bicho
+    let listaDesteBicho = [];
+
+    // Se o usuário pediu MENOS do que o fechamento gera
+    if (qtd < closureCombos.length) {
+        shuffleArray(closureCombos); // Embaralha o fechamento
+        listaDesteBicho = closureCombos.slice(0, qtd); // Pega só o necessário
+    } 
+    // Se o usuário pediu MAIS (Aqui entra o caso da 5911)
+    else {
+        // A. Joga todo o fechamento no balde
+        listaDesteBicho = [...closureCombos]; 
+        
+        // B. Gera os aleatórios que faltam e joga no MESMO balde
+        const faltam = qtd - listaDesteBicho.length;
+        for (let i = 0; i < faltam; i++) {
+            // Gera prefixo aleatório (00-99)
+            const prefixo = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+            const dezena = bicho.dezenas[Math.floor(Math.random() * bicho.dezenas.length)];
+            listaDesteBicho.push(prefixo + dezena); // Ex: Adiciona 5911 aqui
+        }
+    }
+
+    // 4. O SEGREDO: Mistura o balde inteiro AGORA
+    // Isso faz com que a 5911 (fim da lista) possa ir para o começo (índice 0)
+    shuffleArray(listaDesteBicho); 
+    
+    // 5. Salva no resultado final
+    finalResults.milhar.push(...listaDesteBicho);
+}
             });
             typeKeys.forEach(k => shuffleArray(finalResults[k]));
         }
     }
     
-    // --- MODO ALEATÓRIO ---
+    // --- MODO ALEATÓRIO GERAL (CORRIGIDO E SEGURO) ---
     else {
-        summaryParts.push(`\n<strong>- Modo:</strong> Aleatório`);
+        summaryParts.push(`\n<strong>- Modo:</strong> Aleatório (Geral)`);
         summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity}`);
-        let dezenasPool = [];
-        for(let i=0; i<100; i++) dezenasPool.push(String(i).padStart(2,'0'));
+        
         typeKeys.forEach(typeKey => {
-            for(let i=0; i<totalQuantity; i++) {
-                if(typeKey==='milhar') finalResults.milhar.push(String(Math.floor(Math.random()*10000)).padStart(4,'0'));
-                if(typeKey==='centena') finalResults.centena.push(String(Math.floor(Math.random()*1000)).padStart(3,'0'));
-                if(typeKey==='dezena') finalResults.dezena.push(String(Math.floor(Math.random()*100)).padStart(2,'0'));
+            const listaGerada = [];
+            let attempts = 0;
+            const maxAttempts = totalQuantity * 200; 
+
+            while(listaGerada.length < totalQuantity && attempts < maxAttempts) {
+                attempts++;
+                let num = '';
+
+                // 1. Gera o número usando Criptografia (Sem vício)
+                if (typeKey === 'milhar') {
+                    num = String(getSecureRandomInt(10000)).padStart(4, '0');
+                } 
+                else if (typeKey === 'centena') {
+                    num = String(getSecureRandomInt(1000)).padStart(3, '0');
+                } 
+                else if (typeKey === 'dezena') {
+                    num = String(getSecureRandomInt(100)).padStart(2, '0');
+                }
+
+                // 2. Respeita os Filtros Avançados
+                if (applyAdvancedFilters(num, typeKey)) {
+                    listaGerada.push(num);
+                }
             }
+            
+            // 3. Mistura final
+            shuffleArray(listaGerada);
+            
+            finalResults[typeKey].push(...listaGerada);
         });
     }
 
-    // 3. Confirmação
-    summaryParts.push("\nProsseguir com a geração?");
-    const userConfirmed = await showCustomConfirm(summaryParts.join('\n'), "Sim, Gerar", 'Cancelar', 'randomGeneratorModal');
+    // =================================================================
+    // === AQUI ESTÁ A CORREÇÃO: O POPUP DE CONFIRMAÇÃO VOLTOU! ===
+    // =================================================================
 
+    // 3. Confirmação (Obrigatória antes de mostrar)
+    summaryParts.push("\nProsseguir com a geração?");
+    
+    // Chama o Popup e espera a resposta (await)
+    const userConfirmed = await showCustomConfirm(
+        summaryParts.join('\n'), 
+        "Sim, Gerar", 
+        'Cancelar', 
+        'randomGeneratorModal'
+    );
+
+    // Se o usuário clicar em Cancelar, o código PARA aqui e não mostra nada.
     if (!userConfirmed) {
         showToast('Geração cancelada.', 'info');
         return; 
@@ -14697,6 +14856,7 @@ async function generateSelectedNumbers() {
     // ==========================================
     // 4. EXTRAÇÃO DE CENTENAS COM MEMÓRIA
     // ==========================================
+
     if (finalResults.milhar && finalResults.milhar.length > 0 && offerCentenasAfterMilhar) {
         
         await new Promise(r => setTimeout(r, 200));
@@ -15857,23 +16017,7 @@ function checkCentenaRepetition(numStr, rule) {
     if (rule === 'triple') return uniqueDigits === 1; // Trinca (ex: 777)
     return true; // Se a regra for inválida ou 'any'
 }
-    function toggleQuickShortcuts() {
-    // Tenta achar o elemento pelo ID (verifique se no seu HTML o ID é este mesmo)
-    const shortcutsContainer = document.getElementById('quickShortcutsWrapper'); 
     
-    // Se o elemento não existir, para a função para não dar erro
-    if (!shortcutsContainer) {
-        console.warn('Elemento "quickShortcutsWrapper" não encontrado no HTML.');
-        return; 
-    }
-
-    // Se existir, faz a troca de visibilidade
-    if (shortcutsContainer.style.display === 'none' || shortcutsContainer.style.display === '') {
-        shortcutsContainer.style.display = 'block'; // ou 'flex', dependendo do seu layout
-    } else {
-        shortcutsContainer.style.display = 'none';
-    }
-}
 
 function toggleEditMode(itemId, itemElement) {
     const textElement = itemElement.querySelector('.saved-item-text');
