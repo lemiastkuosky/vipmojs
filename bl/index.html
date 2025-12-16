@@ -318,6 +318,29 @@
     }
     td.td-action:before { content: "" !important; } /* Remove label "Ação" no mobile */
 }
+
+/* Botão limpar banca específica */
+.btn-clean-banca {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #a1a1aa;
+    width: 32px; 
+    height: 32px; 
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0; /* Garante que o botão não encolha */
+    margin-left: 8px;
+}
+
+.btn-clean-banca:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--danger);
+    color: var(--danger);
+}
     
     </style>
 </head>
@@ -332,12 +355,9 @@
     </div>
 
     <div class="header-card" id="header-card">
-        <h1 id="page-title">VIP BOLOES PRO</h1>
-        <p id="page-desc">Validação, gestão e estatísticas.</p>
-        <button type="button" id="btn-hist-toggle" class="btn-primary" style="margin-top:15px; width:100%; padding:10px;" onclick="togglePanel('history-panel')">
-    <i class="fas fa-history"></i> Abrir Histórico de Ganhadores
-</button>
-    </div>
+    <h1 id="page-title">VIP BOLOES PRO</h1>
+    <p id="page-desc">Validação, gestão e estatísticas.</p>
+</div>
 
     <div id="admin-panel">
         <div class="card">
@@ -346,24 +366,46 @@
                 <button type="button" class="btn-simular" onclick="simularResultados()">Simular</button>
             </div>
             <div class="grid-bancas">
-                <div class="banca-box">
-                    <span class="banca-label lbl-rj">RJ</span>
-                    <div class="inputs-row" id="inputs-rj"></div>
-                </div>
-                <div class="banca-box">
-                    <span class="banca-label lbl-nc">NC</span>
-                    <div class="inputs-row" id="inputs-nc"></div>
-                </div>
-                <div class="banca-box">
-                    <span class="banca-label lbl-lk">LK</span>
-                    <div class="inputs-row" id="inputs-lk"></div>
-                </div>
-                <div class="banca-box">
-                    <span class="banca-label lbl-fd">FD</span>
-                    <div class="inputs-row" id="inputs-fd"></div>
-                </div>
-            </div>
+    <div class="banca-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span class="banca-label lbl-rj" style="margin-bottom:0; width:100%">RJ</span>
+            <button class="btn-clean-banca" onclick="limparBanca('rj')" title="Limpar RJ">
+                <i class="fas fa-eraser"></i>
+            </button>
         </div>
+        <div class="inputs-row" id="inputs-rj"></div>
+    </div>
+
+    <div class="banca-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span class="banca-label lbl-nc" style="margin-bottom:0; width:100%">NC</span>
+            <button class="btn-clean-banca" onclick="limparBanca('nc')" title="Limpar NC">
+                <i class="fas fa-eraser"></i>
+            </button>
+        </div>
+        <div class="inputs-row" id="inputs-nc"></div>
+    </div>
+
+    <div class="banca-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span class="banca-label lbl-lk" style="margin-bottom:0; width:100%">LK</span>
+            <button class="btn-clean-banca" onclick="limparBanca('lk')" title="Limpar LK">
+                <i class="fas fa-eraser"></i>
+            </button>
+        </div>
+        <div class="inputs-row" id="inputs-lk"></div>
+    </div>
+
+    <div class="banca-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span class="banca-label lbl-fd" style="margin-bottom:0; width:100%">FD</span>
+            <button class="btn-clean-banca" onclick="limparBanca('fd')" title="Limpar FD">
+                <i class="fas fa-eraser"></i>
+            </button>
+        </div>
+        <div class="inputs-row" id="inputs-fd"></div>
+    </div>
+</div>
 
         <div class="card">
             <div class="card-title"><i class="fas fa-sliders-h"></i> Configuração</div>
@@ -382,8 +424,15 @@
                 </div>
             </div>
             
-            <textarea id="lista-jogos" class="form-control" placeholder="Cole a lista aqui..." style="min-height: 150px;"></textarea>
-            
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; margin-top: 15px;">
+    <label style="font-size:12px; color:#a1a1aa; font-weight:bold;">LISTA DE JOGOS</label>
+    
+    <button type="button" class="btn-clean-banca" onclick="limparListaJogos()" title="Limpar Lista" style="width:28px; height:28px;">
+        <i class="fas fa-eraser"></i>
+    </button>
+</div>
+
+<textarea id="lista-jogos" class="form-control" placeholder="Cole a lista aqui..." style="min-height: 150px;"></textarea>            
             <div class="action-group">
                 <button type="button" onclick="limparTudo()" class="btn-clear">
                     <i class="fas fa-trash-alt"></i> LIMPAR TUDO
@@ -391,6 +440,8 @@
             </div>
         </div>
     </div>
+
+    
     
     <div id="history-panel" class="card hidden">
         <div class="card-title">
@@ -698,6 +749,22 @@
         }
     }
 
+    function limparBanca(sigla) {
+        // 1. Limpa os inputs visuais
+        const inputs = document.querySelectorAll(`input[data-banca="${sigla}"]`);
+        inputs.forEach(input => {
+            input.value = '';
+        });
+
+        // 2. Limpa da memória LocalStorage apenas dessa banca
+        for(let i=0; i<5; i++) {
+            localStorage.removeItem(`res_${sigla}_${i}`);
+        }
+
+        // 3. Atualiza os cálculos
+        atualizarConferenciaEmTempoReal();
+    }
+
     // ===============================================
     //          HISTÓRICO (FIXED)
     // ===============================================
@@ -739,6 +806,17 @@
             carregarHistorico();
         }
     }
+
+    function limparListaJogos() {
+    // 1. Limpa o campo visual imediatamente
+    document.getElementById('lista-jogos').value = '';
+    
+    // 2. Limpa da memória do navegador
+    localStorage.removeItem('lista_jogos');
+    
+    // 3. Atualiza os cálculos (vai limpar a tabela de resultados)
+    atualizarConferenciaEmTempoReal();
+}
 
     async function carregarHistorico() {
         const tbody = document.getElementById('history-list');
@@ -1072,10 +1150,10 @@
             tbody.appendChild(tr);
             
             if(textoResumoLinha.length > 0) {
-                let linhaZap = `${nome} (${multi}x) ➡ ${textoResumoLinha.join(' | ')}`;
-                if(ganhouLinha) linhaZap += " (Cota Ganhadora)";
-                zapGeral += linhaZap + "\n";
-            }
+    let linhaZap = `${nome} (${multi}x) ➡ ${textoResumoLinha.join(' | ')}`;
+    if(ganhouLinha) linhaZap += " (Cota Ganhadora)";
+    zapGeral += linhaZap + "\n\n"; // <--- MUDAR PARA \n\n (dois enters)
+}
         });
 
         // --- LÓGICA DE CONFETE ---
