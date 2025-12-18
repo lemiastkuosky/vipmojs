@@ -699,7 +699,9 @@
 
     function gerarDadosObjeto() {
         let rawLista = document.getElementById('lista-jogos').value;
-        rawLista = rawLista.replace(/\n(?=\d{2}\/)/g, ' ');
+        rawLista = rawLista.replace(/\n(?=\d{2})/g, ' '); 
+
+        const linhas = rawLista.split('\n');
 
         const dados = {
             lista: rawLista,
@@ -1022,39 +1024,42 @@
         montarPlacarPublico();
 
         linhas.forEach(linha => {
-            const nums = linha.match(/\b\d{2}\b/g) || [];
+            // Extração de Números: Pega pares de dígitos (01, 08, etc)
+            const nums = linha.match(/\d{2}/g) || [];
             if(nums.length < 10) return;
 
+            // 2. Identificação das Bancas
             let bancasJogadas = [];
             const lineUp = linha.toUpperCase();
             if(lineUp.includes('RJ') || lineUp.includes('RIO') || lineUp.includes('PT')) bancasJogadas.push('RJ');
             if(lineUp.includes('NC')) bancasJogadas.push('NC');
             if(lineUp.includes('LK') || lineUp.includes('LOOK')) bancasJogadas.push('LK');
-            if(lineUp.includes('FD') || lineUp.includes('FED') || lineUp.includes('FEDERAL')) bancasJogadas.push('FD');
-            
+            if(lineUp.includes('FD') || lineUp.includes('FEDERAL')) bancasJogadas.push('FD');
             if(bancasJogadas.length === 0) bancasJogadas.push('ND');
 
+            // 3. Multiplicador (1x, 20x, etc)
             let multi = 1;
             const matchMulti = linha.match(/(\d+)[xX]/);
             if(matchMulti) multi = parseInt(matchMulti[1]);
 
-            // --- CÓDIGO CORRIGIDO PARA NOMES E EMOJIS ---
-let nome = linha
-    // Remove datas e sequências longas de números (ex: 17/12/2025)
-    .replace(/\d{2}\/\d{2}\/\d{4}/g, '') 
-    // Remove multiplicadores (ex: 20x, 1X) com a flag 'u' para não quebrar emojis vizinhos
-    .replace(/\d+[xX]/gu, '') 
-    // Remove siglas de bancas conhecidas
-    .replace(/\b(RJ|NC|LK|FD|RIO|FED|LOOK|FEDERAL|PT)\b/gi, '') 
-    // Remove emojis específicos e setas sem quebrar o caractere
-    .replace(/[✅➡\/🔟📌▫▪•]/gu, '') 
-    // Remove números sozinhos no início da linha (ex: 1. Nome)
-    .replace(/^[\d\s\.\-\)]+/, '')
-    // Remove espaços extras
-    .trim();
+            // 4. LIMPEZA DO NOME (O SEGREDO ESTÁ AQUI)
+            let nomeOriginal = linha;
+            
+            let nomeLimpo = nomeOriginal
+                // Remove qualquer sequência longa que misture números, barras, traços e espaços (o Jogo)
+                .replace(/([\d\/\s\-\.]{15,})/gu, '') 
+                // Remove multiplicadores (ex: 1x, 20x) com suporte total a acentos
+                .replace(/\d+[xX]/gu, '') 
+                // Remove siglas de bancas conhecidas (só se forem palavras inteiras)
+                .replace(/\b(RJ|NC|LK|FD|RIO|FED|LOOK|FEDERAL|PT)\b/gu, '') 
+                // Remove emojis e símbolos sem corromper letras acentuadas (como o 'í' de Romário)
+                .replace(/[✅➡\/🔟📌▫▪•]/gu, '') 
+                // Remove o que sobrar de hifens e espaços nas pontas
+                .replace(/^[\s\-\.]+|[\s\-\.]+$/gu, '')
+                .trim();
 
-// Se após a limpeza o nome ficar vazio ou sobrar apenas símbolos estranhos
-if(!nome || nome.length < 2) nome = "Jogador";
+            let nome = nomeLimpo || "Jogador";
+            // --------------------------
 
             let htmlDetalhes = "<div class='lista-resultados'>";
             let textoResumoLinha = [];
