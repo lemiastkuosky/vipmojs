@@ -1038,19 +1038,23 @@
             const matchMulti = linha.match(/(\d+)[xX]/);
             if(matchMulti) multi = parseInt(matchMulti[1]);
 
-            let nome = linha
-                .replace(/[\d\/\.\-\s]{10,}/, '')    
-                .replace(/\d+[xX]/, '')              
-                .replace(/RJ|NC|LK|FD|RIO|FED|LOOK|FEDERAL/gi, '') 
-                .replace(/[✅➡\/]/g,'')              
-                .replace(/[\u0030-\u0039]\uFE0F?\u20E3/g, '') 
-                .replace(/🔟/g, '')
-                .replace(/[📌▫▪•]/g, '')
-                .replace(/-/g, '')  
-                .replace(/^[\d\s\.\-\)]+/, '')       
-                .trim();
-            
-            if(nome.length === 0) nome = "Desconhecido";
+            // --- CÓDIGO CORRIGIDO PARA NOMES E EMOJIS ---
+let nome = linha
+    // Remove datas e sequências longas de números (ex: 17/12/2025)
+    .replace(/\d{2}\/\d{2}\/\d{4}/g, '') 
+    // Remove multiplicadores (ex: 20x, 1X) com a flag 'u' para não quebrar emojis vizinhos
+    .replace(/\d+[xX]/gu, '') 
+    // Remove siglas de bancas conhecidas
+    .replace(/\b(RJ|NC|LK|FD|RIO|FED|LOOK|FEDERAL|PT)\b/gi, '') 
+    // Remove emojis específicos e setas sem quebrar o caractere
+    .replace(/[✅➡\/🔟📌▫▪•]/gu, '') 
+    // Remove números sozinhos no início da linha (ex: 1. Nome)
+    .replace(/^[\d\s\.\-\)]+/, '')
+    // Remove espaços extras
+    .trim();
+
+// Se após a limpeza o nome ficar vazio ou sobrar apenas símbolos estranhos
+if(!nome || nome.length < 2) nome = "Jogador";
 
             let htmlDetalhes = "<div class='lista-resultados'>";
             let textoResumoLinha = [];
