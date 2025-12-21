@@ -5298,6 +5298,9 @@ body.dark-mode .multiplier-btn:active {
     background-color: #007bff !important;
     color: white !important;
 }
+body.dark-mode #clearAddNameX {
+    color: #ff4d4d !important;
+}
 
 }
 
@@ -6168,10 +6171,16 @@ body.dark-mode .multiplier-btn:active {
         <h2 id="nome-modal-section-title" class="sr-only">Adicionar ou Excluir Nomes</h2>
         <div class="nomes-container">
           <div class="nome-column">
-            <label for="nomePessoaInputModal"><strong>Nome da Pessoa:</strong></label>
-            <input type="text" id="nomePessoaInputModal" placeholder="Digite o nome aqui" aria-label="Digite o nome da pessoa para adicionar" />
-            <button onclick="addNome()" class="save-name-btn">💾 Salvar Nome</button>
-          </div>
+  <label for="nomePessoaInputModal"><strong>Nome da Pessoa:</strong></label>
+  <div style="position: relative; width: 100%;">
+      <input type="text" id="nomePessoaInputModal" placeholder="Digite o nome aqui" aria-label="Digite o nome da pessoa para adicionar" style="padding-right: 35px;" />
+      <span id="clearAddNameX" onclick="clearAddNameInput()" 
+            style="position: absolute; right: 04px; top: 41%; transform: translateY(-50%); 
+                   cursor: pointer; color: #dc3545; font-weight: bold; font-size: 1.2rem; 
+                   display: none; padding: 5px; z-index: 10;">✖</span>
+  </div>
+  <button onclick="addNome()" class="save-name-btn">💾 Salvar Nome</button>
+</div>
 
           <div class="nome-column">
             <label for="nomePessoaSelectModal"><strong>Excluir nome:</strong></label>
@@ -7217,6 +7226,13 @@ function showCopySelectionModal(hasMilhar, hasCentena, hasDezena) {
 
 function closeCopySelectionModal() {
     document.getElementById('copySelectionModal').classList.remove('active');
+}
+
+function clearAddNameInput() {
+    const input = document.getElementById('nomePessoaInputModal');
+    input.value = '';
+    document.getElementById('clearAddNameX').style.display = 'none';
+    input.focus();
 }
 
 function handleCopySelection(type, btnElement) {
@@ -12616,7 +12632,13 @@ async function getUnidadesAtrasadasIA(loteria) {
     cb.addEventListener('change', convertToEmojisRealTime);
 });
 
-    
+const addNameInput = document.getElementById('nomePessoaInputModal');
+const clearX = document.getElementById('clearAddNameX');
+if (addNameInput && clearX) {
+    addNameInput.addEventListener('input', () => {
+        clearX.style.display = addNameInput.value.length > 0 ? 'block' : 'none';
+    });
+}
  
 const nomeSelectModal = document.getElementById('nomePessoaSelectModal');
     if (nomeSelectModal) {
@@ -13674,6 +13696,7 @@ function displayResultsWithSummary(type, resultsArray) {
         } else {
             nomesSalvos.splice(nomesSalvos.indexOf(nome), 1);
         }
+        document.getElementById('clearAddNameX').style.display = 'none';
     }
 
     async function removeNome() {
