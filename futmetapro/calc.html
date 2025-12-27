@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Soros Master V16.1 Fixed</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- LAYOUT ORIGINAL --- */
+        :root {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --bg-input: #2b2b2b;
+            --border-color: #333333;
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --accent-gold: #f1c40f;
+            
+            /* Cores dos Cards Bonitos */
+            --card-yellow: #fbbf24;
+            --card-green: #34d399;
+            --card-blue: #60a5fa;
+            --card-purple: #a78bfa;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: #e0e0e0;
+            font-family: 'Roboto', sans-serif;
+            padding-bottom: 80px;
+        }
+
+        /* --- CARDS ORIGINAIS --- */
+        .master-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        /* --- CARDS BONITOS (Topo) --- */
+        .premium-card {
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+            min-height: 100px;
+        }
+
+        .card-content {
+            padding: 16px;
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .card-bg-icon {
+            position: absolute;
+            right: -10px;
+            bottom: -10px;
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.03);
+            transform: rotate(-15deg);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .border-l-yellow { border-left: 4px solid var(--card-yellow); }
+        .border-l-purple { border-left: 4px solid var(--card-purple); }
+        .border-l-green { border-left: 4px solid var(--card-green); }
+        .border-l-blue { border-left: 4px solid var(--card-blue); }
+
+        .kpi-label { font-size: 0.7rem; text-transform: uppercase; color: #888; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 4px; }
+        .kpi-value { font-size: 1.5rem; font-weight: 700; color: #fff; white-space: nowrap; line-height: 1.1; }
+
+        @media (max-width: 576px) {
+            .kpi-value { font-size: 1.2rem; }
+            .btn-lg-mobile { padding: 15px; font-size: 1.1rem; }
+            .table-mobile-text { font-size: 0.75rem !important; }
+            .table-mobile-sub { font-size: 0.65rem !important; display: block; margin-top: 2px; color: #888; }
+        }
+
+        /* --- INPUTS E BOTÕES --- */
+        .form-control-dark {
+            background-color: var(--bg-input) !important;
+            border: 1px solid var(--border-color) !important;
+            color: #fff !important;
+            font-size: 1.1rem;
+            padding: 10px;
+        }
+        .form-control-dark:focus {
+            box-shadow: none;
+            border-color: var(--accent-gold) !important;
+        }
+
+        .btn-check:checked + .btn-outline-warning {
+            background-color: var(--accent-gold);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .table-custom th { color: #aaa; font-size: 0.8rem; font-weight: 500; border-bottom: 1px solid #444; }
+        .table-custom td { color: #ccc; font-size: 0.85rem; border-bottom: 1px solid #333; vertical-align: middle; }
+
+        .badge-green { background-color: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.3); font-weight: 700; font-size: 0.65rem; padding: 2px 4px; }
+        .badge-red { background-color: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); font-weight: 700; font-size: 0.65rem; padding: 2px 4px; }
+        .badge-soros { background-color: rgba(241, 196, 15, 0.2); color: #f1c40f; font-size: 0.6rem; padding: 2px 4px; border-radius: 4px; }
+        .badge-fixed { background-color: rgba(255, 255, 255, 0.1); color: #aaa; font-size: 0.6rem; padding: 2px 4px; border-radius: 4px; }
+
+        .profit-pos { color: var(--accent-green); font-weight: bold; font-size: 0.75rem; }
+        .profit-neg { color: var(--accent-red); font-weight: bold; font-size: 0.75rem; }
+
+        .modal-content { background-color: var(--bg-card); border: 1px solid var(--border-color); }
+        .modal-header { border-bottom: 1px solid var(--border-color); }
+        .modal-footer { border-top: 1px solid var(--border-color); }
+
+        .progress-meta-container {
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            margin-top: 8px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .progress-meta-bar {
+            height: 100%;
+            background: var(--accent-gold);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        .meta-hit { border-color: var(--accent-gold) !important; box-shadow: 0 0 10px rgba(241, 196, 15, 0.2); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-25 mb-3" style="background-color: #1a1a1a;">
+    <div class="container-fluid">
+        <span class="navbar-brand fw-bold text-light"><i class="fa-solid fa-mobile-screen me-2 text-warning"></i>Soros<span class="text-secondary">Mob</span></span>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#dailyHistoryModal">
+                <i class="fa-solid fa-list-check"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+            <button class="btn btn-sm btn-danger fw-bold" onclick="endOfDay()">
+                <i class="fa-solid fa-power-off"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="premium-card border-l-yellow">
+                <i class="fa-solid fa-wallet card-bg-icon"></i>
+                <div class="card-content">
+                    <div class="kpi-label">Caixa</div>
+                    <div class="kpi-value" style="color: var(--card-yellow);" id="displayBankroll">R$ 50</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="premium-card border-l-purple">
+                <i class="fa-solid fa-layer-group card-bg-icon"></i>
+                <div class="card-content">
+                    <div class="kpi-label">Entrada Base</div>
+                    <div class="kpi-value" style="color: var(--card-purple);" id="displayBaseBet">R$ 50</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="premium-card border-l-green">
+                <i class="fa-solid fa-chart-line card-bg-icon"></i>
+                <div class="card-content">
+                    <div class="kpi-label">Retorno Hoje</div>
+                    <div class="kpi-value" style="color: var(--card-green);" id="displayTotalOut">R$ 0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="premium-card border-l-blue" id="profitCardBorder">
+                <i class="fa-solid fa-bullseye card-bg-icon"></i>
+                <div class="card-content justify-content-end">
+                    <div class="d-flex justify-content-between">
+                        <div class="kpi-label">Lucro</div>
+                    </div>
+                    <div class="kpi-value" style="color: var(--card-blue);" id="displayNetProfit">R$ 0</div>
+                    <div class="progress-meta-container">
+                        <div class="progress-meta-bar" id="goalProgressBar"></div>
+                    </div>
+                    <small class="text-muted mt-1" style="font-size: 0.65rem;" id="goalTextStatus">Meta: R$ 50</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-4 order-lg-1 order-1">
+            <div class="master-card p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-white mb-0 fw-bold"><i class="fa-solid fa-gamepad me-2"></i>Operar</h6>
+                    <div id="sorosToggleContainer" style="display:none;">
+                        <input type="checkbox" class="btn-check" id="sorosToggle" checked onchange="toggleSorosMode()">
+                        <label class="btn btn-sm btn-outline-warning rounded-pill" for="sorosToggle" style="font-size: 0.8rem;" id="toggleLabel">
+                            <i class="fa-solid fa-bolt"></i> Soros
+                        </label>
+                    </div>
+                </div>
+
+                <div class="alert alert-secondary p-2 mb-3 text-center" id="statusAlert" style="font-size: 0.85rem;">
+                    Modo: <strong>FIXO</strong>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="text-muted small mb-1">Entrada (R$)</label>
+                        <input type="text" inputmode="decimal" class="form-control form-control-dark fw-bold text-white" id="betStake" placeholder="0,00" oninput="formatCurrency(this)">
+                    </div>
+                    <div class="col-6">
+                        <label class="text-muted small mb-1">Odd</label>
+                        <input type="text" inputmode="decimal" class="form-control form-control-dark" id="betOdd" step="0.01" placeholder="1,40" oninput="analyzeRisk()">
+                    </div>
+                </div>
+                
+                <div id="advisorText" class="alert alert-dark p-2 mb-3 text-center small" style="display:none; border: 1px solid #444;"></div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-success w-100 btn-lg-mobile fw-bold shadow-sm" onclick="registerBet(true)">
+                            <i class="fa-solid fa-check me-1"></i>WIN
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-danger w-100 btn-lg-mobile fw-bold shadow-sm" onclick="registerBet(false)">
+                            <i class="fa-solid fa-xmark me-1"></i>LOSS
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="master-card p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="kpi-label mb-0">Evolução</h6>
+                </div>
+                <div style="height: 150px;">
+                    <canvas id="miniChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 order-lg-2 order-2">
+            <div class="master-card p-3">
+                <h6 class="text-white mb-3 fw-bold"><i class="fa-solid fa-list-ul me-2"></i>Apostas de Hoje</h6>
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover align-middle mb-0 text-start">
+                        <thead>
+                            <tr>
+                                <th>Hora/Modo</th>
+                                <th>Dados</th>
+                                <th>Resultado</th>
+                                <th class="text-end">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="settingsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white">⚙️ Ajustes</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Banca Atual (R$)</label>
+                    <input type="tel" id="inputBankroll" class="form-control form-control-dark" oninput="formatCurrency(this)">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Entrada Fixa (R$)</label>
+                    <input type="tel" id="inputBaseBet" class="form-control form-control-dark" oninput="formatCurrency(this)">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-warning fw-bold"><i class="fa-solid fa-bullseye me-1"></i> Meta Diária (R$)</label>
+                    <input type="tel" id="inputDailyGoal" class="form-control form-control-dark border-warning" oninput="formatCurrency(this)">
+                </div>
+                <hr class="border-secondary my-4">
+                <div class="p-3 rounded border border-danger bg-danger bg-opacity-10">
+                    <h6 class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> Zona de Perigo</h6>
+                    <button class="btn btn-outline-danger w-100 btn-sm" onclick="resetAllData()">
+                        <i class="fa-solid fa-trash-can me-2"></i> APAGAR TUDO
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100" onclick="saveSettings()">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dailyHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen-sm-down modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white">Relatório Geral</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped mb-0 text-center small align-middle">
+                        <thead class="bg-black border-bottom border-secondary">
+                            <tr>
+                                <th class="text-start ps-3 py-3">Data</th>
+                                <th>Placar</th>
+                                <th>Finanças</th>
+                                <th>Lucro</th>
+                                <th>Banca</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dailyHistoryBody"></tbody>
+                        <tfoot class="bg-dark border-top border-secondary">
+                             <tr class="fw-bold" style="font-size: 1rem;">
+                                <td class="text-start ps-3 text-warning py-3">TOTAL</td>
+                                <td>-</td>
+                                <td class="text-secondary" id="grandTotalFinance">R$ 0 / R$ 0</td>
+                                <td id="grandTotalProfit">R$ 0,00</td>
+                                <td>-</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="goalReachedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-warning">
+            <div class="modal-body text-center p-4">
+                <i class="fa-solid fa-trophy fa-3x text-warning mb-3 animate__animated animate__bounce"></i>
+                <h3 class="fw-bold text-white">META BATIDA!</h3>
+                <div class="alert alert-success mt-2 mb-3">
+                    <strong>+ <span id="modalCurrentProfit"></span></strong>
+                </div>
+                <button type="button" class="btn btn-warning w-100 fw-bold mb-2" data-bs-dismiss="modal">Parar (Recomendado)</button>
+                <button class="btn btn-sm btn-link text-secondary text-decoration-none" onclick="continueTrading()">Continuar (Risco)</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let appState = {
+        bankroll: 50.00,
+        baseBet: 50.00,
+        dailyGoal: 50.00,
+        currentStep: 1,      
+        pendingSorosAmount: 0,
+        currentSessionHistory: [],
+        dailyArchive: []
+    };
+    let chartInstance = null;
+    let goalAlertShownSession = false;
+
+    // Helper: Formata valor com virgula (Visual) e parse (Lógico)
+    function formatCurrency(elem) {
+        let val = elem.value.replace(/\D/g, ""); 
+        if (val === "") return;
+        val = (parseInt(val) / 100).toFixed(2); 
+        elem.value = val.replace('.', ','); 
+        if(elem.id === 'betOdd') analyzeRisk();
+    }
+
+    function parseDisplayValue(val) {
+        if (!val) return 0;
+        return parseFloat(val.toString().replace(/\./g, '').replace(',', '.'));
+    }
+
+    function toDisplayValue(num) {
+        return num.toFixed(2).replace('.', ',');
+    }
+
+    function init() {
+        const saved = localStorage.getItem('sorosPro_v16');
+        if (saved) appState = JSON.parse(saved);
+        if(!appState.dailyGoal) appState.dailyGoal = 50.00;
+
+        document.getElementById('inputBankroll').value = toDisplayValue(appState.bankroll);
+        document.getElementById('inputBaseBet').value = toDisplayValue(appState.baseBet);
+        document.getElementById('inputDailyGoal').value = toDisplayValue(appState.dailyGoal);
+
+        renderChart();
+        updateUI();
+        renderDailyHistory();
+    }
+
+    function resetAllData() {
+        if(confirm("⛔ TEM CERTEZA?\nIsso apagará TODO o histórico.")) {
+            localStorage.removeItem('sorosPro_v16');
+            location.reload();
+        }
+    }
+
+    function continueTrading() {
+        goalAlertShownSession = true;
+        bootstrap.Modal.getInstance(document.getElementById('goalReachedModal')).hide();
+    }
+
+    function saveSettings() {
+        const newBank = parseDisplayValue(document.getElementById('inputBankroll').value);
+        const newBase = parseDisplayValue(document.getElementById('inputBaseBet').value);
+        const newGoal = parseDisplayValue(document.getElementById('inputDailyGoal').value);
+
+        if (!isNaN(newBank)) {
+            appState.bankroll = newBank;
+            appState.baseBet = newBase;
+            appState.dailyGoal = newGoal;
+            appState.currentStep = 1;
+            saveAndRender();
+            bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
+        } else { alert("Valores inválidos!"); }
+    }
+
+    function endOfDay() {
+        if(appState.currentSessionHistory.length === 0) { alert("Sem dados."); return; }
+        if(!confirm("Finalizar dia?")) return;
+
+        let dailyProfit = 0, dailyIn = 0, dailyOut = 0, wins = 0, losses = 0;
+        appState.currentSessionHistory.forEach(bet => {
+            dailyIn += bet.stake; dailyOut += bet.returnVal;
+            if(bet.result === 'WIN') { dailyProfit += (bet.returnVal - bet.stake); wins++; } 
+            else { dailyProfit -= bet.stake; losses++; }
+        });
+
+        let roi = dailyIn > 0 ? ((dailyProfit / dailyIn) * 100).toFixed(1) : 0;
+        let totalBets = wins + losses;
+        let winrate = totalBets > 0 ? ((wins / totalBets) * 100).toFixed(0) : 0;
+
+        appState.dailyArchive.unshift({
+            id: Date.now(),
+            date: new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}),
+            fullDate: new Date().toLocaleString('pt-BR'),
+            profit: dailyProfit, totalIn: dailyIn, totalOut: dailyOut, wins, losses, roi, winrate, finalBank: appState.bankroll
+        });
+
+        appState.currentSessionHistory = [];
+        appState.currentStep = 1;
+        goalAlertShownSession = false;
+        
+        saveAndRender();
+        renderDailyHistory();
+    }
+
+    function toggleSorosMode() {
+        const toggle = document.getElementById('sorosToggle');
+        const stakeInput = document.getElementById('betStake');
+        const label = document.getElementById('toggleLabel');
+        
+        if (toggle.checked) {
+            stakeInput.value = toDisplayValue(appState.pendingSorosAmount);
+            if(label) { label.innerText = "SOROS"; label.className = "btn btn-sm btn-outline-warning rounded-pill"; }
+            document.getElementById('statusAlert').innerHTML = `Modo: <strong class="text-warning">SOROS ⚡</strong>`;
+        } else {
+            stakeInput.value = toDisplayValue(appState.baseBet);
+            if(label) { label.innerText = "FIXO"; label.className = "btn btn-sm btn-outline-secondary rounded-pill"; }
+            document.getElementById('statusAlert').innerHTML = `Modo: <strong class="text-secondary">FIXO</strong>`;
+        }
+    }
+
+    function analyzeRisk() {
+        const odd = parseDisplayValue(document.getElementById('betOdd').value);
+        const txt = document.getElementById('advisorText');
+        const isSoros = document.getElementById('sorosToggle').checked && appState.currentStep === 2;
+
+        if (!odd) { txt.style.display = 'none'; return; }
+        txt.style.display = 'block';
+
+        if (isSoros) {
+            if (odd > 1.50) txt.innerHTML = '<span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> Risco Alto!</span>';
+            else txt.innerHTML = '<span class="text-success fw-bold"><i class="fa-solid fa-check"></i> Odd Segura</span>';
+        } else {
+            if (odd < 1.30) txt.innerHTML = '<span class="text-warning fw-bold">Retorno Baixo</span>';
+            else txt.innerHTML = '<span class="text-muted">Odd Normal</span>';
+        }
+    }
+
+    function registerBet(isGreen) {
+        const odd = parseDisplayValue(document.getElementById('betOdd').value);
+        const stake = parseDisplayValue(document.getElementById('betStake').value);
+
+        if (!odd || odd <= 1 || !stake) { alert("Valores inválidos."); return; }
+
+        let returnVal = 0;
+        const wasSoros = stake > (appState.baseBet * 1.1);
+
+        if (isGreen) {
+            returnVal = stake * odd;
+            appState.bankroll += (returnVal - stake);
+            if (appState.currentStep === 1) {
+                appState.currentStep = 2; appState.pendingSorosAmount = returnVal;
+            } else {
+                if (wasSoros) appState.currentStep = 1; 
+                else { appState.currentStep = 2; appState.pendingSorosAmount = returnVal; }
+            }
+        } else {
+            appState.bankroll -= stake;
+            appState.currentStep = 1;
+        }
+
+        appState.currentSessionHistory.unshift({
+            id: Date.now(),
+            time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
+            type: wasSoros ? 'SOROS' : 'FIXA',
+            odd: odd, stake: stake, returnVal: isGreen ? returnVal : 0, result: isGreen ? 'WIN' : 'LOSS', bankAfter: appState.bankroll
+        });
+
+        saveAndRender();
+        checkGoal(true);
+        document.getElementById('betOdd').value = '';
+        document.getElementById('advisorText').style.display = 'none';
+        document.getElementById('betOdd').focus();
+    }
+
+    function checkGoal(triggerModal = false) {
+        let sessionNet = 0;
+        appState.currentSessionHistory.forEach(h => {
+            if(h.result === 'WIN') sessionNet += (h.returnVal - h.stake);
+            else sessionNet -= h.stake;
+        });
+
+        if (triggerModal && sessionNet >= appState.dailyGoal && sessionNet > 0 && !goalAlertShownSession) {
+            const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('modalCurrentProfit').innerText = fmt(sessionNet);
+            new bootstrap.Modal(document.getElementById('goalReachedModal')).show();
+        }
+    }
+
+    function updateUI() {
+        const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+        const fmtFull = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        document.getElementById('displayBankroll').innerText = fmt(appState.bankroll);
+        document.getElementById('displayBaseBet').innerText = fmt(appState.baseBet);
+        
+        let sessionNet = 0, sessionOut = 0;
+        appState.currentSessionHistory.forEach(h => {
+            sessionOut += h.returnVal;
+            if(h.result === 'WIN') sessionNet += (h.returnVal - h.stake);
+            else sessionNet -= h.stake;
+        });
+
+        document.getElementById('displayTotalOut').innerText = fmt(sessionOut);
+        
+        const netEl = document.getElementById('displayNetProfit');
+        netEl.innerText = fmt(sessionNet);
+        netEl.className = sessionNet >= 0 ? "kpi-value text-success" : "kpi-value text-danger";
+
+        const progressEl = document.getElementById('goalProgressBar');
+        let percent = 0;
+        if(appState.dailyGoal > 0 && sessionNet > 0) percent = (sessionNet / appState.dailyGoal) * 100;
+        progressEl.style.width = `${Math.min(percent, 100)}%`;
+        document.getElementById('goalTextStatus').innerText = `Meta: ${fmt(appState.dailyGoal)} (${percent.toFixed(0)}%)`;
+
+        if (sessionNet >= appState.dailyGoal) {
+            progressEl.classList.add('bg-warning');
+            document.getElementById('profitCardBorder').classList.add('meta-hit');
+        } else {
+            progressEl.classList.remove('bg-warning');
+            document.getElementById('profitCardBorder').classList.remove('meta-hit');
+        }
+
+        const stakeInput = document.getElementById('betStake');
+        const toggle = document.getElementById('sorosToggle');
+        const label = document.getElementById('toggleLabel');
+        const statusAlert = document.getElementById('statusAlert');
+
+        if (appState.currentStep === 1) {
+            toggle.checked = false;
+            // Só atualiza se o usuario não estiver com foco no input (pra não bugar digitação)
+            if(document.activeElement !== stakeInput) stakeInput.value = toDisplayValue(appState.baseBet);
+            
+            if(label) { label.innerText = "FIXO"; label.className = "btn btn-sm btn-outline-secondary rounded-pill"; }
+            statusAlert.className = "alert alert-secondary p-2 mb-3 text-center small";
+            statusAlert.innerHTML = `Modo: <strong class="text-secondary">FIXO</strong>`;
+        } else {
+            toggle.checked = true;
+            if(document.activeElement !== stakeInput) stakeInput.value = toDisplayValue(appState.pendingSorosAmount);
+            if(label) { label.innerText = "SOROS"; label.className = "btn btn-sm btn-outline-warning rounded-pill"; }
+            statusAlert.className = "alert alert-warning p-2 mb-3 text-center small";
+            statusAlert.innerHTML = `Modo: <strong class="text-warning">SOROS ⚡</strong>`;
+        }
+
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = '';
+        appState.currentSessionHistory.slice(0, 30).forEach(item => { 
+            const statusBadge = item.result === 'WIN' 
+                ? '<span class="badge badge-green">GREEN</span>' 
+                : '<span class="badge badge-red">RED</span>';
+            
+            const sorosBadge = item.type === 'SOROS'
+                ? '<span class="badge-soros ms-1">S</span>'
+                : '<span class="badge-fixed ms-1">F</span>';
+
+            const valStake = item.stake.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const valBank = item.bankAfter.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            
+            let profitVal = 0;
+            if (item.result === 'WIN') profitVal = item.returnVal - item.stake;
+            else profitVal = -item.stake;
+            
+            const profitClass = profitVal >= 0 ? 'profit-pos' : 'profit-neg';
+            const sign = profitVal >= 0 ? '+' : '';
+            const profitStr = profitVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="ps-3">
+                        <div class="table-mobile-text fw-bold text-white">${item.time}</div>
+                        <div class="table-mobile-sub">${sorosBadge}</div>
+                    </td>
+                    <td>
+                        <div class="table-mobile-text text-white">Odd: ${toDisplayValue(item.odd)}</div>
+                        <div class="table-mobile-sub text-muted">In: ${valStake}</div>
+                    </td>
+                    <td>
+                        <div class="mb-1">${statusBadge}</div>
+                        <div class="${profitClass}">${sign} ${profitStr}</div>
+                    </td>
+                    <td class="text-end pe-3 align-middle">
+                        <span class="fw-bold text-white table-mobile-text">${valBank}</span>
+                    </td>
+                </tr>`;
+        });
+        updateChart();
+    }
+
+    function renderDailyHistory() {
+        const tbody = document.getElementById('dailyHistoryBody');
+        const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        let grandProfit = 0, grandIn = 0, grandOut = 0;
+
+        if (appState.dailyArchive.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-3">Vazio</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        appState.dailyArchive.forEach(day => {
+            const tIn = day.totalIn || 0; const tOut = day.totalOut || 0;
+            const wins = day.wins || 0; const losses = day.losses || 0;
+            const roi = day.roi || 0; const winrate = day.winrate || 0;
+            
+            grandProfit += day.profit; grandIn += tIn; grandOut += tOut;
+
+            const pClass = day.profit >= 0 ? 'profit-pos' : 'profit-neg';
+            const sign = day.profit >= 0 ? '+' : '';
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td class="text-start ps-3">
+                        <div class="fw-bold text-white small">${day.date}</div>
+                    </td>
+                    <td>
+                        <div class="text-white small fw-bold">${wins}W - ${losses}L</div>
+                        <span class="text-muted small" style="font-size:0.65rem">${winrate}% Winrate</span>
+                    </td>
+                    <td>
+                        <div class="text-secondary small" style="font-size:0.7rem">In: ${fmt(tIn)}</div>
+                        <div class="text-info small" style="font-size:0.7rem">Out: ${fmt(tOut)}</div>
+                    </td>
+                    <td>
+                        <div class="${pClass} small">${sign}${fmt(day.profit)}</div>
+                        <span class="text-muted small" style="font-size:0.65rem">ROI: ${roi}%</span>
+                    </td>
+                    <td class="fw-bold text-white small">${fmt(day.finalBank)}</td>
+                </tr>`;
+        });
+        
+        document.getElementById('grandTotalFinance').innerText = `${fmt(grandIn)} / ${fmt(grandOut)}`;
+        const grandEl = document.getElementById('grandTotalProfit');
+        grandEl.innerText = fmt(grandProfit);
+        grandEl.className = grandProfit >= 0 ? "fw-bold text-success" : "fw-bold text-danger";
+    }
+
+    function renderChart() {
+        const ctx = document.getElementById('miniChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [{ label: 'R$', data: [], borderColor: '#f1c40f', tension: 0.2, fill: true, backgroundColor: 'rgba(241, 196, 15, 0.05)' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#333' }, ticks: { color: '#888', font: {size: 10} } } } } });
+    }
+
+    function updateChart() {
+        if (!chartInstance) return;
+        const pastData = [...appState.dailyArchive].reverse().map(d => ({ label: d.date, value: d.finalBank }));
+        const todayData = [...appState.currentSessionHistory].reverse().map(d => ({ label: d.time, value: d.bankAfter }));
+        if (pastData.length === 0 && todayData.length === 0) pastData.push({label: 'Início', value: appState.bankroll});
+        const fullLabels = [...pastData.map(d => d.label), ...todayData.map(d => d.label)];
+        const fullValues = [...pastData.map(d => d.value), ...todayData.map(d => d.value)];
+        chartInstance.data.labels = fullLabels;
+        chartInstance.data.datasets[0].data = fullValues;
+        const firstVal = fullValues[0] || 0;
+        const currentVal = fullValues[fullValues.length - 1] || 0;
+        const color = currentVal >= firstVal ? '#2ecc71' : '#e74c3c';
+        chartInstance.data.datasets[0].borderColor = color;
+        chartInstance.data.datasets[0].backgroundColor = currentVal >= firstVal ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)';
+        chartInstance.update();
+    }
+
+    function saveAndRender() { localStorage.setItem('sorosPro_v16', JSON.stringify(appState)); updateUI(); }
+    init();
+</script>
+</body>
+</html>
