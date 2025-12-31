@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FutAnalise | Ultimate Tabs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- TEMA DARK LEAD --- */
+        :root {
+            --bg-body: #18181b;
+            --bg-card: #27272a;
+            --bg-header: #202022;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #fbbf24;
+            --accent-blue: #3b82f6;
+            --border-color: #3f3f46;
+        }
+
+        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 0.9rem; }
+
+        /* Navbar */
+        .navbar { background-color: rgba(24, 24, 27, 0.95) !important; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); }
+        .navbar-brand { font-weight: 800; letter-spacing: -0.5px; }
+
+        /* --- BOTÕES DE NAVEGAÇÃO (TABS) --- */
+        .nav-tabs-custom {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-tab {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 10px 5px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .btn-tab:hover { background-color: #333; color: #fff; }
+        
+        /* Estado Ativo */
+        .btn-tab.active {
+            background-color: rgba(16, 185, 129, 0.1); /* Fundo verde bem suave */
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+        }
+        
+        .badge-count {
+            background-color: #3f3f46;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin-left: 5px;
+        }
+        .active .badge-count { background-color: var(--accent-green); color: #000; }
+
+        /* Estilos do Card (Mantidos) */
+        .league-header { background-color: var(--bg-header); padding: 8px 15px; border-radius: 6px; margin-top: 15px; font-weight: 700; font-size: 0.8rem; border: 1px solid var(--border-color); border-left: 3px solid #71717a; display: flex; align-items: center; }
+        .league-flag { width: 18px; margin-right: 10px; opacity: 0.8; }
+        .match-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+        .team-logo { width: 30px; height: 30px; object-fit: contain; }
+        .match-time { font-size: 0.7rem; color: var(--text-muted); background: #18181b; padding: 3px 8px; border-radius: 4px; font-family: monospace; border: 1px solid #333; }
+        .live-badge { font-size: 0.65rem; color: #fca5a5; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); padding: 2px 6px; border-radius: 3px; animation: pulse 1.5s infinite; font-weight: 700; }
+
+        /* Grid Stats */
+        .grid-stats { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; }
+        .stat-box { text-align: center; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 6px; border: 1px solid transparent; }
+        .stat-label { font-size: 0.6rem; color: #71717a; display: block; margin-bottom: 2px; font-weight: 700; }
+        .stat-value { font-weight: 800; font-size: 0.85rem; color: #fff; }
+        
+        .status-green { color: var(--accent-green); border-color: var(--accent-green); background: rgba(16, 185, 129, 0.05); }
+        .status-red { color: var(--accent-red); opacity: 0.4; text-decoration: line-through; border-color: #333; }
+        .status-wait { color: #d4d4d8; border-color: #3f3f46; }
+        
+        .progress-mini { height: 4px; background: #18181b; border-radius: 2px; margin-top: 4px; overflow: hidden; }
+        .progress-bar-mini { height: 100%; border-radius: 2px; }
+
+        /* Dicas */
+        .tip-box { margin-top: 10px; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 6px; font-size: 0.75rem; display: flex; align-items: center; border-left: 3px solid transparent; }
+        .tip-icon { font-size: 0.9rem; margin-right: 8px; }
+        .tip-wait { border-color: var(--accent-blue); color: #93c5fd; background: rgba(59, 130, 246, 0.05); }
+        .tip-bet { border-color: var(--accent-green); color: #6ee7b7; background: rgba(16, 185, 129, 0.05); font-weight: bold; }
+        .tip-alert { border-color: var(--accent-red); color: #fca5a5; background: rgba(239, 68, 68, 0.05); animation: pulse-border 2s infinite; }
+        .tip-neutral { border-color: #52525b; color: #71717a; }
+
+        .card-green-border { border-left: 4px solid var(--accent-green) !important; }
+        .card-red-border { border-left: 4px solid var(--accent-red) !important; }
+        .score-live { color: var(--accent-green); font-weight: bold; font-size: 1.1em; margin-left: 6px; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        @keyframes pulse-border { 0% { border-color: var(--accent-red); } 50% { border-color: transparent; } 100% { border-color: var(--accent-red); } }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">
+            <i class="fas fa-robot text-primary me-2"></i>FutAnalise <span style="color:var(--accent-green)">Pro</span>
+        </span>
+        <button class="btn btn-sm btn-dark border-secondary text-light" onclick="carregarJogos()">
+            <i class="fas fa-sync-alt me-1"></i>
+        </button>
+    </div>
+</nav>
+
+<div class="container mb-5">
+    
+    <div class="nav-tabs-custom">
+        <button class="btn btn-tab" id="btn-live" onclick="mudarAba('live')">
+            <i class="fas fa-broadcast-tower me-1"></i> Ao Vivo <span class="badge-count" id="count-live">0</span>
+        </button>
+        <button class="btn btn-tab active" id="btn-pre" onclick="mudarAba('pre')">
+            <i class="far fa-calendar-alt me-1"></i> Pré-Jogo <span class="badge-count" id="count-pre">0</span>
+        </button>
+        <button class="btn btn-tab" id="btn-finished" onclick="mudarAba('finished')">
+            <i class="fas fa-flag-checkered me-1"></i> Finalizados <span class="badge-count" id="count-finished">0</span>
+        </button>
+    </div>
+
+    <div id="loading" class="text-center py-5">
+        <div class="spinner-border text-secondary" role="status"></div>
+        <p class="mt-3 text-muted fw-bold" style="font-size: 0.8rem;">Analisando oportunidades...</p>
+    </div>
+
+    <div id="content-live" style="display:none;"></div>
+    <div id="content-pre" style="display:block;"></div> <div id="content-finished" style="display:none;"></div>
+
+    <div id="empty-msg" class="text-center mt-5 text-muted" style="display:none;">
+        <i class="fas fa-inbox fa-3x mb-3" style="color: #333;"></i><br>
+        Nenhum jogo nesta categoria.
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const FIREBASE_URL = "https://futanalise-121f9-default-rtdb.firebaseio.com"; 
+    let currentData = null; // Armazena os dados para não precisar refazer fetch ao trocar aba
+
+    document.addEventListener('DOMContentLoaded', () => { carregarJogos(); });
+
+    // --- CONTROLE DE ABAS ---
+    function mudarAba(aba) {
+        // 1. Atualiza visual dos botões
+        document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById(`btn-${aba}`).classList.add('active');
+
+        // 2. Esconde todos os conteúdos
+        ['live', 'pre', 'finished'].forEach(k => {
+            document.getElementById(`content-${k}`).style.display = 'none';
+        });
+
+        // 3. Mostra o conteúdo selecionado
+        const container = document.getElementById(`content-${aba}`);
+        container.style.display = 'block';
+
+        // 4. Verifica se está vazio
+        const isEmpty = container.innerHTML.trim() === '';
+        document.getElementById('empty-msg').style.display = isEmpty ? 'block' : 'none';
+    }
+
+    async function carregarJogos() {
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
+        document.getElementById('empty-msg').style.display = 'none';
+
+        const hoje = new Date().toISOString().split('T')[0];
+        
+        try {
+            const res = await fetch(`${FIREBASE_URL}/jogos/${hoje}.json`);
+            currentData = await res.json();
+            loading.style.display = 'none';
+
+            if (!currentData) return;
+
+            processarDados(currentData);
+
+        } catch (e) { console.error(e); }
+    }
+
+    function processarDados(data) {
+        const buckets = { live: {}, pre: {}, finished: {} };
+        let counts = { live: 0, pre: 0, finished: 0 };
+
+        // Limpa containers
+        ['live', 'pre', 'finished'].forEach(k => document.getElementById(`content-${k}`).innerHTML = '');
+
+        Object.values(data).forEach(jogo => {
+            const st = jogo.info.status_short;
+            const idLiga = jogo.liga.id;
+            let type = 'pre';
+            
+            if (['1H','2H','HT','ET','P','BT'].includes(st)) type = 'live';
+            else if (['FT','AET','PEN','ABD'].includes(st)) type = 'finished';
+            
+            if (!buckets[type][idLiga]) buckets[type][idLiga] = { info: jogo.liga, jogos: [] };
+            buckets[type][idLiga].jogos.push(jogo);
+            counts[type]++;
+        });
+
+        // Atualiza Badges dos Botões
+        document.getElementById('count-live').innerText = counts.live;
+        document.getElementById('count-pre').innerText = counts.pre;
+        document.getElementById('count-finished').innerText = counts.finished;
+
+        // Renderiza
+        ['live', 'pre', 'finished'].forEach(type => {
+            if (counts[type] > 0) renderizarLista(type, buckets[type]);
+        });
+
+        // Lógica automática de aba inicial
+        // Se tiver jogo ao vivo, vai pra aba Live. Se não, fica na Pre.
+        if (counts.live > 0) {
+            mudarAba('live');
+        } else {
+            mudarAba('pre');
+        }
+    }
+
+    function renderizarLista(tipo, dados) {
+        const container = document.getElementById(`content-${tipo}`);
+        
+        // Ordena ligas por nome (opcional, mas fica melhor)
+        const ligasOrdenadas = Object.values(dados).sort((a,b) => a.info.nome.localeCompare(b.info.nome));
+
+        ligasOrdenadas.forEach(liga => {
+            const htmlHeader = `
+                <div class="league-header">
+                    <img src="${liga.info.bandeira||''}" class="league-flag" onerror="this.style.display='none'">
+                    ${liga.info.pais}: ${liga.info.nome}
+                </div>`;
+            container.innerHTML += htmlHeader;
+            
+            // Ordena jogos por horário dentro da liga
+            liga.jogos.sort((a,b) => a.info.timestamp - b.info.timestamp).forEach(j => { 
+                container.innerHTML += cardJogo(j); 
+            });
+        });
+    }
+
+    // --- RENDERIZADOR DO CARD (Visual Dark Lead + MultiGols) ---
+    function cardJogo(jogo) {
+        const golsCasa = jogo.placar.casa || 0;
+        const golsFora = jogo.placar.fora || 0;
+        const totalGols = golsCasa + golsFora;
+        const status = jogo.info.status_short;
+        const isLive = ['1H','2H','HT','ET'].includes(status);
+        const isFinal = ['FT','AET','PEN'].includes(status);
+
+        // Probabilidades
+        const probs = {
+            '0.5': jogo.analise.prob_over05_ft || 0,
+            '1.5': jogo.analise.prob_over15_ft || 0,
+            '2.5': jogo.analise.prob_over25_ft || 0,
+            '3.5': jogo.analise.prob_over35_ft || 0
+        };
+
+        // Display de Tempo
+        let timeDisplay = `<span class="match-time">${new Date(jogo.info.timestamp*1000).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`;
+        let cardBorder = "";
+
+        if(isLive) {
+            timeDisplay = `<span class="live-badge">AO VIVO ${jogo.info.tempo_decorrido}'</span> <span class="score-live">${golsCasa}-${golsFora}</span>`;
+            if(totalGols > 0) cardBorder = "card-green-border";
+        }
+        if(isFinal) {
+            timeDisplay = `<span class="badge bg-dark border border-secondary text-muted">FIM ${golsCasa}-${golsFora}</span>`;
+            if(totalGols > 0) cardBorder = "card-green-border"; 
+            else cardBorder = "card-red-border";
+        }
+
+        // Stats Box
+        const renderStat = (line, val) => {
+            let classe = "status-wait";
+            let icone = "";
+            let corBarra = getCor(val);
+
+            if (totalGols > parseFloat(line)) { classe = "status-green"; icone = "✅"; }
+            else if (isFinal && totalGols <= parseFloat(line)) { classe = "status-red"; icone = ""; }
+
+            return `
+                <div class="stat-box ${classe}">
+                    <span class="stat-label">Over ${line}</span>
+                    <div class="stat-value">${val}% ${icone}</div>
+                    <div class="progress-mini"><div class="progress-bar-mini" style="width:${val}%; background:${corBarra}"></div></div>
+                </div>`;
+        };
+
+        // Dica IA
+        const dica = gerarDica(jogo);
+        const htmlDica = dica ? `<div class="tip-box ${dica.class}"><i class="fas ${dica.icon} tip-icon"></i> ${dica.text}</div>` : '';
+
+        return `
+            <div class="card match-card ${cardBorder}">
+                <div class="card-body p-3">
+                    <div class="row align-items-center mb-2">
+                        <div class="col-4 text-center">
+                            <img src="${jogo.times.casa_logo}" class="team-logo mb-1" onerror="this.src='https://via.placeholder.com/30'">
+                            <div class="text-truncate fw-bold text-white" style="font-size:0.7rem">${jogo.times.casa}</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            ${timeDisplay}
+                            <div class="mt-1 text-muted" style="font-size:0.7rem">vs</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <img src="${jogo.times.fora_logo}" class="team-logo mb-1" onerror="this.src='https://via.placeholder.com/30'">
+                            <div class="text-truncate fw-bold text-white" style="font-size:0.7rem">${jogo.times.fora}</div>
+                        </div>
+                    </div>
+                    <div class="grid-stats">
+                        ${renderStat('0.5', probs['0.5'])}
+                        ${renderStat('1.5', probs['1.5'])}
+                        ${renderStat('2.5', probs['2.5'])}
+                        ${renderStat('3.5', probs['3.5'])}
+                    </div>
+                    ${htmlDica}
+                </div>
+            </div>
+        `;
+    }
+
+    function gerarDica(jogo) {
+        const st = jogo.info.status_short;
+        const gols = (jogo.placar.casa||0) + (jogo.placar.fora||0);
+        const p05 = jogo.analise.prob_over05_ft || 0;
+        const p15 = jogo.analise.prob_over15_ft || 0;
+
+        if (['FT','AET','PEN'].includes(st)) return null;
+
+        if (['1H','2H','HT'].includes(st)) {
+            if (gols > 0 && p15 > 75) return { icon: 'fa-chart-line', text: 'Jogo aberto! Buscar Over 1.5.', class: 'tip-bet' };
+            if (gols > 0) return { icon: 'fa-check', text: 'Green no 0.5. Mercado cumprido.', class: 'tip-neutral' };
+            if (st === 'HT' && gols === 0 && p05 > 80) return { icon: 'fa-gem', text: 'Valor: Entrar Over 0.5 HT.', class: 'tip-bet' };
+            if (st === '2H' && gols === 0 && p05 > 85) return { icon: 'fa-fire', text: 'PRESSÃO: Gol maduro.', class: 'tip-alert' };
+            return { icon: 'fa-tv', text: 'Aguarde leitura...', class: 'tip-wait' };
+        }
+
+        if (p05 >= 90) return { icon: 'fa-shield-alt', text: 'Seguro: Over 0.5 FT.', class: 'tip-bet' };
+        if (p15 >= 75) return { icon: 'fa-layer-group', text: 'Alvo: Over 1.5 Gols.', class: 'tip-wait' };
+        return { icon: 'fa-search', text: 'Analisar ao vivo.', class: 'tip-neutral' };
+    }
+
+    function getCor(p) { return p>=80 ? '#10b981' : p>=50 ? '#f59e0b' : '#52525b'; }
+</script>
+
+</body>
+</html>
