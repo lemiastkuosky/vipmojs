@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SorosPro V24.1 Final</title>
+    <title>SorosPro V24.5 Auto-Import</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -81,25 +81,22 @@
         .form-control-dark:read-only { background-color: #1a1a1a !important; border-color: #333 !important; color: var(--accent-gold) !important; cursor: not-allowed; font-weight: bold; }
         .btn-check:checked + .btn-outline-warning { background-color: var(--accent-gold); color: #000; font-weight: bold; }
 
-        /* --- TABELA OTIMIZADA PARA MOBILE (CORRIGIDA) --- */
+        /* --- TABELA OTIMIZADA PARA MOBILE --- */
         .table-custom { table-layout: fixed; width: 100%; }
         .table-custom th { color: #666; font-size: 0.7rem; font-weight: 700; border-bottom: 1px solid #333; text-transform: uppercase; padding-bottom: 8px; }
         .table-custom td { color: #ddd; font-size: 0.85rem; border-bottom: 1px solid #2a2a2a; vertical-align: middle; padding: 10px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* Ajuste fino para evitar sobreposição */
         .cell-sub { display: block; font-size: 0.65rem; color: #777; margin-top: 3px; }
         .cell-main { display: block; font-weight: bold; font-size: 0.8rem; color: #eee; }
         
-        /* Sequência separada para não colar na hora */
         .cell-seq { 
             font-size: 0.75rem; 
             color: var(--accent-gold); 
             font-weight: 900; 
-            margin-right: 4px; /* Espaço extra */
+            margin-right: 4px;
             display: inline-block;
         }
 
-        /* Botões de Ação na Tabela */
         .action-container { display: flex; gap: 5px; align-items: center; }
         .action-btn { 
             border: none; 
@@ -140,6 +137,51 @@
         .modal-content { background-color: var(--bg-card); border: 1px solid var(--border-color); }
         .modal-header { border-bottom: 1px solid var(--border-color); }
         .modal-footer { border-top: 1px solid var(--border-color); }
+
+        /* Estilos xG */
+        .xg-result-box {
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        .xg-result-box.recommended { border-color: var(--accent-green); background: rgba(46, 204, 113, 0.05); }
+        .xg-badge { font-size: 0.7rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+        .bg-ev-pos { background: #2ecc71; color: #000; }
+        .bg-ev-neu { background: #f1c40f; color: #000; }
+        .bg-ev-neg { background: #e74c3c; color: #fff; }
+
+        .nav-tabs .nav-link { color: #888; border: none; font-size: 0.9rem; }
+        .nav-tabs .nav-link.active { background-color: transparent; border-bottom: 2px solid var(--accent-gold); color: #fff; font-weight: bold; }
+        .time-box { background: #111; border: 1px solid #333; border-radius: 6px; padding: 8px; text-align: center; }
+        .time-title { font-size: 0.7rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; }
+        .time-val { font-size: 1.1rem; font-weight: 900; color: #fff; }
+        .prob-bar { height: 4px; background: #333; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+        .prob-fill { height: 100%; background: var(--accent-gold); }
+        
+        .kelly-badge {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--accent-gold);
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-top: 5px;
+            border: 1px dashed var(--accent-gold);
+        }
+
+        /* Área de Importação */
+        .import-area {
+            border: 1px dashed #555;
+            background: #111;
+            color: #ccc;
+            font-family: monospace;
+            font-size: 0.8rem;
+            min-height: 100px;
+        }
+        .import-area:focus { outline: none; border-color: var(--accent-gold); background: #151515; }
+
     </style>
 </head>
 <body>
@@ -148,11 +190,19 @@
     <div class="container-fluid">
         <span class="navbar-brand fw-bold text-light"><i class="fa-solid fa-chart-line me-2 text-warning"></i>Soros<span class="text-secondary">Pro</span></span>
         <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-info" onclick="bsModals.history.show()"><i class="fa-solid fa-list-check"></i></button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="bsModals.settings.show()"><i class="fa-solid fa-gear"></i></button>
-            <button class="btn btn-sm btn-danger fw-bold" onclick="endOfDay()"><i class="fa-solid fa-power-off"></i></button>
-        </div>
-    </div>
+    <a href="processar_resultados.php" target="_blank" class="btn btn-sm btn-outline-success fw-bold" title="Abrir Análises">
+        <i class="fa-solid fa-chart-column"></i> Análises
+    </a>
+    <button class="btn btn-sm btn-outline-light" onclick="bsModals.import.show()" title="Importar Link/Dados">
+        <i class="fa-solid fa-cloud-arrow-down"></i>
+    </button>
+    <button class="btn btn-sm btn-outline-primary" onclick="bsModals.xg.show()" title="Análise xG Expert">
+        <i class="fa-solid fa-futbol"></i>
+    </button>
+    <button class="btn btn-sm btn-outline-info" onclick="bsModals.history.show()"><i class="fa-solid fa-list-check"></i></button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="bsModals.settings.show()"><i class="fa-solid fa-gear"></i></button>
+    <button class="btn btn-sm btn-danger fw-bold" onclick="endOfDay()"><i class="fa-solid fa-power-off"></i></button>
+</div>
 </nav>
 
 <div class="container-fluid">
@@ -416,6 +466,212 @@
     </div>
 </div>
 
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-white"><i class="fa-solid fa-download me-2 text-warning"></i>Importar Dados</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small">1. Cole o Link do Jogo (SofaScore/FlashScore)</label>
+                    <div class="input-group">
+                        <input type="text" id="gameLinkInput" class="form-control form-control-dark" placeholder="https://...">
+                        <button class="btn btn-outline-warning" type="button" onclick="openGameLink()"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir</button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small">2. Copie os dados do site (Ctrl+A / Ctrl+C) e Cole abaixo</label>
+                    <textarea id="dataPasteArea" class="form-control import-area p-2" placeholder="Cole aqui o texto da página de estatísticas..."></textarea>
+                </div>
+
+                <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-3">
+                    <i class="fa-solid fa-wand-magic-sparkles me-2"></i>
+                    <div>A "Leitura Inteligente" tentará encontrar o xG e Placar automaticamente no texto colado.</div>
+                </div>
+
+                <button class="btn btn-success w-100 fw-bold py-2" onclick="processPastedData()">
+                    <i class="fa-solid fa-gears me-2"></i> PROCESSAR TEXTO
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="xgModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-white"><i class="fa-solid fa-brain me-2 text-primary"></i>Análise Titan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                
+                <ul class="nav nav-tabs mb-3 border-secondary" id="analysisTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="simple-tab" data-bs-toggle="tab" data-bs-target="#simple" type="button">Match (1x2)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="goals-tab" data-bs-toggle="tab" data-bs-target="#goals" type="button">Gols & BTTS</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button">Raio-X (HT/FT)</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="analysisTabsContent">
+                    
+                    <div class="tab-pane fade show active" id="simple" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-lg-5 border-end border-secondary">
+                                <h6 class="text-warning small fw-bold mb-3">DADOS (xG)</h6>
+                                <div class="mb-3">
+                                    <label class="text-muted small mb-1">xG Total (Casa / Fora)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="xgHome" class="form-control form-control-dark text-center fw-bold" step="0.01" placeholder="1.50">
+                                        <span class="input-group-text bg-dark border-secondary text-muted">x</span>
+                                        <input type="number" id="xgAway" class="form-control form-control-dark text-center fw-bold" step="0.01" placeholder="0.80">
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="text-muted small mb-1">Odds da Casa</label>
+                                    <div class="input-group input-group-sm mb-1">
+                                        <span class="input-group-text bg-dark border-secondary text-muted w-25 justify-content-center">1</span>
+                                        <input type="number" id="oddBookieHome" class="form-control form-control-dark text-center" step="0.01" placeholder="1.90">
+                                    </div>
+                                    <div class="input-group input-group-sm mb-1">
+                                        <span class="input-group-text bg-dark border-secondary text-muted w-25 justify-content-center">X</span>
+                                        <input type="number" id="oddBookieDraw" class="form-control form-control-dark text-center" step="0.01" placeholder="3.40">
+                                    </div>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-dark border-secondary text-muted w-25 justify-content-center">2</span>
+                                        <input type="number" id="oddBookieAway" class="form-control form-control-dark text-center" step="0.01" placeholder="4.20">
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary w-100 fw-bold shadow mb-2" onclick="calculateXgOdds()">
+                                    <i class="fa-solid fa-bolt me-2"></i>ANALISAR TUDO
+                                </button>
+                            </div>
+                            <div class="col-lg-7">
+                                <h6 class="text-info small fw-bold mb-3">RESULTADO + KELLY</h6>
+                                <div id="xgResults" class="d-none">
+                                    <div class="alert alert-dark border-secondary py-2 px-3 mb-3 d-flex justify-content-between align-items-center">
+                                        <span class="small text-muted">Placar Provável:</span>
+                                        <span class="fw-black text-white fs-5" id="mostLikelyScore">0x0</span>
+                                    </div>
+                                    <div class="xg-result-box" id="boxHome">
+                                        <div class="d-flex justify-content-between align-items-center"><span class="fw-bold text-white small">CASA</span><span id="badgeHome" class="xg-badge bg-secondary">---</span></div>
+                                        <div class="d-flex justify-content-between mt-2 small"><div class="text-muted">Justa: <span class="text-white fw-bold" id="fairOddHome">-</span></div><div class="text-muted">Bookie: <span class="text-warning fw-bold" id="displayBookieHome">-</span></div></div>
+                                        <div class="d-flex justify-content-between align-items-end"><div id="kellyHome"></div><div class="mt-1 small text-end" id="evHome">EV: 0%</div></div>
+                                    </div>
+                                    <div class="xg-result-box" id="boxDraw">
+                                        <div class="d-flex justify-content-between align-items-center"><span class="fw-bold text-white small">EMPATE</span><span id="badgeDraw" class="xg-badge bg-secondary">---</span></div>
+                                        <div class="d-flex justify-content-between mt-2 small"><div class="text-muted">Justa: <span class="text-white fw-bold" id="fairOddDraw">-</span></div><div class="text-muted">Bookie: <span class="text-warning fw-bold" id="displayBookieDraw">-</span></div></div>
+                                        <div class="d-flex justify-content-between align-items-end"><div id="kellyDraw"></div><div class="mt-1 small text-end" id="evDraw">EV: 0%</div></div>
+                                    </div>
+                                    <div class="xg-result-box" id="boxAway">
+                                        <div class="d-flex justify-content-between align-items-center"><span class="fw-bold text-white small">FORA</span><span id="badgeAway" class="xg-badge bg-secondary">---</span></div>
+                                        <div class="d-flex justify-content-between mt-2 small"><div class="text-muted">Justa: <span class="text-white fw-bold" id="fairOddAway">-</span></div><div class="text-muted">Bookie: <span class="text-warning fw-bold" id="displayBookieAway">-</span></div></div>
+                                        <div class="d-flex justify-content-between align-items-end"><div id="kellyAway"></div><div class="mt-1 small text-end" id="evAway">EV: 0%</div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="goals" role="tabpanel">
+                        <div id="goalsPlaceholder" class="text-center py-4 text-muted small">
+                            <i class="fa-solid fa-arrow-left me-1"></i> Preencha o xG na primeira aba e clique em Analisar.
+                        </div>
+                        <div id="goalsResults" class="d-none">
+                            <h6 class="text-success small fw-bold mb-3"><i class="fa-solid fa-crosshairs me-2"></i>SCANNER DE GOLS</h6>
+                            
+                            <div class="time-box mb-2 text-start px-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted small fw-bold">OVER 1.5 GOLS</span>
+                                    <span class="text-white fw-bold" id="txtOver15">0%</span>
+                                </div>
+                                <div class="prob-bar"><div class="prob-fill bg-success" id="barOver15" style="width:0%"></div></div>
+                                <div class="text-end mt-1"><span class="text-secondary small" style="font-size:0.65rem">Odd Justa: <span class="text-white" id="oddJustaOver15">@0.00</span></span></div>
+                            </div>
+
+                            <div class="time-box mb-2 text-start px-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted small fw-bold">OVER 2.5 GOLS</span>
+                                    <span class="text-white fw-bold" id="txtOver25">0%</span>
+                                </div>
+                                <div class="prob-bar"><div class="prob-fill bg-warning" id="barOver25" style="width:0%"></div></div>
+                                <div class="text-end mt-1"><span class="text-secondary small" style="font-size:0.65rem">Odd Justa: <span class="text-white" id="oddJustaOver25">@0.00</span></span></div>
+                            </div>
+
+                            <div class="time-box mb-2 text-start px-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted small fw-bold">AMBAS MARCAM (BTTS)</span>
+                                    <span class="text-white fw-bold" id="txtBTTS">0%</span>
+                                </div>
+                                <div class="prob-bar"><div class="prob-fill bg-info" id="barBTTS" style="width:0%"></div></div>
+                                <div class="text-end mt-1"><span class="text-secondary small" style="font-size:0.65rem">Odd Justa: <span class="text-white" id="oddJustaBTTS">@0.00</span></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="advanced" role="tabpanel">
+                        <div class="alert alert-dark border-secondary p-2 small text-muted mb-3">
+                            <i class="fa-solid fa-clock me-1"></i> Preencha a <strong>Média de Gols</strong> (Marcados e Sofridos) por tempo.
+                        </div>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <h6 class="text-center text-white small fw-bold mb-2">TIME CASA</h6>
+                                <input type="number" id="htHomeScored" class="form-control form-control-dark mb-1 text-center" placeholder="Gols 1ºT" step="0.1">
+                                <input type="number" id="ftHomeScored" class="form-control form-control-dark text-center" placeholder="Gols 2ºT" step="0.1">
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-center text-white small fw-bold mb-2">TIME FORA</h6>
+                                <input type="number" id="htAwayScored" class="form-control form-control-dark mb-1 text-center" placeholder="Gols 1ºT" step="0.1">
+                                <input type="number" id="ftAwayScored" class="form-control form-control-dark text-center" placeholder="Gols 2ºT" step="0.1">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-info w-100 fw-bold shadow mb-3" onclick="calculateHTFT()">
+                            <i class="fa-solid fa-microscope me-2"></i>GERAR RAIO-X
+                        </button>
+
+                        <div id="htftResults" class="d-none">
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <div class="time-box">
+                                        <div class="time-title">Chance Gol 1º Tempo</div>
+                                        <div class="time-val text-warning" id="probOver05HT">0%</div>
+                                        <div class="prob-bar"><div class="prob-fill" id="barOver05HT" style="width:0%"></div></div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="time-box">
+                                        <div class="time-title">Chance Gol 2º Tempo</div>
+                                        <div class="time-val text-info" id="probOver05FT">0%</div>
+                                        <div class="prob-bar"><div class="prob-fill bg-info" id="barOver05FT" style="width:0%"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="xg-result-box">
+                                <div class="d-flex justify-content-between align-items-center"><span class="fw-bold text-white small">VEREDITO TEMPORAL</span></div>
+                                <p class="small text-muted mt-2 mb-0" id="temporalVerdict">Aguardando dados...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let appState = {
@@ -431,7 +687,8 @@
         dailyArchive: []
     };
     
-    let bsModals = { settings: null, history: null, goal: null, loss: null, confirm: null, del: null };
+    // Inclui 'import' nos modais
+    let bsModals = { settings: null, history: null, goal: null, loss: null, confirm: null, del: null, xg: null, import: null };
     let chartInstance = null;
     let goalAlertShownSession = false;
     let stopLossOverride = false;
@@ -463,10 +720,16 @@
         bsModals.loss = new bootstrap.Modal(document.getElementById('stopLossModal'));
         bsModals.confirm = new bootstrap.Modal(document.getElementById('confirmActionModal'));
         bsModals.del = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        bsModals.xg = new bootstrap.Modal(document.getElementById('xgModal'));
+        bsModals.import = new bootstrap.Modal(document.getElementById('importModal'));
 
         const saved = localStorage.getItem('sorosPro_v24_1');
         if (saved) appState = JSON.parse(saved);
         
+        // Link Salvo Recuperar
+        const savedLink = localStorage.getItem('sorosPro_lastLink');
+        if(savedLink) document.getElementById('gameLinkInput').value = savedLink;
+
         if(!appState.sequenceCounter) appState.sequenceCounter = 1;
         if(!appState.dailyGoal) appState.dailyGoal = 50.00;
         if(!appState.stopLoss) appState.stopLoss = 0.00;
@@ -482,6 +745,54 @@
         updateUI();
         renderDailyHistory();
     }
+
+    // --- LÓGICA DE IMPORTAÇÃO (SMART PASTE) ---
+    function openGameLink() {
+        const url = document.getElementById('gameLinkInput').value;
+        if(!url) { alert("Cole um link primeiro!"); return; }
+        // Salva link
+        localStorage.setItem('sorosPro_lastLink', url);
+        window.open(url, '_blank');
+    }
+
+    function processPastedData() {
+        const text = document.getElementById('dataPasteArea').value;
+        if(!text) { alert("Cole o texto primeiro!"); return; }
+
+        let foundXG = false;
+        
+        // Tenta achar xG com Regex simples (procura "xG" seguido de numeros ou "Expected Goals")
+        // Exemplo texto site: "xG 1.54 0.33" ou "Expected Goals 2.10 - 1.05"
+        // Regex busca: (numero.numero) ... (numero.numero)
+        
+        // Pattern 1: xG explícito
+        const xgRegex = /(?:xG|Expected Goals|Expectativa de Gols).*?(\d+[.,]\d+).*?(\d+[.,]\d+)/i;
+        const matchXG = text.match(xgRegex);
+
+        if (matchXG) {
+            let h = matchXG[1].replace(',', '.');
+            let a = matchXG[2].replace(',', '.');
+            document.getElementById('xgHome').value = h;
+            document.getElementById('xgAway').value = a;
+            foundXG = true;
+        } else {
+            // Pattern 2: Tenta achar dois floats isolados em uma linha que pareça stats (fallback arriscado, mas util)
+            // Vamos procurar apenas se a palavra xG não foi achada.
+            // Muitas vezes o xG vem logo após o placar. 
+        }
+
+        if(foundXG) {
+            alert("Dados de xG encontrados e preenchidos! \nVerifique se estão corretos e clique em Analisar.");
+            bsModals.import.hide();
+            bsModals.xg.show();
+        } else {
+            alert("Não consegui encontrar o padrão 'xG' ou 'Expected Goals' no texto. \n\nTente copiar apenas a área das estatísticas do site.");
+        }
+        
+        // Limpa area
+        document.getElementById('dataPasteArea').value = '';
+    }
+    // ------------------------------------------
 
     function resetAllData() {
         if(confirm("Deseja apagar tudo?")) {
@@ -761,6 +1072,177 @@
         document.body.removeChild(link);
     }
 
+    // --- FUNÇÕES DE CÁLCULO (Poisson) ---
+    function poisson(k, lambda) {
+        let p = Math.exp(-lambda);
+        for (let i = 0; i < k; i++) { p = p * lambda; }
+        let fat = 1;
+        for (let i = 1; i <= k; i++) { fat = fat * i; }
+        return p / fat;
+    }
+
+    // 1. CÁLCULO GERAL + KELLY + GOLS SCANNER
+    function calculateXgOdds() {
+        const xgHome = parseFloat(document.getElementById('xgHome').value);
+        const xgAway = parseFloat(document.getElementById('xgAway').value);
+        const oddB_H = parseFloat(document.getElementById('oddBookieHome').value);
+        const oddB_D = parseFloat(document.getElementById('oddBookieDraw').value);
+        const oddB_A = parseFloat(document.getElementById('oddBookieAway').value);
+
+        if (isNaN(xgHome) || isNaN(xgAway)) { alert("Insira os valores de xG."); return; }
+
+        let probH = 0, probD = 0, probA = 0;
+        let probOver15 = 0, probOver25 = 0, probBTTS = 0;
+        let maxProbScore = 0;
+        let mostLikelyScore = "0x0";
+
+        for (let h = 0; h < 10; h++) {
+            for (let a = 0; a < 10; a++) {
+                const p = poisson(h, xgHome) * poisson(a, xgAway);
+                if(p > maxProbScore) { maxProbScore = p; mostLikelyScore = `${h}x${a}`; }
+                
+                // Match Odds
+                if (h > a) probH += p;
+                else if (h === a) probD += p;
+                else probA += p;
+
+                // Gols Scanner
+                if ((h + a) > 1.5) probOver15 += p;
+                if ((h + a) > 2.5) probOver25 += p;
+                if (h > 0 && a > 0) probBTTS += p;
+            }
+        }
+
+        const total = probH + probD + probA;
+        probH /= total; probD /= total; probA /= total;
+
+        const oddFairH = probH > 0 ? (1 / probH) : 999;
+        const oddFairD = probD > 0 ? (1 / probD) : 999;
+        const oddFairA = probA > 0 ? (1 / probA) : 999;
+
+        // Render Cards (com Kelly)
+        renderResultCard('Home', oddFairH, oddB_H);
+        renderResultCard('Draw', oddFairD, oddB_D);
+        renderResultCard('Away', oddFairA, oddB_A);
+
+        // Render Gols Tab
+        renderGoalsTab(probOver15, probOver25, probBTTS);
+        
+        document.getElementById('mostLikelyScore').innerText = mostLikelyScore;
+        document.getElementById('xgResults').classList.remove('d-none');
+        document.getElementById('goalsPlaceholder').classList.add('d-none');
+        document.getElementById('goalsResults').classList.remove('d-none');
+    }
+
+    function renderGoalsTab(p15, p25, pbtts) {
+        const odd15 = p15 > 0 ? (1/p15).toFixed(2) : '---';
+        const odd25 = p25 > 0 ? (1/p25).toFixed(2) : '---';
+        const oddBtts = pbtts > 0 ? (1/pbtts).toFixed(2) : '---';
+
+        document.getElementById('txtOver15').innerText = (p15 * 100).toFixed(0) + "%";
+        document.getElementById('barOver15').style.width = (p15 * 100) + "%";
+        document.getElementById('oddJustaOver15').innerText = "@" + odd15;
+
+        document.getElementById('txtOver25').innerText = (p25 * 100).toFixed(0) + "%";
+        document.getElementById('barOver25').style.width = (p25 * 100) + "%";
+        document.getElementById('oddJustaOver25').innerText = "@" + odd25;
+
+        document.getElementById('txtBTTS').innerText = (pbtts * 100).toFixed(0) + "%";
+        document.getElementById('barBTTS').style.width = (pbtts * 100) + "%";
+        document.getElementById('oddJustaBTTS').innerText = "@" + oddBtts;
+    }
+
+    function renderResultCard(type, fairOdd, bookieOdd) {
+        const displayFair = fairOdd < 100 ? fairOdd.toFixed(2) : '99+';
+        const displayBookie = !isNaN(bookieOdd) ? bookieOdd.toFixed(2) : '-';
+        
+        document.getElementById(`fairOdd${type}`).innerText = "@" + displayFair;
+        document.getElementById(`displayBookie${type}`).innerText = "@" + displayBookie;
+
+        const badgeEl = document.getElementById(`badge${type}`);
+        const boxEl = document.getElementById(`box${type}`);
+        const evEl = document.getElementById(`ev${type}`);
+        const kellyEl = document.getElementById(`kelly${type}`);
+        
+        kellyEl.innerHTML = ''; 
+
+        if (!isNaN(bookieOdd) && bookieOdd > 1) {
+            const probReal = 1 / fairOdd;
+            const ev = ((probReal * bookieOdd) - 1) * 100;
+            
+            evEl.innerText = `EV: ${ev > 0 ? '+' : ''}${ev.toFixed(1)}%`;
+            evEl.className = ev > 0 ? "mt-1 small text-end fw-bold text-success" : "mt-1 small text-end fw-bold text-danger";
+
+            if (ev > 0) {
+                const b = bookieOdd - 1;
+                const p = probReal;
+                const q = 1 - p;
+                let f = (b * p - q) / b;
+                const safeKelly = f * 0.25;
+                
+                if (safeKelly > 0) {
+                    const stakeVal = appState.bankroll * safeKelly;
+                    kellyEl.innerHTML = `<span class="kelly-badge">Sug: R$ ${stakeVal.toFixed(2)} (${(safeKelly*100).toFixed(1)}%)</span>`;
+                }
+            }
+
+            if (ev >= 5) {
+                badgeEl.innerText = "💎 VALOR";
+                badgeEl.className = "xg-badge bg-ev-pos";
+                boxEl.classList.add('recommended');
+            } else if (ev >= 0) {
+                badgeEl.innerText = "⚠️ NEUTRO";
+                badgeEl.className = "xg-badge bg-ev-neu";
+                boxEl.classList.remove('recommended');
+            } else {
+                badgeEl.innerText = "❌ S/ VALOR";
+                badgeEl.className = "xg-badge bg-ev-neg";
+                boxEl.classList.remove('recommended');
+            }
+        } else {
+            badgeEl.innerText = "---";
+            badgeEl.className = "xg-badge bg-secondary";
+            evEl.innerText = "Insira Odds";
+            boxEl.classList.remove('recommended');
+        }
+    }
+
+    // 2. CÁLCULO AVANÇADO (Raio-X Tempos)
+    function calculateHTFT() {
+        const h1 = parseFloat(document.getElementById('htHomeScored').value) || 0;
+        const h2 = parseFloat(document.getElementById('ftHomeScored').value) || 0;
+        const a1 = parseFloat(document.getElementById('htAwayScored').value) || 0;
+        const a2 = parseFloat(document.getElementById('ftAwayScored').value) || 0;
+
+        const lambdaHT = (h1 + a1); 
+        const lambdaFT = (h2 + a2); 
+
+        const prob0HT = poisson(0, lambdaHT);
+        const probOver05HT = (1 - prob0HT) * 100;
+
+        const prob0FT = poisson(0, lambdaFT);
+        const probOver05FT = (1 - prob0FT) * 100;
+
+        document.getElementById('probOver05HT').innerText = probOver05HT.toFixed(0) + "%";
+        document.getElementById('barOver05HT').style.width = probOver05HT + "%";
+
+        document.getElementById('probOver05FT').innerText = probOver05FT.toFixed(0) + "%";
+        document.getElementById('barOver05FT').style.width = probOver05FT + "%";
+
+        const verdictEl = document.getElementById('temporalVerdict');
+        if (probOver05HT > 75) {
+            verdictEl.innerHTML = "<strong class='text-warning'>JOGO QUENTE CEDO!</strong><br>Grande chance de gol no 1º tempo.";
+        } else if (probOver05FT > probOver05HT + 15) {
+            verdictEl.innerHTML = "<strong class='text-info'>JOGO MORNO -> QUENTE.</strong><br>Times se estudam no início e soltam no 2º tempo.";
+        } else if (probOver05HT < 40 && probOver05FT < 40) {
+            verdictEl.innerHTML = "<strong class='text-danger'>JOGO TRANCADO.</strong><br>Provável 0x0 ou Under gols.";
+        } else {
+            verdictEl.innerHTML = "Equilíbrio. Acompanhe o Live.";
+        }
+
+        document.getElementById('htftResults').classList.remove('d-none');
+    }
+
     function updateUI() {
         const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -804,20 +1286,7 @@
 
         const tbody = document.getElementById('historyBody');
         tbody.innerHTML = '';
-        // Mostra na ordem: mais antigo (1) para mais novo (10)? Ou inverso? 
-        // Normalmente lista de tarefas é inversa (recente no topo). 
-        // O usuário pediu "lista crescente, todo jogo novo entra embaixo".
-        // Então NÃO usamos reverse() se quisermos o mais novo embaixo? Não, o usuário disse:
-        // "quero que a lista seja crescente, todo jogo novo entre embaixo"
-        // Então a ordem é CRONOLÓGICA (1, 2, 3).
-        // Meu código original usava unshift (coloca no topo).
-        // PARA FICAR CRESCENTE (NOVO EMBAIXO), o array deve ser percorrido NORMALMENTE, mas na UI o unshift inverteu.
-        // Vamos manter o unshift na lógica (fácil acesso ao último), mas na renderização podemos inverter.
-        // Mas se ele quer o #1 no topo e o #10 lá embaixo...
-        // O código atual renderiza do array. Se usei unshift, o [0] é o mais novo.
-        // Se ele quer #1 em cima e #10 embaixo, preciso renderizar REVERSO do array atual (que tem o mais novo no 0).
-        
-        const renderList = [...appState.currentSessionHistory].reverse(); // Inverte para mostrar cronológico (Antigo -> Novo)
+        const renderList = [...appState.currentSessionHistory].reverse(); 
 
         renderList.forEach(item => { 
             const typeBadge = item.type.includes('SOROS')
@@ -887,69 +1356,6 @@
         footerProfit.className = sessionNet >= 0 ? "f-value f-value-total text-success" : "f-value f-value-total text-danger";
 
         updateChart();
-    }
-
-    function renderDailyHistory() {
-        const tbody = document.getElementById('dailyHistoryBody');
-        const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        
-        if (appState.dailyArchive.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-3">Vazio</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = '';
-        appState.dailyArchive.forEach(day => {
-            const tIn = day.totalIn || 0; const tOut = day.totalOut || 0;
-            const wins = day.wins || 0; const losses = day.losses || 0;
-            const roi = day.roi || 0; const winrate = day.winrate || 0;
-            
-            const pClass = day.profit >= 0 ? 'profit-pos' : 'profit-neg';
-            const sign = day.profit >= 0 ? '+' : '';
-            
-            tbody.innerHTML += `
-                <tr>
-                    <td class="text-start ps-3"><div class="fw-bold text-white small">${day.date}</div></td>
-                    <td><div class="text-white small fw-bold">${wins}W - ${losses}L</div><span class="text-muted small" style="font-size:0.65rem">${winrate}% Winrate</span></td>
-                    <td><div class="text-secondary small" style="font-size:0.7rem">In: ${fmt(tIn)}</div><div class="text-info small" style="font-size:0.7rem">Out: ${fmt(tOut)}</div></td>
-                    <td><div class="${pClass} small">${sign}${fmt(day.profit)}</div><span class="text-muted small" style="font-size:0.65rem">ROI: ${roi}%</span></td>
-                    <td class="fw-bold text-white small">${fmt(day.finalBank)}</td>
-                </tr>`;
-        });
-        
-        let grandIn = 0, grandOut = 0, grandProfit = 0;
-        appState.dailyArchive.forEach(d => { grandIn += d.totalIn; grandOut += d.totalOut; grandProfit += d.profit; });
-        document.getElementById('grandTotalFinance').innerText = `${fmt(grandIn)} / ${fmt(grandOut)}`;
-        const gEl = document.getElementById('grandTotalProfit');
-        gEl.innerText = fmt(grandProfit);
-        gEl.className = grandProfit >= 0 ? "fw-bold text-success" : "fw-bold text-danger";
-    }
-
-    function renderChart() {
-        const ctx = document.getElementById('miniChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
-        chartInstance = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [{ label: 'R$', data: [], borderColor: '#f1c40f', tension: 0.2, fill: true, backgroundColor: 'rgba(241, 196, 15, 0.05)' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#333' }, ticks: { color: '#888', font: {size: 10} } } } } });
-    }
-
-    function updateChart() {
-        if (!chartInstance) return;
-        const pastData = [...appState.dailyArchive].reverse().map(d => ({ label: d.date, value: d.finalBank }));
-        const todayData = [...appState.currentSessionHistory].filter(h => h.status === 'SETTLED').map(d => ({ label: d.time, value: d.bankAfter })); // Map direto (cronologico)
-        
-        if (pastData.length === 0 && todayData.length === 0) pastData.push({label: 'Início', value: appState.bankroll});
-        
-        const fullLabels = [...pastData.map(d => d.label), ...todayData.map(d => d.label)];
-        const fullValues = [...pastData.map(d => d.value), ...todayData.map(d => d.value)];
-        
-        chartInstance.data.labels = fullLabels;
-        chartInstance.data.datasets[0].data = fullValues;
-        
-        const firstVal = fullValues[0] || 0;
-        const currentVal = fullValues[fullValues.length - 1] || 0;
-        const color = currentVal >= firstVal ? '#2ecc71' : '#e74c3c';
-        chartInstance.data.datasets[0].borderColor = color;
-        chartInstance.data.datasets[0].backgroundColor = currentVal >= firstVal ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)';
-        chartInstance.update();
     }
 
     function saveAndRender() { localStorage.setItem('sorosPro_v24_1', JSON.stringify(appState)); updateUI(); }
