@@ -1024,10 +1024,15 @@
         });
     }
     
-    // --- GERAÇÃO DE PDF ---
+    // --- GERAÇÃO DE PDF MODIFICADA PARA KODULAR ---
     async function gerarPDF(isGestao, mode) { 
         if(!edicaoAtivaID) return alert("Selecione uma campanha!");
-        const { jsPDF } = window.jspdf; const doc = new jsPDF(); const conf = dadosDB[edicaoAtivaID].config; const vendasData = dadosDB[edicaoAtivaID].vendas || {}; const vendas = Object.values(vendasData); const gastos = Object.values(dadosDB[edicaoAtivaID].gastos || {});
+        const { jsPDF } = window.jspdf; 
+        const doc = new jsPDF(); 
+        const conf = dadosDB[edicaoAtivaID].config; 
+        const vendasData = dadosDB[edicaoAtivaID].vendas || {}; 
+        const vendas = Object.values(vendasData); 
+        const gastos = Object.values(dadosDB[edicaoAtivaID].gastos || {});
         
         const azulEscuro = [59, 130, 246]; const cinzaEscuro = [31, 41, 55]; const corHeader = isGestao ? cinzaEscuro : azulEscuro;
 
@@ -1071,8 +1076,32 @@
         const pageCount = doc.internal.getNumberOfPages();
         for(let i = 1; i <= pageCount; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(150); doc.text(`Página ${i} de ${pageCount} - Gerado pelo Sistema Rifa Pro`, 105, 290, null, null, "center"); }
 
-        if(mode === 'save') doc.save(`${isGestao?'Gestao':'Lista'}_${conf.nomeExibicao}.pdf`);
-        else { const blob = doc.output('bloburl'); document.getElementById('iframePDF').src = blob; document.getElementById('modalVisualizarPDF').style.display = 'flex'; }
+        // --- LÓGICA DE DOWNLOAD MODIFICADA PARA KODULAR ---
+        if (window.AppInventor && window.AppInventor.setWebViewString) {
+             // Modo App (Android/Kodular)
+             const dataUri = doc.output('datauristring');
+             const base64Clean = dataUri.split(',')[1];
+             const nomeArquivo = `${isGestao?'Gestao':'Lista'}_${conf.nomeExibicao.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+
+             const dados = {
+                 acao: "SALVAR_PDF",
+                 nome: nomeArquivo,
+                 conteudo: base64Clean
+             };
+             
+             // Envia o JSON para o Kodular decodificar e salvar
+             window.AppInventor.setWebViewString(JSON.stringify(dados));
+             
+        } else {
+             // Modo Desktop (PC)
+             if(mode === 'save') {
+                doc.save(`${isGestao?'Gestao':'Lista'}_${conf.nomeExibicao}.pdf`);
+             } else { 
+                const blob = doc.output('bloburl'); 
+                document.getElementById('iframePDF').src = blob; 
+                document.getElementById('modalVisualizarPDF').style.display = 'flex'; 
+             }
+        }
     }
 </script>
 </body>
