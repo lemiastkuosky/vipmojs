@@ -84,9 +84,26 @@
         .btn-back { background: transparent; color: var(--gray); width: auto; padding: 8px 0; font-size: 0.9rem; justify-content: flex-start; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
 
-        /* --- LISTAS & ITENS --- */
-        .venda-item { background: #f9fafb; padding: 15px; margin-bottom: 10px; border-radius: 10px; border-left: 4px solid var(--primary); display: flex; justify-content: space-between; align-items: flex-start; }
+        /* --- LISTAS & ITENS (ATUALIZADO PARA CORES) --- */
+        .venda-item { 
+            padding: 15px; 
+            margin-bottom: 10px; 
+            border-radius: 10px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            border-left-width: 5px; 
+            border-left-style: solid;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            background: #f9fafb;
+            border-left-color: var(--gray);
+        }
         
+        /* Status Pago: Verde */
+        .venda-item.pago { background: #ecfdf5; border-left-color: #10b981; }
+        /* Status Pendente: Vermelho/Laranja */
+        .venda-item.pendente { background: #fef2f2; border-left-color: #ef4444; }
+
         .info-row { display: block; margin-bottom: 3px; font-size: 0.9rem; line-height: 1.4; }
         .info-label { color: var(--gray); font-size: 0.8rem; margin-right: 4px; }
         
@@ -127,6 +144,17 @@
         /* --- RODAPÉ --- */
         .app-footer { text-align: center; padding: 20px; color: var(--gray); font-size: 0.85rem; background: #e5e7eb; margin-top: auto; }
         .app-footer strong { color: var(--primary-dark); }
+
+        /* --- RESUMO ESTATÍSTICO --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+        @media (min-width: 480px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+        .stat-card { background: var(--white); padding: 12px; border-radius: var(--radius); text-align: center; box-shadow: var(--shadow); border: 1px solid #f3f4f6; position: relative; overflow: hidden; }
+        .stat-val { font-size: 1.2rem; font-weight: 800; color: var(--dark); display: block; margin-bottom: 2px; }
+        .stat-label { font-size: 0.75rem; color: var(--gray); text-transform: uppercase; font-weight: 600; }
+        .stat-card.c-verde { border-bottom: 3px solid var(--primary); }
+        .stat-card.c-azul { border-bottom: 3px solid var(--secondary); }
+        .stat-card.c-amarelo { border-bottom: 3px solid #f59e0b; }
+        .stat-card.c-vermelho { border-bottom: 3px solid #ef4444; }
 
         /* --- NOVO TEMPLATE DO RECIBO PRO --- */
         #receipt-container {
@@ -259,7 +287,7 @@
     <div class="container">
         <div class="app-header">
             <div class="app-title">Rifa<span>Pro</span></div>
-            <div style="font-size:0.8rem; color:#6b7280;">v4.1</div>
+            <div style="font-size:0.8rem; color:#6b7280;">v4.3</div>
         </div>
 
         <div class="nav-tabs">
@@ -327,6 +355,9 @@
                 
                 <div class="card">
                     <h2 id="tituloVenda" style="font-size:1.3rem; color:var(--primary);">Venda</h2>
+                    
+                    <div id="resumoStats" class="stats-grid" style="margin-bottom:20px;"></div>
+
                     <div id="promoBanner" class="promo-banner"></div>
 
                     <label>WhatsApp do Cliente</label>
@@ -411,7 +442,7 @@
 </div>
 
 <footer class="app-footer">
-    Criado por <strong>Le Miastkuosky</strong> - Versão 4.1
+    Criado por <strong>Le Miastkuosky</strong> - Versão 4.3
 </footer>
 
 <div id="modalAgenda" class="modal"><div class="modal-content"><h2>✏️ Editar Contato</h2><input type="hidden" id="editOldTel"><label>Nome</label><input type="text" id="editNomeCli"><label>Telefone</label><input type="tel" id="editTelCli"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button><button class="btn-back" onclick="fecharModais()">Cancelar</button></div></div></div>
@@ -661,7 +692,7 @@
         }
     }
 
-    // --- NOVA FUNÇÃO: ENVIAR TEXTO WHATSAPP ---
+    // --- FUNÇÃO: ENVIAR TEXTO WHATSAPP ---
     function enviarTextoWhatsapp() {
         if(!edicaoAtivaID || !vendaRecenteParaEnvio || !dadosDB[edicaoAtivaID]) return;
         
@@ -844,66 +875,108 @@
     document.getElementById("nomePart").addEventListener("input", function() { const v=this.value, l=document.getElementById("autocomplete-list"); l.innerHTML=""; if(v.length<2)return; Object.values(baseClientes).forEach(c=>{ if(c.nome.toUpperCase().includes(v.toUpperCase())){ const d=document.createElement("div"); d.innerHTML=`<b>${c.nome}</b> (${c.tel})`; d.onclick=()=>{document.getElementById("nomePart").value=c.nome;document.getElementById("telPart").value=c.tel;l.innerHTML=""}; l.appendChild(d); }}) });
     document.addEventListener("click", e=>{ if(e.target.id!="nomePart")document.getElementById("autocomplete-list").innerHTML=""; if(e.target.id!="telPart")document.getElementById("autocomplete-tel-list").innerHTML=""; });
 
-    // --- RENDER VENDAS ATUALIZADO (VERTICAL LAYOUT) ---
+    // --- RENDER VENDAS E STATS (ATUALIZADO) ---
     function renderVendas() { 
         const c = document.getElementById('listaParticipantes'); 
-        if(!c) return; 
-        c.innerHTML = ""; 
+        const r = document.getElementById('resumoStats'); 
         
-        if(!edicaoAtivaID || !dadosDB[edicaoAtivaID] || !dadosDB[edicaoAtivaID].vendas) { 
-            c.innerHTML = "<p style='text-align:center;color:#999'>Vazio</p>"; 
-            document.getElementById('resumoNumerico').innerHTML="R$ 0,00"; 
+        c.innerHTML = ""; 
+        r.innerHTML = ""; 
+
+        if(!edicaoAtivaID || !dadosDB[edicaoAtivaID]) return;
+
+        const vendasObj = dadosDB[edicaoAtivaID].vendas || {};
+        const config = dadosDB[edicaoAtivaID].config;
+        const listaVendas = Object.keys(vendasObj).map(k => ({...vendasObj[k], key: k}));
+        
+        // --- CÁLCULOS ESTATÍSTICOS ---
+        let cotasPagas = 0;
+        let cotasAbertas = 0;
+        let cotasTotalVendidas = 0;
+        
+        listaVendas.forEach(v => {
+            // Conta quantas cotas (números) tem nessa venda
+            const qtdNumeros = v.nums ? (v.nums.match(/\d+/g) || []).length : 0;
+            cotasTotalVendidas += qtdNumeros;
+            
+            if(v.pago) { cotasPagas += qtdNumeros; } else { cotasAbertas += qtdNumeros; }
+        });
+
+        const maxCotas = Math.pow(10, parseInt(config.tipo));
+        const restantes = maxCotas - cotasTotalVendidas;
+        
+        // MUDANÇA AQUI: Agora conta o total de Cards (Vendas) em vez de clientes únicos
+        const totalVendasRealizadas = listaVendas.length; 
+
+        // Renderiza o Resumo
+        r.innerHTML = `
+            <div class="stat-card c-verde">
+                <span class="stat-val" style="color:var(--primary)">${cotasPagas}</span>
+                <span class="stat-label">Cotas Pagas</span>
+            </div>
+            <div class="stat-card c-vermelho">
+                <span class="stat-val" style="color:#ef4444">${cotasAbertas}</span>
+                <span class="stat-label">Em Aberto</span>
+            </div>
+            <div class="stat-card c-amarelo">
+                <span class="stat-val" style="color:#f59e0b">${restantes}</span>
+                <span class="stat-label">Restam</span>
+            </div>
+             <div class="stat-card c-azul">
+                <span class="stat-val" style="color:#3b82f6">${totalVendasRealizadas}</span>
+                <span class="stat-label">Vendas</span>
+            </div>
+        `;
+
+        if (listaVendas.length === 0) { 
+            c.innerHTML = "<p style='text-align:center;color:#999'>Nenhuma venda registrada.</p>"; 
+            atualizarResumoFinanceiro();
             return; 
         } 
         
-        const v = dadosDB[edicaoAtivaID].vendas;
-        const config = dadosDB[edicaoAtivaID].config;
         const brindeAtivo = config.brinde && config.brinde.ativo;
         
-        Object.keys(v).forEach((k, index) => { 
-            const venda = v[k]; 
-            const nSequencia = index + 1;
+        listaVendas.reverse().forEach((venda, index) => { 
+            const k = venda.key;
+            const nSequencia = listaVendas.length - index;
             
-            // 1. Status do Pagamento
+            // Define a classe CSS baseada no pagamento
+            const classeStatus = venda.pago ? 'pago' : 'pendente';
+
             let statusBadge = "";
             let btnAcaoPagamento = "";
+            
             if(venda.pago === true) {
-                statusBadge = `<span style='color:var(--primary-dark); background:#ecfdf5; border:1px solid var(--primary); padding:1px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold; margin-right:5px;'>✅ Pago</span>`;
-                btnAcaoPagamento = `<button class="btn-undo" onclick="alternarStatusPagamento('${k}', false)" title="Desfazer">↩️</button>`;
+                statusBadge = `<span style='color:var(--primary-dark); font-weight:bold; font-size:0.8rem;'>✅ PAGO</span>`;
+                btnAcaoPagamento = `<button class="btn-undo" onclick="alternarStatusPagamento('${k}', false)" title="Marcar como pendente">↩️</button>`;
             } else {
-                statusBadge = `<span style='color:#b45309; background:#fffbeb; border:1px solid #fcd34d; padding:1px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold; margin-right:5px;'>⏳ Pendente</span>`;
-                btnAcaoPagamento = `<button class="btn-pay" onclick="alternarStatusPagamento('${k}', true)" title="Pagar">💲</button>`;
+                statusBadge = `<span style='color:#b91c1c; font-weight:bold; font-size:0.8rem;'>⏳ PENDENTE</span>`;
+                btnAcaoPagamento = `<button class="btn-pay" onclick="alternarStatusPagamento('${k}', true)" title="Confirmar Pagamento">💲</button>`;
             }
 
-            // 2. Linha das Cotas
             let linhaCotas = `<span class="info-row"><span class="info-label">🎟️ Cotas:</span>${venda.nums}</span>`;
-
-            // 3. Linha do Brinde
+            
             let linhaBrinde = "";
             if(brindeAtivo) {
                 if(venda.brinde && venda.brinde.trim() !== "") {
-                    linhaBrinde = `<span class="info-row"><span class="info-label">🎁 Palpite:</span><span style='color:var(--primary); font-weight:bold;'>${venda.brinde}</span></span>`;
+                    linhaBrinde = `<span class="info-row"><span class="info-label">🎁 Palpite:</span><span style='color:var(--dark); font-weight:bold;'>${venda.brinde}</span></span>`;
                 } else {
-                    linhaBrinde = `<span class="info-row"><span style='color:#b91c1c; background:#fecaca; padding:1px 4px; border-radius:4px; font-size:0.7rem; font-weight:bold;'>⚠️ Sem Palpite</span></span>`;
+                    linhaBrinde = `<span class="info-row"><span style='color:#b91c1c; font-size:0.75rem;'>⚠️ Sem Palpite</span></span>`;
                 }
             }
-            
-            // MONTAGEM DO HTML COM LAYOUT VERTICAL
-            c.innerHTML += `<div class="venda-item">
+
+            c.innerHTML += `<div class="venda-item ${classeStatus}">
                 <div style="flex:1">
                     <div style="margin-bottom:6px; font-size:1rem;">
-                        <span style="font-weight:800; color:var(--primary); margin-right:5px;">${nSequencia}°</span>
-                        <b>#${venda.cod}</b> - ${venda.nome}
+                        <span style="font-weight:800; opacity:0.6; margin-right:5px;">#${nSequencia}</span>
+                        <b>${venda.nome}</b>
                     </div>
-                    
-                    <div style="margin-bottom:6px;">
-                        ${statusBadge} <small style="color:#9ca3af">(${venda.data})</small>
+                    <div style="margin-bottom:8px;">
+                        ${statusBadge} <small style="opacity:0.7">(${venda.data})</small>
                     </div>
-
                     ${linhaCotas}
                     ${linhaBrinde}
                 </div>
-
                 <div class="acoes">
                     ${btnAcaoPagamento}
                     <button class="btn-edit" onclick="abrirModalVenda('${k}')">✏️</button>
@@ -916,6 +989,46 @@
         atualizarResumoFinanceiro(); 
     }
 
+    // --- RENDER AGENDA (MANTIDO) ---
+    function renderAgenda() { 
+        const c = document.getElementById('listaAgenda'); 
+        const termo = document.getElementById('buscaAgenda').value.toLowerCase().trim();
+        
+        c.innerHTML = ""; 
+
+        let lista = Object.keys(baseClientes).map(key => ({
+            id: key,
+            nome: baseClientes[key].nome,
+            tel: baseClientes[key].tel
+        }));
+
+        lista.sort((a, b) => a.nome.localeCompare(b.nome));
+
+        if (termo.length > 0) {
+            lista = lista.filter(cliente => {
+                const matchNome = cliente.nome.toLowerCase().includes(termo);
+                const telLimpo = cliente.tel.replace(/\D/g, ''); 
+                const matchTel = cliente.tel.includes(termo) || telLimpo.includes(termo);
+                return matchNome || matchTel;
+            });
+        }
+
+        if (lista.length === 0) {
+            c.innerHTML = "<div style='text-align:center; padding:20px; color:#9ca3af;'>Nenhum contato encontrado.</div>";
+            return;
+        }
+
+        lista.forEach(i => { 
+            c.innerHTML += `<div class="venda-item">
+                <div><b>${i.nome}</b><br><small>${i.tel}</small></div>
+                <div class="acoes">
+                    <button class="btn-edit" onclick="abrirModalAgenda('${i.id}')">✏️</button>
+                    <button class="btn-del" onclick="pedirConfirmacao('CONTATO','${i.id}')">X</button>
+                </div>
+            </div>`;
+        }); 
+    }
+
     // --- FUNÇÃO PARA ALTERNAR STATUS (PAGAR / DESFAZER) ---
     function alternarStatusPagamento(key, novoStatus) {
         if(!edicaoAtivaID) return;
@@ -925,12 +1038,10 @@
     function prepararImpressao(key) {
         if(dadosDB[edicaoAtivaID] && dadosDB[edicaoAtivaID].vendas[key]) {
             vendaRecenteParaEnvio = dadosDB[edicaoAtivaID].vendas[key];
-            
-            // Abre o novo modal de escolha (Texto ou Imagem)
             document.getElementById('modalWhatsapp').style.display = 'flex';
         }
     }    
-    function renderAgenda() { const c=document.getElementById('listaAgenda'); c.innerHTML=""; Object.keys(baseClientes).forEach(k=>{ const i=baseClientes[k]; c.innerHTML+=`<div class="venda-item"><div><b>${i.nome}</b><br><small>${i.tel}</small></div><div class="acoes"><button class="btn-edit" onclick="abrirModalAgenda('${k}')">✏️</button><button class="btn-del" onclick="pedirConfirmacao('CONTATO','${k}')">X</button></div></div>`}); }
+    
     function abrirModalAgenda(k) { document.getElementById('editOldTel').value=k; document.getElementById('editNomeCli').value=baseClientes[k].nome; document.getElementById('editTelCli').value=baseClientes[k].tel; document.getElementById('modalAgenda').style.display='flex'; }
     function confirmarEdicaoAgenda() { const o=document.getElementById('editOldTel').value, n=document.getElementById('editNomeCli').value, t=document.getElementById('editTelCli').value, k=t.replace(/\D/g,''); if(o!==k) database.ref('clientes/'+o).remove(); database.ref('clientes/'+k).set({nome:n, tel:t}).then(()=>fecharModais()); }
     
@@ -988,7 +1099,7 @@
     function atualizarResumoFinanceiro() { const r=document.getElementById('resumoNumerico'); if(!dadosDB[edicaoAtivaID])return; const v=Object.values(dadosDB[edicaoAtivaID].vendas||{}), g=Object.values(dadosDB[edicaoAtivaID].gastos||{}); let tv=v.reduce((a,i)=>a+parseFloat((i.valor||"0").replace(/[^\d,]/g,'').replace(',','.')),0), tg=g.reduce((a,i)=>a+parseFloat((i.valor||"0").replace(/[^\d,]/g,'').replace(',','.')),0); r.innerHTML=`<div><small>Entrada</small><br>R$ ${tv.toFixed(2)}</div><div><small>Saída</small><br>R$ ${tg.toFixed(2)}</div><div style="font-size:1.2rem; font-weight:bold; color:${tv-tg>=0?'var(--primary)':'var(--danger)'}"><small>Lucro</small><br>R$ ${(tv-tg).toFixed(2)}</div>`; r.style.display="flex"; r.style.justifyContent="space-around"; }
     function buscarPorTel(t) { /* Listener */ }
 
-    // --- NOVA FUNÇÃO: COPIAR APENAS OS PALPITES (CORRIGIDA) ---
+    // --- FUNÇÃO: COPIAR APENAS OS PALPITES ---
     function copiarPalpites() {
         if(!edicaoAtivaID || !dadosDB[edicaoAtivaID]) return;
         if(!dadosDB[edicaoAtivaID].vendas) return alert("Nenhuma venda realizada.");
@@ -1001,7 +1112,6 @@
 
         Object.values(vendas).forEach(v => {
             if(v.brinde && v.brinde.trim() !== "") {
-                // Regex para pegar todos os números, caso haja mais de um separado por vírgula ou espaço
                 let nums = v.brinde.match(/\d+/g); 
                 if(nums) {
                     listaPalpites.push(...nums);
@@ -1014,7 +1124,6 @@
         const textoFinal = listaPalpites.join(", ");
 
         navigator.clipboard.writeText(textoFinal).then(() => {
-            // USANDO O POPUP PADRÃO DO SITE
             document.querySelector('#modalSucesso h2').innerText = "Copiado!";
             document.querySelector('#modalSucesso p').innerText = `${listaPalpites.length} palpites copiados com sucesso.`;
             document.getElementById('modalSucesso').style.display = 'flex';
@@ -1024,7 +1133,7 @@
         });
     }
     
-    // --- GERAÇÃO DE PDF MODIFICADA PARA KODULAR ---
+    // --- GERAÇÃO DE PDF ---
     async function gerarPDF(isGestao, mode) { 
         if(!edicaoAtivaID) return alert("Selecione uma campanha!");
         const { jsPDF } = window.jspdf; 
@@ -1076,9 +1185,7 @@
         const pageCount = doc.internal.getNumberOfPages();
         for(let i = 1; i <= pageCount; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(150); doc.text(`Página ${i} de ${pageCount} - Gerado pelo Sistema Rifa Pro`, 105, 290, null, null, "center"); }
 
-        // --- LÓGICA DE DOWNLOAD MODIFICADA PARA KODULAR ---
         if (window.AppInventor && window.AppInventor.setWebViewString) {
-             // Modo App (Android/Kodular)
              const dataUri = doc.output('datauristring');
              const base64Clean = dataUri.split(',')[1];
              const nomeArquivo = `${isGestao?'Gestao':'Lista'}_${conf.nomeExibicao.replace(/[^a-z0-9]/gi, '_')}.pdf`;
@@ -1088,12 +1195,8 @@
                  nome: nomeArquivo,
                  conteudo: base64Clean
              };
-             
-             // Envia o JSON para o Kodular decodificar e salvar
              window.AppInventor.setWebViewString(JSON.stringify(dados));
-             
         } else {
-             // Modo Desktop (PC)
              if(mode === 'save') {
                 doc.save(`${isGestao?'Gestao':'Lista'}_${conf.nomeExibicao}.pdf`);
              } else { 
