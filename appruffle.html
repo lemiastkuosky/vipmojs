@@ -619,32 +619,53 @@ body.theme-jb {
         const r = s.val() || {};
         dadosDB = r.rifas || {};
         baseClientes = r.clientes || {};
+        
+        // Atualiza a interface
         atualizarSelect();
         renderAgenda();
         if(edicaoAtivaID) { renderVendas(); renderGastos(); }
 
-        // Lógica de "Deep Link" para abrir o recibo automaticamente se vier pelo link
+        // --- CORREÇÃO DO LINK DO RECIBO ---
         const params = new URLSearchParams(window.location.search);
         const rParam = params.get('r');
         const vParam = params.get('v');
 
-        if(rParam && vParam) {
+        // Só executa se houver parâmetros na URL E se o banco de dados não estiver vazio
+        if(rParam && vParam && Object.keys(dadosDB).length > 0) {
+             
              if (dadosDB[rParam]) {
-                 // A Rifa existe
+                 // 1. A Rifa existe! Vamos abrir.
                  edicaoAtivaID = rParam;
-                 document.getElementById('selectEdicoes').value = rParam;
-                 trocarEdicao(); 
+                 
+                 // Força o Select a selecionar a rifa correta
+                 const selectElement = document.getElementById('selectEdicoes');
+                 if(selectElement) {
+                     selectElement.value = rParam;
+                     // Troca a tela para o Terminal (sai da tela inicial)
+                     trocarEdicao(); 
+                 }
 
-                 const vendaAlvo = dadosDB[rParam].vendas[vParam];
+                 // 2. Busca a venda específica
+                 const vendaAlvo = dadosDB[rParam].vendas ? dadosDB[rParam].vendas[vParam] : null;
+                 
                  if(vendaAlvo) {
-                     gerarImagemRecibo({...vendaAlvo, key: vParam});
+                     // Gera o recibo (com um pequeno delay para garantir que o HTML carregou)
+                     setTimeout(() => {
+                         gerarImagemRecibo({...vendaAlvo, key: vParam});
+                     }, 500);
+                     
+                     // Limpa a URL para não ficar abrindo o recibo se der F5
                      window.history.replaceState({}, document.title, window.location.pathname);
+                 } else {
+                     console.log("Venda não encontrada neste sorteio.");
                  }
              } else {
-                 // A Rifa NÃO existe mais (Excluída)
-                 document.getElementById('modalErrorTitle').innerText = "⛔ Link Expirado";
-                 document.getElementById('msgDuplicado').innerHTML = "Este sorteio foi encerrado ou excluído.<br><b>O comprovante não é mais válido.</b>";
+                 // A Rifa NÃO existe mais ou ID está errado
+                 document.getElementById('modalErrorTitle').innerText = "⛔ Link Inválido";
+                 document.getElementById('msgDuplicado').innerHTML = "Este sorteio não foi encontrado ou foi excluído.";
                  document.getElementById('modalDuplicado').style.display = 'flex';
+                 
+                 // Limpa a URL
                  window.history.replaceState({}, document.title, window.location.pathname);
              }
         }
