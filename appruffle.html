@@ -84,7 +84,7 @@
         .btn-back { background: transparent; color: var(--gray); width: auto; padding: 8px 0; font-size: 0.9rem; justify-content: flex-start; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
 
-        /* --- LISTAS & ITENS (ATUALIZADO PARA CORES) --- */
+        /* --- LISTAS & ITENS --- */
         .venda-item { 
             padding: 15px; 
             margin-bottom: 10px; 
@@ -99,9 +99,7 @@
             border-left-color: var(--gray);
         }
         
-        /* Status Pago: Verde */
         .venda-item.pago { background: #ecfdf5; border-left-color: #10b981; }
-        /* Status Pendente: Vermelho/Laranja */
         .venda-item.pendente { background: #fef2f2; border-left-color: #ef4444; }
 
         .info-row { display: block; margin-bottom: 3px; font-size: 0.9rem; line-height: 1.4; }
@@ -279,6 +277,28 @@
         .extra-title { color: #b45309; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; }
         .extra-num { color: #b45309; font-family: 'Roboto Mono', monospace; font-weight: bold; font-size: 1.1rem; margin-top: 2px;}
 
+
+/* --- NOVO: ESTILOS JOGO DO BICHO E SELETORES --- */
+:root {
+    --jb-color: #8b5cf6; /* Roxo para o Bicho */
+    --jb-dark: #7c3aed;
+}
+/* Classe que será ativada via JS quando for Bicho */
+body.theme-jb { 
+    --primary: var(--jb-color); 
+    --primary-dark: var(--jb-dark); 
+}
+
+/* Botões de Seleção de Modo (Rifa ou Bicho) */
+.mode-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+.mode-option { flex: 1; padding: 15px; border: 2px solid #e5e7eb; border-radius: var(--radius); cursor: pointer; text-align: center; opacity: 0.6; transition: 0.3s; }
+.mode-option.selected { border-color: var(--primary); background: #f0fdf4; opacity: 1; transform: scale(1.02); }
+.mode-option div { font-size: 1.5rem; margin-bottom: 5px; }
+.mode-option span { font-weight: bold; display: block; font-size: 0.9rem; }
+
+/* Ajustes de visibilidade */
+#totalLiveInput:disabled { color: var(--gray); opacity: 0.7; }
+
     </style>
 </head>
 <body>
@@ -287,7 +307,7 @@
     <div class="container">
         <div class="app-header">
             <div class="app-title">Rifa<span>Pro</span></div>
-            <div style="font-size:0.8rem; color:#6b7280;">v4.3</div>
+            <div style="font-size:0.8rem; color:#6b7280;">v4.7</div>
         </div>
 
         <div class="nav-tabs">
@@ -442,7 +462,7 @@
 </div>
 
 <footer class="app-footer">
-    Criado por <strong>Le Miastkuosky</strong> - Versão 4.3
+    Criado por <strong>Le Miastkuosky</strong> - Versão 4.7
 </footer>
 
 <div id="modalAgenda" class="modal"><div class="modal-content"><h2>✏️ Editar Contato</h2><input type="hidden" id="editOldTel"><label>Nome</label><input type="text" id="editNomeCli"><label>Telefone</label><input type="tel" id="editTelCli"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button><button class="btn-back" onclick="fecharModais()">Cancelar</button></div></div></div>
@@ -470,18 +490,17 @@
 
 <div id="modalConfirm" class="modal"><div class="modal-content"><h2 id="confirmTitle" style="color:var(--danger)">Atenção</h2><p id="confirmMsg" style="margin:20px 0; font-size:1.1rem; color:var(--gray);"></p><div style="display:flex;gap:10px"><button id="confirmYes" class="btn-del">Confirmar</button><button onclick="fecharModais()" class="btn-back" style="width:100%">Cancelar</button></div></div></div>
 
-<div id="modalDuplicado" class="modal"><div class="modal-content"><h2 style="color:var(--danger)">⛔ Número Indisponível</h2><p id="msgDuplicado" style="font-size:1.1rem; margin: 20px 0; color:var(--dark);"></p><button class="btn-main" onclick="fecharModais()">Entendi, vou corrigir</button></div></div>
+<div id="modalDuplicado" class="modal"><div class="modal-content"><h2 id="modalErrorTitle" style="color:var(--danger)">⛔ Número Indisponível</h2><p id="msgDuplicado" style="font-size:1.1rem; margin: 20px 0; color:var(--dark);"></p><button class="btn-main" onclick="fecharModais()">Entendi, vou corrigir</button></div></div>
 
 <div id="modalSucesso" class="modal"><div class="modal-content"><div style="font-size:3rem;">✅</div><h2 style="color:var(--primary)">Sucesso!</h2><p id="msgSucesso">Operação realizada.</p><button class="btn-main" onclick="fecharModais()">OK</button></div></div>
 
 <div id="modalWhatsapp" class="modal">
     <div class="modal-content">
         <div style="font-size:3rem;">✅</div>
-        <h2 style="color:var(--primary)">Venda Salva!</h2>
-        <p style="margin: 15px 0; color:var(--gray);">Como deseja enviar o comprovante?</p>
+        <h2 style="color:var(--primary)">Venda Registrada!</h2>
+        <p style="margin: 15px 0; color:var(--gray);">Envie o comprovante agora:</p>
         <div style="display:flex; flex-direction:column; gap:10px;">
-            <button class="btn-whats" style="width:100%; justify-content:center;" onclick="enviarTextoWhatsapp()">💬 Enviar Texto (WhatsApp)</button>
-            <button class="btn-sec" style="width:100%; justify-content:center;" onclick="prepararGeracaoImagem()">📸 Gerar Imagem</button>
+            <button class="btn-whats" style="width:100%; justify-content:center;" onclick="enviarTextoWhatsapp()">📲 Enviar no WhatsApp</button>
             <button class="btn-back" style="width:100%; justify-content:center;" onclick="fecharModais()">Fechar</button>
         </div>
     </div>
@@ -595,7 +614,7 @@
     VMasker(document.getElementById("editTelCli")).maskPattern("(99) 99999-9999");
     document.querySelectorAll('.money').forEach(i => VMasker(i).maskMoney({unit: "R$"}));
 
-    // Listener do Banco de Dados
+    // Listener do Banco de Dados + LÓGICA DE LINK AUTOMÁTICO
     database.ref('/').on('value', (s) => {
         const r = s.val() || {};
         dadosDB = r.rifas || {};
@@ -603,9 +622,42 @@
         atualizarSelect();
         renderAgenda();
         if(edicaoAtivaID) { renderVendas(); renderGastos(); }
+
+        // Lógica de "Deep Link" para abrir o recibo automaticamente se vier pelo link
+        const params = new URLSearchParams(window.location.search);
+        const rParam = params.get('r');
+        const vParam = params.get('v');
+
+        if(rParam && vParam) {
+             if (dadosDB[rParam]) {
+                 // A Rifa existe
+                 edicaoAtivaID = rParam;
+                 document.getElementById('selectEdicoes').value = rParam;
+                 trocarEdicao(); 
+
+                 const vendaAlvo = dadosDB[rParam].vendas[vParam];
+                 if(vendaAlvo) {
+                     gerarImagemRecibo({...vendaAlvo, key: vParam});
+                     window.history.replaceState({}, document.title, window.location.pathname);
+                 }
+             } else {
+                 // A Rifa NÃO existe mais (Excluída)
+                 document.getElementById('modalErrorTitle').innerText = "⛔ Link Expirado";
+                 document.getElementById('msgDuplicado').innerHTML = "Este sorteio foi encerrado ou excluído.<br><b>O comprovante não é mais válido.</b>";
+                 document.getElementById('modalDuplicado').style.display = 'flex';
+                 window.history.replaceState({}, document.title, window.location.pathname);
+             }
+        }
     });
 
     // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
+
+    function gerarSaudacao() {
+        const hora = new Date().getHours();
+        if (hora < 12) return "Bom dia";
+        if (hora < 18) return "Boa tarde";
+        return "Boa noite";
+    }
 
     function formatarDigitos(input, tamanho) {
         let val = input.value.replace(/\D/g, ''); 
@@ -660,11 +712,13 @@
         
         const listaNumerosRaw = numsInput.match(/\d+/g);
         if (listaNumerosRaw && (new Set(listaNumerosRaw)).size !== listaNumerosRaw.length) {
+            document.getElementById('modalErrorTitle').innerText = "⛔ Número Indisponível";
             document.getElementById('msgDuplicado').innerHTML = `Você digitou números duplicados no mesmo campo!`;
             document.getElementById('modalDuplicado').style.display = 'flex'; return;
         }
         const repetido = verificarDuplicidade(listaNumerosRaw);
         if(repetido) {
+            document.getElementById('modalErrorTitle').innerText = "⛔ Número Indisponível";
             document.getElementById('msgDuplicado').innerHTML = `O número <b>${repetido}</b> já foi vendido!`;
             document.getElementById('modalDuplicado').style.display = 'flex'; return;
         }
@@ -677,9 +731,11 @@
             pago: pago 
         };
         
-        database.ref('rifas/'+edicaoAtivaID+'/vendas').push(venda).then(() => {
+        const novaVendaRef = database.ref('rifas/'+edicaoAtivaID+'/vendas').push(venda);
+        
+        novaVendaRef.then(() => {
             database.ref('clientes/'+t.replace(/\D/g,'')).set({nome:n, tel:t});
-            vendaRecenteParaEnvio = venda;
+            vendaRecenteParaEnvio = { ...venda, key: novaVendaRef.key };
             document.getElementById('modalWhatsapp').style.display = 'flex';
             limparCamposVenda();
         });
@@ -692,31 +748,30 @@
         }
     }
 
-    // --- FUNÇÃO: ENVIAR TEXTO WHATSAPP ---
+    // --- FUNÇÃO DE ENVIO COM O LINK ---
     function enviarTextoWhatsapp() {
         if(!edicaoAtivaID || !vendaRecenteParaEnvio || !dadosDB[edicaoAtivaID]) return;
         
         const config = dadosDB[edicaoAtivaID].config;
         const v = vendaRecenteParaEnvio;
         const telLimpo = v.tel.replace(/\D/g, '');
+        const saudacao = gerarSaudacao();
+        
+        // GERA O LINK INTELIGENTE
+        const baseUrl = window.location.href.split('?')[0];
+        const linkRecibo = `${baseUrl}?r=${edicaoAtivaID}&v=${v.key}`;
 
-        let texto = "🎫 *COMPROVANTE*\n---------------------------\n";
-        texto += `📂 *Rifa:* ${config.nomeExibicao}\n`;
-        texto += `🏆 *Prêmio:* ${config.premio}\n`;
-        texto += `👤 *Cliente:* ${v.nome}\n`;
+        let texto = `${saudacao}, ${v.nome}! 😃\n`;
+        texto += `Aqui está o resumo da sua participação na *${config.nomeExibicao}*:\n\n`;
         texto += `🔢 *Cotas:* ${v.nums}\n`;
-        texto += `💰 *Valor:* ${v.valor}\n\n`;
-
+        texto += `🏆 *Prêmio:* ${config.premio}\n`;
+        
         if(v.brinde && v.brinde.trim() !== "") {
-            texto += `🍀 *MILHAR DA SORTE:* ${v.brinde}\n`;
-            let valBrinde = config.brinde.valor || "Prêmio Extra";
-            if(!valBrinde.includes("R$")) valBrinde = "R$ " + valBrinde;
-            texto += `💵 *Valendo:* ${valBrinde}\n`;
+            texto += `🍀 *Palpite Extra:* ${v.brinde}\n`;
         }
-
-        texto += "---------------------------\n";
-        texto += "Obrigado e boa sorte! 🤞\n";
-        texto += `_gerado no dia ${v.data}_`;
+        
+        texto += `\n🔗 *Confira seu bilhete detalhado aqui:* \n${linkRecibo}\n\n`;
+        texto += "Boa sorte! 🤞";
 
         const link = `https://wa.me/${telLimpo}?text=${encodeURIComponent(texto)}`;
         window.open(link, '_blank');
@@ -765,7 +820,7 @@
     
     function abrirWhatsAposBaixar() {
          if(vendaRecenteParaEnvio && vendaRecenteParaEnvio.tel) {
-             let txt = "Olá! Segue seu recibo digital: (Anexe a imagem aqui)";
+             let txt = `${gerarSaudacao()}! Segue seu recibo digital em imagem.`;
              window.open(`https://wa.me/${vendaRecenteParaEnvio.tel.replace(/\D/g,'')}?text=${encodeURIComponent(txt)}`);
              fecharModais();
          }
@@ -895,7 +950,6 @@
         let cotasTotalVendidas = 0;
         
         listaVendas.forEach(v => {
-            // Conta quantas cotas (números) tem nessa venda
             const qtdNumeros = v.nums ? (v.nums.match(/\d+/g) || []).length : 0;
             cotasTotalVendidas += qtdNumeros;
             
@@ -905,10 +959,8 @@
         const maxCotas = Math.pow(10, parseInt(config.tipo));
         const restantes = maxCotas - cotasTotalVendidas;
         
-        // MUDANÇA AQUI: Agora conta o total de Cards (Vendas) em vez de clientes únicos
-        const totalVendasRealizadas = listaVendas.length; 
+        const totalVendasRealizadas = listaVendas.length;
 
-        // Renderiza o Resumo
         r.innerHTML = `
             <div class="stat-card c-verde">
                 <span class="stat-val" style="color:var(--primary)">${cotasPagas}</span>
@@ -940,7 +992,6 @@
             const k = venda.key;
             const nSequencia = listaVendas.length - index;
             
-            // Define a classe CSS baseada no pagamento
             const classeStatus = venda.pago ? 'pago' : 'pendente';
 
             let statusBadge = "";
@@ -1037,7 +1088,7 @@
 
     function prepararImpressao(key) {
         if(dadosDB[edicaoAtivaID] && dadosDB[edicaoAtivaID].vendas[key]) {
-            vendaRecenteParaEnvio = dadosDB[edicaoAtivaID].vendas[key];
+            vendaRecenteParaEnvio = { ...dadosDB[edicaoAtivaID].vendas[key], key: key };
             document.getElementById('modalWhatsapp').style.display = 'flex';
         }
     }    
