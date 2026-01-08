@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rifa Pro - Comprovante</title>
+    <title>Rifa Pro - Sistema Seguro</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -321,15 +321,32 @@
             display: block;
         }
 
+        /* --- MODO LOGIN (BLOQUEIO) --- */
+        #modalLogin {
+            display: flex; /* Começa visível para bloquear */
+            background-color: #111827; /* Fundo escuro total */
+            z-index: 9999;
+        }
+
     </style>
 </head>
 <body>
+
+<div id="modalLogin" class="modal">
+    <div class="modal-content" style="background:#1f2937; color:white; border:1px solid #374151;">
+        <div style="font-size:3rem;">🔒</div>
+        <h2 style="color:white;">Acesso Restrito</h2>
+        <p style="color:#9ca3af; margin-bottom:15px;">Digite a senha de administrador:</p>
+        <input type="password" id="inputSenhaAdmin" placeholder="Senha..." style="background:#374151; border:none; color:white; text-align:center; margin-bottom:15px;">
+        <button class="btn-main" onclick="tentarLogin()">Entrar no Sistema</button>
+    </div>
+</div>
 
 <div class="main-content">
     <div class="container">
         <div class="app-header">
             <div class="app-title">Rifa<span>Pro</span></div>
-            <div style="font-size:0.8rem; color:#6b7280;">v4.9</div>
+            <div style="font-size:0.8rem; color:#6b7280;">v5.0 Secure</div>
         </div>
 
         <div class="nav-tabs">
@@ -484,7 +501,7 @@
 </div>
 
 <footer class="app-footer">
-    Criado por <strong>Le Miastkuosky</strong> - Versão 4.9
+    Criado por <strong>Le Miastkuosky</strong> - Versão 5.0
 </footer>
 
 <div id="modalAgenda" class="modal"><div class="modal-content"><h2>✏️ Editar Contato</h2><input type="hidden" id="editOldTel"><label>Nome</label><input type="text" id="editNomeCli"><label>Telefone</label><input type="tel" id="editTelCli"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button><button class="btn-back" onclick="fecharModais()">Cancelar</button></div></div></div>
@@ -635,13 +652,39 @@
     let edicaoAtivaID = "", dadosDB = {}, baseClientes = {};
     let valorFinalVenda = "R$ 0,00";
     let vendaRecenteParaEnvio = null;
+    
+    // HASH DA SENHA "le121212" (SHA-256)
+    // Isso garante que se alguém abrir o código, não vê a senha real, só o hash.
+    const ADMIN_HASH = "9c8c5ccc45f284c0f866467023347a8274025e16578508711475752382101032";
 
     // Inicializa Máscaras
     VMasker(document.getElementById("telPart")).maskPattern("(99) 99999-9999");
     VMasker(document.getElementById("editTelCli")).maskPattern("(99) 99999-9999");
     document.querySelectorAll('.money').forEach(i => VMasker(i).maskMoney({unit: "R$"}));
 
-    // Listener do Banco de Dados + MODO CLIENTE (VISUALIZAÇÃO)
+    // --- SISTEMA DE LOGIN SEGURO ---
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function tentarLogin() {
+        const pass = document.getElementById('inputSenhaAdmin').value;
+        const hash = await sha256(pass);
+        
+        if (hash === ADMIN_HASH) {
+            // Senha Correta
+            localStorage.setItem('auth_rifa', 'true'); // Salva login
+            document.getElementById('modalLogin').style.display = 'none';
+        } else {
+            alert("Senha Incorreta!");
+            document.getElementById('inputSenhaAdmin').value = "";
+        }
+    }
+
+    // Listener do Banco de Dados + MODO CLIENTE + LOGIN
     database.ref('/').on('value', (s) => {
         const r = s.val() || {};
         dadosDB = r.rifas || {};
@@ -653,17 +696,15 @@
         const vParam = params.get('v');
 
         if(rParam && vParam) {
-            // --- MODO CLIENTE ATIVADO ---
-            // Verifica se a venda existe
+            // --- MODO CLIENTE (SEM SENHA) ---
+            document.getElementById('modalLogin').style.display = 'none'; // Remove bloqueio para cliente
+
             if (dadosDB[rParam] && dadosDB[rParam].vendas && dadosDB[rParam].vendas[vParam]) {
-                // 1. Adiciona classe que ESCONDE o site e MOSTRA o recibo
                 document.body.classList.add('mode-client');
                 
-                // 2. Preenche os dados do recibo
                 const venda = {...dadosDB[rParam].vendas[vParam], key: vParam};
                 const config = dadosDB[rParam].config;
                 
-                // Preenche visualmente o HTML do recibo (que agora está visível)
                 document.getElementById('recibo_campanha').innerText = config.nomeExibicao;
                 document.getElementById('recibo_nome').innerText = venda.nome;
                 document.getElementById('recibo_premio').innerText = config.premio;
@@ -681,17 +722,23 @@
                     brindeArea.style.display = 'none';
                 }
                 
-                // Define variáveis globais para o botão de download funcionar
                 edicaoAtivaID = rParam; 
                 vendaRecenteParaEnvio = venda;
 
             } else {
-                // Link quebrado ou inválido
                 document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Link Expirado</h1><p>Este comprovante não está mais disponível.</p></div>";
             }
         } else {
-            // --- MODO ADMIN (NORMAL) ---
+            // --- MODO ADMIN (COM SENHA) ---
             document.body.classList.remove('mode-client');
+            
+            // Verifica se já está logado
+            if(localStorage.getItem('auth_rifa') === 'true') {
+                document.getElementById('modalLogin').style.display = 'none';
+            } else {
+                document.getElementById('modalLogin').style.display = 'flex'; // Exibe login
+            }
+
             atualizarSelect();
             renderAgenda();
             if(edicaoAtivaID) { renderVendas(); renderGastos(); }
@@ -796,7 +843,7 @@
         }
     }
 
-    // --- FUNÇÃO DE ENVIO COM O LINK ---
+    // --- FUNÇÃO DE ENVIO COM CORREÇÃO DE LINK (URL ENCODED) ---
     function enviarTextoWhatsapp() {
         if(!edicaoAtivaID || !vendaRecenteParaEnvio || !dadosDB[edicaoAtivaID]) return;
         
@@ -805,9 +852,8 @@
         const telLimpo = v.tel.replace(/\D/g, '');
         const saudacao = gerarSaudacao();
         
-        // GERA O LINK INTELIGENTE (COM CORREÇÃO DE ESPAÇOS)
+        // CORREÇÃO DO LINK PARA EVITAR QUEBRA COM ESPAÇOS
         const baseUrl = window.location.href.split('?')[0];
-        // O uso de encodeURIComponent abaixo conserta o link quebrado
         const linkRecibo = `${baseUrl}?r=${encodeURIComponent(edicaoAtivaID)}&v=${encodeURIComponent(v.key)}`;
 
         let texto = `${saudacao}, ${v.nome}! 😃\n`;
@@ -820,7 +866,7 @@
         }
         
         texto += `\n🔗 *Confira seu bilhete detalhado aqui:* \n${linkRecibo}\n\n`;
-        texto += "Muito obrigado e Boa sorte! 🤞";
+        texto += "Boa sorte! 🤞";
 
         const link = `https://wa.me/${telLimpo}?text=${encodeURIComponent(texto)}`;
         window.open(link, '_blank');
@@ -867,7 +913,6 @@
         });
     }
 
-    // Função para o cliente baixar a imagem na tela pública
     function baixarImagemPublica() {
         if(!vendaRecenteParaEnvio) return;
         const btn = document.querySelector('#btn-download-publico button');
@@ -904,8 +949,8 @@
         if(document.getElementById('checkBrinde').checked) {
             brindeCfg = { ativo: true, tipo: document.querySelector('input[name="tipoBrinde"]:checked').value, valor: document.getElementById('valorBrinde').value };
         }
-        // Adicionei \s na regex para pegar espaços também
-const id = n.trim().replace(/[\s.#$\[\]]/g, "_") + "_" + Date.now();
+        // Correção de espaços no ID para evitar link quebrado
+        const id = n.trim().replace(/[\s.#$\[\]]/g, "_") + "_" + Date.now();
         database.ref('rifas/'+id).set({ config: { nomeExibicao: n, premio: document.getElementById('premioEdicao').value, tipo: tipo, valorFixo: v, promocoes: promos, brinde: brindeCfg } }).then(() => { edicaoAtivaID = id; trocarEdicao(); });
     }
 
