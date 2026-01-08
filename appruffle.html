@@ -805,9 +805,10 @@
         const telLimpo = v.tel.replace(/\D/g, '');
         const saudacao = gerarSaudacao();
         
-        // GERA O LINK INTELIGENTE
+        // GERA O LINK INTELIGENTE (COM CORREÇÃO DE ESPAÇOS)
         const baseUrl = window.location.href.split('?')[0];
-        const linkRecibo = `${baseUrl}?r=${edicaoAtivaID}&v=${v.key}`;
+        // O uso de encodeURIComponent abaixo conserta o link quebrado
+        const linkRecibo = `${baseUrl}?r=${encodeURIComponent(edicaoAtivaID)}&v=${encodeURIComponent(v.key)}`;
 
         let texto = `${saudacao}, ${v.nome}! 😃\n`;
         texto += `Aqui está o resumo da sua participação na *${config.nomeExibicao}*:\n\n`;
@@ -819,7 +820,7 @@
         }
         
         texto += `\n🔗 *Confira seu bilhete detalhado aqui:* \n${linkRecibo}\n\n`;
-        texto += "Boa sorte! 🤞";
+        texto += "Muito obrigado e Boa sorte! 🤞";
 
         const link = `https://wa.me/${telLimpo}?text=${encodeURIComponent(texto)}`;
         window.open(link, '_blank');
@@ -903,7 +904,8 @@
         if(document.getElementById('checkBrinde').checked) {
             brindeCfg = { ativo: true, tipo: document.querySelector('input[name="tipoBrinde"]:checked').value, valor: document.getElementById('valorBrinde').value };
         }
-        const id = n.replace(/[.#$\[\]]/g, "_") + "_" + Date.now();
+        // Adicionei \s na regex para pegar espaços também
+const id = n.trim().replace(/[\s.#$\[\]]/g, "_") + "_" + Date.now();
         database.ref('rifas/'+id).set({ config: { nomeExibicao: n, premio: document.getElementById('premioEdicao').value, tipo: tipo, valorFixo: v, promocoes: promos, brinde: brindeCfg } }).then(() => { edicaoAtivaID = id; trocarEdicao(); });
     }
 
