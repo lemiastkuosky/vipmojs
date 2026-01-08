@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rifa Pro - App</title>
+    <title>Rifa Pro - Comprovante</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -154,7 +154,7 @@
         .stat-card.c-amarelo { border-bottom: 3px solid #f59e0b; }
         .stat-card.c-vermelho { border-bottom: 3px solid #ef4444; }
 
-        /* --- NOVO TEMPLATE DO RECIBO PRO --- */
+        /* --- TEMPLATE DO RECIBO PRO --- */
         #receipt-container {
             position: fixed;
             top: -9999px;
@@ -164,6 +164,7 @@
             overflow: hidden;
             font-family: 'Inter', sans-serif;
             border-radius: 0;
+            z-index: 1000;
         }
         
         .recibo-header {
@@ -277,27 +278,48 @@
         .extra-title { color: #b45309; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; }
         .extra-num { color: #b45309; font-family: 'Roboto Mono', monospace; font-weight: bold; font-size: 1.1rem; margin-top: 2px;}
 
+        /* --- MODO CLIENTE (VISÃO PÚBLICA) --- */
+        body.mode-client {
+            background-color: #e5e7eb;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
 
-/* --- NOVO: ESTILOS JOGO DO BICHO E SELETORES --- */
-:root {
-    --jb-color: #8b5cf6; /* Roxo para o Bicho */
-    --jb-dark: #7c3aed;
-}
-/* Classe que será ativada via JS quando for Bicho */
-body.theme-jb { 
-    --primary: var(--jb-color); 
-    --primary-dark: var(--jb-dark); 
-}
+        /* Esconde TODO o painel administrativo quando for cliente */
+        body.mode-client .main-content,
+        body.mode-client .nav-tabs,
+        body.mode-client .app-footer,
+        body.mode-client .app-header,
+        body.mode-client .modal {
+            display: none !important;
+        }
 
-/* Botões de Seleção de Modo (Rifa ou Bicho) */
-.mode-selector { display: flex; gap: 10px; margin-bottom: 20px; }
-.mode-option { flex: 1; padding: 15px; border: 2px solid #e5e7eb; border-radius: var(--radius); cursor: pointer; text-align: center; opacity: 0.6; transition: 0.3s; }
-.mode-option.selected { border-color: var(--primary); background: #f0fdf4; opacity: 1; transform: scale(1.02); }
-.mode-option div { font-size: 1.5rem; margin-bottom: 5px; }
-.mode-option span { font-weight: bold; display: block; font-size: 0.9rem; }
+        /* Mostra e estiliza o Recibo para o Cliente */
+        body.mode-client #receipt-container {
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            display: block !important;
+            margin: 20px auto;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            animation: slideUp 0.5s ease;
+        }
 
-/* Ajustes de visibilidade */
-#totalLiveInput:disabled { color: var(--gray); opacity: 0.7; }
+        /* Botão para baixar imagem (só aparece pro cliente) */
+        #btn-download-publico {
+            display: none;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        body.mode-client #btn-download-publico {
+            display: block;
+        }
 
     </style>
 </head>
@@ -307,7 +329,7 @@ body.theme-jb {
     <div class="container">
         <div class="app-header">
             <div class="app-title">Rifa<span>Pro</span></div>
-            <div style="font-size:0.8rem; color:#6b7280;">v4.7</div>
+            <div style="font-size:0.8rem; color:#6b7280;">v4.9</div>
         </div>
 
         <div class="nav-tabs">
@@ -462,7 +484,7 @@ body.theme-jb {
 </div>
 
 <footer class="app-footer">
-    Criado por <strong>Le Miastkuosky</strong> - Versão 4.7
+    Criado por <strong>Le Miastkuosky</strong> - Versão 4.9
 </footer>
 
 <div id="modalAgenda" class="modal"><div class="modal-content"><h2>✏️ Editar Contato</h2><input type="hidden" id="editOldTel"><label>Nome</label><input type="text" id="editNomeCli"><label>Telefone</label><input type="tel" id="editTelCli"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button><button class="btn-back" onclick="fecharModais()">Cancelar</button></div></div></div>
@@ -591,6 +613,11 @@ body.theme-jb {
     </div>
 </div>
 
+<div id="btn-download-publico">
+    <button class="btn-main" onclick="baixarImagemPublica()">⬇️ Baixar Imagem do Comprovante</button>
+    <p style="margin-top:10px; color:#6b7280; font-size:0.8rem;">Este é um comprovante digital verificado.</p>
+</div>
+
 <script>
     // Configuração do Firebase
     const firebaseConfig = {
@@ -614,60 +641,60 @@ body.theme-jb {
     VMasker(document.getElementById("editTelCli")).maskPattern("(99) 99999-9999");
     document.querySelectorAll('.money').forEach(i => VMasker(i).maskMoney({unit: "R$"}));
 
-    // Listener do Banco de Dados + LÓGICA DE LINK AUTOMÁTICO
+    // Listener do Banco de Dados + MODO CLIENTE (VISUALIZAÇÃO)
     database.ref('/').on('value', (s) => {
         const r = s.val() || {};
         dadosDB = r.rifas || {};
         baseClientes = r.clientes || {};
         
-        // Atualiza a interface
-        atualizarSelect();
-        renderAgenda();
-        if(edicaoAtivaID) { renderVendas(); renderGastos(); }
-
-        // --- CORREÇÃO DO LINK DO RECIBO ---
+        // Verifica URL para ver se é ADMIN ou CLIENTE
         const params = new URLSearchParams(window.location.search);
         const rParam = params.get('r');
         const vParam = params.get('v');
 
-        // Só executa se houver parâmetros na URL E se o banco de dados não estiver vazio
-        if(rParam && vParam && Object.keys(dadosDB).length > 0) {
-             
-             if (dadosDB[rParam]) {
-                 // 1. A Rifa existe! Vamos abrir.
-                 edicaoAtivaID = rParam;
-                 
-                 // Força o Select a selecionar a rifa correta
-                 const selectElement = document.getElementById('selectEdicoes');
-                 if(selectElement) {
-                     selectElement.value = rParam;
-                     // Troca a tela para o Terminal (sai da tela inicial)
-                     trocarEdicao(); 
-                 }
+        if(rParam && vParam) {
+            // --- MODO CLIENTE ATIVADO ---
+            // Verifica se a venda existe
+            if (dadosDB[rParam] && dadosDB[rParam].vendas && dadosDB[rParam].vendas[vParam]) {
+                // 1. Adiciona classe que ESCONDE o site e MOSTRA o recibo
+                document.body.classList.add('mode-client');
+                
+                // 2. Preenche os dados do recibo
+                const venda = {...dadosDB[rParam].vendas[vParam], key: vParam};
+                const config = dadosDB[rParam].config;
+                
+                // Preenche visualmente o HTML do recibo (que agora está visível)
+                document.getElementById('recibo_campanha').innerText = config.nomeExibicao;
+                document.getElementById('recibo_nome').innerText = venda.nome;
+                document.getElementById('recibo_premio').innerText = config.premio;
+                document.getElementById('recibo_nums').innerText = venda.nums;
+                document.getElementById('recibo_valor').innerText = venda.valor;
+                document.getElementById('recibo_data').innerText = venda.data.split(' ')[0];
+                document.getElementById('recibo_hash').innerText = '#' + venda.cod;
+                document.getElementById('recibo_timestamp').innerText = venda.data;
 
-                 // 2. Busca a venda específica
-                 const vendaAlvo = dadosDB[rParam].vendas ? dadosDB[rParam].vendas[vParam] : null;
-                 
-                 if(vendaAlvo) {
-                     // Gera o recibo (com um pequeno delay para garantir que o HTML carregou)
-                     setTimeout(() => {
-                         gerarImagemRecibo({...vendaAlvo, key: vParam});
-                     }, 500);
-                     
-                     // Limpa a URL para não ficar abrindo o recibo se der F5
-                     window.history.replaceState({}, document.title, window.location.pathname);
-                 } else {
-                     console.log("Venda não encontrada neste sorteio.");
-                 }
-             } else {
-                 // A Rifa NÃO existe mais ou ID está errado
-                 document.getElementById('modalErrorTitle').innerText = "⛔ Link Inválido";
-                 document.getElementById('msgDuplicado').innerHTML = "Este sorteio não foi encontrado ou foi excluído.";
-                 document.getElementById('modalDuplicado').style.display = 'flex';
-                 
-                 // Limpa a URL
-                 window.history.replaceState({}, document.title, window.location.pathname);
-             }
+                const brindeArea = document.getElementById('recibo_brinde_area');
+                if(venda.brinde) {
+                    brindeArea.style.display = 'block';
+                    document.getElementById('recibo_brinde_num').innerText = venda.brinde;
+                } else {
+                    brindeArea.style.display = 'none';
+                }
+                
+                // Define variáveis globais para o botão de download funcionar
+                edicaoAtivaID = rParam; 
+                vendaRecenteParaEnvio = venda;
+
+            } else {
+                // Link quebrado ou inválido
+                document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Link Expirado</h1><p>Este comprovante não está mais disponível.</p></div>";
+            }
+        } else {
+            // --- MODO ADMIN (NORMAL) ---
+            document.body.classList.remove('mode-client');
+            atualizarSelect();
+            renderAgenda();
+            if(edicaoAtivaID) { renderVendas(); renderGastos(); }
         }
     });
 
@@ -836,6 +863,22 @@ body.theme-jb {
             btnDownload.download = `Recibo_${venda.nome.replace(/\s/g,'')}_${Date.now()}.png`;
             
             document.getElementById('modalPreviewRecibo').style.display = 'flex';
+        });
+    }
+
+    // Função para o cliente baixar a imagem na tela pública
+    function baixarImagemPublica() {
+        if(!vendaRecenteParaEnvio) return;
+        const btn = document.querySelector('#btn-download-publico button');
+        btn.innerText = "⏳ Gerando imagem...";
+        
+        const template = document.getElementById('receipt-container');
+        html2canvas(template, { scale: 2 }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Comprovante_${vendaRecenteParaEnvio.nome}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            btn.innerText = "⬇️ Baixar Imagem do Comprovante";
         });
     }
     
