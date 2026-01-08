@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rifa Pro - Sistema Seguro</title>
+    <title>Rifa Pro - Link Seguro</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -348,7 +348,7 @@
         <div class="app-header">
             <div>
                 <div class="app-title">Rifa<span>Pro</span></div>
-                <div style="font-size:0.8rem; color:#6b7280;">v5.1 Secure</div>
+                <div style="font-size:0.8rem; color:#6b7280;">v5.3 Secure Link</div>
             </div>
             <button class="btn-logout" onclick="fazerLogout()">🔒 Sair</button>
         </div>
@@ -505,7 +505,7 @@
 </div>
 
 <footer class="app-footer">
-    Criado por <strong>Le Miastkuosky</strong> - Versão 5.1
+    Criado por <strong>Le Miastkuosky</strong> - Versão 5.3
 </footer>
 
 <div id="modalAgenda" class="modal"><div class="modal-content"><h2>✏️ Editar Contato</h2><input type="hidden" id="editOldTel"><label>Nome</label><input type="text" id="editNomeCli"><label>Telefone</label><input type="tel" id="editTelCli"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button><button class="btn-back" onclick="fecharModais()">Cancelar</button></div></div></div>
@@ -657,68 +657,72 @@
     let valorFinalVenda = "R$ 0,00";
     let vendaRecenteParaEnvio = null;
     
-    // HASH DA SENHA "le121212" (SHA-256)
-    const ADMIN_HASH = "9c8c5ccc45f284c0f866467023347a8274025e16578508711475752382101032";
+    // TOKEN DE SEGURANÇA (Base64 da senha "le121212")
+    const ADMIN_TOKEN = "bGUxMjEyMTI=";
 
     // Inicializa Máscaras
     VMasker(document.getElementById("telPart")).maskPattern("(99) 99999-9999");
     VMasker(document.getElementById("editTelCli")).maskPattern("(99) 99999-9999");
     document.querySelectorAll('.money').forEach(i => VMasker(i).maskMoney({unit: "R$"}));
 
-    // --- SISTEMA DE LOGIN SEGURO ---
-    async function sha256(message) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function tentarLogin() {
-        // CORREÇÃO: .trim() remove espaços em branco antes ou depois da senha
-        const pass = document.getElementById('inputSenhaAdmin').value.trim();
-        const hash = await sha256(pass);
+    // --- SISTEMA DE LOGIN ---
+    function tentarLogin() {
+        const input = document.getElementById('inputSenhaAdmin');
+        const pass = input.value.trim().toLowerCase();
+        const token = btoa(pass);
         
-        if (hash === ADMIN_HASH) {
-            // Senha Correta: Salva no navegador para não pedir mais
+        if (token === ADMIN_TOKEN) {
             localStorage.setItem('auth_rifa_pro', 'true'); 
             document.getElementById('modalLogin').style.display = 'none';
         } else {
             alert("Senha Incorreta!");
-            document.getElementById('inputSenhaAdmin').value = "";
+            input.value = "";
         }
     }
     
     function fazerLogout() {
         if(confirm("Deseja sair e bloquear o sistema?")) {
             localStorage.removeItem('auth_rifa_pro');
-            location.reload(); // Recarrega a página para bloquear
+            location.reload(); 
         }
     }
     
-    // VERIFICA LOGIN IMEDIATAMENTE AO ABRIR (Evita piscar o bloqueio)
-    function verificarLoginSalvo() {
-        // Se já estiver salvo, esconde o modal de login na hora
-        if(localStorage.getItem('auth_rifa_pro') === 'true') {
-            document.getElementById('modalLogin').style.display = 'none';
-        }
+    // Verificação Instantânea
+    if(localStorage.getItem('auth_rifa_pro') === 'true') {
+        document.getElementById('modalLogin').style.display = 'none';
     }
-    // Roda a verificação assim que o script carrega
-    verificarLoginSalvo();
 
-    // Listener do Banco de Dados + MODO CLIENTE + LOGIN
+    // Listener do Banco de Dados + MODO CLIENTE (Token Aleatório)
     database.ref('/').on('value', (s) => {
         const r = s.val() || {};
         dadosDB = r.rifas || {};
         baseClientes = r.clientes || {};
         
-        // Verifica URL para ver se é ADMIN ou CLIENTE
         const params = new URLSearchParams(window.location.search);
-        const rParam = params.get('r');
-        const vParam = params.get('v');
+        
+        // Suporte para Link Antigo (r + v) e Novo (t)
+        const tokenAleatorio = params.get('t');
+        let rParam = params.get('r');
+        let vParam = params.get('v');
+
+        // Lógica para decifrar o token "aleatório"
+        if(tokenAleatorio) {
+            try {
+                // Decodifica o Base64 e separa pelo separador "###"
+                const decoded = atob(tokenAleatorio); 
+                const parts = decoded.split('###');
+                if(parts.length === 2) {
+                    rParam = parts[0];
+                    vParam = parts[1];
+                }
+            } catch(e) {
+                console.log("Token inválido");
+            }
+        }
 
         if(rParam && vParam) {
-            // --- MODO CLIENTE (SEM SENHA) ---
-            document.getElementById('modalLogin').style.display = 'none'; // Garante desbloqueio para cliente
+            // --- MODO CLIENTE ---
+            document.getElementById('modalLogin').style.display = 'none'; 
 
             if (dadosDB[rParam] && dadosDB[rParam].vendas && dadosDB[rParam].vendas[vParam]) {
                 document.body.classList.add('mode-client');
@@ -750,10 +754,10 @@
                 document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Link Expirado</h1><p>Este comprovante não está mais disponível.</p></div>";
             }
         } else {
-            // --- MODO ADMIN (COM SENHA) ---
+            // --- MODO ADMIN ---
             document.body.classList.remove('mode-client');
             
-            // Só pede senha se NÃO estiver salvo no localStorage
+            // Verifica Login
             if(localStorage.getItem('auth_rifa_pro') !== 'true') {
                 document.getElementById('modalLogin').style.display = 'flex';
             } else {
@@ -864,7 +868,7 @@
         }
     }
 
-    // --- FUNÇÃO DE ENVIO COM CORREÇÃO DE LINK (URL ENCODED) ---
+    // --- FUNÇÃO DE ENVIO COM LINK "ALEATÓRIO" ---
     function enviarTextoWhatsapp() {
         if(!edicaoAtivaID || !vendaRecenteParaEnvio || !dadosDB[edicaoAtivaID]) return;
         
@@ -873,9 +877,15 @@
         const telLimpo = v.tel.replace(/\D/g, '');
         const saudacao = gerarSaudacao();
         
-        // CORREÇÃO DO LINK PARA EVITAR QUEBRA COM ESPAÇOS
         const baseUrl = window.location.href.split('?')[0];
-        const linkRecibo = `${baseUrl}?r=${encodeURIComponent(edicaoAtivaID)}&v=${encodeURIComponent(v.key)}`;
+
+        // CRIAÇÃO DO TOKEN OBSCURO (Base64)
+        // Junta ID e Key com ### e transforma em letras "aleatórias"
+        const dadosCombinados = `${edicaoAtivaID}###${v.key}`;
+        const tokenObscuro = btoa(dadosCombinados);
+        
+        // Link agora usa ?t=CODIGO_DOIDO
+        const linkRecibo = `${baseUrl}?t=${tokenObscuro}`;
 
         let texto = `${saudacao}, ${v.nome}! 😃\n`;
         texto += `Aqui está o resumo da sua participação na *${config.nomeExibicao}*:\n\n`;
