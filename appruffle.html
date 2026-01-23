@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rifa Pro - Sistema Seguro</title>
+    <title>Rifa Pro - MultiRodas</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -154,6 +154,7 @@
         .stat-card.c-azul { border-bottom: 3px solid var(--secondary); }
         .stat-card.c-amarelo { border-bottom: 3px solid #f59e0b; }
         .stat-card.c-vermelho { border-bottom: 3px solid #ef4444; }
+        .stat-card.c-roxo { border-bottom: 3px solid #8b5cf6; } /* NOVO CARD GRÁTIS */
 
         /* --- TEMPLATE DO RECIBO PRO --- */
         #receipt-container {
@@ -233,7 +234,9 @@
         <div class="app-header">
             <div>
                 <div class="app-title">Rifa<span>Pro</span></div>
-                <div style="font-size:0.8rem; color:#6b7280;">v5.7 Winner Ultimate</div>
+                <div style="font-size:0.8rem; color:#6b7280;">v5.7 MultiRodas
+
+                </div>
             </div>
             <button class="btn-logout" onclick="fazerLogout()">🔒 Sair</button>
         </div>
@@ -308,16 +311,16 @@
 
                     <div id="promoBanner" class="promo-banner"></div>
 
-                    <label>WhatsApp do Cliente</label>
-                    <div class="autocomplete-container">
-                        <input type="tel" id="telPart" placeholder="(00) 00000-0000" oninput="buscarPorTel(this.value)" autocomplete="off">
-                        <div id="autocomplete-tel-list" class="autocomplete-items"></div>
-                    </div>
-                    
                     <label>Nome do Cliente</label>
                     <div class="autocomplete-container">
                         <input type="text" id="nomePart" placeholder="Digite o nome..." autocomplete="off">
                         <div id="autocomplete-list" class="autocomplete-items"></div>
+                    </div>
+
+                    <label>WhatsApp do Cliente</label>
+                    <div class="autocomplete-container">
+                        <input type="tel" id="telPart" placeholder="(00) 00000-0000" oninput="buscarPorTel(this.value)" autocomplete="off">
+                        <div id="autocomplete-tel-list" class="autocomplete-items"></div>
                     </div>
                     
                     <label>Números (Cotas)</label>
@@ -329,15 +332,24 @@
                         <small style="color:var(--secondary); font-weight:bold;">*Brinde Grátis</small>
                     </div>
 
-                    <div class="total-bar">
+                    <label style="margin-top:15px;">Aplicar Desconto (R$)</label>
+                    <input type="tel" id="inputDesconto" placeholder="R$ 0,00" class="money" oninput="calcularTotalLive()">
+
+                    <div class="total-bar" style="margin-top:10px;">
                         <span id="qtdLive">0 n°</span>
                         <span id="totalLive">R$ 0,00</span>
                     </div>
                     
-                    <label class="checkbox-wrapper" style="margin-top:15px; margin-bottom:5px;">
-                        <input type="checkbox" id="checkPago" checked> 
-                        <span>💸 Já está pago?</span>
-                    </label>
+                    <div style="display:flex; gap:10px; margin-top:15px; margin-bottom:5px;">
+                        <label class="checkbox-wrapper" style="margin:0; flex:1; justify-content:center;">
+                            <input type="checkbox" id="checkPago" checked onchange="if(this.checked) document.getElementById('checkGratis').checked=false"> 
+                            <span>💸 Pago</span>
+                        </label>
+                        <label class="checkbox-wrapper" style="margin:0; flex:1; justify-content:center;">
+                            <input type="checkbox" id="checkGratis" onchange="if(this.checked) document.getElementById('checkPago').checked=false"> 
+                            <span>🎁 Grátis</span>
+                        </label>
+                    </div>
 
                     <button class="btn-main" style="margin-top:10px; font-size:1.1rem;" onclick="registrarVenda()">✅ Confirmar Venda</button>
                 </div>
@@ -516,6 +528,20 @@
             <input type="tel" id="editBrindeVenda" placeholder="Digite o palpite..." style="background:white;">
         </div>
 
+        <label>Desconto (R$)</label>
+        <input type="tel" id="editDescontoVenda" placeholder="R$ 0,00" class="money">
+
+        <div style="display:flex; gap:10px; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+            <label class="checkbox-wrapper" style="margin:0; flex:1; justify-content:center;">
+                <input type="checkbox" id="editCheckPago" onchange="if(this.checked) document.getElementById('editCheckGratis').checked=false"> 
+                <span>💸 Pago</span>
+            </label>
+            <label class="checkbox-wrapper" style="margin:0; flex:1; justify-content:center;">
+                <input type="checkbox" id="editCheckGratis" onchange="if(this.checked) document.getElementById('editCheckPago').checked=false"> 
+                <span>🎁 Grátis</span>
+            </label>
+        </div>
+
         <div style="display:flex;gap:10px;margin-top:20px">
             <button class="btn-main" onclick="confirmarEdicaoVenda()">Salvar</button>
             <button class="btn-back" onclick="fecharModais()">Cancelar</button>
@@ -572,6 +598,8 @@
         <label>Título</label><input type="text" id="edit_nomeEdicao">
         <label>Prêmio</label><input type="text" id="edit_premioEdicao">
         <label>Valor Cota</label><input type="tel" id="edit_valorFixoEdicao" class="money">
+
+        <label class="checkbox-wrapper"><input type="checkbox" id="edit_checkPromo" onchange="alternarVisibilidade('edit_checkPromo', 'edit_areaPromo')"> <span>Ativar Promoções (Atacado)</span></label>
 
         <div id="edit_areaPromo" class="hidden-area">
             <div style="display:flex; gap:10px;"><input type="tel" id="edit_promoQtd2"><input type="tel" id="edit_promoVal2" class="money"></div>
@@ -652,9 +680,13 @@
     // TOKEN DE SEGURANÇA (Base64 da senha "le121212")
     const ADMIN_TOKEN = "bGUxMjEyMTI=";
 
-    // Inicializa Máscaras
-    VMasker(document.getElementById("telPart")).maskPattern("(99) 99999-9999");
-    VMasker(document.getElementById("editTelCli")).maskPattern("(99) 99999-9999");
+    // --- CORREÇÃO: Inicializa Máscaras com verificação de segurança ---
+    const inputTel = document.getElementById("telPart");
+    if (inputTel) VMasker(inputTel).maskPattern("(99) 99999-9999");
+
+    const inputEditTel = document.getElementById("editTelCli");
+    if (inputEditTel) VMasker(inputEditTel).maskPattern("(99) 99999-9999");
+
     document.querySelectorAll('.money').forEach(i => VMasker(i).maskMoney({unit: "R$"}));
 
     // --- SISTEMA DE LOGIN ---
@@ -747,7 +779,10 @@
             }
             atualizarSelect();
             renderAgenda();
-            if(edicaoAtivaID) { renderVendas(); renderGastos(); }
+            if(edicaoAtivaID) { 
+                renderVendas(); 
+                renderGastos(); // CORREÇÃO: Carregar gastos ao abrir
+            }
         }
     });
 
@@ -773,15 +808,57 @@
         if(config.brinde && config.brinde.ativo) formatarDigitos(input, parseInt(config.brinde.tipo));
     }
 
+    // --- CÁLCULO DE PREÇO (COM DESCONTO NO TERMINAL) ---
     function calcularTotalLive() {
         if(!edicaoAtivaID) return;
         const config = dadosDB[edicaoAtivaID].config;
         const inputRegular = document.getElementById('numPart');
+        const inputDesc = document.getElementById('inputDesconto');
         const tipo = parseInt(config.tipo);
         
         formatarDigitos(inputRegular, tipo);
         
+        // Aplica mascara de dinheiro no desconto se ainda não tiver
+        if(inputDesc.value === "") VMasker(inputDesc).maskMoney({unit: "R$"});
+
         let numsRaw = inputRegular.value.replace(/[^\d]/g, ''); 
+        let qtdRestante = Math.floor(numsRaw.length / tipo); 
+        let unitario = parseFloat((config.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.'));
+        let totalCalculado = 0;
+
+        // Calcula Preço Base (com promoções)
+        if(config.promocoes && config.promocoes.length > 0) {
+            const promos = config.promocoes.sort((a,b) => parseInt(b.qtd) - parseInt(a.qtd));
+            for(let p of promos) {
+                let pQtd = parseInt(p.qtd);
+                let pVal = parseFloat(p.valor.replace(/[^\d,]/g,'').replace(',','.'));
+                if(qtdRestante >= pQtd) {
+                    let numPacotes = Math.floor(qtdRestante / pQtd);
+                    totalCalculado += numPacotes * pVal;
+                    qtdRestante = qtdRestante % pQtd;
+                }
+            }
+        }
+        totalCalculado += qtdRestante * unitario;
+
+        // Subtrai o Desconto
+        let valorDesconto = parseFloat((inputDesc.value || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+        
+        // O total não pode ser negativo
+        if(valorDesconto > totalCalculado) valorDesconto = totalCalculado;
+        
+        totalCalculado = totalCalculado - valorDesconto;
+
+        valorFinalVenda = totalCalculado.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        document.getElementById('qtdLive').innerText = `${Math.floor(numsRaw.length / tipo)} cotas`;
+        document.getElementById('totalLive').innerText = valorFinalVenda;
+    }
+
+    // Função auxiliar que retorna o valor em NÚMERO (para fazer conta na edição)
+    function calcularValorBaseNumerico(numsStr, config) {
+        if(!numsStr) return 0;
+        const tipo = parseInt(config.tipo);
+        let numsRaw = numsStr.replace(/[^\d]/g, ''); 
         let qtdRestante = Math.floor(numsRaw.length / tipo); 
         let unitario = parseFloat((config.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.'));
         let totalCalculado = 0;
@@ -799,15 +876,19 @@
             }
         }
         totalCalculado += qtdRestante * unitario;
-        valorFinalVenda = totalCalculado.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-        document.getElementById('qtdLive').innerText = `${Math.floor(numsRaw.length / tipo)} cotas`;
-        document.getElementById('totalLive').innerText = valorFinalVenda;
+        return totalCalculado;
     }
 
     function registrarVenda() {
         if(!edicaoAtivaID) return alert("Selecione uma campanha!");
-        const n = document.getElementById('nomePart').value, t = document.getElementById('telPart').value, numsInput = document.getElementById('numPart').value, brindeInput = document.getElementById('inputBrinde').value;
-        const pago = document.getElementById('checkPago').checked; 
+        const n = document.getElementById('nomePart').value; 
+        const t = document.getElementById('telPart').value;
+        const numsInput = document.getElementById('numPart').value; 
+        const brindeInput = document.getElementById('inputBrinde').value;
+        const descInput = document.getElementById('inputDesconto').value; 
+        
+        const isGratis = document.getElementById('checkGratis').checked;
+        const isPago = document.getElementById('checkPago').checked; 
 
         if(!n || !numsInput) return alert("Preencha Nome e Números!");
         
@@ -827,9 +908,11 @@
         const venda = { 
             cod: Math.random().toString(36).substr(2,6).toUpperCase(), 
             nome:n, tel:t, nums: numsInput, brinde: brindeInput, 
-            valor: valorFinalVenda, 
+            valor: isGratis ? 'Grátis' : valorFinalVenda, 
+            desconto: isGratis ? "0" : descInput, 
             data: new Date().toLocaleString('pt-BR'),
-            pago: pago 
+            pago: (isGratis || isPago), 
+            isGratis: isGratis 
         };
         
         const novaVendaRef = database.ref('rifas/'+edicaoAtivaID+'/vendas').push(venda);
@@ -989,9 +1072,14 @@
     function trocarEdicao() {
         edicaoAtivaID = document.getElementById('selectEdicoes').value;
         if(edicaoAtivaID && dadosDB[edicaoAtivaID]) {
-            document.getElementById('telaInicial').style.display='none'; document.getElementById('telaTerminal').style.display='block';
+            // Alterna as telas
+            document.getElementById('telaInicial').style.display='none'; 
+            document.getElementById('telaTerminal').style.display='block';
+            
+            // Carrega configurações visuais (Título, Banner, etc)
             const cfg = dadosDB[edicaoAtivaID].config;
             document.getElementById('tituloVenda').innerText = cfg.nomeExibicao;
+            
             const divBrinde = document.getElementById('campoBrinde'), lblBrinde = document.getElementById('labelCampoBrinde');
             const btnBrinde = document.getElementById('btnCpyBrinde');
 
@@ -1011,7 +1099,10 @@
                 cfg.promocoes.forEach(p => { txt += `• Leve ${p.qtd} por ${p.valor}<br>`; });
                 banner.innerHTML = txt; banner.style.display = 'block';
             } else { banner.style.display = 'none'; }
-            renderVendas();
+            
+            // Renderiza Participantes e Financeiro
+            renderVendas();   
+            renderGastos();  
         }
     }
 
@@ -1043,7 +1134,19 @@
     function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInicial').style.display='block'; document.getElementById('telaTerminal').style.display='none'; }
     function fecharModais() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
     function alternarVisibilidade(c,d) { document.getElementById(d).style.display = document.getElementById(c).checked ? 'block' : 'none'; }
-    function limparCamposVenda() { document.getElementById('nomePart').value=""; document.getElementById('telPart').value=""; document.getElementById('numPart').value=""; document.getElementById('inputBrinde').value=""; document.getElementById('qtdLive').innerText="0 n°"; document.getElementById('totalLive').innerText="R$ 0,00"; document.getElementById('checkPago').checked = true; }
+    
+    function limparCamposVenda() { 
+        document.getElementById('nomePart').value=""; 
+        document.getElementById('telPart').value=""; 
+        document.getElementById('numPart').value=""; 
+        document.getElementById('inputBrinde').value=""; 
+        document.getElementById('inputDesconto').value=""; // Limpa desconto
+        document.getElementById('qtdLive').innerText="0 n°"; 
+        document.getElementById('totalLive').innerText="R$ 0,00"; 
+        document.getElementById('checkPago').checked = true; 
+        document.getElementById('checkGratis').checked = false; 
+    }
+
     function atualizarSelect() { const s = document.getElementById('selectEdicoes'); const sel = edicaoAtivaID; s.innerHTML = '<option value="">-- Selecione --</option>'; for(let id in dadosDB) { s.innerHTML += `<option value="${id}" ${id===sel?'selected':''}>${dadosDB[id].config.nomeExibicao}</option>`; } if(sel && dadosDB[sel]) edicaoAtivaID = sel; else { edicaoAtivaID=""; voltarInicio(); } }
     
     // Autocomplete
@@ -1203,7 +1306,6 @@
 
     function getNomeTipo(n) { if(n===2) return "Dezena"; if(n===3) return "Centena"; return "Milhar"; }
 
-    // --- RENDER VENDAS ATUALIZADO (COM BUSCA) ---
     function renderVendas() { 
         const c = document.getElementById('listaParticipantes'); 
         const r = document.getElementById('resumoStats'); 
@@ -1218,18 +1320,30 @@
         const config = dadosDB[edicaoAtivaID].config;
         let listaVendas = Object.keys(vendasObj).map(k => ({...vendasObj[k], key: k}));
         
-        let cotasPagas = 0, cotasAbertas = 0, cotasTotalVendidas = 0;
+        // Contadores
+        let cotasPagas = 0, cotasAbertas = 0, cotasGratis = 0, cotasTotalVendidas = 0;
+        
         listaVendas.forEach(v => {
             const qtd = v.nums ? (v.nums.match(/\d+/g) || []).length : 0;
             cotasTotalVendidas += qtd;
-            if(v.pago) cotasPagas += qtd; else cotasAbertas += qtd;
+            
+            if(v.isGratis) {
+                cotasGratis += qtd;
+            } else if(v.pago) {
+                cotasPagas += qtd; 
+            } else {
+                cotasAbertas += qtd;
+            }
         });
         const maxCotas = Math.pow(10, parseInt(config.tipo));
         
-        r.innerHTML = `<div class="stat-card c-verde"><span class="stat-val" style="color:var(--primary)">${cotasPagas}</span><span class="stat-label">Pagas</span></div>
+        // Renderiza os Cards (Incluindo o Novo Card Roxo de Grátis)
+        r.innerHTML = `
+            <div class="stat-card c-verde"><span class="stat-val" style="color:var(--primary)">${cotasPagas}</span><span class="stat-label">Pagas ($)</span></div>
+            <div class="stat-card c-roxo"><span class="stat-val" style="color:#8b5cf6">${cotasGratis}</span><span class="stat-label">Grátis</span></div>
             <div class="stat-card c-vermelho"><span class="stat-val" style="color:#ef4444">${cotasAbertas}</span><span class="stat-label">Abertas</span></div>
             <div class="stat-card c-amarelo"><span class="stat-val" style="color:#f59e0b">${maxCotas - cotasTotalVendidas}</span><span class="stat-label">Restam</span></div>
-            <div class="stat-card c-azul"><span class="stat-val" style="color:#3b82f6">${listaVendas.length}</span><span class="stat-label">Vendas</span></div>`;
+        `;
 
         if(termoBusca.length > 0) {
             listaVendas = listaVendas.filter(v => {
@@ -1245,11 +1359,20 @@
         
         listaVendas.sort((a,b) => b.key.localeCompare(a.key)).forEach((venda, index) => { 
             const k = venda.key;
-            const statusBadge = venda.pago ? `<span style='color:var(--primary-dark); font-weight:bold; font-size:0.8rem;'>✅ PAGO</span>` : `<span style='color:#b91c1c; font-weight:bold; font-size:0.8rem;'>⏳ PENDENTE</span>`;
+            // Badge visual ajustado para Grátis
+            let statusBadge = "";
+            if(venda.isGratis) {
+                statusBadge = `<span style='color:#8b5cf6; font-weight:bold; font-size:0.8rem;'>🎁 GRÁTIS</span>`;
+            } else {
+                statusBadge = venda.pago ? `<span style='color:var(--primary-dark); font-weight:bold; font-size:0.8rem;'>✅ PAGO</span>` : `<span style='color:#b91c1c; font-weight:bold; font-size:0.8rem;'>⏳ PENDENTE</span>`;
+            }
+            
             const btnAcao = venda.pago ? `<button class="btn-undo" onclick="alternarStatusPagamento('${k}', false)">↩️</button>` : `<button class="btn-pay" onclick="alternarStatusPagamento('${k}', true)">💲</button>`;
+            
             let linhaBrinde = "";
             if(brindeAtivo) linhaBrinde = venda.brinde ? `<span class="info-row"><span class="info-label">🎁 Palpite:</span><b>${venda.brinde}</b></span>` : `<span class="info-row" style='color:#b91c1c; font-size:0.75rem;'>⚠️ Sem Palpite</span>`;
-            c.innerHTML += `<div class="venda-item ${venda.pago?'pago':'pendente'}">
+            
+            c.innerHTML += `<div class="venda-item ${venda.pago?'pago':'pendente'}" style="${venda.isGratis ? 'border-left-color:#8b5cf6; background:#f5f3ff;' : ''}">
                 <div style="flex:1"><div style="margin-bottom:6px;"><b>${venda.nome}</b></div><div style="margin-bottom:8px;">${statusBadge} <small>(${venda.data})</small></div><span class="info-row"><span class="info-label">🎟️ Cotas:</span>${venda.nums}</span>${linhaBrinde}</div>
                 <div class="acoes">${btnAcao}<button class="btn-edit" onclick="abrirModalVenda('${k}')">✏️</button><button class="btn-whats" onclick="prepararImpressao('${k}')">📸</button><button class="btn-del" onclick="pedirConfirmacao('VENDA','${k}')">X</button></div>
             </div>`; 
@@ -1276,12 +1399,27 @@
     function abrirModalVenda(k) { 
         const v = dadosDB[edicaoAtivaID].vendas[k]; 
         const cfg = dadosDB[edicaoAtivaID].config;
+        
         document.getElementById('editVendaKey').value = k; 
         document.getElementById('editNomeVenda').value = v.nome; 
         document.getElementById('editNumVenda').value = v.nums; 
+        
+        // --- Carregar Desconto Existente ---
+        const inputDesc = document.getElementById('editDescontoVenda');
+        inputDesc.value = v.desconto || ""; // Carrega o desconto salvo
+        VMasker(inputDesc).maskMoney({unit: "R$"}); // Garante a máscara de R$
+
+        // --- Status ---
+        const isGratis = v.isGratis === true;
+        const isPago = v.pago === true;
+        document.getElementById('editCheckGratis').checked = isGratis;
+        document.getElementById('editCheckPago').checked = !isGratis && isPago;
+
+        // --- Brinde ---
         const divBrinde = document.getElementById('divEditBrinde');
         const inpBrinde = document.getElementById('editBrindeVenda');
         const lblBrinde = document.getElementById('lblEditBrinde');
+        
         if (cfg.brinde && cfg.brinde.ativo) {
             divBrinde.style.display = 'block';
             inpBrinde.value = v.brinde || "";
@@ -1289,14 +1427,114 @@
             lblBrinde.innerText = `🎁 Palpite Extra (${nomeTipo}):`;
             inpBrinde.oninput = function() { formatarDigitos(this, parseInt(cfg.brinde.tipo)); };
         } else { divBrinde.style.display = 'none'; inpBrinde.value = ""; }
+        
         document.getElementById('modalVenda').style.display = 'flex'; 
     }
     
-    function confirmarEdicaoVenda() { const k = document.getElementById('editVendaKey').value; const n = document.getElementById('editNomeVenda').value; const nu = document.getElementById('editNumVenda').value; const b = document.getElementById('editBrindeVenda').value; database.ref('rifas/' + edicaoAtivaID + '/vendas/' + k).update({ nome: n, nums: nu, brinde: b }).then(() => fecharModais()); }
+    function confirmarEdicaoVenda() { 
+        const k = document.getElementById('editVendaKey').value; 
+        const n = document.getElementById('editNomeVenda').value; 
+        const nu = document.getElementById('editNumVenda').value; 
+        const b = document.getElementById('editBrindeVenda').value; 
+        const dInput = document.getElementById('editDescontoVenda').value;
+        
+        const novoGratis = document.getElementById('editCheckGratis').checked;
+        const novoPagoCheck = document.getElementById('editCheckPago').checked;
+        const finalPago = novoGratis ? true : novoPagoCheck;
+        
+        let novoValor = "R$ 0,00";
+        let descontoSalvar = dInput;
+
+        if (novoGratis) {
+            novoValor = "Grátis";
+            descontoSalvar = "0"; // Se virou grátis, zera o desconto (pois tudo é despesa)
+        } else {
+            // 1. Calcula o preço base das cotas
+            let valorBase = calcularValorBaseNumerico(nu, dadosDB[edicaoAtivaID].config);
+            
+            // 2. Subtrai o Desconto
+            let valorDesc = parseFloat((dInput||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+            
+            // Impede desconto maior que o valor
+            if(valorDesc > valorBase) valorDesc = valorBase;
+            
+            let final = valorBase - valorDesc;
+            novoValor = final.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        }
+
+        database.ref('rifas/' + edicaoAtivaID + '/vendas/' + k).update({ 
+            nome: n, 
+            nums: nu, 
+            brinde: b,
+            desconto: descontoSalvar, // Salva o novo desconto
+            pago: finalPago,
+            isGratis: novoGratis,
+            valor: novoValor // Salva o novo valor recalculado
+        }).then(() => fecharModais()); 
+    }
+
     function pedirConfirmacao(t,k) { const m=document.getElementById('modalConfirm'), ti=document.getElementById('confirmTitle'), msg=document.getElementById('confirmMsg'), y=document.getElementById('confirmYes'); m.style.display='flex'; y.className="btn-del"; if(t==='VENDA'){ti.innerText="Excluir Venda";msg.innerText="Tem certeza que deseja apagar esta venda?";y.onclick=()=>{database.ref('rifas/'+edicaoAtivaID+'/vendas/'+k).remove();fecharModais()}} else if(t==='CONTATO'){ti.innerText="Excluir Contato";msg.innerText="Remover da agenda?";y.onclick=()=>{database.ref('clientes/'+k).remove();fecharModais()}} else if(t==='RIFA_TOTAL'){ti.innerText="🗑️ EXCLUIR CAMPANHA";msg.innerText="Isso apagará TODAS as vendas e configurações. Não tem volta!";y.onclick=()=>{database.ref('rifas/'+edicaoAtivaID).remove();voltarInicio();fecharModais()}} else if(t==='GASTO'){ti.innerText="Excluir Despesa";msg.innerText="Apagar este lançamento?";y.onclick=()=>{database.ref('rifas/'+edicaoAtivaID+'/gastos/'+k).remove();fecharModais()}} }
     function adicionarGasto() { if(!edicaoAtivaID)return; const d=document.getElementById('descGasto').value, v=document.getElementById('valorGasto').value; database.ref('rifas/'+edicaoAtivaID+'/gastos').push({desc:d, valor:v}); }
     function renderGastos() { const c=document.getElementById('listaGastos'); c.innerHTML=""; const g=dadosDB[edicaoAtivaID]?.gastos; if(!g)return; Object.keys(g).forEach(k=>{ c.innerHTML+=`<div class="venda-item" style="border-left-color:var(--danger)"><span>${g[k].desc} - ${g[k].valor}</span><button class="btn-del" onclick="pedirConfirmacao('GASTO','${k}')">X</button></div>`}) }
-    function atualizarResumoFinanceiro() { const r=document.getElementById('resumoNumerico'); if(!dadosDB[edicaoAtivaID])return; const v=Object.values(dadosDB[edicaoAtivaID].vendas||{}), g=Object.values(dadosDB[edicaoAtivaID].gastos||{}); let tv=v.reduce((a,i)=>a+parseFloat((i.valor||"0").replace(/[^\d,]/g,'').replace(',','.')),0), tg=g.reduce((a,i)=>a+parseFloat((i.valor||"0").replace(/[^\d,]/g,'').replace(',','.')),0); r.innerHTML=`<div><small>Entrada</small><br>R$ ${tv.toFixed(2)}</div><div><small>Saída</small><br>R$ ${tg.toFixed(2)}</div><div style="font-size:1.2rem; font-weight:bold; color:${tv-tg>=0?'var(--primary)':'var(--danger)'}"><small>Lucro</small><br>R$ ${(tv-tg).toFixed(2)}</div>`; r.style.display="flex"; r.style.justifyContent="space-around"; }
+    
+    function atualizarResumoFinanceiro() { 
+        const r = document.getElementById('resumoNumerico'); 
+        if(!dadosDB[edicaoAtivaID]) return; 
+        
+        const config = dadosDB[edicaoAtivaID].config;
+        const v = Object.values(dadosDB[edicaoAtivaID].vendas || {});
+        const g = Object.values(dadosDB[edicaoAtivaID].gastos || {}); 
+
+        // 1. Entrada (O valor FINAL pago pelo cliente)
+        let totalEntrada = v.reduce((acc, item) => {
+            if(item.isGratis) return acc;
+            return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+        }, 0);
+
+        // 2. Gastos Manuais
+        let totalGastosManuais = g.reduce((acc, item) => {
+            return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+        }, 0);
+
+        // 3. Cortesias (Grátis Total)
+        let valorUnitario = parseFloat((config.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+        let qtdCotasGratis = 0;
+        let totalDescontosAplicados = 0;
+        
+        v.forEach(item => {
+            if(item.isGratis) {
+                qtdCotasGratis += (item.nums.match(/\d+/g) || []).length;
+            } else {
+                // Se não é grátis, verifica se teve desconto parcial
+                if(item.desconto) {
+                    totalDescontosAplicados += parseFloat((item.desconto||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+                }
+            }
+        });
+        
+        let totalDespesaGratis = qtdCotasGratis * valorUnitario;
+
+        // 4. Total Saída = Gastos + Cortesias + Descontos
+        let totalSaida = totalGastosManuais + totalDespesaGratis + totalDescontosAplicados;
+
+        r.innerHTML = `
+            <div>
+                <small>Entrada</small><br>
+                R$ ${totalEntrada.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </div>
+            <div>
+                <small>Saída (Geral)</small><br>
+                <span style="color:#ef4444">R$ ${totalSaida.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+            <div style="font-size:1.2rem; font-weight:bold; color:${totalEntrada-totalSaida>=0?'var(--primary)':'var(--danger)'}">
+                <small>Lucro Real</small><br>
+                R$ ${(totalEntrada - totalSaida).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </div>
+        `; 
+        r.style.display = "flex"; 
+        r.style.justifyContent = "space-around"; 
+    }
+
     function buscarPorTel(t) { /* Listener */ }
 
     function copiarPalpites() {
@@ -1328,7 +1566,7 @@
         const conf = dadosDB[edicaoAtivaID].config; 
         const vendasData = dadosDB[edicaoAtivaID].vendas || {}; 
         const vendas = Object.values(vendasData); 
-        const gastos = Object.values(dadosDB[edicaoAtivaID].gastos || {});
+        let gastos = [...Object.values(dadosDB[edicaoAtivaID].gastos || {})];
         
         const azulEscuro = [59, 130, 246]; const cinzaEscuro = [31, 41, 55]; const corHeader = isGestao ? cinzaEscuro : azulEscuro;
 
@@ -1337,12 +1575,48 @@
         doc.setFontSize(12); doc.text(`Rifa: ${conf.nomeExibicao}`, 105, 28, null, null, "center");
 
         if(isGestao) {
-            let totalV = vendas.reduce((a,i) => a + parseFloat((i.valor||"0").replace(/[^\d,]/g,'').replace(',','.')), 0);
-            let totalG = gastos.reduce((a,i) => a + parseFloat((i.valor||"0").replace(/[^\d,]/g,'').replace(',','.')), 0);
-            let lucro = totalV - totalG; let totalCotas = vendas.reduce((a,i) => a + (i.nums ? i.nums.match(/\d+/g).length : 0), 0);
+            // --- CÁLCULO FINANCEIRO ---
+            let totalV = vendas.reduce((acc, item) => {
+                if(item.isGratis) return acc;
+                return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+            }, 0);
+
+            let totalG = gastos.reduce((acc, item) => {
+                return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+            }, 0);
+
+            let valorUnitario = parseFloat((conf.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+            
+            vendas.forEach(item => {
+                // 1. Lógica das Cortesias (Grátis Total)
+                if(item.isGratis) {
+                    let qtdCotas = (item.nums.match(/\d+/g) || []).length;
+                    let custoCortesia = qtdCotas * valorUnitario;
+                    totalG += custoCortesia;
+                    gastos.push({
+                        desc: `CORTESIA: ${item.nome} (${qtdCotas} cotas)`,
+                        valor: custoCortesia.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
+                    });
+                } 
+                // 2. Lógica dos Descontos Parciais
+                else if(item.desconto) {
+                    let valDesconto = parseFloat((item.desconto||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+                    if(valDesconto > 0) {
+                        totalG += valDesconto;
+                        gastos.push({
+                            desc: `DESCONTO: ${item.nome}`,
+                            valor: valDesconto.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
+                        });
+                    }
+                }
+            });
+
+            let lucro = totalV - totalG; 
+            let totalCotas = vendas.reduce((a,i) => a + (i.nums ? i.nums.match(/\d+/g).length : 0), 0);
+
             doc.setFillColor(243, 244, 246); doc.roundedRect(14, 40, 182, 25, 3, 3, 'F');
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("VENDAS TOTAIS", 20, 48); doc.setFontSize(14); doc.setTextColor(0); doc.text(`R$ ${totalV.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 20, 58);
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("DESPESAS (-)", 70, 48); doc.setFontSize(14); doc.setTextColor(239, 68, 68); doc.text(`R$ ${totalG.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 70, 58);
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("VENDAS (ENTRADA)", 20, 48); doc.setFontSize(14); doc.setTextColor(0); doc.text(`R$ ${totalV.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 20, 58);
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("DESPESAS (Total)", 70, 48); doc.setFontSize(14); doc.setTextColor(239, 68, 68); doc.text(`R$ ${totalG.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 70, 58);
             doc.setFontSize(10); doc.setTextColor(50); doc.text("LUCRO LÍQUIDO", 120, 48); doc.setFontSize(14); if(lucro >= 0) doc.setTextColor(16, 185, 129); else doc.setTextColor(239, 68, 68); doc.text(`R$ ${lucro.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 120, 58);
             doc.setFontSize(10); doc.setTextColor(50); doc.text("TOTAL COTAS", 170, 48); doc.setFontSize(14); doc.setTextColor(0); doc.text(`${totalCotas}`, 170, 58);
         } else {
@@ -1356,7 +1630,11 @@
         let head = []; if(isGestao) { head = hasBrinde ? [['#', 'DATA', 'NOME', 'TEL', 'COTAS', nomeBrinde, 'VALOR']] : [['#', 'DATA', 'NOME', 'TEL', 'COTAS', 'VALOR']]; } else { head = hasBrinde ? [['#', 'NOME', 'QTD', 'COTAS', nomeBrinde]] : [['#', 'NOME', 'QTD', 'COTAS']]; }
         const body = vendas.map((v, index) => { 
             const n = v.nums; const qtd = n.match(/\d+/g).length + ' cotas'; const b = v.brinde || '-'; const seq = index + 1; const d = v.data ? v.data.split(' ')[0] : '-';
-            if(isGestao) return hasBrinde ? [seq, d, v.nome, v.tel, n, b, v.valor] : [seq, d, v.nome, v.tel, n, v.valor];
+            
+            let valorDisplay = v.valor;
+            if(v.isGratis) valorDisplay = "GRÁTIS";
+
+            if(isGestao) return hasBrinde ? [seq, d, v.nome, v.tel, n, b, valorDisplay] : [seq, d, v.nome, v.tel, n, valorDisplay];
             else return hasBrinde ? [seq, v.nome, qtd, n, b] : [seq, v.nome, qtd, n];
         });
 
