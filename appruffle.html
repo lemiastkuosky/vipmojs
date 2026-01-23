@@ -1568,6 +1568,7 @@
         const conf = dadosDB[edicaoAtivaID].config; 
         const vendasData = dadosDB[edicaoAtivaID].vendas || {}; 
         const vendas = Object.values(vendasData); 
+        // Clona os gastos para não alterar o original
         let gastos = [...Object.values(dadosDB[edicaoAtivaID].gastos || {})];
         
         const azulEscuro = [59, 130, 246]; const cinzaEscuro = [31, 41, 55]; const corHeader = isGestao ? cinzaEscuro : azulEscuro;
@@ -1577,59 +1578,101 @@
         doc.setFontSize(12); doc.text(`Rifa: ${conf.nomeExibicao}`, 105, 28, null, null, "center");
 
         if(isGestao) {
-            // --- CÁLCULO FINANCEIRO ---
-            let totalV = vendas.reduce((acc, item) => {
+            // --- CÁLCULO FINANCEIRO DETALHADO ---
+            
+            // 1. Entrada (Dinheiro que entrou de verdade)
+            let totalEntrada = vendas.reduce((acc, item) => {
                 if(item.isGratis) return acc;
                 return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
             }, 0);
 
-            let totalG = gastos.reduce((acc, item) => {
+            // 2. Separação das Despesas
+            // A) Gastos Manuais (já cadastrados na aba Financeiro)
+            let somaGastosManuais = gastos.reduce((acc, item) => {
                 return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
             }, 0);
 
+            let somaCortesias = 0;
+            let somaDescontos = 0;
             let valorUnitario = parseFloat((conf.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
             
+            // B) Processa Vendas para achar Cortesias e Descontos
             vendas.forEach(item => {
-                // 1. Lógica das Cortesias (Grátis Total)
+                // Lógica das Cortesias (Grátis Total)
                 if(item.isGratis) {
                     let qtdCotas = (item.nums.match(/\d+/g) || []).length;
-                    let custoCortesia = qtdCotas * valorUnitario;
-                    totalG += custoCortesia;
+                    let custo = qtdCotas * valorUnitario;
+                    somaCortesias += custo;
+                    
+                    // Adiciona na lista de gastos do PDF
                     gastos.push({
                         desc: `CORTESIA: ${item.nome} (${qtdCotas} cotas)`,
-                        valor: custoCortesia.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
+                        valor: custo.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
                     });
                 } 
-                // 2. Lógica dos Descontos Parciais
+                // Lógica dos Descontos Parciais
                 else if(item.desconto) {
-                    let valDesconto = parseFloat((item.desconto||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
-                    if(valDesconto > 0) {
-                        totalG += valDesconto;
+                    let valDesc = parseFloat((item.desconto||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+                    if(valDesc > 0) {
+                        somaDescontos += valDesc;
+                        
+                        // Adiciona na lista de gastos do PDF
                         gastos.push({
                             desc: `DESCONTO: ${item.nome}`,
-                            valor: valDesconto.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
+                            valor: valDesc.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
                         });
                     }
                 }
             });
 
-            let lucro = totalV - totalG; 
+            // Total Geral de Saídas
+            let totalSaidaGeral = somaGastosManuais + somaCortesias + somaDescontos;
+            let lucroLiquido = totalEntrada - totalSaidaGeral;
             let totalCotas = vendas.reduce((a,i) => a + (i.nums ? i.nums.match(/\d+/g).length : 0), 0);
 
-            doc.setFillColor(243, 244, 246); doc.roundedRect(14, 40, 182, 25, 3, 3, 'F');
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("VENDAS (ENTRADA)", 20, 48); doc.setFontSize(14); doc.setTextColor(0); doc.text(`R$ ${totalV.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 20, 58);
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("DESPESAS (Total)", 70, 48); doc.setFontSize(14); doc.setTextColor(239, 68, 68); doc.text(`R$ ${totalG.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 70, 58);
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("LUCRO LÍQUIDO", 120, 48); doc.setFontSize(14); if(lucro >= 0) doc.setTextColor(16, 185, 129); else doc.setTextColor(239, 68, 68); doc.text(`R$ ${lucro.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 120, 58);
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("TOTAL COTAS", 170, 48); doc.setFontSize(14); doc.setTextColor(0); doc.text(`${totalCotas}`, 170, 58);
+            // --- DESENHO DOS QUADROS (HEADER FINANCEIRO) ---
+            doc.setFillColor(243, 244, 246); 
+            doc.roundedRect(14, 40, 182, 25, 3, 3, 'F');
+            
+            // Colunas Principais
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("VENDAS (ENTRADA)", 20, 48); 
+            doc.setFontSize(14); doc.setTextColor(0); doc.text(`R$ ${totalEntrada.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 20, 58);
+            
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("SAÍDAS (TOTAL)", 70, 48); 
+            doc.setFontSize(14); doc.setTextColor(239, 68, 68); doc.text(`R$ ${totalSaidaGeral.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 70, 58);
+            
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("LUCRO LÍQUIDO", 120, 48); 
+            doc.setFontSize(14); 
+            if(lucroLiquido >= 0) doc.setTextColor(16, 185, 129); else doc.setTextColor(239, 68, 68); 
+            doc.text(`R$ ${lucroLiquido.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 120, 58);
+            
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("TOTAL COTAS", 170, 48); 
+            doc.setFontSize(14); doc.setTextColor(0); doc.text(`${totalCotas}`, 170, 58);
+
+            // --- NOVO: LINHA DE DETALHAMENTO DE SAÍDAS ---
+            doc.setFontSize(8); doc.setTextColor(100);
+            const textoDetalhe = `DETALHES DA SAÍDA:   Gastos: R$ ${somaGastosManuais.toLocaleString('pt-BR',{minimumFractionDigits:2})}   •   Descontos: R$ ${somaDescontos.toLocaleString('pt-BR',{minimumFractionDigits:2})}   •   Cortesias: R$ ${somaCortesias.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+            doc.text(textoDetalhe, 105, 69, null, null, "center");
+
+            // Define onde a tabela começa (um pouco mais baixo por causa do resumo)
+            var startY_Table = 75;
+
         } else {
+            // Header Modo Lista Simples
             const totalNums = vendas.reduce((a,i) => a + (i.nums ? i.nums.match(/\d+/g).length : 0), 0);
             doc.setFillColor(243, 244, 246); doc.roundedRect(14, 40, 182, 15, 3, 3, 'F');
             doc.setFontSize(10); doc.setTextColor(0); doc.text(`Total de Participantes: ${vendas.length}`, 20, 50); doc.text(`Total de Cotas Vendidas: ${totalNums}`, 120, 50);
+            var startY_Table = 70;
         }
 
+        // --- TABELA PRINCIPAL (LISTA DE NOMES) ---
         const hasBrinde = conf.brinde && conf.brinde.ativo;
         let nomeBrinde = ""; if(hasBrinde) { nomeBrinde = conf.brinde.tipo == '2' ? 'DEZENA EXTRA' : (conf.brinde.tipo == '3' ? 'CENTENA EXTRA' : 'MILHAR EXTRA'); }
-        let head = []; if(isGestao) { head = hasBrinde ? [['#', 'DATA', 'NOME', 'TEL', 'COTAS', nomeBrinde, 'VALOR']] : [['#', 'DATA', 'NOME', 'TEL', 'COTAS', 'VALOR']]; } else { head = hasBrinde ? [['#', 'NOME', 'QTD', 'COTAS', nomeBrinde]] : [['#', 'NOME', 'QTD', 'COTAS']]; }
+        
+        let head = []; 
+        if(isGestao) { head = hasBrinde ? [['#', 'DATA', 'NOME', 'TEL', 'COTAS', nomeBrinde, 'VALOR']] : [['#', 'DATA', 'NOME', 'TEL', 'COTAS', 'VALOR']]; } 
+        else { head = hasBrinde ? [['#', 'NOME', 'QTD', 'COTAS', nomeBrinde]] : [['#', 'NOME', 'QTD', 'COTAS']]; }
+        
         const body = vendas.map((v, index) => { 
             const n = v.nums; const qtd = n.match(/\d+/g).length + ' cotas'; const b = v.brinde || '-'; const seq = index + 1; const d = v.data ? v.data.split(' ')[0] : '-';
             
@@ -1640,12 +1683,22 @@
             else return hasBrinde ? [seq, v.nome, qtd, n, b] : [seq, v.nome, qtd, n];
         });
 
-        doc.autoTable({ startY: 70, head: head, body: body, headStyles: {fillColor: corHeader, halign: 'center'}, bodyStyles: {halign: 'center'}, columnStyles: { 1: {halign: isGestao ? 'center' : 'left'} }, alternateRowStyles: {fillColor: [249, 250, 251]} });
+        doc.autoTable({ startY: startY_Table, head: head, body: body, headStyles: {fillColor: corHeader, halign: 'center'}, bodyStyles: {halign: 'center'}, columnStyles: { 1: {halign: isGestao ? 'center' : 'left'} }, alternateRowStyles: {fillColor: [249, 250, 251]} });
 
+        // --- TABELA DE DESPESAS (SÓ NO MODO GESTÃO) ---
         if(isGestao && gastos.length > 0) {
             let finalY = doc.lastAutoTable.finalY + 15; if(finalY > 250) { doc.addPage(); finalY = 20; }
             doc.setFontSize(14); doc.setTextColor(239, 68, 68); doc.text("RELATÓRIO DE DESPESAS", 14, finalY);
-            const bodyGastos = gastos.map(g => [g.desc || "Sem descrição", g.valor]);
+            
+            // Adiciona o prefixo GASTO: apenas para os manuais
+            const bodyGastos = gastos.map(g => {
+                let d = g.desc || "Sem descrição";
+                if(!d.startsWith("CORTESIA") && !d.startsWith("DESCONTO")) {
+                    d = "GASTO: " + d;
+                }
+                return [d, g.valor];
+            });
+
             doc.autoTable({ startY: finalY + 5, head: [['DESCRIÇÃO DA DESPESA', 'VALOR']], body: bodyGastos, headStyles: {fillColor: [239, 68, 68], halign: 'left'}, bodyStyles: {halign: 'left'}, theme: 'grid' });
         }
 
