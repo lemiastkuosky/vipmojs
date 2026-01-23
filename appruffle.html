@@ -687,6 +687,7 @@
     const inputEditTel = document.getElementById("editTelCli");
     if (inputEditTel) VMasker(inputEditTel).maskPattern("(99) 99999-9999");
 
+    // Aplica mascara de dinheiro em TODOS os campos com classe .money (incluindo o desconto)
     document.querySelectorAll('.money').forEach(i => VMasker(i).maskMoney({unit: "R$"}));
 
     // --- SISTEMA DE LOGIN ---
@@ -818,9 +819,6 @@
         
         formatarDigitos(inputRegular, tipo);
         
-        // Aplica mascara de dinheiro no desconto se ainda não tiver
-        if(inputDesc.value === "") VMasker(inputDesc).maskMoney({unit: "R$"});
-
         let numsRaw = inputRegular.value.replace(/[^\d]/g, ''); 
         let qtdRestante = Math.floor(numsRaw.length / tipo); 
         let unitario = parseFloat((config.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.'));
@@ -841,8 +839,12 @@
         }
         totalCalculado += qtdRestante * unitario;
 
-        // Subtrai o Desconto
-        let valorDesconto = parseFloat((inputDesc.value || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+        // CORREÇÃO AQUI: Lógica segura para ler o dinheiro (remove tudo que não é numero e divide por 100)
+        let valorDesconto = 0;
+        let descClean = inputDesc.value.replace(/[^\d]/g, ''); // Fica só numeros (Ex: 2500)
+        if(descClean.length > 0) {
+            valorDesconto = parseFloat(descClean) / 100; // Divide por 100 (Ex: 25.00)
+        }
         
         // O total não pode ser negativo
         if(valorDesconto > totalCalculado) valorDesconto = totalCalculado;
@@ -1447,15 +1449,15 @@
 
         if (novoGratis) {
             novoValor = "Grátis";
-            descontoSalvar = "0"; // Se virou grátis, zera o desconto (pois tudo é despesa)
+            descontoSalvar = "0"; 
         } else {
             // 1. Calcula o preço base das cotas
             let valorBase = calcularValorBaseNumerico(nu, dadosDB[edicaoAtivaID].config);
             
-            // 2. Subtrai o Desconto
-            let valorDesc = parseFloat((dInput||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+            // 2. Subtrai o Desconto (Lógica segura: remove não-numeros e divide por 100)
+            let descClean = dInput.replace(/[^\d]/g, '');
+            let valorDesc = descClean.length > 0 ? parseFloat(descClean) / 100 : 0;
             
-            // Impede desconto maior que o valor
             if(valorDesc > valorBase) valorDesc = valorBase;
             
             let final = valorBase - valorDesc;
@@ -1466,10 +1468,10 @@
             nome: n, 
             nums: nu, 
             brinde: b,
-            desconto: descontoSalvar, // Salva o novo desconto
+            desconto: descontoSalvar, 
             pago: finalPago,
             isGratis: novoGratis,
-            valor: novoValor // Salva o novo valor recalculado
+            valor: novoValor
         }).then(() => fecharModais()); 
     }
 
