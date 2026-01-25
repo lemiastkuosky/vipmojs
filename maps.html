@@ -3,41 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GeoSearch Vision AI</title>
+    <title>GeoSearch Pro V3</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        /* --- ESTILOS VISUAIS --- */
+        /* --- ESTILOS GERAIS --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; background: #111; }
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; background: #1a1a1a; }
         
-        #map { width: 100%; height: 100%; z-index: 1; opacity: 0.9; }
+        #map { width: 100%; height: 100%; z-index: 1; opacity: 1; }
 
         /* BARRA DE BUSCA */
         .search-wrapper { 
             position: absolute; top: 20px; left: 15px; right: 15px; z-index: 1000; 
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); 
-            border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); 
+            border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.25); 
             display: flex; align-items: center; padding: 6px; 
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
             transition: all 0.3s ease;
         }
 
-        .search-icon { padding: 0 10px 0 15px; font-size: 1.4rem; }
+        .search-icon { padding: 0 10px 0 15px; font-size: 1.3rem; }
         
         input { 
             flex: 1; border: none; background: transparent; padding: 14px 0; 
-            font-size: 16px; color: #000; outline: none; font-weight: 600; 
+            font-size: 16px; color: #111; outline: none; font-weight: 600; 
         }
         input::placeholder { color: #666; font-weight: 400; }
 
         /* Botão Câmera */
         .btn-cam {
-            background: #eee; color: #333; border: none;
-            width: 40px; height: 40px; border-radius: 12px; margin-right: 5px;
+            background: #f0f0f0; color: #333; border: none;
+            width: 42px; height: 42px; border-radius: 12px; margin-right: 8px;
             font-size: 1.2rem; display: flex; justify-content: center; align-items: center;
             cursor: pointer; transition: 0.2s;
         }
@@ -48,15 +48,15 @@
             background: linear-gradient(135deg, #007AFF, #0055ff); color: white; border: none; 
             width: 44px; height: 44px; border-radius: 12px;
             font-weight: 800; display: flex; justify-content: center; align-items: center; 
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.3);
+            cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.3);
         }
         .btn-go:active { transform: scale(0.95); }
 
         /* Loader */
-        .loader { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s infinite linear; display: none; }
+        .loader { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s infinite linear; display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* PAINEL DE RESULTADO */
+        /* PAINEL DE RESULTADO (Bottom Sheet) */
         #bottom-sheet { 
             position: absolute; bottom: 0; left: 0; right: 0; 
             background: white; border-radius: 24px 24px 0 0; 
@@ -68,36 +68,43 @@
         .sheet-drag-handle { width: 40px; height: 5px; background: #ddd; border-radius: 10px; margin: 12px auto; }
         .sheet-content { padding: 0 25px 40px 25px; overflow-y: auto; }
 
+        /* Estilo dos Resultados */
         .header-row { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
         .flag-img { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .title-group h2 { margin: 0; font-size: 1.5rem; color: #111; letter-spacing: -0.5px; }
         .badge { background: #007AFF; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: inline-block; margin-bottom: 5px; }
-        
         .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; align-items: center; }
         .info-label { color: #888; font-size: 0.9rem; font-weight: 500; }
         .info-value { color: #111; font-weight: 600; font-size: 1rem; text-align: right; }
 
-        /* Toast */
+        /* Notificação (Toast) */
         #toast { 
             position: absolute; top: 90px; left: 50%; transform: translateX(-50%); 
             background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 50px; 
             font-size: 0.9rem; font-weight: 500; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 2000;
-            backdrop-filter: blur(5px); text-align: center; width: 80%;
+            backdrop-filter: blur(5px); text-align: center; width: max-content; max-width: 90%;
         }
         #toast.show { opacity: 1; top: 100px; }
 
-        /* Overlay da Câmera */
-        #cam-overlay {
-            position: fixed; top:0; left:0; width:100%; height:100%; 
-            background: rgba(0,0,0,0.8); z-index: 2000; display: none;
-            justify-content: center; align-items: center; flex-direction: column; color: white;
+        /* RODAPÉ DO CRIADOR */
+        .app-footer {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(0, 0, 0, 0.5); /* Escuro semi-transparente para ver no mapa claro */
+            font-size: 0.75rem;
+            z-index: 500; /* Acima do mapa, abaixo dos resultados */
+            pointer-events: none; /* Permite clicar no mapa através do texto */
+            font-weight: 500;
+            text-shadow: 0 1px 10px rgba(255,255,255,0.8); /* Halo branco para ler em qualquer fundo */
         }
     </style>
 </head>
 <body>
 
     <div class="search-wrapper">
-        <div class="search-icon">🧠</div>
+        <div class="search-icon">🔍</div>
         <input type="text" id="searchInput" placeholder="Digite ou tire foto..." enterkeyhint="search">
         
         <button class="btn-cam" id="btnCamera">📷</button>
@@ -110,7 +117,12 @@
     </div>
 
     <div id="toast">Notificação</div>
+    
     <div id="map"></div>
+
+    <div class="app-footer">
+        Criado por <strong>Le Miastkuosky</strong> • Versão 3.0
+    </div>
 
     <div id="bottom-sheet">
         <div class="sheet-drag-handle" id="closeSheet"></div>
@@ -120,99 +132,86 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // ===============================================
-        // DADOS (Dicionários e Padrões)
+        // 1. DADOS & DICIONÁRIOS
         // ===============================================
         var wordMap = {
             'canguru': 'au', 'koala': 'au', 'panda': 'cn', 'dragao': 'cn', 'leao': 'za', 'elefante': 'in',
             'vodka': 'ru', 'tequila': 'mx', 'taco': 'mx', 'sushi': 'jp', 'ramen': 'jp', 'pizza': 'it', 'pasta': 'it',
             'feijoada': 'br', 'caipirinha': 'br', 'hamburguer': 'us', 'croissant': 'fr', 'bacalhau': 'pt',
             'paella': 'es', 'cerveja': 'de', 'samba': 'br', 'tango': 'ar', 'anime': 'jp', 'kpop': 'kr',
-            'ikea': 'se', 'ferrari': 'it', 'bmw': 'de', 'iphone': 'us', 'cristo redentor': 'br', 'torre eiffel': 'fr'
+            'ikea': 'se', 'ferrari': 'it', 'bmw': 'de', 'iphone': 'us', 'cristo redentor': 'br', 'torre eiffel': 'fr',
+            'lego': 'dk', 'chocolate': 'ch', 'charuto': 'cu', 'farao': 'eg'
         };
-
         var ddiMap = { '1':'us', '55':'br', '351':'pt', '44':'gb', '33':'fr', '49':'de', '34':'es', '81':'jp', '86':'cn', '7':'ru' };
         var domainMap = { 'br':'br', 'pt':'pt', 'us':'us', 'uk':'gb', 'de':'de', 'fr':'fr', 'it':'it', 'es':'es', 'jp':'jp', 'cn':'cn', 'ru':'ru', 'ar':'ar' };
         var dddMap = { '11':'SP', '21':'RJ', '31':'MG', '41':'PR', '51':'RS', '61':'DF', '71':'BA', '81':'PE', '91':'PA' };
 
-        // --- MAPA ---
+        // ===============================================
+        // 2. INICIALIZAÇÃO DO MAPA
+        // ===============================================
         var map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: ''
+        }).addTo(map);
         var currentMarker = null;
 
         // ===============================================
-        // LÓGICA DE VISÃO (CÂMERA)
+        // 3. LÓGICA DE CÂMERA / GALERIA (OCR)
         // ===============================================
-        
-        // 1. Abrir seletor de arquivo/câmera
         document.getElementById('btnCamera').addEventListener('click', function() {
+            // Isso abre o menu nativo do celular (Câmera ou Arquivos)
             document.getElementById('fileInput').click();
         });
 
-        // 2. Ao selecionar a foto
         document.getElementById('fileInput').addEventListener('change', async function(e) {
             var file = e.target.files[0];
             if (!file) return;
 
-            showToast("🔍 Analisando imagem... Aguarde.");
+            showToast("🔍 Lendo imagem... Aguarde.");
             toggleLoader(true);
 
             try {
-                // Usa Tesseract para ler
-                const { data: { text } } = await Tesseract.recognize(
-                    file,
-                    'eng', // Inglês lê melhor caracteres latinos gerais
-                    { logger: m => console.log(m) }
-                );
-
-                // Limpeza básica do texto encontrado
-                // Remove quebras de linha e caracteres estranhos, mantém letras e numeros
+                // Reconhecimento de texto
+                const { data: { text } } = await Tesseract.recognize(file, 'eng');
+                
                 var cleanText = text.replace(/\n/g, ' ').trim();
-                
-                // Filtro para tentar achar o "ouro" no meio do texto
-                // Se a imagem tiver muito texto, tentamos achar padrões conhecidos
-                
-                var textoFinal = cleanText;
-                
-                // Tenta achar Placa Mercosul ou Telefone no meio do texto
+                console.log("Texto Bruto:", cleanText);
+
+                // Tentativa de encontrar padrões (Placa ou Telefone)
                 var plateRegex = /[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/i;
                 var phoneRegex = /(\+|00)[0-9]{2,}/;
                 
-                var plateMatch = cleanText.match(plateRegex);
-                var phoneMatch = cleanText.match(phoneRegex);
+                var finalQuery = "";
 
-                if (plateMatch) {
-                    textoFinal = plateMatch[0]; // Pega só a placa
-                    showToast("🚙 Placa detectada: " + textoFinal);
-                } else if (phoneMatch) {
-                    textoFinal = phoneMatch[0]; // Pega só o telefone
-                    showToast("📞 Telefone detectado: " + textoFinal);
+                if (plateRegex.test(cleanText)) {
+                    finalQuery = cleanText.match(plateRegex)[0];
+                    showToast("🚙 Placa encontrada: " + finalQuery);
+                } else if (phoneRegex.test(cleanText)) {
+                    finalQuery = cleanText.match(phoneRegex)[0];
+                    showToast("📞 Telefone encontrado: " + finalQuery);
                 } else {
-                    // Se não achar padrão, pega as primeiras 3 palavras (evita textos longos)
-                    var words = cleanText.split(' ').filter(w => w.length > 2);
+                    // Pega a primeira palavra longa encontrada (ex: nome de marca)
+                    var words = cleanText.split(' ').filter(w => w.length > 3);
                     if (words.length > 0) {
-                        // Pega a palavra mais "significativa" (ex: a maior) ou a primeira
-                        // Vamos pegar a primeira palavra grande
-                        textoFinal = words[0]; 
-                        showToast("🔤 Texto lido: " + textoFinal);
+                        finalQuery = words[0]; 
+                        showToast("🔤 Texto lido: " + finalQuery);
                     } else {
-                        throw new Error("Nenhum texto legível.");
+                        throw new Error("Texto ilegível");
                     }
                 }
 
-                // Joga no input e busca
-                document.getElementById('searchInput').value = textoFinal;
+                document.getElementById('searchInput').value = finalQuery;
                 fazerBusca();
 
             } catch (err) {
                 console.error(err);
-                showToast("❌ Não consegui ler nada na foto. Tente uma imagem mais clara.");
+                showToast("❌ Não consegui ler. Tente outra foto.");
                 toggleLoader(false);
             }
         });
 
-
         // ===============================================
-        // LÓGICA DE BUSCA
+        // 4. LÓGICA DE BUSCA PRINCIPAL
         // ===============================================
         async function fazerBusca() {
             var input = document.getElementById('searchInput');
@@ -222,61 +221,61 @@
             if (!raw) return;
             toggleLoader(true);
 
+            // Normalização
             var clean = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ""); 
             var cleanNoSpace = clean.replace(/\s/g, '');
 
             try {
-                // 1. Dicionário Cultural
+                // A. Palavra Cultural
                 if (wordMap[clean] || wordMap[cleanNoSpace]) {
                     var code = wordMap[clean] || wordMap[cleanNoSpace];
                     await buscarPais(code, "Associação: " + raw.toUpperCase());
                     return;
                 }
 
-                // 2. Código País
+                // B. Domínio / Sigla
                 var cleanCode = clean.replace('.', '');
                 if (cleanCode.length <= 3 && domainMap[cleanCode]) {
                     await buscarPais(domainMap[cleanCode], "Código de País");
                     return;
                 }
 
-                // 3. Números (DDD/DDI)
+                // C. Números
                 var nums = raw.replace(/[^0-9]/g, '');
                 if (nums.length >= 2) {
-                    // DDD
                     if (nums.length === 2 && dddMap[nums]) {
                         await buscarNominatim("Brasil " + dddMap[nums], "DDD Brasileiro");
                         return;
                     }
-                    // DDI
                     for (var i = 3; i >= 1; i--) {
                         var prefix = nums.substring(0, i);
                         if (ddiMap[prefix]) {
-                            await buscarPais(ddiMap[prefix], "DDI Detectado: +" + prefix);
+                            await buscarPais(ddiMap[prefix], "DDI: +" + prefix);
                             return;
                         }
                     }
                 }
 
-                // 4. Placas (Mercosul/EU)
-                var cleanAlphaNum = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-                if (/[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/.test(cleanAlphaNum)) {
+                // D. Placa Carro
+                if (/[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/i.test(cleanNoSpace)) {
                     await buscarPais('br', "Placa Detectada");
                     return;
                 }
 
-                // 5. Coringa
-                await buscarNominatim(raw, "Resultado Encontrado");
+                // E. Busca Genérica (Nominatim)
+                await buscarNominatim(raw, "Local Encontrado");
 
             } catch (e) {
                 console.log(e);
-                showToast("Não consegui identificar '" + raw + "'");
+                showToast("Não encontrado 😕");
             } finally {
                 toggleLoader(false);
             }
         }
 
-        // --- APIS ---
+        // ===============================================
+        // 5. API E RENDERIZAÇÃO
+        // ===============================================
         async function buscarPais(code, motivo) {
             var res = await fetch('https://restcountries.com/v3.1/alpha/' + code);
             if (!res.ok) throw new Error();
@@ -304,12 +303,11 @@
             
             var loc = data[0];
             var addr = loc.address;
-            var titulo = addr.road || loc.name || addr.city || addr.town;
             var flag = 'https://flagcdn.com/w80/' + (addr.country_code || 'xx') + '.png';
 
             renderResult({
                 lat: parseFloat(loc.lat), lng: parseFloat(loc.lon), zoom: 14,
-                title: titulo,
+                title: addr.road || loc.name || addr.city,
                 badge: motivo,
                 flag: flag,
                 rows: [
@@ -342,14 +340,14 @@
             document.getElementById('bottom-sheet').classList.add('active');
         }
 
-        // --- UTILS ---
+        // Utilitários
         function toggleLoader(show) {
             document.getElementById('btnIcon').style.display = show ? 'none' : 'block';
             document.getElementById('loader').style.display = show ? 'block' : 'none';
         }
         function showToast(msg) {
             var t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 4000); // 4 segs para ler o toast
+            setTimeout(() => t.classList.remove('show'), 3000);
         }
         function fecharPainel() { document.getElementById('bottom-sheet').classList.remove('active'); }
 
