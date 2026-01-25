@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GeoSearch Pro V3</title>
+    <title>GeoSearch Pro V5</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
@@ -14,32 +14,46 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; background: #1a1a1a; }
         
-        #map { width: 100%; height: 100%; z-index: 1; opacity: 1; }
+        #map { width: 100%; height: 100%; z-index: 1; }
 
         /* BARRA DE BUSCA */
         .search-wrapper { 
             position: absolute; top: 20px; left: 15px; right: 15px; z-index: 1000; 
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); 
             border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.25); 
-            display: flex; align-items: center; padding: 6px; 
+            display: flex; align-items: center; padding: 6px 6px 6px 12px; 
             border: 1px solid rgba(255,255,255,0.4);
             transition: all 0.3s ease;
         }
 
-        .search-icon { padding: 0 10px 0 15px; font-size: 1.3rem; }
+        .search-icon { font-size: 1.3rem; margin-right: 10px; }
         
         input { 
-            flex: 1; border: none; background: transparent; padding: 14px 0; 
+            flex: 1; border: none; background: transparent; padding: 12px 0; 
             font-size: 16px; color: #111; outline: none; font-weight: 600; 
+            min-width: 0; /* Fix flexbox shrink issue */
         }
-        input::placeholder { color: #666; font-weight: 400; }
+        input::placeholder { color: #888; font-weight: 400; }
+
+        /* Botão X (Limpar) */
+        .btn-clear {
+            background: #ddd; color: #666; border: none;
+            width: 24px; height: 24px; border-radius: 50%; 
+            font-size: 14px; font-weight: bold;
+            display: none; /* Escondido por padrão */
+            justify-content: center; align-items: center;
+            cursor: pointer; margin-right: 10px;
+        }
+        
+        /* Divisória vertical */
+        .divider { width: 1px; height: 24px; background: #ddd; margin-right: 8px; }
 
         /* Botão Câmera */
         .btn-cam {
             background: #f0f0f0; color: #333; border: none;
             width: 42px; height: 42px; border-radius: 12px; margin-right: 8px;
             font-size: 1.2rem; display: flex; justify-content: center; align-items: center;
-            cursor: pointer; transition: 0.2s;
+            cursor: pointer; transition: 0.2s; flex-shrink: 0;
         }
         .btn-cam:active { background: #ddd; transform: scale(0.95); }
         
@@ -48,7 +62,7 @@
             background: linear-gradient(135deg, #007AFF, #0055ff); color: white; border: none; 
             width: 44px; height: 44px; border-radius: 12px;
             font-weight: 800; display: flex; justify-content: center; align-items: center; 
-            cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+            cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.3); flex-shrink: 0;
         }
         .btn-go:active { transform: scale(0.95); }
 
@@ -56,7 +70,26 @@
         .loader { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s infinite linear; display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* PAINEL DE RESULTADO (Bottom Sheet) */
+        /* --- MENU DE ESCOLHA --- */
+        #media-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 2000;
+            display: none; justify-content: center; align-items: flex-end; padding-bottom: 20px;
+        }
+        .media-options {
+            background: white; width: 90%; max-width: 400px;
+            border-radius: 20px; padding: 20px; animation: slideUp 0.3s ease;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .media-btn {
+            background: #f5f5f5; border: none; padding: 15px;
+            border-radius: 12px; font-size: 1rem; font-weight: 600; color: #333;
+            display: flex; align-items: center; gap: 10px; cursor: pointer;
+        }
+        .media-btn.cancel { background: transparent; color: #ff3b30; justify-content: center; margin-top: 5px; }
+
+        /* RESULTADOS */
         #bottom-sheet { 
             position: absolute; bottom: 0; left: 0; right: 0; 
             background: white; border-radius: 24px 24px 0 0; 
@@ -67,37 +100,32 @@
         #bottom-sheet.active { transform: translateY(0); }
         .sheet-drag-handle { width: 40px; height: 5px; background: #ddd; border-radius: 10px; margin: 12px auto; }
         .sheet-content { padding: 0 25px 40px 25px; overflow-y: auto; }
-
-        /* Estilo dos Resultados */
+        
+        /* Estilos Internos do Painel */
         .header-row { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
         .flag-img { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .title-group h2 { margin: 0; font-size: 1.5rem; color: #111; letter-spacing: -0.5px; }
-        .badge { background: #007AFF; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: inline-block; margin-bottom: 5px; }
-        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; align-items: center; }
-        .info-label { color: #888; font-size: 0.9rem; font-weight: 500; }
-        .info-value { color: #111; font-weight: 600; font-size: 1rem; text-align: right; }
+        .badge { background: #007AFF; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: inline-block; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .info-label { color: #888; font-weight: 500; }
+        .info-value { color: #111; font-weight: 600; text-align: right; }
 
-        /* Notificação (Toast) */
+        /* Toast */
         #toast { 
-            position: absolute; top: 90px; left: 50%; transform: translateX(-50%); 
-            background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 50px; 
+            position: absolute; top: 100px; left: 50%; transform: translateX(-50%); 
+            background: rgba(0,0,0,0.9); color: white; padding: 12px 24px; border-radius: 50px; 
             font-size: 0.9rem; font-weight: 500; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 2000;
             backdrop-filter: blur(5px); text-align: center; width: max-content; max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
-        #toast.show { opacity: 1; top: 100px; }
+        #toast.show { opacity: 1; top: 110px; }
 
-        /* RODAPÉ DO CRIADOR */
+        /* RODAPÉ */
         .app-footer {
-            position: fixed;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            color: rgba(0, 0, 0, 0.5); /* Escuro semi-transparente para ver no mapa claro */
-            font-size: 0.75rem;
-            z-index: 500; /* Acima do mapa, abaixo dos resultados */
-            pointer-events: none; /* Permite clicar no mapa através do texto */
-            font-weight: 500;
-            text-shadow: 0 1px 10px rgba(255,255,255,0.8); /* Halo branco para ler em qualquer fundo */
+            position: fixed; bottom: 20px; width: 100%; text-align: center;
+            color: rgba(0, 0, 0, 0.5); font-size: 0.7rem; z-index: 500;
+            pointer-events: none; font-weight: 600;
+            text-shadow: 0 1px 15px rgba(255,255,255,1);
         }
     </style>
 </head>
@@ -107,8 +135,13 @@
         <div class="search-icon">🔍</div>
         <input type="text" id="searchInput" placeholder="Digite ou tire foto..." enterkeyhint="search">
         
-        <button class="btn-cam" id="btnCamera">📷</button>
-        <input type="file" id="fileInput" accept="image/*" style="display:none">
+        <button class="btn-clear" id="btnClear">✕</button>
+        <div class="divider"></div>
+
+        <button class="btn-cam" id="btnMenuMedia">📷</button>
+        
+        <input type="file" id="inputCamera" accept="image/*" capture="environment" style="display:none">
+        <input type="file" id="inputGallery" accept="image/*" style="display:none">
 
         <button class="btn-go" id="btnBuscar">
             <span id="btnIcon">➔</span>
@@ -116,112 +149,140 @@
         </button>
     </div>
 
+    <div id="media-modal">
+        <div class="media-options">
+            <div style="text-align:center; font-weight:bold; color:#555; margin-bottom:10px;">Escolher Origem</div>
+            <button class="media-btn" onclick="usarCamera()">📸 Tirar Foto</button>
+            <button class="media-btn" onclick="usarGaleria()">🖼️ Abrir Galeria</button>
+            <button class="media-btn cancel" onclick="fecharModal()">Cancelar</button>
+        </div>
+    </div>
+
     <div id="toast">Notificação</div>
-    
     <div id="map"></div>
-
-    <div class="app-footer">
-        Criado por <strong>Le Miastkuosky</strong> • Versão 3.0
-    </div>
-
-    <div id="bottom-sheet">
-        <div class="sheet-drag-handle" id="closeSheet"></div>
-        <div class="sheet-content" id="sheetContent"></div>
-    </div>
+    <div class="app-footer">Criado por <strong>Le Miastkuosky</strong> • Versão 5.0</div>
+    <div id="bottom-sheet"><div class="sheet-drag-handle" id="closeSheet"></div><div class="sheet-content" id="sheetContent"></div></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // ===============================================
-        // 1. DADOS & DICIONÁRIOS
-        // ===============================================
-        var wordMap = {
-            'canguru': 'au', 'koala': 'au', 'panda': 'cn', 'dragao': 'cn', 'leao': 'za', 'elefante': 'in',
-            'vodka': 'ru', 'tequila': 'mx', 'taco': 'mx', 'sushi': 'jp', 'ramen': 'jp', 'pizza': 'it', 'pasta': 'it',
-            'feijoada': 'br', 'caipirinha': 'br', 'hamburguer': 'us', 'croissant': 'fr', 'bacalhau': 'pt',
-            'paella': 'es', 'cerveja': 'de', 'samba': 'br', 'tango': 'ar', 'anime': 'jp', 'kpop': 'kr',
-            'ikea': 'se', 'ferrari': 'it', 'bmw': 'de', 'iphone': 'us', 'cristo redentor': 'br', 'torre eiffel': 'fr',
-            'lego': 'dk', 'chocolate': 'ch', 'charuto': 'cu', 'farao': 'eg'
-        };
+        // DADOS
+        var wordMap = { 'canguru': 'au', 'koala': 'au', 'panda': 'cn', 'dragao': 'cn', 'vodka': 'ru', 'tequila': 'mx', 'taco': 'mx', 'sushi': 'jp', 'ramen': 'jp', 'pizza': 'it', 'feijoada': 'br', 'hamburguer': 'us', 'croissant': 'fr', 'bacalhau': 'pt', 'paella': 'es', 'samba': 'br', 'tango': 'ar', 'anime': 'jp', 'ikea': 'se', 'ferrari': 'it', 'cristo redentor': 'br', 'torre eiffel': 'fr', 'lego': 'dk', 'chocolate': 'ch' };
         var ddiMap = { '1':'us', '55':'br', '351':'pt', '44':'gb', '33':'fr', '49':'de', '34':'es', '81':'jp', '86':'cn', '7':'ru' };
         var domainMap = { 'br':'br', 'pt':'pt', 'us':'us', 'uk':'gb', 'de':'de', 'fr':'fr', 'it':'it', 'es':'es', 'jp':'jp', 'cn':'cn', 'ru':'ru', 'ar':'ar' };
         var dddMap = { '11':'SP', '21':'RJ', '31':'MG', '41':'PR', '51':'RS', '61':'DF', '71':'BA', '81':'PE', '91':'PA' };
 
-        // ===============================================
-        // 2. INICIALIZAÇÃO DO MAPA
-        // ===============================================
+        // MAPA
         var map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: ''
-        }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
         var currentMarker = null;
 
-        // ===============================================
-        // 3. LÓGICA DE CÂMERA / GALERIA (OCR)
-        // ===============================================
-        document.getElementById('btnCamera').addEventListener('click', function() {
-            // Isso abre o menu nativo do celular (Câmera ou Arquivos)
-            document.getElementById('fileInput').click();
+        // --- 1. BOTÃO "X" (LIMPAR) ---
+        var inputEl = document.getElementById('searchInput');
+        var clearBtn = document.getElementById('btnClear');
+
+        inputEl.addEventListener('input', function() {
+            // Mostra o botão se tiver texto, esconde se vazio
+            clearBtn.style.display = this.value.length > 0 ? 'flex' : 'none';
         });
 
-        document.getElementById('fileInput').addEventListener('change', async function(e) {
+        clearBtn.addEventListener('click', function() {
+            inputEl.value = '';
+            clearBtn.style.display = 'none';
+            inputEl.focus();
+        });
+
+        // --- 2. MENU CÂMERA/GALERIA ---
+        document.getElementById('btnMenuMedia').addEventListener('click', function() { document.getElementById('media-modal').style.display = 'flex'; });
+        function fecharModal() { document.getElementById('media-modal').style.display = 'none'; }
+        function usarCamera() { fecharModal(); document.getElementById('inputCamera').click(); }
+        function usarGaleria() { fecharModal(); document.getElementById('inputGallery').click(); }
+
+        // --- 3. PROCESSAMENTO DE IMAGEM (OCR TURBINADO) ---
+        async function processarImagem(e) {
             var file = e.target.files[0];
             if (!file) return;
 
-            showToast("🔍 Lendo imagem... Aguarde.");
+            showToast("👁️ Analisando imagem... (Isso pode demorar)");
             toggleLoader(true);
 
             try {
-                // Reconhecimento de texto
+                // Executa Tesseract padrão
                 const { data: { text } } = await Tesseract.recognize(file, 'eng');
                 
-                var cleanText = text.replace(/\n/g, ' ').trim();
-                console.log("Texto Bruto:", cleanText);
+                // Texto bruto, substitui quebras de linha por espaço
+                var rawText = text.replace(/\n/g, ' ').trim();
+                console.log("OCR Bruto:", rawText);
 
-                // Tentativa de encontrar padrões (Placa ou Telefone)
-                var plateRegex = /[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/i;
-                var phoneRegex = /(\+|00)[0-9]{2,}/;
+                // --- LÓGICA DE DETECÇÃO AVANÇADA ---
                 
+                // 1. Limpa tudo que não é letra ou número para tentar achar a placa
+                // Remove espaços e hifens para facilitar: "ABC - 1234" vira "ABC1234"
+                var cleanForPlate = rawText.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+                // Regex Placas (Mercosul ou Antiga) -> Procura dentro da string limpa
+                var plateRegex = /[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/;
+                var phoneRegex = /(\+|00)[0-9]{2,}/;
+
                 var finalQuery = "";
 
-                if (plateRegex.test(cleanText)) {
-                    finalQuery = cleanText.match(plateRegex)[0];
-                    showToast("🚙 Placa encontrada: " + finalQuery);
-                } else if (phoneRegex.test(cleanText)) {
-                    finalQuery = cleanText.match(phoneRegex)[0];
-                    showToast("📞 Telefone encontrado: " + finalQuery);
-                } else {
-                    // Pega a primeira palavra longa encontrada (ex: nome de marca)
-                    var words = cleanText.split(' ').filter(w => w.length > 3);
+                if (plateRegex.test(cleanForPlate)) {
+                    // Achou placa na versão limpa
+                    finalQuery = cleanForPlate.match(plateRegex)[0];
+                    showToast("🚙 Placa identificada: " + finalQuery);
+                } 
+                else if (phoneRegex.test(rawText)) {
+                    // Achou telefone no texto original
+                    finalQuery = rawText.match(phoneRegex)[0];
+                    showToast("📞 Telefone identificado: " + finalQuery);
+                } 
+                else {
+                    // Não achou placa. Tenta achar palavras conhecidas (Dicionário)
+                    // Separa palavras com mais de 3 letras
+                    var words = rawText.split(/[\s,\.\-]+/).filter(w => w.length > 3 && /^[a-zA-Z]+$/.test(w));
+                    
                     if (words.length > 0) {
-                        finalQuery = words[0]; 
+                        // Verifica se alguma palavra está no nosso dicionário
+                        var culturalMatch = words.find(w => wordMap[w.toLowerCase()]);
+                        
+                        if (culturalMatch) {
+                            finalQuery = culturalMatch; // Usa a palavra exata (ex: "Sushi")
+                        } else {
+                            // Se não achar no dicionário, pega a maior palavra (maior chance de ser marca/cidade)
+                            finalQuery = words.sort((a, b) => b.length - a.length)[0];
+                        }
                         showToast("🔤 Texto lido: " + finalQuery);
                     } else {
-                        throw new Error("Texto ilegível");
+                        throw new Error("Não consegui ler texto nítido");
                     }
                 }
 
-                document.getElementById('searchInput').value = finalQuery;
+                // Preenche o campo e mostra o botão X
+                inputEl.value = finalQuery;
+                clearBtn.style.display = 'flex';
+                
+                // Dispara a busca
                 fazerBusca();
 
             } catch (err) {
                 console.error(err);
-                showToast("❌ Não consegui ler. Tente outra foto.");
+                showToast("❌ Não consegui identificar nada. Tente aproximar a câmera.");
                 toggleLoader(false);
             }
-        });
+            e.target.value = ''; 
+        }
 
-        // ===============================================
-        // 4. LÓGICA DE BUSCA PRINCIPAL
-        // ===============================================
+        document.getElementById('inputCamera').addEventListener('change', processarImagem);
+        document.getElementById('inputGallery').addEventListener('change', processarImagem);
+
+
+        // --- 4. BUSCA ---
         async function fazerBusca() {
             var input = document.getElementById('searchInput');
             var raw = input.value.trim();
-            
             input.blur(); fecharPainel();
             if (!raw) return;
             toggleLoader(true);
 
-            // Normalização
             var clean = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ""); 
             var cleanNoSpace = clean.replace(/\s/g, '');
 
@@ -232,14 +293,12 @@
                     await buscarPais(code, "Associação: " + raw.toUpperCase());
                     return;
                 }
-
-                // B. Domínio / Sigla
+                // B. Código País
                 var cleanCode = clean.replace('.', '');
                 if (cleanCode.length <= 3 && domainMap[cleanCode]) {
                     await buscarPais(domainMap[cleanCode], "Código de País");
                     return;
                 }
-
                 // C. Números
                 var nums = raw.replace(/[^0-9]/g, '');
                 if (nums.length >= 2) {
@@ -255,14 +314,15 @@
                         }
                     }
                 }
-
-                // D. Placa Carro
-                if (/[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/i.test(cleanNoSpace)) {
+                // D. Placa Carro (Verificação final)
+                // Removemos tudo que não é letra/numero para validar o padrão
+                var plateCheck = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (/[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/.test(plateCheck)) {
                     await buscarPais('br', "Placa Detectada");
                     return;
                 }
 
-                // E. Busca Genérica (Nominatim)
+                // E. Busca Genérica
                 await buscarNominatim(raw, "Local Encontrado");
 
             } catch (e) {
@@ -273,25 +333,16 @@
             }
         }
 
-        // ===============================================
-        // 5. API E RENDERIZAÇÃO
-        // ===============================================
         async function buscarPais(code, motivo) {
             var res = await fetch('https://restcountries.com/v3.1/alpha/' + code);
             if (!res.ok) throw new Error();
             var data = await res.json();
             var c = data[0];
-
             renderResult({
                 lat: c.latlng[0], lng: c.latlng[1], zoom: 5,
                 title: c.translations.por ? c.translations.por.common : c.name.common,
-                badge: motivo,
-                flag: c.flags.svg,
-                rows: [
-                    {k: 'Capital', v: c.capital?.[0] || '-'},
-                    {k: 'Região', v: c.region},
-                    {k: 'Moeda', v: c.currencies ? Object.values(c.currencies)[0].symbol : '$'}
-                ]
+                badge: motivo, flag: c.flags.svg,
+                rows: [{k:'Capital',v:c.capital?.[0]||'-'},{k:'Região',v:c.region},{k:'Moeda',v:c.currencies?Object.values(c.currencies)[0].symbol:'$'}]
             });
         }
 
@@ -300,21 +351,13 @@
             var res = await fetch(url);
             var data = await res.json();
             if (!data.length) throw new Error();
-            
             var loc = data[0];
             var addr = loc.address;
-            var flag = 'https://flagcdn.com/w80/' + (addr.country_code || 'xx') + '.png';
-
             renderResult({
                 lat: parseFloat(loc.lat), lng: parseFloat(loc.lon), zoom: 14,
                 title: addr.road || loc.name || addr.city,
-                badge: motivo,
-                flag: flag,
-                rows: [
-                    {k: 'Cidade', v: addr.city || addr.town || '-'},
-                    {k: 'País', v: addr.country},
-                    {k: 'CEP', v: addr.postcode || '-'}
-                ]
+                badge: motivo, flag: 'https://flagcdn.com/w80/' + (addr.country_code || 'xx') + '.png',
+                rows: [{k:'Cidade',v:addr.city||addr.town||'-'},{k:'País',v:addr.country},{k:'CEP',v:addr.postcode||'-'}]
             });
         }
 
@@ -322,39 +365,18 @@
             if (currentMarker) map.removeLayer(currentMarker);
             map.setView([data.lat, data.lng], data.zoom, {animate: true, duration: 1.5});
             currentMarker = L.marker([data.lat, data.lng]).addTo(map);
-
-            var htmlRows = data.rows.map(r => 
-                `<div class="info-row"><span class="info-label">${r.k}</span><span class="info-value">${r.v}</span></div>`
-            ).join('');
-
-            document.getElementById('sheetContent').innerHTML = `
-                <div class="header-row">
-                    <img src="${data.flag}" class="flag-img" onerror="this.style.display='none'">
-                    <div class="title-group">
-                        <span class="badge">${data.badge}</span>
-                        <h2>${data.title}</h2>
-                    </div>
-                </div>
-                ${htmlRows}
-            `;
+            var htmlRows = data.rows.map(r => `<div class="info-row"><span class="info-label">${r.k}</span><span class="info-value">${r.v}</span></div>`).join('');
+            document.getElementById('sheetContent').innerHTML = `<div class="header-row"><img src="${data.flag}" class="flag-img" onerror="this.style.display='none'"><div class="title-group"><span class="badge">${data.badge}</span><h2>${data.title}</h2></div></div>${htmlRows}`;
             document.getElementById('bottom-sheet').classList.add('active');
         }
 
-        // Utilitários
-        function toggleLoader(show) {
-            document.getElementById('btnIcon').style.display = show ? 'none' : 'block';
-            document.getElementById('loader').style.display = show ? 'block' : 'none';
-        }
-        function showToast(msg) {
-            var t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 3000);
-        }
+        function toggleLoader(show) { document.getElementById('btnIcon').style.display = show ? 'none' : 'block'; document.getElementById('loader').style.display = show ? 'block' : 'none'; }
+        function showToast(msg) { var t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 4000); }
         function fecharPainel() { document.getElementById('bottom-sheet').classList.remove('active'); }
 
         document.getElementById('btnBuscar').addEventListener('click', fazerBusca);
         document.getElementById('closeSheet').addEventListener('click', fecharPainel);
         document.getElementById("searchInput").addEventListener("keypress", (e) => { if(e.key==="Enter") fazerBusca() });
-
     </script>
 </body>
 </html>
