@@ -3,103 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GeoSearch Pro V2</title>
+    <title>GeoSearch Vision AI</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        /* --- ESTILOS GERAIS --- */
+        /* --- ESTILOS VISUAIS --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; background: #111; }
         
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            margin: 0; padding: 0;
-            height: 100vh; width: 100vw;
-            overflow: hidden;
-            background-color: #f5f5f5;
+        #map { width: 100%; height: 100%; z-index: 1; opacity: 0.9; }
+
+        /* BARRA DE BUSCA */
+        .search-wrapper { 
+            position: absolute; top: 20px; left: 15px; right: 15px; z-index: 1000; 
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); 
+            border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            display: flex; align-items: center; padding: 6px; 
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
         }
 
-        #map { width: 100%; height: 100%; z-index: 1; }
-
-        /* --- BARRA DE BUSCA --- */
-        .search-wrapper {
-            position: absolute; top: 20px; left: 15px; right: 15px; z-index: 1000;
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-            border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            display: flex; align-items: center; padding: 5px;
-        }
-
-        .search-icon { padding: 10px 15px; color: #666; font-size: 1.2rem; }
-
-        input {
-            flex: 1; border: none; background: transparent; padding: 12px 0;
-            font-size: 16px; color: #333; outline: none; font-family: inherit;
-        }
-
-        .btn-go {
-            background-color: #007AFF; color: white; border: none;
-            width: 40px; height: 40px; border-radius: 10px; margin-left: 5px;
-            font-weight: 600; display: flex; justify-content: center; align-items: center;
-            cursor: pointer;
-        }
+        .search-icon { padding: 0 10px 0 15px; font-size: 1.4rem; }
         
+        input { 
+            flex: 1; border: none; background: transparent; padding: 14px 0; 
+            font-size: 16px; color: #000; outline: none; font-weight: 600; 
+        }
+        input::placeholder { color: #666; font-weight: 400; }
+
+        /* Botão Câmera */
+        .btn-cam {
+            background: #eee; color: #333; border: none;
+            width: 40px; height: 40px; border-radius: 12px; margin-right: 5px;
+            font-size: 1.2rem; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: 0.2s;
+        }
+        .btn-cam:active { background: #ddd; transform: scale(0.95); }
+        
+        /* Botão Ir */
+        .btn-go { 
+            background: linear-gradient(135deg, #007AFF, #0055ff); color: white; border: none; 
+            width: 44px; height: 44px; border-radius: 12px;
+            font-weight: 800; display: flex; justify-content: center; align-items: center; 
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.3);
+        }
+        .btn-go:active { transform: scale(0.95); }
+
         /* Loader */
-        .loader {
-            width: 18px; height: 18px; border: 2px solid #fff;
-            border-bottom-color: transparent; border-radius: 50%;
-            display: none; animation: rotation 1s linear infinite;
-        }
-        @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .loader { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s infinite linear; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* --- PAINEL RESULTADOS --- */
-        #bottom-sheet {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            background: white; border-radius: 20px 20px 0 0;
-            box-shadow: 0 -5px 30px rgba(0,0,0,0.15); z-index: 1001;
-            transform: translateY(110%); transition: transform 0.4s ease;
-            max-height: 60vh; display: flex; flex-direction: column;
+        /* PAINEL DE RESULTADO */
+        #bottom-sheet { 
+            position: absolute; bottom: 0; left: 0; right: 0; 
+            background: white; border-radius: 24px 24px 0 0; 
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.2); z-index: 1001; 
+            transform: translateY(120%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            max-height: 70vh; display: flex; flex-direction: column; 
         }
         #bottom-sheet.active { transform: translateY(0); }
+        .sheet-drag-handle { width: 40px; height: 5px; background: #ddd; border-radius: 10px; margin: 12px auto; }
+        .sheet-content { padding: 0 25px 40px 25px; overflow-y: auto; }
 
-        .sheet-drag-handle {
-            width: 40px; height: 5px; background-color: #e0e0e0;
-            border-radius: 3px; margin: 12px auto;
-        }
-
-        .sheet-content { padding: 0 20px 30px 20px; overflow-y: auto; }
-
-        .result-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-        .flag-box img { width: 50px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .result-title h2 { margin: 0; font-size: 1.2rem; color: #1a1a1a; }
-        .result-title span { font-size: 0.85rem; color: #007AFF; background: #eef7ff; padding: 3px 8px; border-radius: 6px; }
-
-        .info-item { display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; margin-bottom: 10px; }
-        .label { color: #888; font-size: 0.9rem; }
-        .value { color: #333; font-weight: 500; text-align: right; }
+        .header-row { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .flag-img { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .title-group h2 { margin: 0; font-size: 1.5rem; color: #111; letter-spacing: -0.5px; }
+        .badge { background: #007AFF; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: inline-block; margin-bottom: 5px; }
+        
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; align-items: center; }
+        .info-label { color: #888; font-size: 0.9rem; font-weight: 500; }
+        .info-value { color: #111; font-weight: 600; font-size: 1rem; text-align: right; }
 
         /* Toast */
-        #toast {
-            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-            background: #FF3B30; color: white; padding: 10px 20px; border-radius: 30px;
-            font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 2000; pointer-events: none;
+        #toast { 
+            position: absolute; top: 90px; left: 50%; transform: translateX(-50%); 
+            background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 50px; 
+            font-size: 0.9rem; font-weight: 500; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 2000;
+            backdrop-filter: blur(5px); text-align: center; width: 80%;
         }
-        #toast.show { opacity: 1; }
+        #toast.show { opacity: 1; top: 100px; }
+
+        /* Overlay da Câmera */
+        #cam-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background: rgba(0,0,0,0.8); z-index: 2000; display: none;
+            justify-content: center; align-items: center; flex-direction: column; color: white;
+        }
     </style>
 </head>
 <body>
 
     <div class="search-wrapper">
-        <div class="search-icon">🔍</div>
-        <input type="text" id="searchInput" placeholder="País, Rua, CEP ou Tel..." enterkeyhint="search">
+        <div class="search-icon">🧠</div>
+        <input type="text" id="searchInput" placeholder="Digite ou tire foto..." enterkeyhint="search">
+        
+        <button class="btn-cam" id="btnCamera">📷</button>
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+
         <button class="btn-go" id="btnBuscar">
             <span id="btnIcon">➔</span>
             <div id="loader" class="loader"></div>
         </button>
     </div>
 
-    <div id="toast">Local não encontrado</div>
+    <div id="toast">Notificação</div>
     <div id="map"></div>
 
     <div id="bottom-sheet">
@@ -108,205 +118,244 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script>
-        // --- 1. DADOS ---
-        var ddiMap = {
-            '1': 'us', '55': 'br', '351': 'pt', '44': 'gb', '33': 'fr', '49': 'de', '39': 'it', 
-            '34': 'es', '81': 'jp', '86': 'cn', '61': 'au', '7': 'ru', '54': 'ar', '56': 'cl',
-            '57': 'co', '52': 'mx', '51': 'pe', '598': 'uy', '58': 've', '595': 'py', '353': 'ie',
-            '32': 'be', '41': 'ch', '31': 'nl', '46': 'se', '47': 'no', '90': 'tr', '91': 'in'
-        };
-        
-        var domainExceptions = { 'uk': 'gb', 'com': 'us', 'eu': 'be', 'net': 'us', 'org': 'us' };
-
-        var dddData = {
-            '11': { uf: 'SP', city: 'São Paulo' }, '12': { uf: 'SP', city: 'S. José dos Campos' },
-            '13': { uf: 'SP', city: 'Santos' }, '19': { uf: 'SP', city: 'Campinas' },
-            '21': { uf: 'RJ', city: 'Rio de Janeiro' }, '22': { uf: 'RJ', city: 'Cabo Frio/Campos' },
-            '24': { uf: 'RJ', city: 'Petrópolis' }, '27': { uf: 'ES', city: 'Vitória' },
-            '31': { uf: 'MG', city: 'Belo Horizonte' }, '41': { uf: 'PR', city: 'Curitiba' },
-            '47': { uf: 'SC', city: 'Joinville' }, '48': { uf: 'SC', city: 'Florianópolis' },
-            '51': { uf: 'RS', city: 'Porto Alegre' }, '61': { uf: 'DF', city: 'Brasília' },
-            '62': { uf: 'GO', city: 'Goiânia' }, '71': { uf: 'BA', city: 'Salvador' },
-            '81': { uf: 'PE', city: 'Recife' }, '85': { uf: 'CE', city: 'Fortaleza' },
-            '91': { uf: 'PA', city: 'Belém' }, '92': { uf: 'AM', city: 'Manaus' }
+        // ===============================================
+        // DADOS (Dicionários e Padrões)
+        // ===============================================
+        var wordMap = {
+            'canguru': 'au', 'koala': 'au', 'panda': 'cn', 'dragao': 'cn', 'leao': 'za', 'elefante': 'in',
+            'vodka': 'ru', 'tequila': 'mx', 'taco': 'mx', 'sushi': 'jp', 'ramen': 'jp', 'pizza': 'it', 'pasta': 'it',
+            'feijoada': 'br', 'caipirinha': 'br', 'hamburguer': 'us', 'croissant': 'fr', 'bacalhau': 'pt',
+            'paella': 'es', 'cerveja': 'de', 'samba': 'br', 'tango': 'ar', 'anime': 'jp', 'kpop': 'kr',
+            'ikea': 'se', 'ferrari': 'it', 'bmw': 'de', 'iphone': 'us', 'cristo redentor': 'br', 'torre eiffel': 'fr'
         };
 
-        // --- 2. MAPA ---
-        var map = L.map('map', { zoomControl: false }).setView([-14.235, -51.925], 3);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
+        var ddiMap = { '1':'us', '55':'br', '351':'pt', '44':'gb', '33':'fr', '49':'de', '34':'es', '81':'jp', '86':'cn', '7':'ru' };
+        var domainMap = { 'br':'br', 'pt':'pt', 'us':'us', 'uk':'gb', 'de':'de', 'fr':'fr', 'it':'it', 'es':'es', 'jp':'jp', 'cn':'cn', 'ru':'ru', 'ar':'ar' };
+        var dddMap = { '11':'SP', '21':'RJ', '31':'MG', '41':'PR', '51':'RS', '61':'DF', '71':'BA', '81':'PE', '91':'PA' };
+
+        // --- MAPA ---
+        var map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
         var currentMarker = null;
 
-        // --- 3. LÓGICA PRINCIPAL (FUNCÃO GLOBAL) ---
+        // ===============================================
+        // LÓGICA DE VISÃO (CÂMERA)
+        // ===============================================
+        
+        // 1. Abrir seletor de arquivo/câmera
+        document.getElementById('btnCamera').addEventListener('click', function() {
+            document.getElementById('fileInput').click();
+        });
+
+        // 2. Ao selecionar a foto
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            showToast("🔍 Analisando imagem... Aguarde.");
+            toggleLoader(true);
+
+            try {
+                // Usa Tesseract para ler
+                const { data: { text } } = await Tesseract.recognize(
+                    file,
+                    'eng', // Inglês lê melhor caracteres latinos gerais
+                    { logger: m => console.log(m) }
+                );
+
+                // Limpeza básica do texto encontrado
+                // Remove quebras de linha e caracteres estranhos, mantém letras e numeros
+                var cleanText = text.replace(/\n/g, ' ').trim();
+                
+                // Filtro para tentar achar o "ouro" no meio do texto
+                // Se a imagem tiver muito texto, tentamos achar padrões conhecidos
+                
+                var textoFinal = cleanText;
+                
+                // Tenta achar Placa Mercosul ou Telefone no meio do texto
+                var plateRegex = /[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/i;
+                var phoneRegex = /(\+|00)[0-9]{2,}/;
+                
+                var plateMatch = cleanText.match(plateRegex);
+                var phoneMatch = cleanText.match(phoneRegex);
+
+                if (plateMatch) {
+                    textoFinal = plateMatch[0]; // Pega só a placa
+                    showToast("🚙 Placa detectada: " + textoFinal);
+                } else if (phoneMatch) {
+                    textoFinal = phoneMatch[0]; // Pega só o telefone
+                    showToast("📞 Telefone detectado: " + textoFinal);
+                } else {
+                    // Se não achar padrão, pega as primeiras 3 palavras (evita textos longos)
+                    var words = cleanText.split(' ').filter(w => w.length > 2);
+                    if (words.length > 0) {
+                        // Pega a palavra mais "significativa" (ex: a maior) ou a primeira
+                        // Vamos pegar a primeira palavra grande
+                        textoFinal = words[0]; 
+                        showToast("🔤 Texto lido: " + textoFinal);
+                    } else {
+                        throw new Error("Nenhum texto legível.");
+                    }
+                }
+
+                // Joga no input e busca
+                document.getElementById('searchInput').value = textoFinal;
+                fazerBusca();
+
+            } catch (err) {
+                console.error(err);
+                showToast("❌ Não consegui ler nada na foto. Tente uma imagem mais clara.");
+                toggleLoader(false);
+            }
+        });
+
+
+        // ===============================================
+        // LÓGICA DE BUSCA
+        // ===============================================
         async function fazerBusca() {
             var input = document.getElementById('searchInput');
             var raw = input.value.trim();
             
-            // Fecha UI
-            input.blur(); 
-            fecharPainel();
-
+            input.blur(); fecharPainel();
             if (!raw) return;
-
             toggleLoader(true);
-            var clean = raw.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+            var clean = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ""); 
+            var cleanNoSpace = clean.replace(/\s/g, '');
 
             try {
-                // TIPO 1: Sigla de País (br, us, pt)
-                if (/^[a-z]{2,3}$/.test(clean)) {
-                    var code = domainExceptions[clean] || clean;
-                    await buscarPais(code, "Domínio / País");
+                // 1. Dicionário Cultural
+                if (wordMap[clean] || wordMap[cleanNoSpace]) {
+                    var code = wordMap[clean] || wordMap[cleanNoSpace];
+                    await buscarPais(code, "Associação: " + raw.toUpperCase());
+                    return;
                 }
-                
-                // TIPO 2: Números (DDD, Telefone, CEP)
-                else if (/^\d+$/.test(clean)) {
-                    
-                    // DDD Brasileiro
-                    if (clean.length === 2 && dddData[clean]) {
-                        await buscarNominatim("Brasil, " + dddData[clean].city, "Região DDD " + clean);
-                    }
-                    // Telefone ou CEP
-                    else {
-                        // Tenta achar DDI
-                        var paisDetectado = null;
-                        // Loop reverso para pegar DDI de 3, 2 ou 1 digito
-                        for (var i = 3; i >= 1; i--) {
-                            var prefix = clean.substring(0, i);
-                            if (ddiMap[prefix]) {
-                                paisDetectado = ddiMap[prefix];
-                                break;
-                            }
-                        }
 
-                        if (paisDetectado && clean.length > 6) {
-                            await buscarPais(paisDetectado, "Telefone Internacional");
-                        } else {
-                            // Assume que é Endereço/CEP
-                            await buscarNominatim(raw, "Endereço / CEP");
+                // 2. Código País
+                var cleanCode = clean.replace('.', '');
+                if (cleanCode.length <= 3 && domainMap[cleanCode]) {
+                    await buscarPais(domainMap[cleanCode], "Código de País");
+                    return;
+                }
+
+                // 3. Números (DDD/DDI)
+                var nums = raw.replace(/[^0-9]/g, '');
+                if (nums.length >= 2) {
+                    // DDD
+                    if (nums.length === 2 && dddMap[nums]) {
+                        await buscarNominatim("Brasil " + dddMap[nums], "DDD Brasileiro");
+                        return;
+                    }
+                    // DDI
+                    for (var i = 3; i >= 1; i--) {
+                        var prefix = nums.substring(0, i);
+                        if (ddiMap[prefix]) {
+                            await buscarPais(ddiMap[prefix], "DDI Detectado: +" + prefix);
+                            return;
                         }
                     }
                 }
-                
-                // TIPO 3: Texto (Rua, Cidade)
-                else {
-                    await buscarNominatim(raw, "Endereço Localizado");
+
+                // 4. Placas (Mercosul/EU)
+                var cleanAlphaNum = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                if (/[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/.test(cleanAlphaNum)) {
+                    await buscarPais('br', "Placa Detectada");
+                    return;
                 }
 
-            } catch (error) {
-                console.error(error);
-                showToast("Não encontramos este local.");
+                // 5. Coringa
+                await buscarNominatim(raw, "Resultado Encontrado");
+
+            } catch (e) {
+                console.log(e);
+                showToast("Não consegui identificar '" + raw + "'");
             } finally {
                 toggleLoader(false);
             }
         }
 
-        // --- 4. APIS ---
-        async function buscarPais(code, badgeText) {
+        // --- APIS ---
+        async function buscarPais(code, motivo) {
             var res = await fetch('https://restcountries.com/v3.1/alpha/' + code);
             if (!res.ok) throw new Error();
             var data = await res.json();
             var c = data[0];
 
-            // Tratamento de dados seguro para navegadores antigos
-            var ddi = (c.idd.root || "") + (c.idd.suffixes && c.idd.suffixes.length > 0 ? c.idd.suffixes[0] : "");
-            var capital = c.capital && c.capital.length > 0 ? c.capital[0] : '-';
-            var moeda = c.currencies ? Object.values(c.currencies)[0].symbol : '$';
-            var nome = c.translations.por ? c.translations.por.common : c.name.common;
-
             renderResult({
-                lat: c.latlng[0],
-                lng: c.latlng[1],
-                zoom: 5,
-                title: nome,
-                badge: badgeText,
+                lat: c.latlng[0], lng: c.latlng[1], zoom: 5,
+                title: c.translations.por ? c.translations.por.common : c.name.common,
+                badge: motivo,
                 flag: c.flags.svg,
-                fields: [
-                    { k: 'DDI', v: ddi },
-                    { k: 'Capital', v: capital },
-                    { k: 'Moeda', v: moeda },
-                    { k: 'Região', v: c.region }
+                rows: [
+                    {k: 'Capital', v: c.capital?.[0] || '-'},
+                    {k: 'Região', v: c.region},
+                    {k: 'Moeda', v: c.currencies ? Object.values(c.currencies)[0].symbol : '$'}
                 ]
             });
         }
 
-        async function buscarNominatim(query, badgeText) {
+        async function buscarNominatim(query, motivo) {
             var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&addressdetails=1&limit=1';
             var res = await fetch(url);
             var data = await res.json();
             if (!data.length) throw new Error();
-
+            
             var loc = data[0];
             var addr = loc.address;
-            
-            var titulo = addr.road || addr.suburb || addr.city || addr.town || loc.name;
-            var campos = [];
-
-            if (addr.road) campos.push({k: 'Rua', v: addr.road});
-            if (addr.suburb) campos.push({k: 'Bairro', v: addr.suburb});
-            if (addr.city || addr.town) campos.push({k: 'Cidade', v: addr.city || addr.town});
-            if (addr.state) campos.push({k: 'Estado', v: addr.state});
-            if (addr.country) campos.push({k: 'País', v: addr.country});
-            if (addr.postcode) campos.push({k: 'CEP', v: addr.postcode});
-
-            var flagUrl = 'https://flagcdn.com/w80/' + (addr.country_code || 'xx') + '.png';
+            var titulo = addr.road || loc.name || addr.city || addr.town;
+            var flag = 'https://flagcdn.com/w80/' + (addr.country_code || 'xx') + '.png';
 
             renderResult({
-                lat: parseFloat(loc.lat),
-                lng: parseFloat(loc.lon),
-                zoom: 16,
+                lat: parseFloat(loc.lat), lng: parseFloat(loc.lon), zoom: 14,
                 title: titulo,
-                badge: badgeText,
-                flag: flagUrl,
-                fields: campos
+                badge: motivo,
+                flag: flag,
+                rows: [
+                    {k: 'Cidade', v: addr.city || addr.town || '-'},
+                    {k: 'País', v: addr.country},
+                    {k: 'CEP', v: addr.postcode || '-'}
+                ]
             });
         }
 
-        // --- 5. RENDERIZAÇÃO ---
         function renderResult(data) {
             if (currentMarker) map.removeLayer(currentMarker);
-            map.setView([data.lat, data.lng], data.zoom, { animate: true, duration: 1.5 });
+            map.setView([data.lat, data.lng], data.zoom, {animate: true, duration: 1.5});
             currentMarker = L.marker([data.lat, data.lng]).addTo(map);
 
-            var htmlCampos = data.fields.map(function(item) {
-                return '<div class="info-item"><span class="label">' + item.k + '</span><span class="value">' + item.v + '</span></div>';
-            }).join('');
+            var htmlRows = data.rows.map(r => 
+                `<div class="info-row"><span class="info-label">${r.k}</span><span class="info-value">${r.v}</span></div>`
+            ).join('');
 
-            var content = 
-                '<div class="result-header">' +
-                    '<div class="flag-box"><img src="' + data.flag + '" onerror="this.style.display=\'none\'"></div>' +
-                    '<div class="result-title"><span>' + data.badge + '</span><h2>' + data.title + '</h2></div>' +
-                '</div>' +
-                '<div class="info-grid">' + htmlCampos + '</div>';
-
-            document.getElementById('sheetContent').innerHTML = content;
+            document.getElementById('sheetContent').innerHTML = `
+                <div class="header-row">
+                    <img src="${data.flag}" class="flag-img" onerror="this.style.display='none'">
+                    <div class="title-group">
+                        <span class="badge">${data.badge}</span>
+                        <h2>${data.title}</h2>
+                    </div>
+                </div>
+                ${htmlRows}
+            `;
             document.getElementById('bottom-sheet').classList.add('active');
         }
 
-        // --- 6. UTILITARIOS & EVENTOS ---
+        // --- UTILS ---
         function toggleLoader(show) {
             document.getElementById('btnIcon').style.display = show ? 'none' : 'block';
             document.getElementById('loader').style.display = show ? 'block' : 'none';
         }
-
         function showToast(msg) {
-            var t = document.getElementById('toast');
-            t.innerText = msg;
-            t.classList.add('show');
-            setTimeout(function() { t.classList.remove('show'); }, 3000);
+            var t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 4000); // 4 segs para ler o toast
         }
+        function fecharPainel() { document.getElementById('bottom-sheet').classList.remove('active'); }
 
-        function fecharPainel() {
-            document.getElementById('bottom-sheet').classList.remove('active');
-        }
-
-        // Adicionando eventos com JavaScript (Evita o erro "fazerBusca is not defined")
         document.getElementById('btnBuscar').addEventListener('click', fazerBusca);
         document.getElementById('closeSheet').addEventListener('click', fecharPainel);
-        
-        document.getElementById("searchInput").addEventListener("keypress", function(e) {
-            if (e.key === "Enter") fazerBusca();
-        });
+        document.getElementById("searchInput").addEventListener("keypress", (e) => { if(e.key==="Enter") fazerBusca() });
 
     </script>
 </body>
