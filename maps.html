@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GeoSearch Pro V2</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- ESTILOS GERAIS --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            margin: 0; padding: 0;
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+
+        #map { width: 100%; height: 100%; z-index: 1; }
+
+        /* --- BARRA DE BUSCA --- */
+        .search-wrapper {
+            position: absolute; top: 20px; left: 15px; right: 15px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex; align-items: center; padding: 5px;
+        }
+
+        .search-icon { padding: 10px 15px; color: #666; font-size: 1.2rem; }
+
+        input {
+            flex: 1; border: none; background: transparent; padding: 12px 0;
+            font-size: 16px; color: #333; outline: none; font-family: inherit;
+        }
+
+        .btn-go {
+            background-color: #007AFF; color: white; border: none;
+            width: 40px; height: 40px; border-radius: 10px; margin-left: 5px;
+            font-weight: 600; display: flex; justify-content: center; align-items: center;
+            cursor: pointer;
+        }
+        
+        /* Loader */
+        .loader {
+            width: 18px; height: 18px; border: 2px solid #fff;
+            border-bottom-color: transparent; border-radius: 50%;
+            display: none; animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* --- PAINEL RESULTADOS --- */
+        #bottom-sheet {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: white; border-radius: 20px 20px 0 0;
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.15); z-index: 1001;
+            transform: translateY(110%); transition: transform 0.4s ease;
+            max-height: 60vh; display: flex; flex-direction: column;
+        }
+        #bottom-sheet.active { transform: translateY(0); }
+
+        .sheet-drag-handle {
+            width: 40px; height: 5px; background-color: #e0e0e0;
+            border-radius: 3px; margin: 12px auto;
+        }
+
+        .sheet-content { padding: 0 20px 30px 20px; overflow-y: auto; }
+
+        .result-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .flag-box img { width: 50px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .result-title h2 { margin: 0; font-size: 1.2rem; color: #1a1a1a; }
+        .result-title span { font-size: 0.85rem; color: #007AFF; background: #eef7ff; padding: 3px 8px; border-radius: 6px; }
+
+        .info-item { display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; margin-bottom: 10px; }
+        .label { color: #888; font-size: 0.9rem; }
+        .value { color: #333; font-weight: 500; text-align: right; }
+
+        /* Toast */
+        #toast {
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+            background: #FF3B30; color: white; padding: 10px 20px; border-radius: 30px;
+            font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 2000; pointer-events: none;
+        }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <div class="search-wrapper">
+        <div class="search-icon">🔍</div>
+        <input type="text" id="searchInput" placeholder="País, Rua, CEP ou Tel..." enterkeyhint="search">
+        <button class="btn-go" id="btnBuscar">
+            <span id="btnIcon">➔</span>
+            <div id="loader" class="loader"></div>
+        </button>
+    </div>
+
+    <div id="toast">Local não encontrado</div>
+    <div id="map"></div>
+
+    <div id="bottom-sheet">
+        <div class="sheet-drag-handle" id="closeSheet"></div>
+        <div class="sheet-content" id="sheetContent"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- 1. DADOS ---
+        var ddiMap = {
+            '1': 'us', '55': 'br', '351': 'pt', '44': 'gb', '33': 'fr', '49': 'de', '39': 'it', 
+            '34': 'es', '81': 'jp', '86': 'cn', '61': 'au', '7': 'ru', '54': 'ar', '56': 'cl',
+            '57': 'co', '52': 'mx', '51': 'pe', '598': 'uy', '58': 've', '595': 'py', '353': 'ie',
+            '32': 'be', '41': 'ch', '31': 'nl', '46': 'se', '47': 'no', '90': 'tr', '91': 'in'
+        };
+        
+        var domainExceptions = { 'uk': 'gb', 'com': 'us', 'eu': 'be', 'net': 'us', 'org': 'us' };
+
+        var dddData = {
+            '11': { uf: 'SP', city: 'São Paulo' }, '12': { uf: 'SP', city: 'S. José dos Campos' },
+            '13': { uf: 'SP', city: 'Santos' }, '19': { uf: 'SP', city: 'Campinas' },
+            '21': { uf: 'RJ', city: 'Rio de Janeiro' }, '22': { uf: 'RJ', city: 'Cabo Frio/Campos' },
+            '24': { uf: 'RJ', city: 'Petrópolis' }, '27': { uf: 'ES', city: 'Vitória' },
+            '31': { uf: 'MG', city: 'Belo Horizonte' }, '41': { uf: 'PR', city: 'Curitiba' },
+            '47': { uf: 'SC', city: 'Joinville' }, '48': { uf: 'SC', city: 'Florianópolis' },
+            '51': { uf: 'RS', city: 'Porto Alegre' }, '61': { uf: 'DF', city: 'Brasília' },
+            '62': { uf: 'GO', city: 'Goiânia' }, '71': { uf: 'BA', city: 'Salvador' },
+            '81': { uf: 'PE', city: 'Recife' }, '85': { uf: 'CE', city: 'Fortaleza' },
+            '91': { uf: 'PA', city: 'Belém' }, '92': { uf: 'AM', city: 'Manaus' }
+        };
+
+        // --- 2. MAPA ---
+        var map = L.map('map', { zoomControl: false }).setView([-14.235, -51.925], 3);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
+        var currentMarker = null;
+
+        // --- 3. LÓGICA PRINCIPAL (FUNCÃO GLOBAL) ---
+        async function fazerBusca() {
+            var input = document.getElementById('searchInput');
+            var raw = input.value.trim();
+            
+            // Fecha UI
+            input.blur(); 
+            fecharPainel();
+
+            if (!raw) return;
+
+            toggleLoader(true);
+            var clean = raw.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+            try {
+                // TIPO 1: Sigla de País (br, us, pt)
+                if (/^[a-z]{2,3}$/.test(clean)) {
+                    var code = domainExceptions[clean] || clean;
+                    await buscarPais(code, "Domínio / País");
+                }
+                
+                // TIPO 2: Números (DDD, Telefone, CEP)
+                else if (/^\d+$/.test(clean)) {
+                    
+                    // DDD Brasileiro
+                    if (clean.length === 2 && dddData[clean]) {
+                        await buscarNominatim("Brasil, " + dddData[clean].city, "Região DDD " + clean);
+                    }
+                    // Telefone ou CEP
+                    else {
+                        // Tenta achar DDI
+                        var paisDetectado = null;
+                        // Loop reverso para pegar DDI de 3, 2 ou 1 digito
+                        for (var i = 3; i >= 1; i--) {
+                            var prefix = clean.substring(0, i);
+                            if (ddiMap[prefix]) {
+                                paisDetectado = ddiMap[prefix];
+                                break;
+                            }
+                        }
+
+                        if (paisDetectado && clean.length > 6) {
+                            await buscarPais(paisDetectado, "Telefone Internacional");
+                        } else {
+                            // Assume que é Endereço/CEP
+                            await buscarNominatim(raw, "Endereço / CEP");
+                        }
+                    }
+                }
+                
+                // TIPO 3: Texto (Rua, Cidade)
+                else {
+                    await buscarNominatim(raw, "Endereço Localizado");
+                }
+
+            } catch (error) {
+                console.error(error);
+                showToast("Não encontramos este local.");
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
+        // --- 4. APIS ---
+        async function buscarPais(code, badgeText) {
+            var res = await fetch('https://restcountries.com/v3.1/alpha/' + code);
+            if (!res.ok) throw new Error();
+            var data = await res.json();
+            var c = data[0];
+
+            // Tratamento de dados seguro para navegadores antigos
+            var ddi = (c.idd.root || "") + (c.idd.suffixes && c.idd.suffixes.length > 0 ? c.idd.suffixes[0] : "");
+            var capital = c.capital && c.capital.length > 0 ? c.capital[0] : '-';
+            var moeda = c.currencies ? Object.values(c.currencies)[0].symbol : '$';
+            var nome = c.translations.por ? c.translations.por.common : c.name.common;
+
+            renderResult({
+                lat: c.latlng[0],
+                lng: c.latlng[1],
+                zoom: 5,
+                title: nome,
+                badge: badgeText,
+                flag: c.flags.svg,
+                fields: [
+                    { k: 'DDI', v: ddi },
+                    { k: 'Capital', v: capital },
+                    { k: 'Moeda', v: moeda },
+                    { k: 'Região', v: c.region }
+                ]
+            });
+        }
+
+        async function buscarNominatim(query, badgeText) {
+            var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&addressdetails=1&limit=1';
+            var res = await fetch(url);
+            var data = await res.json();
+            if (!data.length) throw new Error();
+
+            var loc = data[0];
+            var addr = loc.address;
+            
+            var titulo = addr.road || addr.suburb || addr.city || addr.town || loc.name;
+            var campos = [];
+
+            if (addr.road) campos.push({k: 'Rua', v: addr.road});
+            if (addr.suburb) campos.push({k: 'Bairro', v: addr.suburb});
+            if (addr.city || addr.town) campos.push({k: 'Cidade', v: addr.city || addr.town});
+            if (addr.state) campos.push({k: 'Estado', v: addr.state});
+            if (addr.country) campos.push({k: 'País', v: addr.country});
+            if (addr.postcode) campos.push({k: 'CEP', v: addr.postcode});
+
+            var flagUrl = 'https://flagcdn.com/w80/' + (addr.country_code || 'xx') + '.png';
+
+            renderResult({
+                lat: parseFloat(loc.lat),
+                lng: parseFloat(loc.lon),
+                zoom: 16,
+                title: titulo,
+                badge: badgeText,
+                flag: flagUrl,
+                fields: campos
+            });
+        }
+
+        // --- 5. RENDERIZAÇÃO ---
+        function renderResult(data) {
+            if (currentMarker) map.removeLayer(currentMarker);
+            map.setView([data.lat, data.lng], data.zoom, { animate: true, duration: 1.5 });
+            currentMarker = L.marker([data.lat, data.lng]).addTo(map);
+
+            var htmlCampos = data.fields.map(function(item) {
+                return '<div class="info-item"><span class="label">' + item.k + '</span><span class="value">' + item.v + '</span></div>';
+            }).join('');
+
+            var content = 
+                '<div class="result-header">' +
+                    '<div class="flag-box"><img src="' + data.flag + '" onerror="this.style.display=\'none\'"></div>' +
+                    '<div class="result-title"><span>' + data.badge + '</span><h2>' + data.title + '</h2></div>' +
+                '</div>' +
+                '<div class="info-grid">' + htmlCampos + '</div>';
+
+            document.getElementById('sheetContent').innerHTML = content;
+            document.getElementById('bottom-sheet').classList.add('active');
+        }
+
+        // --- 6. UTILITARIOS & EVENTOS ---
+        function toggleLoader(show) {
+            document.getElementById('btnIcon').style.display = show ? 'none' : 'block';
+            document.getElementById('loader').style.display = show ? 'block' : 'none';
+        }
+
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(function() { t.classList.remove('show'); }, 3000);
+        }
+
+        function fecharPainel() {
+            document.getElementById('bottom-sheet').classList.remove('active');
+        }
+
+        // Adicionando eventos com JavaScript (Evita o erro "fazerBusca is not defined")
+        document.getElementById('btnBuscar').addEventListener('click', fazerBusca);
+        document.getElementById('closeSheet').addEventListener('click', fecharPainel);
+        
+        document.getElementById("searchInput").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") fazerBusca();
+        });
+
+    </script>
+</body>
+</html>
