@@ -355,7 +355,7 @@
                 </div>
 
                 <div class="card">
-                    <h2>👥 Participantes</h2>
+                    <h2 id="tituloParticipantes">👥 Participantes</h2>
                     
                     <div style="background:#ecfdf5; padding:15px; border:1px solid #6ee7b7; border-radius:12px; margin-bottom:20px;">
                         <h3 style="margin:0 0 10px 0; color:#065f46; font-size:1rem; display:flex; align-items:center; gap:5px;">
@@ -392,7 +392,7 @@
 
         <div id="telaClientes" style="display:none;">
             <div class="card">
-                <h2>👥 Agenda de Contatos</h2>
+                <h2 id="tituloAgenda">👥 Agenda de Contatos</h2>
                 <input type="text" id="buscaAgenda" placeholder="🔍 Buscar nome ou telefone..." oninput="renderAgenda()">
                 <div id="listaAgenda" style="margin-top:15px;"></div>
             </div>
@@ -1322,6 +1322,17 @@
         const config = dadosDB[edicaoAtivaID].config;
         let listaVendas = Object.keys(vendasObj).map(k => ({...vendasObj[k], key: k}));
         
+        // --- NOVO: Lógica para contar Pessoas Únicas ---
+        const clientesUnicos = new Set();
+        listaVendas.forEach(v => {
+            if(v.tel) clientesUnicos.add(v.tel.replace(/\D/g, ''));
+        });
+        const tituloPart = document.getElementById('tituloParticipantes');
+        if(tituloPart) {
+            tituloPart.innerHTML = `👥 Participantes <span style="font-size:0.9rem; color:#6b7280; font-weight:normal;">(${clientesUnicos.size} pessoas)</span>`;
+        }
+        // ------------------------------------------------
+
         // Contadores
         let cotasPagas = 0, cotasAbertas = 0, cotasGratis = 0, cotasTotalVendidas = 0;
         
@@ -1385,6 +1396,15 @@
     function renderAgenda() { 
         const c = document.getElementById('listaAgenda'); 
         const termo = document.getElementById('buscaAgenda').value.toLowerCase().trim();
+        
+        // --- NOVO: Atualiza título Agenda ---
+        const totalContatos = Object.keys(baseClientes).length;
+        const tituloAgenda = document.getElementById('tituloAgenda');
+        if(tituloAgenda) {
+            tituloAgenda.innerHTML = `👥 Agenda de Contatos <span style="font-size:0.9rem; background:#e5e7eb; padding:2px 8px; border-radius:10px;">${totalContatos}</span>`;
+        }
+        // ------------------------------------
+
         c.innerHTML = ""; 
         let lista = Object.keys(baseClientes).map(key => ({ id: key, nome: baseClientes[key].nome, tel: baseClientes[key].tel }));
         lista.sort((a, b) => a.nome.localeCompare(b.nome));
