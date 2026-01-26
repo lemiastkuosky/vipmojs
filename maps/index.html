@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GeoSearch Pro V19</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- GERAL --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; background: #1a1a1a; }
+        #map { width: 100%; height: 100%; z-index: 1; }
+
+        /* --- UI SUPERIOR --- */
+        .top-ui-container {
+            position: absolute; top: 0; left: 0; right: 0; z-index: 1000;
+            padding: 15px 15px 0 15px; display: flex; flex-direction: column; gap: 10px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
+            pointer-events: none;
+        }
+
+        /* CATEGORIAS */
+        .category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; pointer-events: auto; width: 100%; }
+        .chip {
+            background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px;
+            display: flex; justify-content: center; align-items: center; gap: 4px; padding: 8px 2px; font-size: 0.75rem; font-weight: 600; color: #fff;
+            cursor: pointer; transition: 0.2s; text-shadow: 0 1px 2px rgba(0,0,0,0.6); width: 100%;
+        }
+        .chip.active { background: rgba(0, 122, 255, 0.95); border-color: rgba(0, 122, 255, 0.5); color: white; box-shadow: 0 2px 10px rgba(0,122,255,0.4); }
+
+        /* --- BARRA DE BUSCA (ALINHAMENTO PERFEITO) --- */
+        .search-container-wrapper { pointer-events: auto; width: 100%; }
+        
+        .search-wrapper { 
+            background: rgba(255, 255, 255, 0.98); 
+            backdrop-filter: blur(20px); 
+            border-radius: 50px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
+            /* Flexbox para alinhar tudo no meio verticalmente */
+            display: flex; 
+            align-items: center; 
+            height: 54px; /* Altura fixa para garantir centro */
+            padding: 0 6px 0 16px; /* Padding ajustado */
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        /* Ícone Lupa */
+        .search-icon { color: #888; font-size: 1.1rem; margin-right: 8px; display: flex; align-items: center; }
+
+        /* Input */
+        input { 
+            flex: 1; border: none; background: transparent; padding: 0; height: 100%;
+            font-size: 16px; color: #333; outline: none; font-weight: 500; min-width: 0; 
+        }
+        input::placeholder { color: #aaa; font-weight: 400; }
+
+        /* Divisória */
+        .divider { width: 1px; height: 20px; background: #e0e0e0; margin: 0 6px; }
+
+        /* --- BOTÕES DE AÇÃO (MIC & CAMERA) --- */
+        .action-btn { 
+            background: transparent; 
+            color: #777; 
+            border: none; 
+            width: 40px; height: 40px; 
+            border-radius: 50%;
+            font-size: 1.3rem; 
+            /* Centralização Absoluta do Ícone */
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 0; margin: 0; line-height: 0; /* Remove espaços extras */
+            cursor: pointer; flex-shrink: 0; transition: all 0.2s ease;
+        }
+        .action-btn:active { background: rgba(0,0,0,0.05); transform: scale(0.9); color: #333; }
+        
+        .action-btn.recording { color: #ff3b30; animation: pulseRed 1.5s infinite; background: rgba(255, 59, 48, 0.1); }
+        @keyframes pulseRed { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* Botão X */
+        .btn-clear { 
+            background: #eee; color: #888; border: none; width: 22px; height: 22px; 
+            border-radius: 50%; font-size: 12px; font-weight: bold; 
+            display: none; justify-content: center; align-items: center; 
+            padding: 0; margin-right: 5px; cursor: pointer;
+        }
+
+        /* Botão Ir */
+        .btn-go { 
+            background: linear-gradient(135deg, #007AFF, #0055ff); 
+            color: white; border: none; 
+            width: 42px; height: 42px; 
+            border-radius: 50%; 
+            font-weight: 800; 
+            display: flex; justify-content: center; align-items: center; 
+            padding: 0; margin-left: 2px;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(0,122,255,0.3); flex-shrink: 0;
+        }
+        .btn-go:active { transform: scale(0.9); }
+        
+        .loader { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s infinite linear; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- RODAPÉ --- */
+        .btn-premium {
+            position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, #FFD700, #FFC107); color: #333; border: none; padding: 10px 22px;
+            border-radius: 30px; font-size: 0.8rem; font-weight: 800; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            cursor: pointer; display: flex; align-items: center; gap: 8px; z-index: 900; animation: float 3s ease-in-out infinite;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        @keyframes float { 0% { transform: translateX(-50%) translateY(0px); } 50% { transform: translateX(-50%) translateY(-3px); } 100% { transform: translateX(-50%) translateY(0px); } }
+
+        .btn-feedback {
+            position: fixed; bottom: 28px; right: 16px; width: 40px; height: 40px;
+            background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; color: #fff; font-size: 20px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 900;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.2s;
+        }
+        .btn-feedback:active { transform: scale(0.9); background: rgba(255,255,255,0.4); }
+
+        /* MODAIS */
+        #feedback-modal, #media-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; }
+        #media-modal { align-items: flex-end; padding-bottom: 20px; }
+        .feedback-box { background: white; width: 100%; max-width: 350px; border-radius: 20px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s ease; }
+        .media-options { background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 20px; animation: slideUp 0.3s ease; display: flex; flex-direction: column; gap: 10px; }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .feedback-box h3 { margin: 0 0 15px 0; color: #333; text-align: center; }
+        .feedback-input, .feedback-textarea { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; }
+        .feedback-textarea { min-height: 100px; resize: none; }
+        .feedback-submit { width: 100%; padding: 12px; background: #007AFF; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .feedback-close { margin-top: 10px; width: 100%; background: transparent; border: none; color: #888; cursor: pointer; padding: 10px; }
+        .media-btn { background: #f5f5f5; border: none; padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: 600; color: #333; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .media-btn.cancel { background: transparent; color: #ff3b30; justify-content: center; margin-top: 5px; }
+
+        /* RESULTADOS */
+        #bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 50px rgba(0,0,0,0.25); z-index: 1001; transform: translateY(120%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); max-height: 75vh; display: flex; flex-direction: column; padding-bottom: 80px; }
+        #bottom-sheet.active { transform: translateY(0); }
+        .btn-close-sheet { position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; background: #f0f0f0; border: none; border-radius: 50%; color: #555; font-size: 18px; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; }
+        .sheet-content { padding: 25px; overflow-y: auto; position: relative; }
+        .header-row { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; margin-right: 30px; }
+        .flag-img { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .title-group h2 { margin: 0; font-size: 1.4rem; color: #111; letter-spacing: -0.5px; line-height: 1.2; }
+        .badge { background: #007AFF; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: inline-block; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .info-label { color: #888; font-weight: 500; font-size: 0.9rem; }
+        .info-value { color: #111; font-weight: 600; text-align: right; font-size: 0.95rem; }
+
+        /* TOAST & FOOTER */
+        #toast { position: absolute; top: 180px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 50px; font-size: 0.9rem; font-weight: 500; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 2000; backdrop-filter: blur(5px); text-align: center; width: max-content; max-width: 90%; }
+        #toast.show { opacity: 1; top: 190px; }
+        .app-footer { position: fixed; bottom: 8px; width: 100%; text-align: center; color: rgba(255, 255, 255, 0.9); font-size: 0.7rem; z-index: 500; pointer-events: none; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+    <div class="top-ui-container">
+        <div class="category-grid">
+            <div class="chip active" onclick="setMode('auto', this)">✨ Auto</div>
+            <div class="chip" onclick="setMode('phone', this)">📞 Telefone</div>
+            <div class="chip" onclick="setMode('plate', this)">🚙 Placa</div>
+            <div class="chip" onclick="setMode('address', this)">📍 Endereço</div>
+            <div class="chip" onclick="setMode('site', this)">🌐 Site</div>
+            <div class="chip" onclick="setMode('word', this)">🧠 Palavra</div>
+        </div>
+
+        <div class="search-container-wrapper">
+            <div class="search-wrapper">
+                <div class="search-icon" id="searchIconDisplay">✨</div>
+                <input type="text" id="searchInput" placeholder="Digite..." enterkeyhint="search">
+                <button class="btn-clear" id="btnClear">✕</button>
+                <div class="divider"></div>
+                
+                <button class="action-btn" id="btnMic" onclick="startVoiceSearch()">🎙️</button>
+                
+                <button class="action-btn" id="btnMenuMedia">📷</button>
+                
+                <input type="file" id="inputCamera" accept="image/*" capture="environment" style="display:none">
+                <input type="file" id="inputGallery" accept="image/*" style="display:none">
+                
+                <button class="btn-go" id="btnBuscar"><span id="btnIcon">➔</span><div id="loader" class="loader"></div></button>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-premium" onclick="buyPremium()">👑 Remover Anúncios</button>
+    <button class="btn-feedback" onclick="abrirFeedback()">💡</button>
+    <div class="app-footer">Criado por <strong>Le Miastkuosky</strong> • Versão 19.0</div>
+
+    <div id="feedback-modal">
+        <div class="feedback-box">
+            <h3>Relatar Bug ou Ideia 💡</h3>
+            <form id="feedbackForm" action="https://formspree.io/f/mqeqelrv" method="POST">
+                <input type="email" name="email" class="feedback-input" placeholder="Seu E-mail (Opcional)">
+                <textarea name="message" class="feedback-textarea" placeholder="Descreva sua sugestão..." required></textarea>
+                <button type="submit" class="feedback-submit" id="btnSendFeedback">Enviar</button>
+            </form>
+            <button class="feedback-close" onclick="fecharFeedback()">Fechar</button>
+        </div>
+    </div>
+
+    <div id="media-modal">
+        <div class="media-options">
+            <div style="text-align:center; font-weight:bold; color:#555; margin-bottom:10px;">Escolher Origem</div>
+            <button class="media-btn" onclick="usarCamera()">📸 Tirar Foto</button>
+            <button class="media-btn" onclick="usarGaleria()">🖼️ Abrir Galeria</button>
+            <button class="media-btn cancel" onclick="fecharModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="toast">Notificação</div>
+    <div id="map"></div>
+
+    <div id="bottom-sheet">
+        <button class="btn-close-sheet" onclick="fecharPainel()">✕</button>
+        <div class="sheet-content" id="sheetContent"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        function startVoiceSearch() {
+            if (!('webkitSpeechRecognition' in window)) { showToast("⚠️ Voz não suportada."); return; }
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'pt-BR'; recognition.continuous = false;
+            const btnMic = document.getElementById('btnMic');
+            btnMic.classList.add('recording');
+            showToast("🎙️ Pode falar...");
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+                document.getElementById('searchInput').value = text;
+                document.getElementById('btnClear').style.display = 'flex';
+                showToast("🗣️ Ouvido: " + text); setTimeout(fazerBusca, 500); 
+            };
+            recognition.onerror = function() { showToast("❌ Erro ao ouvir."); btnMic.classList.remove('recording'); };
+            recognition.onend = function() { btnMic.classList.remove('recording'); };
+            recognition.start();
+        }
+
+        function buyPremium() { if (window.AppInventor) { window.AppInventor.setWebViewString("BUY_PREMIUM"); } else { showToast("⚠️ Disponível no App!"); } }
+        function hidePremiumButton() { document.querySelector('.btn-premium').style.display = 'none'; }
+        function triggerAdCounter() { if (window.AppInventor) window.AppInventor.setWebViewString("BUSCA_REALIZADA"); }
+
+        function abrirFeedback() { document.getElementById('feedback-modal').style.display = 'flex'; }
+        function fecharFeedback() { document.getElementById('feedback-modal').style.display = 'none'; }
+        var form = document.getElementById("feedbackForm");
+        form.addEventListener("submit", async function(event) { event.preventDefault(); var status = document.getElementById("btnSendFeedback"); var data = new FormData(event.target); status.innerText = "Enviando..."; fetch(event.target.action, { method: form.method, body: data, headers: { 'Accept': 'application/json' } }).then(response => { if (response.ok) { showToast("✅ Enviado!"); form.reset(); fecharFeedback(); } else { showToast("❌ Erro."); } status.innerText = "Enviar"; }).catch(error => { showToast("❌ Erro conexão."); status.innerText = "Enviar"; }); });
+
+        var wordMap = { 'canguru':'au','koala':'au','panda':'cn','vodka':'ru','tequila':'mx','sushi':'jp','pizza':'it','feijoada':'br','hamburguer':'us','croissant':'fr','bacalhau':'pt','paella':'es','samba':'br','tango':'ar','anime':'jp','ikea':'se','ferrari':'it','cristo redentor':'br','torre eiffel':'fr','lego':'dk','chocolate':'ch' };
+        var ddiMap = { '1':'us', '55':'br', '351':'pt', '44':'gb', '33':'fr', '49':'de', '34':'es', '81':'jp', '86':'cn', '7':'ru' };
+        var domainMap = { 'br':'br', 'pt':'pt', 'us':'us', 'uk':'gb', 'de':'de', 'fr':'fr', 'it':'it', 'es':'es', 'jp':'jp', 'cn':'cn', 'ru':'ru', 'ar':'ar' };
+        var dddMap = { '11':'SP', '21':'RJ', '31':'MG', '41':'PR', '51':'RS', '61':'DF', '71':'BA', '81':'PE', '91':'PA' };
+        var currentMode = 'auto'; 
+        var modeIcons = { 'auto':'✨', 'address':'📍', 'plate':'🚙', 'phone':'📞', 'site':'🌐', 'word':'🧠' };
+        var inputEl = document.getElementById('searchInput');
+        
+        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20, 0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+        var currentMarker = null;
+
+        function setMode(mode, element) {
+            currentMode = mode;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('searchIconDisplay').innerText = modeIcons[mode];
+            inputEl.placeholder = mode === 'phone' ? 'Ex: 11 99999...' : (mode === 'plate' ? 'Ex: ABC1234' : 'Digite...');
+            inputEl.focus();
+        }
+
+        async function processarImagem(e) {
+            var file = e.target.files[0]; if (!file) return;
+            showToast("👁️ Lendo (" + currentMode.toUpperCase() + ")..."); toggleLoader(true);
+            try {
+                const { data: { text } } = await Tesseract.recognize(file, 'eng');
+                var rawText = text.replace(/\n/g, ' ').trim(); var finalText = "";
+                if (currentMode === 'plate') {
+                    var clean = rawText.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    var match = clean.match(/[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/);
+                    finalText = match ? match[0] : clean.substring(0, 7); showToast("🚙 Placa: " + finalText);
+                } else if (currentMode === 'phone') {
+                    finalText = rawText.replace(/[^0-9+]/g, ''); showToast("📞 Telefone: " + finalText);
+                } else {
+                    finalText = rawText; showToast("Texto lido.");
+                }
+                inputEl.value = finalText; document.getElementById('btnClear').style.display = 'flex'; fazerBusca();
+            } catch (err) { showToast("❌ Erro leitura"); toggleLoader(false); } e.target.value = ''; 
+        }
+
+        async function fazerBusca() {
+            var raw = inputEl.value.trim();
+            inputEl.blur(); 
+            if (!raw) return;
+            toggleLoader(true);
+            var clean = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ""); 
+            var cleanNoSpace = clean.replace(/\s/g, '');
+            try {
+                if (currentMode === 'phone' || (currentMode === 'auto' && /^[0-9\+\-\(\)\s]+$/.test(raw))) {
+                    var nums = raw.replace(/[^0-9]/g, ''); if (nums.startsWith('0')) nums = nums.substring(1);
+                    if (nums.length >= 2) { var possibleDDD = nums.substring(0, 2); if (dddMap[possibleDDD]) { await buscarNominatim("Brasil " + dddMap[possibleDDD], "📞 Brasil - DDD " + possibleDDD); return; } }
+                    for (var i = 3; i >= 1; i--) { var prefix = nums.substring(0, i); if (ddiMap[prefix]) { await buscarPais(ddiMap[prefix], "📞 DDI +" + prefix); return; } }
+                }
+                if (currentMode === 'address') { await buscarNominatim(raw, "📍 Endereço"); return; }
+                if (currentMode === 'plate' || (currentMode === 'auto' && /[A-Z]{3}[0-9]/.test(cleanNoSpace.toUpperCase()))) {
+                    var plateCheck = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    if (/[A-Z]{3}[0-9][A-Z0-9][0-9]{2}/.test(plateCheck)) { await buscarPais('br', "🚙 Placa BR"); }
+                    else if (/[A-Z]{2}[0-9]{2}[A-Z]{2}/.test(plateCheck)) { await buscarPais('pt', "🚙 Placa EU"); }
+                    else if (currentMode === 'plate') { showToast("Placa inválida"); }
+                    else { await buscarNominatim(raw, "Auto"); }
+                    toggleLoader(false); return;
+                }
+                if (currentMode === 'word' || currentMode === 'auto') { if (wordMap[clean] || wordMap[cleanNoSpace]) { await buscarPais(wordMap[clean]||wordMap[cleanNoSpace], "🧠 Associação"); return; } }
+                if (currentMode === 'site' || (currentMode === 'auto' && clean.includes('.'))) { var tld = clean.replace('.', ''); if (domainMap[tld]) { await buscarPais(domainMap[tld], "🌐 Domínio"); return; } }
+                await buscarNominatim(raw, "Resultado");
+            } catch (e) { console.log(e); showToast("Não encontrado 😕"); } 
+            finally { toggleLoader(false); triggerAdCounter(); }
+        }
+
+        async function buscarPais(code, motivo) {
+            var res = await fetch('https://restcountries.com/v3.1/alpha/' + code);
+            if (!res.ok) throw new Error();
+            var data = await res.json(); var c = data[0];
+            renderResult({ lat: c.latlng[0], lng: c.latlng[1], zoom: 5, title: c.translations.por ? c.translations.por.common : c.name.common, badge: motivo, flag: c.flags.svg, rows: [{k:'Capital',v:c.capital?.[0]||'-'},{k:'Região',v:c.region},{k:'Moeda',v:c.currencies?Object.values(c.currencies)[0].symbol:'$'}] });
+        }
+
+        async function buscarNominatim(query, motivo) {
+            var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&addressdetails=1&limit=1';
+            var res = await fetch(url); var data = await res.json(); if (!data.length) throw new Error(); var loc = data[0]; var addr = loc.address;
+            renderResult({ lat: parseFloat(loc.lat), lng: parseFloat(loc.lon), zoom: 14, title: addr.road || loc.name || addr.city, badge: motivo, flag: 'https://flagcdn.com/w80/' + (addr.country_code || 'xx') + '.png', rows: [{k:'Cidade',v:addr.city||addr.town||'-'},{k:'País',v:addr.country},{k:'CEP',v:addr.postcode||'-'}] });
+        }
+
+        function renderResult(data) {
+            if (currentMarker) map.removeLayer(currentMarker); map.setView([data.lat, data.lng], data.zoom, {animate: true, duration: 1.5}); currentMarker = L.marker([data.lat, data.lng]).addTo(map);
+            var htmlRows = data.rows.map(r => `<div class="info-row"><span class="info-label">${r.k}</span><span class="info-value">${r.v}</span></div>`).join('');
+            document.getElementById('sheetContent').innerHTML = `<div class="header-row"><img src="${data.flag}" class="flag-img" onerror="this.style.display='none'"><div class="title-group"><span class="badge">${data.badge}</span><h2>${data.title}</h2></div></div>${htmlRows}`;
+            document.getElementById('bottom-sheet').classList.add('active'); toggleLoader(false);
+        }
+
+        document.getElementById('btnClear').addEventListener('click', function() { inputEl.value = ''; this.style.display = 'none'; inputEl.focus(); });
+        inputEl.addEventListener('input', function() { document.getElementById('btnClear').style.display = this.value.length > 0 ? 'flex' : 'none'; });
+        document.getElementById('btnMenuMedia').addEventListener('click', () => document.getElementById('media-modal').style.display='flex');
+        function fecharModal() { document.getElementById('media-modal').style.display='none'; }
+        function usarCamera() { fecharModal(); document.getElementById('inputCamera').click(); }
+        function usarGaleria() { fecharModal(); document.getElementById('inputGallery').click(); }
+        document.getElementById('inputCamera').addEventListener('change', processarImagem);
+        document.getElementById('inputGallery').addEventListener('change', processarImagem);
+        document.getElementById('btnBuscar').addEventListener('click', fazerBusca);
+        function fecharPainel() { document.getElementById('bottom-sheet').classList.remove('active'); }
+        inputEl.addEventListener("keypress", (e) => { if(e.key==="Enter") fazerBusca() });
+        function toggleLoader(show) { document.getElementById('btnIcon').style.display = show ? 'none' : 'block'; document.getElementById('loader').style.display = show ? 'block' : 'none'; }
+        function showToast(msg) { var t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+    </script>
+</body>
+</html>
