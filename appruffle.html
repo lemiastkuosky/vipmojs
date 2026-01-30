@@ -136,6 +136,7 @@
         .pdf-frame { width: 100%; flex: 1; border: none; }
 
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* --- AUTOCOMPLETE --- */
         .autocomplete-container { position: relative; }
@@ -222,11 +223,17 @@
         .extra-num { color: #b45309; font-family: 'Roboto Mono', monospace; font-weight: bold; font-size: 1.1rem; margin-top: 2px;}
 
         /* --- MODO CLIENTE (VISÃO PÚBLICA) --- */
-        body.mode-client { background-color: #e5e7eb; align-items: center; justify-content: center; min-height: 100vh; }
+        body.mode-client { background-color: #e5e7eb; align-items: center; justify-content: center; min-height: 100vh; display: flex; }
         body.mode-client .main-content, body.mode-client .nav-tabs, body.mode-client .app-footer, body.mode-client .app-header, body.mode-client .modal { display: none !important; }
-        body.mode-client #receipt-container { position: relative !important; top: auto !important; left: auto !important; display: block !important; margin: 20px auto; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 20px; animation: slideUp 0.5s ease; }
+        body.mode-client #receipt-container { position: relative !important; top: auto !important; left: auto !important; display: none; margin: 20px auto; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 20px; animation: slideUp 0.5s ease; }
+        
         #btn-download-publico { display: none; margin: 20px auto; width: 90%; max-width: 400px; text-align: center; }
         body.mode-client #btn-download-publico { display: block; }
+
+        /* LOADING CLIENTE */
+        #clientLoading { display: none; text-align: center; padding: 20px; }
+        body.mode-client #clientLoading { display: block; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: var(--primary); animation: spin 1s linear infinite; margin: 0 auto 15px; }
 
         /* --- MODO LOGIN (BLOQUEIO) --- */
         #modalLogin { display: flex; background-color: #111827; z-index: 9999; }
@@ -286,6 +293,12 @@
         <input type="password" id="inputSenhaAdmin" placeholder="Senha..." style="background:#374151; border:none; color:white; text-align:center; margin-bottom:15px; font-size:1.2rem;">
         <button class="btn-main" onclick="tentarLogin()">Entrar no Sistema</button>
     </div>
+</div>
+
+<div id="clientLoading">
+    <div class="spinner"></div>
+    <h3 style="color:#374151;">Carregando comprovante...</h3>
+    <p style="color:#6b7280; font-size:0.9rem;">Autenticando dados...</p>
 </div>
 
 <div class="main-content">
@@ -500,7 +513,6 @@
 
         <label class="checkbox-wrapper"><input type="checkbox" id="checkBrinde" onchange="alternarVisibilidade('checkBrinde', 'areaBrinde')"> <span>🍀 Brinde Extra (Palpite)</span></label>
         <div id="areaBrinde" class="hidden-area">
-            <label>Tipo do Brinde:</label>
             <div class="radio-group">
                 <label><input type="radio" name="tipoBrinde" value="2"><span>Dezena</span></label>
                 <label><input type="radio" name="tipoBrinde" value="3"><span>Centena</span></label>
@@ -894,33 +906,44 @@ _{numeros}_
         }
 
         if(rParam && vParam) {
-            // --- MODO CLIENTE ---
-            document.getElementById('modalLogin').style.display = 'none'; 
+            // --- MODO CLIENTE: MOSTRA LOADING IMEDIATAMENTE ---
+            document.body.classList.add('mode-client');
+            document.getElementById('modalLogin').style.display = 'none';
+            // --------------------------------------------------
 
-            if (dadosDB[rParam] && dadosDB[rParam].vendas && dadosDB[rParam].vendas[vParam]) {
-                document.body.classList.add('mode-client');
-                const venda = {...dadosDB[rParam].vendas[vParam], key: vParam};
-                const config = dadosDB[rParam].config;
-                document.getElementById('recibo_campanha').innerText = config.nomeExibicao;
-                document.getElementById('recibo_nome').innerText = venda.nome;
-                document.getElementById('recibo_premio').innerText = config.premio;
-                document.getElementById('recibo_nums').innerText = venda.nums;
-                document.getElementById('recibo_valor').innerText = venda.valor;
-                let dataLimpa = venda.data.split(' ')[0].replace(',', '');
-                document.getElementById('recibo_data').innerText = dataLimpa;
-                document.getElementById('recibo_hash').innerText = '#' + venda.cod;
-                document.getElementById('recibo_timestamp').innerText = venda.data;
-                const brindeArea = document.getElementById('recibo_brinde_area');
-                if(venda.brinde) {
-                    brindeArea.style.display = 'block';
-                    document.getElementById('recibo_brinde_num').innerText = venda.brinde;
+            // SE OS DADOS JÁ CHEGARAM (OU ACABARAM DE CHEGAR)
+            if (dadosDB[rParam]) {
+                const venda = dadosDB[rParam].vendas ? dadosDB[rParam].vendas[vParam] : null;
+                
+                if (venda) {
+                    // DADOS VÁLIDOS: ESCONDE LOADING E MOSTRA RECIBO
+                    document.getElementById('clientLoading').style.display = 'none';
+                    document.getElementById('receipt-container').style.display = 'block';
+
+                    const vendaCompleta = {...venda, key: vParam};
+                    const config = dadosDB[rParam].config;
+                    document.getElementById('recibo_campanha').innerText = config.nomeExibicao;
+                    document.getElementById('recibo_nome').innerText = vendaCompleta.nome;
+                    document.getElementById('recibo_premio').innerText = config.premio;
+                    document.getElementById('recibo_nums').innerText = vendaCompleta.nums;
+                    document.getElementById('recibo_valor').innerText = vendaCompleta.valor;
+                    let dataLimpa = vendaCompleta.data.split(' ')[0].replace(',', '');
+                    document.getElementById('recibo_data').innerText = dataLimpa;
+                    document.getElementById('recibo_hash').innerText = '#' + vendaCompleta.cod;
+                    document.getElementById('recibo_timestamp').innerText = vendaCompleta.data;
+                    const brindeArea = document.getElementById('recibo_brinde_area');
+                    if(vendaCompleta.brinde) {
+                        brindeArea.style.display = 'block';
+                        document.getElementById('recibo_brinde_num').innerText = vendaCompleta.brinde;
+                    } else {
+                        brindeArea.style.display = 'none';
+                    }
+                    edicaoAtivaID = rParam; 
+                    vendaRecenteParaEnvio = vendaCompleta;
                 } else {
-                    brindeArea.style.display = 'none';
+                    // DADOS VAZIOS PARA ESSA VENDA
+                    document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Link Inválido</h1><p>Esta venda não foi encontrada.</p></div>";
                 }
-                edicaoAtivaID = rParam; 
-                vendaRecenteParaEnvio = venda;
-            } else {
-                document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Link Expirado</h1><p>Este comprovante não está mais disponível.</p></div>";
             }
         } else {
             // --- MODO ADMIN ---
@@ -944,6 +967,10 @@ _{numeros}_
 
     // --- LÓGICA DE NEGÓCIO ---
 
+    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
+    const normalizeText = (text) => {
+        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+    };
 
     function gerarSaudacao() {
         const hora = new Date().getHours();
@@ -2034,11 +2061,6 @@ _{numeros}_
 
         document.getElementById('modalConferencia').style.display = 'flex';
     }
-
-    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
-    const normalizeText = (text) => {
-        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-    };
 
     // --- NOVA FUNÇÃO HELPER DE ABRIR O ZAP ---
     function abrirZapMarketing(txt) {
