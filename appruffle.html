@@ -868,6 +868,16 @@ _{numeros}_
     // TOKEN DE SEGURANÇA (Base64 da senha "le121212")
     const ADMIN_TOKEN = "bGUxMjEyMTI=";
 
+    // --- HELPER: SETTEXT SEGURO (PREVINE CRASH) ---
+    function safeSetText(id, text) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerText = text;
+        } else {
+            console.warn(`Elemento visual não encontrado: ${id}`);
+        }
+    }
+
     // --- CORREÇÃO: Inicializa Máscaras com verificação de segurança ---
     const inputTel = document.getElementById("telPart");
     if (inputTel) VMasker(inputTel).maskPattern("(99) 99999-9999");
@@ -943,22 +953,26 @@ _{numeros}_
 
                 const vendaCompleta = {...venda, key: vParam};
 
-                document.getElementById('recibo_campanha').innerText = config.nomeExibicao;
-                document.getElementById('recibo_nome').innerText = vendaCompleta.nome;
-                document.getElementById('recibo_premio').innerText = config.premio;
-                document.getElementById('recibo_nums').innerText = vendaCompleta.nums;
-                document.getElementById('recibo_valor').innerText = vendaCompleta.valor;
-                let dataLimpa = vendaCompleta.data.split(' ')[0].replace(',', '');
-                document.getElementById('recibo_data').innerText = dataLimpa;
-                document.getElementById('recibo_hash').innerText = '#' + vendaCompleta.cod;
-                document.getElementById('recibo_timestamp').innerText = vendaCompleta.data;
+                // USANDO A FUNÇÃO SEGURA (PREVINE CRASH)
+                safeSetText('recibo_campanha', config.nomeExibicao);
+                safeSetText('recibo_nome', vendaCompleta.nome);
+                safeSetText('recibo_premio', config.premio);
+                safeSetText('recibo_nums', vendaCompleta.nums);
+                safeSetText('recibo_valor', vendaCompleta.valor);
+                
+                let dataLimpa = (vendaCompleta.data || "").split(' ')[0].replace(',', '');
+                safeSetText('recibo_data', dataLimpa);
+                safeSetText('recibo_hash', '#' + vendaCompleta.cod);
+                safeSetText('recibo_timestamp', vendaCompleta.data);
                 
                 const brindeArea = document.getElementById('recibo_brinde_area');
-                if(vendaCompleta.brinde) {
-                    brindeArea.style.display = 'block';
-                    document.getElementById('recibo_brinde_num').innerText = vendaCompleta.brinde;
-                } else {
-                    brindeArea.style.display = 'none';
+                if(brindeArea) {
+                    if(vendaCompleta.brinde) {
+                        brindeArea.style.display = 'block';
+                        safeSetText('recibo_brinde_num', vendaCompleta.brinde);
+                    } else {
+                        brindeArea.style.display = 'none';
+                    }
                 }
                 
                 edicaoAtivaID = rParam; 
@@ -969,14 +983,11 @@ _{numeros}_
         }).catch(err => {
             console.error(err);
             const loadingEl = document.getElementById('clientLoading');
-            if(loadingEl) loadingEl.style.display = 'none';
-            
-            document.body.innerHTML = `<div style='text-align:center; padding:50px; font-family:sans-serif;'>
-                <h1 style='color:#ef4444'>❌ Erro ao Conectar</h1>
-                <p>O sistema recusou a conexão.</p>
-                <p style='background:#fee2e2; padding:10px; border-radius:8px; font-family:monospace'>${err.message || err}</p>
-                <p>Verifique se as <b>Regras do Firebase</b> permitem leitura (read: true).</p>
-            </div>`;
+            // Se falhar a conexão, mostra o erro
+            if(loadingEl) {
+                document.getElementById('msgErro').innerText = err.code || err.message || err;
+                document.getElementById('loadingError').style.display = 'block';
+            }
         });
 
     } else {
@@ -1006,10 +1017,6 @@ _{numeros}_
 
     // --- LÓGICA DE NEGÓCIO ---
 
-    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
-    const normalizeText = (text) => {
-        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-    };
 
     function gerarSaudacao() {
         const hora = new Date().getHours();
@@ -1521,6 +1528,11 @@ _{numeros}_
             for(let r of radios) { if(r.value === config.brinde.tipo) r.checked = true; }
             document.getElementById('edit_valorBrinde').value = config.brinde.valor;
         }
+        
+        // CARREGA O TEXTO PERSONALIZADO SE EXISTIR, SENÃO USA O PADRÃO
+        const defaultText = "🔥 *RESTAM POUCAS COTAS!* 🔥\n\n🎟️ *{titulo}*\n🏆 Valendo: *{premio}*\n\n*Numeros disponives abaixo*\n\n_{numeros}_\n\n💳 *Garanta o seu agora!*";
+        document.getElementById('edit_textoMarketing').value = config.textoMarketing || defaultText;
+
         document.getElementById('modalEditRifa').style.display = 'flex';
     }
 
@@ -2096,7 +2108,10 @@ _{numeros}_
         document.getElementById('modalConferencia').style.display = 'flex';
     }
 
-  
+    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
+    const normalizeText = (text) => {
+        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+    };
 
     // --- NOVA FUNÇÃO HELPER DE ABRIR O ZAP ---
     function abrirZapMarketing(txt) {
