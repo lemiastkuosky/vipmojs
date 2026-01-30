@@ -503,37 +503,279 @@
     </div>
 </div>
 
-<div id="receipt-container" style="display:none;">
-    <div class="recibo-header">
-        <div class="recibo-logo">🎟️</div>
-        <h1 class="recibo-title">Comprovante</h1>
-        <p class="recibo-subtitle" id="recibo_campanha">Nome da Rifa</p>
-    </div>
-    <div class="recibo-body">
-        <div class="recibo-row"><span class="recibo-label">Cliente</span><span class="recibo-val" id="recibo_nome">Nome</span></div>
-        <div class="recibo-row"><span class="recibo-label">Prêmio</span><span class="recibo-val" id="recibo_premio">Prêmio</span></div>
-        <div class="recibo-row"><span class="recibo-label">Data</span><span class="recibo-val" id="recibo_data">00/00</span></div>
+<footer class="app-footer">
+    Criado por <strong>Le Miastkuosky</strong> - Versão 5.22 Winner Ultimate
+</footer>
+
+<div id="modalNovaRifa" class="modal">
+    <div class="modal-content">
+        <h2>🆕 Nova Campanha</h2>
+        <label>Título da Rifa</label>
+        <input type="text" id="nomeEdicao" placeholder="Ex: Rifa do Iphone">
+        <label>Prêmio Principal</label>
+        <input type="text" id="premioEdicao" placeholder="Ex: Iphone 15 Pro Max">
         
-        <div class="recibo-numbers-box">
-            <span class="recibo-label" style="display:block; margin-bottom:5px;">COTAS SELECIONADAS</span>
-            <div class="recibo-numbers" id="recibo_nums">000</div>
+        <label>Tipo de Sorteio</label>
+        <div class="radio-group">
+            <label><input type="radio" name="tipoNum" value="2"><span>Dezena</span></label>
+            <label><input type="radio" name="tipoNum" value="3"><span>Centena</span></label>
+            <label><input type="radio" name="tipoNum" value="4" checked><span>Milhar</span></label>
+        </div>
+        
+        <label>Valor da Cota</label>
+        <input type="tel" id="valorFixoEdicao" placeholder="R$ 0,00" class="money">
+
+        <label class="checkbox-wrapper"><input type="checkbox" id="checkPromo" onchange="alternarVisibilidade('checkPromo', 'areaPromo')"> <span>🏷️ Ativar Promoções (Atacado)</span></label>
+        <div id="areaPromo" class="hidden-area">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1"><label style="margin-top:0">Qtd</label><input type="tel" id="promoQtd2" placeholder="Ex: 5"></div>
+                <div style="flex:1"><label style="margin-top:0">Valor</label><input type="tel" id="promoVal2" placeholder="R$" class="money"></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <div style="flex:1"><input type="tel" id="promoQtd3" placeholder="Ex: 10"></div>
+                <div style="flex:1"><input type="tel" id="promoVal3" placeholder="R$" class="money"></div>
+            </div>
         </div>
 
-        <div id="recibo_brinde_area" style="display:none;" class="extra-box">
-             <span class="extra-title">🍀 Milhar da Sorte</span>
-             <div class="extra-num" id="recibo_brinde_num">0000</div>
+        <label class="checkbox-wrapper"><input type="checkbox" id="checkBrinde" onchange="alternarVisibilidade('checkBrinde', 'areaBrinde')"> <span>🍀 Brinde Extra (Palpite)</span></label>
+        <div id="areaBrinde" class="hidden-area">
+            <div class="radio-group">
+                <label><input type="radio" name="tipoBrinde" value="2"><span>Dezena</span></label>
+                <label><input type="radio" name="tipoBrinde" value="3"><span>Centena</span></label>
+                <label><input type="radio" name="tipoBrinde" value="4"><span>Milhar</span></label>
+            </div>
+            <label>Valor do Prêmio Extra:</label>
+            <input type="tel" id="valorBrinde" placeholder="R$ 0,00" class="money">
         </div>
+        
+        <label class="checkbox-wrapper" style="margin-top:10px; background:#fff1f2; border-color:#e11d48;">
+            <input type="checkbox" id="checkMostrarFinanceiro"> 
+            <span style="color:#be123c;">🧾 Mostrar "Grátis/Desconto" no Comprovante?</span>
+        </label>
 
-        <div class="recibo-total" id="recibo_valor">R$ 0,00</div>
-    </div>
-    <div class="recibo-footer">
-        <p>Autenticação: <span id="recibo_hash">#0000</span></p>
-        <p style="margin-top:5px; font-size:0.7rem; color:#9ca3af;">Gerado em: <span id="recibo_timestamp">--/--/--</span></p>
+        <label style="margin-top:15px;">Texto de Divulgação (Sobras)</label>
+        <textarea id="textoMarketingCriacao" rows="4" placeholder="Personalize o texto aqui... Use {numeros} para a lista.">🔥 *RESTAM POUCAS COTAS!* 🔥
+
+🎟️ *{titulo}*
+🏆 Valendo: *{premio}*
+
+*Numeros disponives abaixo*
+
+_{numeros}_
+
+💳 *Garanta o seu agora!*</textarea>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn-main" onclick="criarEdicao()">🚀 Criar Campanha</button>
+            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
+        </div>
     </div>
 </div>
-<div id="btn-download-publico" style="display:none;">
-    <button class="btn-main" onclick="baixarImagemPublica()">⬇️ Baixar Imagem do Comprovante</button>
-    <p style="margin-top:10px; color:#6b7280; font-size:0.8rem;">Este é um comprovante digital verificado.</p>
+
+<div id="modalGanhador" class="modal" style="z-index: 3000;">
+    <div class="modal-content" style="max-width: 450px; padding:0; background: transparent; box-shadow: none;">
+        
+        <div id="cardGanhadorPrint" style="background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative;">
+            
+            <div style="background: #1f2937; padding: 25px; text-align: center; border-bottom: 4px solid #f59e0b;">
+                <h2 style="color:white; margin:0; text-transform:uppercase; font-size:1.4rem; letter-spacing:1px;">Resultado do Sorteio</h2>
+                <p style="color:#9ca3af; margin:5px 0 0 0; font-size:0.9rem;" id="card_nome_rifa">Nome da Campanha</p>
+                <div style="margin-top:15px; font-size:1.2rem; color:white; font-weight:bold; letter-spacing:3px;">
+                    <span style="background:rgba(255,255,255,0.1); padding:5px 15px; border-radius:8px;" id="card_federal_completa">00000</span>
+                </div>
+                <div style="color:#6b7280; font-size:0.7rem; margin-top:5px;">Sorteio pela Loteria Federal</div>
+            </div>
+
+            <div style="padding: 20px; display:flex; flex-direction:column; gap:20px; background:#f9fafb;">
+                
+                <div style="background:white; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="background:#ecfdf5; padding:8px; border-bottom:1px solid #d1fae5; font-size:0.8rem; font-weight:bold; color:#065f46; text-transform:uppercase; text-align:center;">
+                        🏆 Prêmio Principal (<span id="lbl_tipo_princ">Centena</span>)
+                    </div>
+                    
+                    <div style="padding:20px; text-align:center;">
+                        <div id="res_num_princ" style="font-size:3rem; font-weight:800; color:#1f2937; line-height:1; margin-bottom:10px;">000</div>
+
+                        <div id="info_ganhador_princ" style="display:none; text-align:left; background:#f8fafc; padding:15px; border-radius:10px; border:1px dashed #cbd5e1;">
+                            <div style="color:#059669; font-weight:bold; font-size:1.1rem; text-align:center; margin-bottom:10px;">
+                                <span style="font-size:1.5rem;">🎉</span> <span id="res_nome_princ">Nome do Cliente</span>
+                            </div>
+                            
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.85rem; margin-bottom:10px;">
+                                <div><b style="color:#64748b;">📱 Tel:</b> <span id="res_tel_princ">--</span></div>
+                                <div><b style="color:#64748b;">💲 Valor:</b> <span id="res_valor_princ" style="color:#059669; font-weight:bold;">R$ 0,00</span></div>
+                                <div style="grid-column: span 2;"><b style="color:#64748b;">📅 Data:</b> <span id="res_data_princ">00/00/00 00:00</span></div>
+                            </div>
+                            
+                            <div style="font-size:0.8rem; color:#64748b; border-top:1px solid #e2e8f0; padding-top:8px;">
+                                <b>🎟️ Cotas Compradas:</b><br>
+                                <span id="res_cotas_princ" style="color:#334155; word-break:break-all; line-height:1.2;">...</span>
+                            </div>
+                        </div>
+
+                        <div id="msg_sem_ganhador_princ" style="display:none; color:#ef4444; font-weight:bold; font-size:1.1rem; padding:10px; background:#fef2f2; border-radius:8px;">
+                            ❌ Não houve ganhador
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bloco_brinde" style="background:white; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02); display:none;">
+                    <div style="background:#fff7ed; padding:8px; border-bottom:1px solid #ffedd5; font-size:0.8rem; font-weight:bold; color:#9a3412; text-transform:uppercase; text-align:center;">
+                        🍀 Brinde Extra (<span id="lbl_tipo_brinde">Milhar</span>)
+                    </div>
+                    
+                    <div style="padding:20px; text-align:center;">
+                        <div id="res_num_brinde" style="font-size:2.5rem; font-weight:800; color:#1f2937; line-height:1; margin-bottom:10px;">0000</div>
+
+                        <div id="info_ganhador_brinde" style="display:none; text-align:left; background:#fffaf0; padding:15px; border-radius:10px; border:1px dashed #fdba74;">
+                            <div style="color:#ea580c; font-weight:bold; font-size:1.1rem; text-align:center; margin-bottom:10px;">
+                                <span style="font-size:1.5rem;">🎁</span> <span id="res_nome_brinde">Nome do Cliente</span>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.85rem;">
+                                <div><b style="color:#9a3412;">📱 Tel:</b> <span id="res_tel_brinde">--</span></div>
+                                <div><b style="color:#9a3412;">💲 Gasto:</b> <span id="res_valor_brinde">R$ 0,00</span></div>
+                                <div style="grid-column: span 2;"><b style="color:#9a3412;">📅 Data:</b> <span id="res_data_brinde">--</span></div>
+                            </div>
+                        </div>
+
+                        <div id="msg_sem_ganhador_brinde" style="display:none; color:#6b7280; font-weight:bold; font-size:1rem; padding:10px; background:#f3f4f6; border-radius:8px;">
+                            Não teve ganhador
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div style="text-align:center; padding-bottom:15px; font-size:0.7rem; color:#9ca3af;">
+                Sistema Rifa Pro • Verificado
+            </div>
+        </div>
+
+        <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-main" onclick="baixarCardGanhador()">📸 Baixar Imagem do Resultado</button>
+            <button class="btn-back" style="background:white; color:#6b7280; justify-content:center;" onclick="fecharModais()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalEditRifa" class="modal">
+    <div class="modal-content">
+        <h2>⚙️ Configurações</h2>
+        <label>Título</label><input type="text" id="edit_nomeEdicao">
+        <label>Prêmio</label><input type="text" id="edit_premioEdicao">
+        <label>Valor Cota</label><input type="tel" id="edit_valorFixoEdicao" class="money">
+
+        <label class="checkbox-wrapper"><input type="checkbox" id="edit_checkPromo" onchange="alternarVisibilidade('edit_checkPromo', 'edit_areaPromo')"> <span>Ativar Promoções (Atacado)</span></label>
+
+        <div id="edit_areaPromo" class="hidden-area">
+            <div style="display:flex; gap:10px;"><input type="tel" id="edit_promoQtd2"><input type="tel" id="edit_promoVal2" class="money"></div>
+            <div style="display:flex; gap:10px; margin-top:10px;"><input type="tel" id="edit_promoQtd3"><input type="tel" id="edit_promoVal3" class="money"></div>
+        </div>
+
+        <label class="checkbox-wrapper"><input type="checkbox" id="edit_checkBrinde" onchange="alternarVisibilidade('edit_checkBrinde', 'edit_areaBrinde')"> <span>Ativar Brinde (Palpite)</span></label>
+        <div id="edit_areaBrinde" class="hidden-area">
+            <div class="radio-group">
+                <label><input type="radio" name="edit_tipoBrinde" value="2"><span>Dezena</span></label>
+                <label><input type="radio" name="edit_tipoBrinde" value="3"><span>Centena</span></label>
+                <label><input type="radio" name="edit_tipoBrinde" value="4"><span>Milhar</span></label>
+            </div>
+            <label>Valor Prêmio</label><input type="tel" id="edit_valorBrinde" class="money">
+        </div>
+        
+        <label class="checkbox-wrapper" style="margin-top:10px; background:#fff1f2; border-color:#e11d48;">
+            <input type="checkbox" id="edit_checkMostrarFinanceiro"> 
+            <span style="color:#be123c;">🧾 Mostrar "Grátis/Desconto" no Comprovante?</span>
+        </label>
+
+        <label style="margin-top:15px;">Texto de Divulgação (Sobras)</label>
+        <textarea id="edit_textoMarketing" rows="4"></textarea>
+
+        <div style="border-top:1px dashed #e5e7eb; margin-top:20px; padding-top:10px;">
+            <button id="btnFinalizar" class="btn-sec" style="margin-bottom:10px; background:#9ca3af; color:white;" onclick="alternarStatusFinalizacao()">🏁 Finalizar / Arquivar Rifa</button>
+            <button class="btn-del" style="width:100%; opacity:0.8;" onclick="pedirConfirmacao('RIFA_TOTAL')">🗑️ Excluir Permanentemente</button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn-main" onclick="salvarEdicaoRifa()">Salvar Alterações</button>
+            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalConferencia" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <span>📋 Central de Conferência</span>
+            <button class="btn-del" style="width:auto; padding:5px 10px;" onclick="document.getElementById('modalConferencia').style.display='none'">Fechar</button>
+        </div>
+        <div style="padding: 20px; overflow-y: auto; height: 100%;">
+            
+            <p style="color:var(--gray); font-size:0.9rem; margin-bottom:20px;">
+                Toque nos cards coloridos para ir direto para a lista.
+            </p>
+
+            <div class="stats-grid" id="confStats">
+                </div>
+
+            <div style="display:flex; flex-direction:column; gap:20px; padding-top:10px;">
+                
+                <div id="boxPagos">
+                    <label style="color:var(--primary-dark)">✅ Números Pagos</label>
+                    <textarea id="confPagos" rows="3" style="width:100%; padding:10px; border:1px solid #d1fae5; border-radius:8px; font-family:'Roboto Mono'; font-size:0.85rem; color:#065f46;" readonly></textarea>
+                </div>
+
+                <div id="boxPendentes">
+                    <label style="color:#ef4444">⏳ Números Pendentes (Não Pagos)</label>
+                    <textarea id="confPendentes" rows="3" style="width:100%; padding:10px; border:1px solid #fee2e2; border-radius:8px; font-family:'Roboto Mono'; font-size:0.85rem; color:#991b1b;" readonly></textarea>
+                </div>
+
+                <div id="boxGratis">
+                    <label style="color:#8b5cf6">🎁 Números Grátis (Cortesias)</label>
+                    <textarea id="confGratis" rows="2" style="width:100%; padding:10px; border:1px solid #ede9fe; border-radius:8px; font-family:'Roboto Mono'; font-size:0.85rem; color:#5b21b6;" readonly></textarea>
+                </div>
+
+                <div id="boxDesconto">
+                    <label style="color:#f59e0b">🏷️ Com Desconto Aplicado</label>
+                    <textarea id="confDesconto" rows="2" style="width:100%; padding:10px; border:1px solid #fef3c7; border-radius:8px; font-family:'Roboto Mono'; font-size:0.85rem; color:#92400e;" readonly></textarea>
+                </div>
+
+                <div id="boxDisponiveis" style="border-top:2px dashed #e5e7eb; padding-top:20px;">
+                    <label style="color:var(--dark)">⚪ Números Disponíveis (Faltam Vender)</label>
+                    <div style="display:flex; gap:10px; margin-bottom:5px;">
+                         <small style="color:var(--gray)">Total: <span id="lblTotalDisponivel">0</span></small>
+                         <button class="btn-sec" style="width:auto; padding:2px 10px; font-size:0.7rem;" onclick="copiarTexto('confDisponiveis')">Copiar Lista</button>
+                    </div>
+                    <textarea id="confDisponiveis" rows="5" style="width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-family:'Roboto Mono'; font-size:0.85rem; color:var(--gray);" readonly></textarea>
+                </div>
+
+            </div>
+
+            <div style="margin-top:30px; padding-top:20px; border-top:4px solid #e5e7eb;">
+                <h3 style="color:var(--dark); display:flex; align-items:center; gap:8px;">
+                    🕵️ Auditoria WhatsApp vs Sistema
+                </h3>
+                <p style="font-size:0.85rem; color:var(--gray);">
+                    Cole sua lista do WhatsApp aqui. O sistema vai comparar os dados.
+                </p>
+                
+                <textarea id="inputListaAudit" rows="6" placeholder="Cole a lista completa aqui..." style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; margin-top:10px; font-family:'Roboto Mono'; font-size:0.8rem;"></textarea>
+                
+                <button class="btn-main" style="margin-top:10px;" onclick="auditarLista()">🔍 Comparar Dados</button>
+
+                <div id="resultadoAuditoria" style="margin-top:20px; display:none;">
+                    </div>
+            </div>
+
+            <div style="margin-top:20px; border-top:4px solid #e5e7eb; padding-top:20px;">
+                <h3 style="color:var(--dark)">📤 Exportar para WhatsApp</h3>
+                <p style="font-size:0.85rem; color:var(--gray);">Gera a lista formatada com Emojis para você postar no grupo.</p>
+                <button class="btn-sec" onclick="gerarTextoLista()">📝 Gerar Lista Completa</button>
+                <textarea id="outputListaZap" rows="6" style="width:100%; padding:10px; margin-top:10px; display:none;" readonly></textarea>
+                <button id="btnCopyZap" class="btn-main" style="margin-top:5px; display:none;" onclick="copiarTexto('outputListaZap')">Copiar Texto</button>
+            </div>
+
+        </div>
+    </div>
 </div>
 
 <script>
@@ -564,12 +806,14 @@
         if (el) {
             el.innerText = text;
         } else {
-            // Silencia o erro, mas não trava o script
             console.warn(`Elemento visual não encontrado: ${id}`);
         }
     }
 
-    
+    // --- HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ---
+    const normalizeText = (text) => {
+        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+    };
 
     // --- CORREÇÃO: Inicializa Máscaras com verificação de segurança ---
     const inputTel = document.getElementById("telPart");
@@ -668,7 +912,19 @@
                     safeSetText('recibo_nome', vendaCompleta.nome);
                     safeSetText('recibo_premio', config.premio);
                     safeSetText('recibo_nums', vendaCompleta.nums);
-                    safeSetText('recibo_valor', vendaCompleta.valor);
+                    
+                    // --- LÓGICA DE VALOR NO COMPROVANTE DO CLIENTE ---
+                    let valorFinal = vendaCompleta.valor; // Começa com o valor real
+                    
+                    if (config.mostrarFinanceiroRecibo !== true) {
+                        // Se a opção estiver DESLIGADA, recalcula o preço cheio
+                        let unitario = parseFloat((config.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+                        let qtdNumeros = (vendaCompleta.nums.match(/\d+/g) || []).length;
+                        let totalCheio = unitario * qtdNumeros;
+                        valorFinal = totalCheio.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                    }
+                    safeSetText('recibo_valor', valorFinal);
+                    // --------------------------------------------------
                     
                     let dataLimpa = (vendaCompleta.data || "").split(' ')[0].replace(',', '');
                     safeSetText('recibo_data', dataLimpa);
@@ -983,7 +1239,17 @@
         safeSetText('recibo_nome', venda.nome);
         safeSetText('recibo_premio', config.premio);
         safeSetText('recibo_nums', venda.nums);
-        safeSetText('recibo_valor', venda.valor);
+        
+        // --- LÓGICA DE VALOR NO PREVIEW DO ADMIN ---
+        let valorFinal = venda.valor;
+        if (config.mostrarFinanceiroRecibo !== true) {
+             let unitario = parseFloat((config.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+             let qtdNumeros = (venda.nums.match(/\d+/g) || []).length;
+             let totalCheio = unitario * qtdNumeros;
+             valorFinal = totalCheio.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        }
+        safeSetText('recibo_valor', valorFinal);
+        // -------------------------------------------
         
         let dataLimpa = (venda.data || "").split(' ')[0].replace(',', '');
         safeSetText('recibo_data', dataLimpa);
@@ -1832,9 +2098,9 @@
     }
 
     // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
-    const normalizeText = (text) => {
-        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-    };
+    // const normalizeText = (text) => {
+    //     return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+    // };
 
     // --- NOVA FUNÇÃO HELPER DE ABRIR O ZAP ---
     function abrirZapMarketing(txt) {
