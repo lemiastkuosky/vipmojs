@@ -897,72 +897,76 @@ _{numeros}_
         document.getElementById('modalLogin').style.display = 'none';
     }
 
-    // Listener do Banco de Dados + MODO CLIENTE
-    database.ref('/').on('value', (s) => {
-        const r = s.val() || {};
-        dadosDB = r.rifas || {};
-        baseClientes = r.clientes || {};
+    // --- PARSE DE URL E INICIALIZAÇÃO OTIMIZADA ---
+    const params = new URLSearchParams(window.location.search);
+    let tokenAleatorio = params.get('t');
+    let rParam = params.get('r');
+    let vParam = params.get('v');
+
+    if(tokenAleatorio) {
+        try {
+            const decoded = atob(tokenAleatorio); 
+            const parts = decoded.split('###');
+            if(parts.length === 2) { rParam = parts[0]; vParam = parts[1]; }
+        } catch(e) { console.log("Token inválido"); }
+    }
+
+    if(rParam && vParam) {
+        // --- MODO CLIENTE (RECIBO RÁPIDO) ---
+        // Não faz o listener global. Busca direto apenas o necessário.
+        document.body.classList.add('mode-client');
+        document.getElementById('modalLogin').style.display = 'none';
         
-        const params = new URLSearchParams(window.location.search);
-        
-        // Suporte para Link Antigo (r + v) e Novo (t)
-        const tokenAleatorio = params.get('t');
-        let rParam = params.get('r');
-        let vParam = params.get('v');
+        // Busca Config e Venda Específica
+        Promise.all([
+            database.ref(`rifas/${rParam}/config`).once('value'),
+            database.ref(`rifas/${rParam}/vendas/${vParam}`).once('value')
+        ]).then(([snapConfig, snapVenda]) => {
+            const config = snapConfig.val();
+            const venda = snapVenda.val();
+            
+            // Esconde Loading
+            document.getElementById('clientLoading').style.display = 'none';
 
-        if(tokenAleatorio) {
-            try {
-                const decoded = atob(tokenAleatorio); 
-                const parts = decoded.split('###');
-                if(parts.length === 2) {
-                    rParam = parts[0];
-                    vParam = parts[1];
-                }
-            } catch(e) { console.log("Token inválido"); }
-        }
+            if(config && venda) {
+                document.getElementById('receipt-container').style.display = 'block';
+                const vendaCompleta = {...venda, key: vParam};
 
-        if(rParam && vParam) {
-            // --- MODO CLIENTE: MOSTRA LOADING IMEDIATAMENTE ---
-            document.body.classList.add('mode-client');
-            document.getElementById('modalLogin').style.display = 'none';
-            // --------------------------------------------------
-
-            // SE OS DADOS JÁ CHEGARAM (OU ACABARAM DE CHEGAR)
-            if (dadosDB[rParam]) {
-                const venda = dadosDB[rParam].vendas ? dadosDB[rParam].vendas[vParam] : null;
+                document.getElementById('recibo_campanha').innerText = config.nomeExibicao;
+                document.getElementById('recibo_nome').innerText = vendaCompleta.nome;
+                document.getElementById('recibo_premio').innerText = config.premio;
+                document.getElementById('recibo_nums').innerText = vendaCompleta.nums;
+                document.getElementById('recibo_valor').innerText = vendaCompleta.valor;
+                let dataLimpa = vendaCompleta.data.split(' ')[0].replace(',', '');
+                document.getElementById('recibo_data').innerText = dataLimpa;
+                document.getElementById('recibo_hash').innerText = '#' + vendaCompleta.cod;
+                document.getElementById('recibo_timestamp').innerText = vendaCompleta.data;
                 
-                if (venda) {
-                    // DADOS VÁLIDOS: ESCONDE LOADING E MOSTRA RECIBO
-                    document.getElementById('clientLoading').style.display = 'none';
-                    document.getElementById('receipt-container').style.display = 'block';
-
-                    const vendaCompleta = {...venda, key: vParam};
-                    const config = dadosDB[rParam].config;
-                    document.getElementById('recibo_campanha').innerText = config.nomeExibicao;
-                    document.getElementById('recibo_nome').innerText = vendaCompleta.nome;
-                    document.getElementById('recibo_premio').innerText = config.premio;
-                    document.getElementById('recibo_nums').innerText = vendaCompleta.nums;
-                    document.getElementById('recibo_valor').innerText = vendaCompleta.valor;
-                    let dataLimpa = vendaCompleta.data.split(' ')[0].replace(',', '');
-                    document.getElementById('recibo_data').innerText = dataLimpa;
-                    document.getElementById('recibo_hash').innerText = '#' + vendaCompleta.cod;
-                    document.getElementById('recibo_timestamp').innerText = vendaCompleta.data;
-                    const brindeArea = document.getElementById('recibo_brinde_area');
-                    if(vendaCompleta.brinde) {
-                        brindeArea.style.display = 'block';
-                        document.getElementById('recibo_brinde_num').innerText = vendaCompleta.brinde;
-                    } else {
-                        brindeArea.style.display = 'none';
-                    }
-                    edicaoAtivaID = rParam; 
-                    vendaRecenteParaEnvio = vendaCompleta;
+                const brindeArea = document.getElementById('recibo_brinde_area');
+                if(vendaCompleta.brinde) {
+                    brindeArea.style.display = 'block';
+                    document.getElementById('recibo_brinde_num').innerText = vendaCompleta.brinde;
                 } else {
-                    // DADOS VAZIOS PARA ESSA VENDA
-                    document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Link Inválido</h1><p>Esta venda não foi encontrada.</p></div>";
+                    brindeArea.style.display = 'none';
                 }
+                
+                edicaoAtivaID = rParam; 
+                vendaRecenteParaEnvio = vendaCompleta;
+            } else {
+                 document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Não Encontrado</h1><p>Venda não localizada.</p></div>";
             }
-        } else {
-            // --- MODO ADMIN ---
+        }).catch(err => {
+             document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>❌ Erro</h1><p>Falha ao carregar.</p></div>";
+        });
+
+    } else {
+        // --- MODO ADMIN (PADRÃO) ---
+        // Carrega tudo como antes
+        database.ref('/').on('value', (s) => {
+            const r = s.val() || {};
+            dadosDB = r.rifas || {};
+            baseClientes = r.clientes || {};
+            
             document.body.classList.remove('mode-client');
             if(localStorage.getItem('auth_rifa_pro') !== 'true') {
                 document.getElementById('modalLogin').style.display = 'flex';
@@ -970,7 +974,6 @@ _{numeros}_
                 document.getElementById('modalLogin').style.display = 'none';
             }
             
-            // ATUALIZADO: Chama a nova listagem visual
             renderCampanhasIniciais();
             renderAgenda();
             
@@ -978,15 +981,10 @@ _{numeros}_
                 renderVendas(); 
                 renderGastos();
             }
-        }
-    });
+        });
+    }
 
     // --- LÓGICA DE NEGÓCIO ---
-
-    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
-    const normalizeText = (text) => {
-        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-    };
 
     function gerarSaudacao() {
         const hora = new Date().getHours();
@@ -1498,11 +1496,6 @@ _{numeros}_
             for(let r of radios) { if(r.value === config.brinde.tipo) r.checked = true; }
             document.getElementById('edit_valorBrinde').value = config.brinde.valor;
         }
-        
-        // CARREGA O TEXTO PERSONALIZADO SE EXISTIR, SENÃO USA O PADRÃO
-        const defaultText = "🔥 *RESTAM POUCAS COTAS!* 🔥\n\n🎟️ *{titulo}*\n🏆 Valendo: *{premio}*\n\n*Numeros disponives abaixo*\n\n_{numeros}_\n\n💳 *Garanta o seu agora!*";
-        document.getElementById('edit_textoMarketing').value = config.textoMarketing || defaultText;
-
         document.getElementById('modalEditRifa').style.display = 'flex';
     }
 
@@ -2078,6 +2071,10 @@ _{numeros}_
         document.getElementById('modalConferencia').style.display = 'flex';
     }
 
+    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
+    const normalizeText = (text) => {
+        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+    };
 
     // --- NOVA FUNÇÃO HELPER DE ABRIR O ZAP ---
     function abrirZapMarketing(txt) {
