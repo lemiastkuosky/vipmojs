@@ -286,6 +286,7 @@
     <script>
         (function() {
             const p = new URLSearchParams(window.location.search);
+            // Se tiver parâmetros de cliente, esconde o painel admin imediatamente
             if(p.has('t') || (p.has('r') && p.has('v'))) {
                 document.documentElement.classList.add('mode-client-init');
                 const style = document.createElement('style');
@@ -322,6 +323,7 @@
             Verifique as Regras de Leitura no Firebase Console.<br>
             <i>(Rules: .read = true)</i>
         </p>
+        <button onclick="window.location.reload()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; margin-top:10px; cursor:pointer;">Tentar Novamente</button>
     </div>
 </div>
 
@@ -529,10 +531,7 @@
                 <div style="flex:1"><label style="margin-top:0">Qtd</label><input type="tel" id="promoQtd2" placeholder="Ex: 5"></div>
                 <div style="flex:1"><label style="margin-top:0">Valor</label><input type="tel" id="promoVal2" placeholder="R$" class="money"></div>
             </div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <div style="flex:1"><input type="tel" id="promoQtd3" placeholder="Ex: 10"></div>
-                <div style="flex:1"><input type="tel" id="promoVal3" placeholder="R$" class="money"></div>
-            </div>
+            <div style="display:flex; gap:10px; margin-top:10px;"><input type="tel" id="promoQtd3"><input type="tel" id="edit_promoVal3" class="money"></div>
         </div>
 
         <label class="checkbox-wrapper"><input type="checkbox" id="checkBrinde" onchange="alternarVisibilidade('checkBrinde', 'areaBrinde')"> <span>🍀 Brinde Extra (Palpite)</span></label>
@@ -935,11 +934,22 @@ _{numeros}_
         document.body.classList.add('mode-client');
         document.getElementById('modalLogin').style.display = 'none';
         
+        // Timeout de Segurança (8s)
+        const loadTimeout = setTimeout(() => {
+            const loadingEl = document.getElementById('clientLoading');
+            if(loadingEl && loadingEl.style.display !== 'none') {
+                document.getElementById('msgErro').innerText = "Tempo limite excedido.";
+                document.getElementById('loadingError').style.display = 'block';
+            }
+        }, 8000);
+
         // Busca Config e Venda Específica
         Promise.all([
             database.ref(`rifas/${rParam}/config`).once('value'),
             database.ref(`rifas/${rParam}/vendas/${vParam}`).once('value')
         ]).then(([snapConfig, snapVenda]) => {
+            clearTimeout(loadTimeout); // Cancela o timeout se carregou
+            
             const config = snapConfig.val();
             const venda = snapVenda.val();
             
@@ -981,6 +991,7 @@ _{numeros}_
                  document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Não Encontrado</h1><p>Venda não localizada.</p></div>";
             }
         }).catch(err => {
+            clearTimeout(loadTimeout);
             console.error(err);
             const loadingEl = document.getElementById('clientLoading');
             // Se falhar a conexão, mostra o erro
@@ -1017,6 +1028,7 @@ _{numeros}_
 
     // --- LÓGICA DE NEGÓCIO ---
 
+   
 
     function gerarSaudacao() {
         const hora = new Date().getHours();
