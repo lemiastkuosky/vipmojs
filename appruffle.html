@@ -315,6 +315,14 @@
     <div class="spinner"></div>
     <h3 style="color:#374151;">Carregando comprovante...</h3>
     <p style="color:#6b7280; font-size:0.9rem;">Autenticando dados...</p>
+    <div id="loadingError" style="display:none; margin-top:20px; color:#ef4444; border-top:1px solid #e5e7eb; padding-top:10px;">
+        <b>Falha ao carregar!</b><br>
+        <small id="msgErro" style="font-family:monospace; background:#fef2f2; padding:4px; border-radius:4px; display:block; margin-top:5px;"></small>
+        <p style="font-size:0.8rem; color:#6b7280; margin-top:10px;">
+            Verifique as Regras de Leitura no Firebase Console.<br>
+            <i>(Rules: .read = true)</i>
+        </p>
+    </div>
 </div>
 
 <div class="main-content">
@@ -905,7 +913,7 @@ _{numeros}_
 
     if(tokenAleatorio) {
         try {
-            const decoded = atob(tokenAleatorio); 
+            const decoded = atob(tokenAleatorio.trim()); 
             const parts = decoded.split('###');
             if(parts.length === 2) { rParam = parts[0]; vParam = parts[1]; }
         } catch(e) { console.log("Token inválido"); }
@@ -956,7 +964,14 @@ _{numeros}_
                  document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>🚫 Não Encontrado</h1><p>Venda não localizada.</p></div>";
             }
         }).catch(err => {
-             document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>❌ Erro</h1><p>Falha ao carregar.</p></div>";
+            console.error(err);
+            document.getElementById('clientLoading').style.display = 'none';
+            document.body.innerHTML = `<div style='text-align:center; padding:50px; font-family:sans-serif;'>
+                <h1 style='color:#ef4444'>❌ Erro ao Conectar</h1>
+                <p>O sistema recusou a conexão.</p>
+                <p style='background:#fee2e2; padding:10px; border-radius:8px; font-family:monospace'>${err.message || err}</p>
+                <p>Verifique se as <b>Regras do Firebase</b> permitem leitura (read: true).</p>
+            </div>`;
         });
 
     } else {
@@ -985,6 +1000,11 @@ _{numeros}_
     }
 
     // --- LÓGICA DE NEGÓCIO ---
+
+    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
+    const normalizeText = (text) => {
+        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+    };
 
     function gerarSaudacao() {
         const hora = new Date().getHours();
@@ -1306,13 +1326,9 @@ _{numeros}_
         if(document.getElementById('checkBrinde').checked) {
             brindeCfg = { ativo: true, tipo: document.querySelector('input[name="tipoBrinde"]:checked').value, valor: document.getElementById('valorBrinde').value };
         }
-        
-        // PEGA O TEXTO PERSONALIZADO DA CRIAÇÃO
-        const txtMkt = document.getElementById('textoMarketingCriacao').value;
-
         const id = n.trim().replace(/[\s.#$\[\]]/g, "_") + "_" + Date.now();
-        
-        database.ref('rifas/'+id).set({ config: { nomeExibicao: n, premio: document.getElementById('premioEdicao').value, tipo: tipo, valorFixo: v, promocoes: promos, brinde: brindeCfg, ativa: true, textoMarketing: txtMkt } }).then(() => { edicaoAtivaID = id; trocarEdicao(); });
+        // ADICIONADO: ativa: true por padrão
+        database.ref('rifas/'+id).set({ config: { nomeExibicao: n, premio: document.getElementById('premioEdicao').value, tipo: tipo, valorFixo: v, promocoes: promos, brinde: brindeCfg, ativa: true } }).then(() => { edicaoAtivaID = id; trocarEdicao(); });
     }
 
     function salvarEdicaoRifa() {
@@ -1325,11 +1341,8 @@ _{numeros}_
         if(document.getElementById('edit_checkBrinde').checked) {
             brindeCfg = { ativo: true, tipo: document.querySelector('input[name="edit_tipoBrinde"]:checked').value, valor: document.getElementById('edit_valorBrinde').value };
         }
-        
-        // SALVA O TEXTO PERSONALIZADO
-        const txtMkt = document.getElementById('edit_textoMarketing').value;
-
-        const novoConfig = { ...dadosDB[edicaoAtivaID].config, nomeExibicao: document.getElementById('edit_nomeEdicao').value, premio: document.getElementById('edit_premioEdicao').value, valorFixo: document.getElementById('edit_valorFixoEdicao').value, promocoes: promos, brinde: brindeCfg, textoMarketing: txtMkt };
+        // MANTEM O STATUS ATUAL DE 'ATIVA'
+        const novoConfig = { ...dadosDB[edicaoAtivaID].config, nomeExibicao: document.getElementById('edit_nomeEdicao').value, premio: document.getElementById('edit_premioEdicao').value, valorFixo: document.getElementById('edit_valorFixoEdicao').value, promocoes: promos, brinde: brindeCfg };
         database.ref('rifas/'+edicaoAtivaID+'/config').set(novoConfig).then(() => { 
             document.querySelector('#modalSucesso h2').innerText = "Sucesso!";
             document.querySelector('#modalSucesso p').innerText = "Configurações atualizadas.";
@@ -2071,10 +2084,7 @@ _{numeros}_
         document.getElementById('modalConferencia').style.display = 'flex';
     }
 
-    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
-    const normalizeText = (text) => {
-        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-    };
+   
 
     // --- NOVA FUNÇÃO HELPER DE ABRIR O ZAP ---
     function abrirZapMarketing(txt) {
