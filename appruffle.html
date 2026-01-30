@@ -933,11 +933,14 @@ _{numeros}_
             const config = snapConfig.val();
             const venda = snapVenda.val();
             
-            // Esconde Loading
-            document.getElementById('clientLoading').style.display = 'none';
+            // Esconde Loading (com verificação para evitar erro de null)
+            const loadingEl = document.getElementById('clientLoading');
+            if(loadingEl) loadingEl.style.display = 'none';
 
             if(config && venda) {
-                document.getElementById('receipt-container').style.display = 'block';
+                const containerEl = document.getElementById('receipt-container');
+                if(containerEl) containerEl.style.display = 'block';
+
                 const vendaCompleta = {...venda, key: vParam};
 
                 document.getElementById('recibo_campanha').innerText = config.nomeExibicao;
@@ -965,7 +968,9 @@ _{numeros}_
             }
         }).catch(err => {
             console.error(err);
-            document.getElementById('clientLoading').style.display = 'none';
+            const loadingEl = document.getElementById('clientLoading');
+            if(loadingEl) loadingEl.style.display = 'none';
+            
             document.body.innerHTML = `<div style='text-align:center; padding:50px; font-family:sans-serif;'>
                 <h1 style='color:#ef4444'>❌ Erro ao Conectar</h1>
                 <p>O sistema recusou a conexão.</p>
@@ -1326,9 +1331,13 @@ _{numeros}_
         if(document.getElementById('checkBrinde').checked) {
             brindeCfg = { ativo: true, tipo: document.querySelector('input[name="tipoBrinde"]:checked').value, valor: document.getElementById('valorBrinde').value };
         }
+        
+        // PEGA O TEXTO PERSONALIZADO DA CRIAÇÃO
+        const txtMkt = document.getElementById('textoMarketingCriacao').value;
+
         const id = n.trim().replace(/[\s.#$\[\]]/g, "_") + "_" + Date.now();
-        // ADICIONADO: ativa: true por padrão
-        database.ref('rifas/'+id).set({ config: { nomeExibicao: n, premio: document.getElementById('premioEdicao').value, tipo: tipo, valorFixo: v, promocoes: promos, brinde: brindeCfg, ativa: true } }).then(() => { edicaoAtivaID = id; trocarEdicao(); });
+        
+        database.ref('rifas/'+id).set({ config: { nomeExibicao: n, premio: document.getElementById('premioEdicao').value, tipo: tipo, valorFixo: v, promocoes: promos, brinde: brindeCfg, ativa: true, textoMarketing: txtMkt } }).then(() => { edicaoAtivaID = id; trocarEdicao(); });
     }
 
     function salvarEdicaoRifa() {
@@ -1341,8 +1350,11 @@ _{numeros}_
         if(document.getElementById('edit_checkBrinde').checked) {
             brindeCfg = { ativo: true, tipo: document.querySelector('input[name="edit_tipoBrinde"]:checked').value, valor: document.getElementById('edit_valorBrinde').value };
         }
-        // MANTEM O STATUS ATUAL DE 'ATIVA'
-        const novoConfig = { ...dadosDB[edicaoAtivaID].config, nomeExibicao: document.getElementById('edit_nomeEdicao').value, premio: document.getElementById('edit_premioEdicao').value, valorFixo: document.getElementById('edit_valorFixoEdicao').value, promocoes: promos, brinde: brindeCfg };
+        
+        // SALVA O TEXTO PERSONALIZADO
+        const txtMkt = document.getElementById('edit_textoMarketing').value;
+
+        const novoConfig = { ...dadosDB[edicaoAtivaID].config, nomeExibicao: document.getElementById('edit_nomeEdicao').value, premio: document.getElementById('edit_premioEdicao').value, valorFixo: document.getElementById('edit_valorFixoEdicao').value, promocoes: promos, brinde: brindeCfg, textoMarketing: txtMkt };
         database.ref('rifas/'+edicaoAtivaID+'/config').set(novoConfig).then(() => { 
             document.querySelector('#modalSucesso h2').innerText = "Sucesso!";
             document.querySelector('#modalSucesso p').innerText = "Configurações atualizadas.";
@@ -2084,7 +2096,7 @@ _{numeros}_
         document.getElementById('modalConferencia').style.display = 'flex';
     }
 
-   
+  
 
     // --- NOVA FUNÇÃO HELPER DE ABRIR O ZAP ---
     function abrirZapMarketing(txt) {
