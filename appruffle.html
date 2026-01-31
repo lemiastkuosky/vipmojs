@@ -286,7 +286,6 @@
     <script>
         (function() {
             const p = new URLSearchParams(window.location.search);
-            // Se tiver parâmetros de cliente, esconde o painel admin imediatamente
             if(p.has('t') || (p.has('r') && p.has('v'))) {
                 document.documentElement.classList.add('mode-client-init');
                 const style = document.createElement('style');
@@ -503,73 +502,37 @@
     </div>
 </div>
 
-<footer class="app-footer">
-    Criado por <strong>Le Miastkuosky</strong> - Versão 5.22 Winner Ultimate
-</footer>
-
-<div id="modalNovaRifa" class="modal">
-    <div class="modal-content">
-        <h2>🆕 Nova Campanha</h2>
-        <label>Título da Rifa</label>
-        <input type="text" id="nomeEdicao" placeholder="Ex: Rifa do Iphone">
-        <label>Prêmio Principal</label>
-        <input type="text" id="premioEdicao" placeholder="Ex: Iphone 15 Pro Max">
-        
-        <label>Tipo de Sorteio</label>
-        <div class="radio-group">
-            <label><input type="radio" name="tipoNum" value="2"><span>Dezena</span></label>
-            <label><input type="radio" name="tipoNum" value="3"><span>Centena</span></label>
-            <label><input type="radio" name="tipoNum" value="4" checked><span>Milhar</span></label>
-        </div>
-        
-        <label>Valor da Cota</label>
-        <input type="tel" id="valorFixoEdicao" placeholder="R$ 0,00" class="money">
-
-        <label class="checkbox-wrapper"><input type="checkbox" id="checkPromo" onchange="alternarVisibilidade('checkPromo', 'areaPromo')"> <span>🏷️ Ativar Promoções (Atacado)</span></label>
-        <div id="areaPromo" class="hidden-area">
-            <div style="display:flex; gap:10px;">
-                <div style="flex:1"><label style="margin-top:0">Qtd</label><input type="tel" id="promoQtd2" placeholder="Ex: 5"></div>
-                <div style="flex:1"><label style="margin-top:0">Valor</label><input type="tel" id="promoVal2" placeholder="R$" class="money"></div>
-            </div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <div style="flex:1"><input type="tel" id="promoQtd3" placeholder="Ex: 10"></div>
-                <div style="flex:1"><input type="tel" id="promoVal3" placeholder="R$" class="money"></div>
-            </div>
-        </div>
-
-        <label class="checkbox-wrapper"><input type="checkbox" id="checkBrinde" onchange="alternarVisibilidade('checkBrinde', 'areaBrinde')"> <span>🍀 Brinde Extra (Palpite)</span></label>
-        <div id="areaBrinde" class="hidden-area">
-            <div class="radio-group">
-                <label><input type="radio" name="tipoBrinde" value="2"><span>Dezena</span></label>
-                <label><input type="radio" name="tipoBrinde" value="3"><span>Centena</span></label>
-                <label><input type="radio" name="tipoBrinde" value="4"><span>Milhar</span></label>
-            </div>
-            <label>Valor do Prêmio Extra:</label>
-            <input type="tel" id="valorBrinde" placeholder="R$ 0,00" class="money">
-        </div>
-        
-        <label class="checkbox-wrapper" style="margin-top:10px; background:#fff1f2; border-color:#e11d48;">
-            <input type="checkbox" id="checkMostrarFinanceiro"> 
-            <span style="color:#be123c;">🧾 Mostrar "Grátis/Desconto" no Comprovante?</span>
-        </label>
-
-        <label style="margin-top:15px;">Texto de Divulgação (Sobras)</label>
-        <textarea id="textoMarketingCriacao" rows="4" placeholder="Personalize o texto aqui... Use {numeros} para a lista.">🔥 *RESTAM POUCAS COTAS!* 🔥
-
-🎟️ *{titulo}*
-🏆 Valendo: *{premio}*
-
-*Numeros disponives abaixo*
-
-_{numeros}_
-
-💳 *Garanta o seu agora!*</textarea>
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn-main" onclick="criarEdicao()">🚀 Criar Campanha</button>
-            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
-        </div>
+<div id="receipt-container" style="display:none;">
+    <div class="recibo-header">
+        <div class="recibo-logo">🎟️</div>
+        <h1 class="recibo-title">Comprovante</h1>
+        <p class="recibo-subtitle" id="recibo_campanha">Nome da Rifa</p>
     </div>
+    <div class="recibo-body">
+        <div class="recibo-row"><span class="recibo-label">Cliente</span><span class="recibo-val" id="recibo_nome">Nome</span></div>
+        <div class="recibo-row"><span class="recibo-label">Prêmio</span><span class="recibo-val" id="recibo_premio">Prêmio</span></div>
+        <div class="recibo-row"><span class="recibo-label">Data</span><span class="recibo-val" id="recibo_data">00/00</span></div>
+        
+        <div class="recibo-numbers-box">
+            <span class="recibo-label" style="display:block; margin-bottom:5px;">COTAS SELECIONADAS</span>
+            <div class="recibo-numbers" id="recibo_nums">000</div>
+        </div>
+
+        <div id="recibo_brinde_area" style="display:none;" class="extra-box">
+             <span class="extra-title">🍀 Milhar da Sorte</span>
+             <div class="extra-num" id="recibo_brinde_num">0000</div>
+        </div>
+
+        <div class="recibo-total" id="recibo_valor">R$ 0,00</div>
+    </div>
+    <div class="recibo-footer">
+        <p>Autenticação: <span id="recibo_hash">#0000</span></p>
+        <p style="margin-top:5px; font-size:0.7rem; color:#9ca3af;">Gerado em: <span id="recibo_timestamp">--/--/--</span></p>
+    </div>
+</div>
+<div id="btn-download-publico" style="display:none;">
+    <button class="btn-main" onclick="baixarImagemPublica()">⬇️ Baixar Imagem do Comprovante</button>
+    <p style="margin-top:10px; color:#6b7280; font-size:0.8rem;">Este é um comprovante digital verificado.</p>
 </div>
 
 <div id="modalGanhador" class="modal" style="z-index: 3000;">
@@ -655,6 +618,91 @@ _{numeros}_
             <button class="btn-main" onclick="baixarCardGanhador()">📸 Baixar Imagem do Resultado</button>
             <button class="btn-back" style="background:white; color:#6b7280; justify-content:center;" onclick="fecharModais()">Fechar</button>
         </div>
+    </div>
+</div>
+
+<div id="modalAgenda" class="modal"><div class="modal-content"><h2>✏️ Editar Contato</h2><input type="hidden" id="editOldTel"><label>Nome</label><input type="text" id="editNomeCli"><label>Telefone</label><input type="tel" id="editTelCli"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button><button class="btn-back" onclick="fecharModais()">Cancelar</button></div></div></div>
+
+<div id="modalVenda" class="modal">
+    <div class="modal-content">
+        <h2>✏️ Editar Venda</h2>
+        <input type="hidden" id="editVendaKey">
+        <label>Nome</label>
+        <input type="text" id="editNomeVenda">
+        <label>Números (Cotas)</label>
+        <input type="tel" id="editNumVenda">
+        
+        <div id="divEditBrinde" style="display:none; margin-top:10px; background:#eff6ff; padding:10px; border-radius:8px; border:1px dashed var(--secondary);">
+            <label id="lblEditBrinde" style="margin-top:0; color:var(--secondary);">🎁 Palpite Extra</label>
+            <input type="tel" id="editBrindeVenda" placeholder="Digite o palpite..." style="background:white;">
+        </div>
+
+        <label>Desconto (R$)</label>
+        <input type="tel" id="editDescontoVenda" placeholder="R$ 0,00" class="money">
+
+        <div style="display:flex; gap:10px; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+            <label class="checkbox-wrapper" style="margin:0; flex:1; justify-content:center;">
+                <input type="checkbox" id="editCheckPago" onchange="if(this.checked) document.getElementById('editCheckGratis').checked=false"> 
+                <span>💸 Pago</span>
+            </label>
+            <label class="checkbox-wrapper" style="margin:0; flex:1; justify-content:center;">
+                <input type="checkbox" id="editCheckGratis" onchange="if(this.checked) document.getElementById('editCheckPago').checked=false"> 
+                <span>🎁 Grátis</span>
+            </label>
+        </div>
+        
+        <label class="checkbox-wrapper" style="margin-top:10px; background:#fff1f2; border-color:#e11d48;">
+            <input type="checkbox" id="editCheckMostrarFinanceiro"> 
+            <span style="color:#be123c;">🧾 Mostrar Preço Real (Grátis)</span>
+        </label>
+
+        <div style="display:flex;gap:10px;margin-top:20px">
+            <button class="btn-main" onclick="confirmarEdicaoVenda()">Salvar</button>
+            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalConfirm" class="modal"><div class="modal-content"><h2 id="confirmTitle" style="color:var(--danger)">Atenção</h2><p id="confirmMsg" style="margin:20px 0; font-size:1.1rem; color:var(--gray);"></p><div style="display:flex;gap:10px"><button id="confirmYes" class="btn-del">Confirmar</button><button onclick="fecharModais()" class="btn-back" style="width:100%">Cancelar</button></div></div></div>
+
+<div id="modalDuplicado" class="modal"><div class="modal-content"><h2 id="modalErrorTitle" style="color:var(--danger)">⛔ Número Indisponível</h2><p id="msgDuplicado" style="font-size:1.1rem; margin: 20px 0; color:var(--dark);"></p><button class="btn-main" onclick="fecharModais()">Entendi, vou corrigir</button></div></div>
+
+<div id="modalSucesso" class="modal"><div class="modal-content"><div style="font-size:3rem;">✅</div><h2 style="color:var(--primary)">Sucesso!</h2><p id="msgSucesso">Operação realizada.</p><button class="btn-main" onclick="fecharModais()">OK</button></div></div>
+
+<div id="modalWhatsapp" class="modal">
+    <div class="modal-content">
+        <div style="font-size:3rem;">✅</div>
+        <h2 style="color:var(--primary)">Venda Registrada!</h2>
+        <p style="margin: 15px 0; color:var(--gray);">Envie o comprovante agora:</p>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-whats" style="width:100%; justify-content:center;" onclick="enviarTextoWhatsapp()">📲 Enviar no WhatsApp</button>
+            <button class="btn-back" style="width:100%; justify-content:center;" onclick="fecharModais()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalPreviewRecibo" class="modal" style="z-index: 2200;">
+    <div class="modal-content" style="max-width: 450px;">
+        <h2 style="color:var(--primary)">Seu Recibo Digital</h2>
+        <p style="font-size:0.9rem; color:var(--gray); margin-bottom:15px;">Baixe a imagem e envie pelo WhatsApp.</p>
+        
+        <div id="imageOutput" style="margin: 15px 0; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow);"></div>
+        
+        <div style="display:flex; flex-direction:column; gap:10px;">
+             <a id="btnDownloadImage" class="btn-main" style="text-decoration:none; justify-content:center;">⬇️ Baixar Imagem</a>
+             <button class="btn-whats" style="justify-content:center;" onclick="abrirWhatsAposBaixar()">📲 Abrir WhatsApp</button>
+            <button class="btn-back" style="justify-content:center;" onclick="fecharModais()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalVisualizarPDF" class="modal" style="z-index: 2100;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <span>Visualização do Arquivo</span>
+            <button class="btn-del" style="width:auto; padding:5px 10px;" onclick="document.getElementById('modalVisualizarPDF').style.display='none'">Fechar</button>
+        </div>
+        <iframe id="iframePDF" class="pdf-frame"></iframe>
     </div>
 </div>
 
@@ -1331,10 +1379,12 @@ _{numeros}_
         
         // PEGA O TEXTO PERSONALIZADO DA CRIAÇÃO
         const txtMkt = document.getElementById('textoMarketingCriacao').value;
+        // Pega o valor do checkbox novo (Padrão false se não marcado)
+        const showFin = document.getElementById('checkMostrarFinanceiro').checked;
 
         const id = n.trim().replace(/[\s.#$\[\]]/g, "_") + "_" + Date.now();
         
-        database.ref('rifas/'+id).set({ config: { nomeExibicao: n, premio: document.getElementById('premioEdicao').value, tipo: tipo, valorFixo: v, promocoes: promos, brinde: brindeCfg, ativa: true, textoMarketing: txtMkt } }).then(() => { edicaoAtivaID = id; trocarEdicao(); });
+        database.ref('rifas/'+id).set({ config: { nomeExibicao: n, premio: document.getElementById('premioEdicao').value, tipo: tipo, valorFixo: v, promocoes: promos, brinde: brindeCfg, ativa: true, textoMarketing: txtMkt, mostrarFinanceiroRecibo: showFin } }).then(() => { edicaoAtivaID = id; trocarEdicao(); });
     }
 
     function salvarEdicaoRifa() {
@@ -1350,8 +1400,9 @@ _{numeros}_
         
         // SALVA O TEXTO PERSONALIZADO
         const txtMkt = document.getElementById('edit_textoMarketing').value;
+        const showFin = document.getElementById('edit_checkMostrarFinanceiro').checked;
 
-        const novoConfig = { ...dadosDB[edicaoAtivaID].config, nomeExibicao: document.getElementById('edit_nomeEdicao').value, premio: document.getElementById('edit_premioEdicao').value, valorFixo: document.getElementById('edit_valorFixoEdicao').value, promocoes: promos, brinde: brindeCfg, textoMarketing: txtMkt };
+        const novoConfig = { ...dadosDB[edicaoAtivaID].config, nomeExibicao: document.getElementById('edit_nomeEdicao').value, premio: document.getElementById('edit_premioEdicao').value, valorFixo: document.getElementById('edit_valorFixoEdicao').value, promocoes: promos, brinde: brindeCfg, textoMarketing: txtMkt, mostrarFinanceiroRecibo: showFin };
         database.ref('rifas/'+edicaoAtivaID+'/config').set(novoConfig).then(() => { 
             document.querySelector('#modalSucesso h2').innerText = "Sucesso!";
             document.querySelector('#modalSucesso p').innerText = "Configurações atualizadas.";
@@ -1521,6 +1572,9 @@ _{numeros}_
         // CARREGA O TEXTO PERSONALIZADO SE EXISTIR, SENÃO USA O PADRÃO
         const defaultText = "🔥 *RESTAM POUCAS COTAS!* 🔥\n\n🎟️ *{titulo}*\n🏆 Valendo: *{premio}*\n\n*Numeros disponives abaixo*\n\n_{numeros}_\n\n💳 *Garanta o seu agora!*";
         document.getElementById('edit_textoMarketing').value = config.textoMarketing || defaultText;
+
+        // Checkbox Financeiro (novo)
+        document.getElementById('edit_checkMostrarFinanceiro').checked = config.mostrarFinanceiroRecibo === true;
 
         document.getElementById('modalEditRifa').style.display = 'flex';
     }
@@ -2096,11 +2150,6 @@ _{numeros}_
 
         document.getElementById('modalConferencia').style.display = 'flex';
     }
-
-    // === HELPER: NORMALIZAÇÃO DE TEXTO (IGNORA ACENTOS) ===
-    // const normalizeText = (text) => {
-    //     return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-    // };
 
     // --- NOVA FUNÇÃO HELPER DE ABRIR O ZAP ---
     function abrirZapMarketing(txt) {
