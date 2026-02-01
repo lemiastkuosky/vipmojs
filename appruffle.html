@@ -428,8 +428,8 @@
                             *As Cotas Bônus entram sempre como "Grátis".
                         </p>
                     </div>
-
-                    <button class="btn-main" style="margin-top:10px; font-size:1.1rem;" onclick="registrarVenda()">✅ Confirmar Venda</button>
+                    
+                    <button id="btnRegistrar" class="btn-main" style="margin-top:10px; font-size:1.1rem;" onclick="registrarVenda()">✅ Confirmar Venda</button>
                 </div>
 
                 <div class="card">
@@ -665,7 +665,7 @@
 
 <div id="modalConfirm" class="modal"><div class="modal-content"><h2 id="confirmTitle" style="color:var(--danger)">Atenção</h2><p id="confirmMsg" style="margin:20px 0; font-size:1.1rem; color:var(--gray);"></p><div style="display:flex;gap:10px"><button id="confirmYes" class="btn-del">Confirmar</button><button onclick="fecharModais()" class="btn-back" style="width:100%">Cancelar</button></div></div></div>
 
-<div id="modalDuplicado" class="modal"><div class="modal-content"><h2 id="modalErrorTitle" style="color:var(--danger)">⛔ Número Indisponível</h2><p id="msgDuplicado" style="font-size:1.1rem; margin: 20px 0; color:var(--dark);"></p><button class="btn-main" onclick="fecharModais()">Entendi, vou corrigir</button></div></div>
+<div id="modalDuplicado" class="modal"><div class="modal-content"><h2 id="modalErrorTitle" style="color:var(--danger)">⛔ Número Indisponível</h2><p id="msgDuplicado" style="font-size:1.1rem; margin: 20px 0; color:var(--dark); text-align: left;"></p><button class="btn-main" onclick="fecharModais()">Entendi, vou corrigir</button></div></div>
 
 <div id="modalSucesso" class="modal"><div class="modal-content"><div style="font-size:3rem;">✅</div><h2 style="color:var(--primary)">Sucesso!</h2><p id="msgSucesso">Operação realizada.</p><button class="btn-main" onclick="fecharModais()">OK</button></div></div>
 
@@ -1131,10 +1131,18 @@
         return totalCalculado;
     }
 
-    // --- NOVA FUNÇÃO DE REGISTRO COM SPLIT DE COTAS (NORMAL/BONUS) ---
+    // --- NOVA FUNÇÃO DE REGISTRO COM TRAVA DE BOTÃO ---
     async function registrarVenda() {
         if(!edicaoAtivaID) return alert("Selecione uma campanha!");
         
+        const btn = document.getElementById('btnRegistrar');
+        const textoOriginal = btn.innerHTML;
+        
+        // 1. TRAVA O BOTÃO IMEDIATAMENTE
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        btn.innerHTML = "⏳ Salvando...";
+
         const n = document.getElementById('nomePart').value; 
         const t = document.getElementById('telPart').value;
         
@@ -1144,42 +1152,42 @@
         const brindeInput = document.getElementById('inputBrinde').value;
         const descInput = document.getElementById('inputDesconto').value; 
         
-        // Agora só olhamos se a parte "Normal" foi paga ou não
         const isPagoNormais = document.getElementById('checkPago').checked; 
 
-        if(!n || (!numsNormais && !numsBonus)) return alert("Preencha Nome e pelo menos um número!");
+        if(!n || (!numsNormais && !numsBonus)) {
+            alert("Preencha Nome e pelo menos um número!");
+            // Destrava se houver erro de preenchimento
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.innerHTML = textoOriginal;
+            return;
+        }
         
-        // Função auxiliar de salvamento
         const salvarLote = async (numeros, tipo) => {
             if(!numeros) return;
 
-            // Validação de duplicidade na digitação
             const listaNumerosRaw = numeros.match(/\d+/g);
             if (listaNumerosRaw && (new Set(listaNumerosRaw)).size !== listaNumerosRaw.length) {
-                alert(`Erro: Você digitou números repetidos: ${numeros}`);
-                throw new Error("Duplicidade");
+                throw new Error(`Erro: Você digitou números repetidos: ${numeros}`);
             }
-            // Validação no banco
-            const repetido = verificarDuplicidade(listaNumerosRaw);
-            if(repetido) {
-                alert(`O número ${repetido} já foi vendido para outra pessoa!`);
-                throw new Error("Repetido");
+            
+            const conflito = verificarDuplicidade(listaNumerosRaw);
+            if(conflito) {
+                // Mensagem detalhada com o nome do cliente
+                throw new Error(`⛔ O número ${conflito.numero} já foi vendido para:\n👤 ${conflito.dono}\n📱 ${conflito.tel}`);
             }
 
-            // Definição Inteligente do Status
             let statusPago = false;
             let ehGratis = false;
             let valorRegistro = "R$ 0,00";
             let descontoRegistro = "0";
 
             if(tipo === 'NORMAL') {
-                // Cotas normais seguem o checkbox e o cálculo de valor
                 statusPago = isPagoNormais;
                 ehGratis = false;
-                valorRegistro = valorFinalVenda; // Valor calculado lá em cima
+                valorRegistro = valorFinalVenda;
                 descontoRegistro = descInput;
             } else {
-                // BÔNUS é sempre Grátis e Pago (Baixado)
                 statusPago = true;
                 ehGratis = true;
                 valorRegistro = "Grátis";
@@ -1198,26 +1206,33 @@
             
             const ref = await database.ref('rifas/'+edicaoAtivaID+'/vendas').push(venda);
             
-            // Prioriza mostrar o recibo da venda paga se houver as duas
             if(tipo === 'NORMAL' || !vendaRecenteParaEnvio) {
                 vendaRecenteParaEnvio = { ...venda, key: ref.key };
             }
         };
 
         try {
-            // 1. Tenta salvar os Bônus (Grátis)
             if(numsBonus) await salvarLote(numsBonus, 'BONUS');
-            
-            // 2. Tenta salvar os Normais (Pagos ou Pendentes)
             if(numsNormais) await salvarLote(numsNormais, 'NORMAL');
 
-            // Sucesso
             database.ref('clientes/'+t.replace(/\D/g,'')).set({nome:n, tel:t});
             document.getElementById('modalWhatsapp').style.display = 'flex';
             limparCamposVenda();
             
         } catch(e) {
-            console.log("Processo interrompido por erro de validação.");
+            // MOSTRA O ERRO REAL (Duplicidade ou Repetição)
+            if(e.message.includes("repetidos") || e.message.includes("já foi vendido") || e.message.includes("duas vezes")) {
+                // Se for erro de validação, mostra no modal de erro ou alert
+                 document.getElementById('msgDuplicado').innerText = e.message;
+                 document.getElementById('modalDuplicado').style.display = 'flex';
+            } else {
+                console.log(e); // Erros de rede silenciosos
+            }
+        } finally {
+            // DESTRAVA O BOTÃO NO FINAL (SEMPRE)
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.innerHTML = textoOriginal;
         }
     }
 
@@ -1241,129 +1256,33 @@
         }
     }
 
-    // --- ENVIAR TEXTO ZAP (RESTAURADA) ---
-    function enviarTextoWhatsapp() {
-        if(!edicaoAtivaID || !vendaRecenteParaEnvio || !dadosDB[edicaoAtivaID]) return;
+    // --- FUNÇÃO DE VERIFICAÇÃO DETALHADA ---
+    function verificarDuplicidade(novosNumeros) {
+        if (!dadosDB[edicaoAtivaID] || !dadosDB[edicaoAtivaID].vendas) return null;
         
-        const config = dadosDB[edicaoAtivaID].config;
-        const v = vendaRecenteParaEnvio;
-        // Garante o 55 do Brasil se o numero não tiver
-        let telLimpo = v.tel.replace(/\D/g, '');
-        if(telLimpo.length <= 11) telLimpo = "55" + telLimpo;
-
-        const saudacao = gerarSaudacao();
+        const vendasExistentes = dadosDB[edicaoAtivaID].vendas;
         
-        const baseUrl = window.location.href.split('?')[0];
-        const dadosCombinados = `${edicaoAtivaID}###${v.key}`;
-        const tokenObscuro = btoa(dadosCombinados);
-        const linkRecibo = `${baseUrl}?t=${tokenObscuro}`;
-
-        // --- MONTAGEM DO TEXTO ---
-        let texto = `✅ *COMPRA CONFIRMADA!*\n\n`;
-        texto += `${saudacao}, *${v.nome}*! Tudo certo com sua participação. 👊\n\n`;
-        
-        texto += `🎟️ *Ação:* ${config.nomeExibicao}\n`;
-        texto += `🔢 *Cotas:* ${v.nums}\n`;
-        texto += `🏆 *Prêmio:* ${config.premio}\n`;
-        
-        if(v.brinde && v.brinde.trim() !== "") {
-            texto += `🍀 *Palpite Extra:* ${v.brinde}\n`;
-        }
-        
-        texto += `\n🔗 *Acesse seu Comprovante Digital:* \n${linkRecibo}\n\n`;
-        texto += "Muito obrigado e Boa sorte! 🤞";
-
-        const link = `https://wa.me/${telLimpo}?text=${encodeURIComponent(texto)}`;
-        window.open(link, '_blank');
-        fecharModais();
-    }
-
-    function gerarImagemRecibo(venda) {
-        if(!edicaoAtivaID || !dadosDB[edicaoAtivaID]) return;
-        const config = dadosDB[edicaoAtivaID].config;
-
-        // USA O SAFESETTEXT PARA PREENCHER OS CAMPOS DO MODAL DE PREVIEW TBM
-        safeSetText('recibo_campanha', config.nomeExibicao);
-        safeSetText('recibo_nome', venda.nome);
-        safeSetText('recibo_premio', config.premio);
-        safeSetText('recibo_nums', venda.nums);
-        
-        // --- LÓGICA DE VALOR NO PREVIEW DO ADMIN ---
-        let valorFinal = venda.valor;
-        if (config.mostrarFinanceiroRecibo !== true) {
-             let unitario = parseFloat((config.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
-             let qtdNumeros = (venda.nums.match(/\d+/g) || []).length;
-             let totalCheio = unitario * qtdNumeros;
-             valorFinal = totalCheio.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-        }
-        safeSetText('recibo_valor', valorFinal);
-        // -------------------------------------------
-        
-        let dataLimpa = (venda.data || "").split(' ')[0].replace(',', '');
-        safeSetText('recibo_data', dataLimpa);
-        safeSetText('recibo_hash', '#' + venda.cod);
-        safeSetText('recibo_timestamp', venda.data);
-
-        const brindeArea = document.getElementById('recibo_brinde_area');
-        if(brindeArea) {
-            if(venda.brinde) {
-                brindeArea.style.display = 'block';
-                safeSetText('recibo_brinde_num', venda.brinde);
-            } else {
-                brindeArea.style.display = 'none';
+        // Percorre todas as vendas já feitas
+        for (let key in vendasExistentes) {
+            const venda = vendasExistentes[key];
+            const numerosDaVenda = venda.nums.match(/\d+/g); // Extrai os números (ex: ["01", "02"])
+            
+            if (numerosDaVenda) {
+                // Verifica se algum dos novos números está nesta venda
+                const conflito = novosNumeros.find(novo => numerosDaVenda.includes(novo));
+                
+                if (conflito) {
+                    // SE ACHOU, RETORNA OS DADOS DO DONO
+                    return {
+                        numero: conflito,
+                        dono: venda.nome,
+                        tel: venda.tel
+                    };
+                }
             }
         }
-
-        const template = document.getElementById('receipt-container');
-        // Garante que o template está visível antes de tirar print
-        template.style.display = 'block';
-
-        html2canvas(template, { scale: 2 }).then(canvas => {
-            const imgData = canvas.toDataURL("image/png");
-            const outputDiv = document.getElementById('imageOutput');
-            outputDiv.innerHTML = ''; 
-            const imgElement = document.createElement('img');
-            imgElement.src = imgData;
-            imgElement.style.width = '100%';
-            imgElement.style.display = 'block';
-            outputDiv.appendChild(imgElement);
-
-            const btnDownload = document.getElementById('btnDownloadImage');
-            btnDownload.href = imgData;
-            btnDownload.download = `Recibo_${venda.nome.replace(/\s/g,'')}_${Date.now()}.png`;
-            
-            document.getElementById('modalPreviewRecibo').style.display = 'flex';
-            // Esconde o template original novamente se for admin
-            // (No modo cliente ele fica visível sempre)
-             if(!document.body.classList.contains('mode-client')) {
-                 template.style.display = 'none';
-             }
-        });
+        return null; // Nenhum conflito encontrado
     }
-
-    function baixarImagemPublica() {
-        if(!vendaRecenteParaEnvio) return;
-        const btn = document.querySelector('#btn-download-publico button');
-        btn.innerText = "⏳ Gerando imagem...";
-        const template = document.getElementById('receipt-container');
-        html2canvas(template, { scale: 2 }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `Comprovante_${vendaRecenteParaEnvio.nome}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-            btn.innerText = "⬇️ Baixar Imagem do Comprovante";
-        });
-    }
-    
-    function abrirWhatsAposBaixar() {
-         if(vendaRecenteParaEnvio && vendaRecenteParaEnvio.tel) {
-             let txt = `${gerarSaudacao()}! Segue seu recibo digital em imagem.`;
-             window.open(`https://wa.me/${vendaRecenteParaEnvio.tel.replace(/\D/g,'')}?text=${encodeURIComponent(txt)}`);
-             fecharModais();
-         }
-    }
-
-    function verificarDuplicidade(novosNumeros) { if(!dadosDB[edicaoAtivaID].vendas) return null; const vendidos = []; Object.values(dadosDB[edicaoAtivaID].vendas).forEach(v => { const numsLimpos = v.nums.match(/\d+/g); if(numsLimpos) vendidos.push(...numsLimpos); }); if(novosNumeros) { for (let num of novosNumeros) { if(vendidos.includes(num)) return num; } } return null; }
 
     function criarEdicao() {
         const n = document.getElementById('nomeEdicao').value, v = document.getElementById('valorFixoEdicao').value, tipo = document.querySelector('input[name="tipoNum"]:checked').value;
@@ -1908,7 +1827,15 @@
         
         document.getElementById('editVendaKey').value = k; 
         document.getElementById('editNomeVenda').value = v.nome; 
-        document.getElementById('editNumVenda').value = v.nums; 
+        
+        // --- Correção: Formatação Automática na Edição ---
+        const inputNums = document.getElementById('editNumVenda');
+        inputNums.value = v.nums;
+        // Adiciona o evento de digitação para colocar virgulas
+        inputNums.oninput = function() {
+            formatarDigitos(this, parseInt(cfg.tipo));
+        };
+        // -------------------------------------------------
         
         // --- Carregar Desconto Existente ---
         const inputDesc = document.getElementById('editDescontoVenda');
