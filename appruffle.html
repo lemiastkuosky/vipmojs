@@ -16,17 +16,36 @@
 
     <style>
         :root {
+            /* --- VARIÁVEIS DE CORES (TEMA CLARO - PADRÃO) --- */
             --primary: #10b981;
             --primary-dark: #059669;
             --secondary: #3b82f6;
             --accent: #f59e0b;
             --danger: #ef4444;
-            --dark: #1f2937;
-            --gray: #6b7280;
-            --light: #f3f4f6;
-            --white: #ffffff;
+            
+            --dark: #1f2937;        /* Texto Principal */
+            --gray: #6b7280;        /* Texto Secundário */
+            --light: #f3f4f6;       /* Fundo da Página */
+            --white: #ffffff;       /* Fundo dos Cards */
+            
+            --bg-input: #f9fafb;    /* Fundo dos Inputs */
+            --border-input: #d1d5db;/* Borda dos Inputs */
+            
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --radius: 12px;
+        }
+
+        /* --- TEMA ESCURO (DARK MODE) --- */
+        [data-theme="dark"] {
+            --dark: #f3f4f6;        /* Inverte Texto: Escuro vira Claro */
+            --gray: #9ca3af;        /* Texto Secundário mais claro */
+            --light: #111827;       /* Fundo da Página Escuro (Cinza/Azulado) */
+            --white: #1f2937;       /* Fundo dos Cards Escuro */
+            
+            --bg-input: #374151;    /* Input Escuro */
+            --border-input: #4b5563;/* Borda Escura */
+            
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -41,6 +60,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .main-content { flex: 1; }
@@ -57,17 +77,21 @@
         .app-title span { color: var(--primary); }
 
         .nav-tabs { display: flex; background: #e5e7eb; padding: 4px; border-radius: var(--radius); margin-bottom: 20px; }
+        [data-theme="dark"] .nav-tabs { background: #374151; }
+
         .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--gray); font-weight: 600; font-size: 0.9rem; cursor: pointer; border-radius: 8px; transition: all 0.3s ease; }
         .tab-btn.active { background: var(--white); color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        [data-theme="dark"] .tab-btn.active { background: #4b5563; color: var(--primary); }
 
         /* --- CARDS & UI ELEMENTS --- */
-        .card { background: var(--white); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.02); transition: transform 0.2s; }
+        .card { background: var(--white); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.02); transition: transform 0.2s, background-color 0.3s; }
         
         h2 { margin: 0 0 15px 0; font-size: 1.1rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; justify-content: space-between; }
         label { display: block; margin: 12px 0 6px; font-weight: 600; font-size: 0.85rem; color: var(--gray); }
 
-        input, select, textarea { width: 100%; padding: 14px; border-radius: var(--radius); border: 1px solid #d1d5db; background: #f9fafb; font-size: 1rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); background: var(--white); }
+        /* INPUTS */
+        input, select, textarea { width: 100%; padding: 14px; border-radius: var(--radius); border: 1px solid var(--border-input); background: var(--bg-input); font-size: 1rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s; outline: none; color: var(--dark); }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
 
         /* --- BOTÕES --- */
         button { width: 100%; padding: 14px; border: none; border-radius: var(--radius); font-weight: 600; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s, opacity 0.2s; }
@@ -81,6 +105,8 @@
         .btn-pay { background: #10b981; color: white; width: auto; padding: 8px 12px; font-size: 0.85rem; }
         .btn-undo { background: #9ca3af; color: white; width: auto; padding: 8px 12px; font-size: 0.85rem; }
         .btn-config { background: #e5e7eb; color: var(--dark); width: auto; padding: 8px 16px; font-size: 0.85rem; border-radius: 20px; }
+        [data-theme="dark"] .btn-config { background: #374151; color: #fff; }
+
         .btn-back { background: transparent; color: var(--gray); width: auto; padding: 8px 0; font-size: 0.9rem; justify-content: flex-start; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
         .btn-logout { background: transparent; color: #ef4444; border: 1px solid #ef4444; width: auto; padding: 6px 12px; font-size: 0.75rem; border-radius: 20px; }
@@ -96,54 +122,64 @@
             border-left-width: 5px; 
             border-left-style: solid;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            background: #f9fafb;
+            background: var(--bg-input); /* Adapta ao tema */
             border-left-color: var(--gray);
+            border: 1px solid transparent;
         }
+        [data-theme="dark"] .venda-item { border-color: #374151; }
         
         .venda-item.pago { background: #ecfdf5; border-left-color: #10b981; }
+        [data-theme="dark"] .venda-item.pago { background: #064e3b; color: #ecfdf5; }
+        
         .venda-item.pendente { background: #fef2f2; border-left-color: #ef4444; }
+        [data-theme="dark"] .venda-item.pendente { background: #450a0a; color: #fef2f2; }
 
         .info-row { display: block; margin-bottom: 3px; font-size: 0.9rem; line-height: 1.4; }
         .info-label { color: var(--gray); font-size: 0.8rem; margin-right: 4px; }
         
         .venda-item b { color: var(--dark); font-size: 0.95rem; }
+        [data-theme="dark"] .venda-item.pago b { color: #fff; }
+        [data-theme="dark"] .venda-item.pendente b { color: #fff; }
+
         .acoes { display: flex; gap: 8px; flex-shrink: 0; margin-left: 10px; }
 
         /* --- LISTA DE CAMPANHAS (MENU NOVO) --- */
         .campanha-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
         .campanha-item { 
-            background: white; border: 1px solid #e5e7eb; padding: 15px; border-radius: 12px; 
+            background: var(--white); border: 1px solid var(--border-input); padding: 15px; border-radius: 12px; 
             display: flex; justify-content: space-between; align-items: center; 
             cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: 0.2s;
             border-left: 4px solid var(--primary);
         }
-        .campanha-item.finalizada { border-left-color: var(--gray); background: #f3f4f6; opacity: 0.8; }
+        .campanha-item.finalizada { border-left-color: var(--gray); background: var(--light); opacity: 0.8; }
         
-        .campanha-item:active { transform: scale(0.98); background: #f9fafb; }
+        .campanha-item:active { transform: scale(0.98); opacity: 0.9; }
         .c-info h3 { margin: 0; font-size: 1rem; color: var(--dark); font-weight: 700; }
         .c-info p { margin: 4px 0 0 0; font-size: 0.85rem; color: var(--gray); }
         .c-arrow { font-size: 1.2rem; color: #d1d5db; }
 
         /* --- BANNERS --- */
         .promo-banner { background: #fffbeb; color: #92400e; padding: 12px; border-radius: var(--radius); border: 1px solid #fcd34d; margin-bottom: 15px; font-size: 0.9rem; text-align: center; line-height: 1.4; }
-        .total-bar { background: var(--dark); color: var(--white); padding: 16px; border-radius: var(--radius); margin-top: 15px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .total-bar { background: var(--dark); color: var(--light); padding: 16px; border-radius: var(--radius); margin-top: 15px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        [data-theme="dark"] .total-bar { background: #000; border: 1px solid #333; }
 
         /* --- MODAIS --- */
-.modal { 
-    display: none; 
-    position: fixed; 
-    z-index: 3000; /* Aumentado para sobrepor qualquer outra tela */
-    left: 0; 
-    top: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(0,0,0,0.7); /* Fundo um pouco mais escuro para destaque */
-    backdrop-filter: blur(4px); 
-    align-items: center; 
-    justify-content: center; 
-}        .modal-content { background: var(--white); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; animation: slideUp 0.3s ease; max-height: 85vh; overflow-y: auto; }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 3000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.7); 
+            backdrop-filter: blur(4px); 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .modal-content { background: var(--white); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; animation: slideUp 0.3s ease; max-height: 85vh; overflow-y: auto; }
         .modal-large { max-width: 800px; height: 90%; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
-        .modal-header { padding: 15px; background: #f3f4f6; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; font-weight: bold; }
+        .modal-header { padding: 15px; background: var(--light); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-input); font-weight: bold; }
         .pdf-frame { width: 100%; flex: 1; border: none; }
 
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -151,31 +187,40 @@
 
         /* --- AUTOCOMPLETE --- */
         .autocomplete-container { position: relative; }
-        .autocomplete-items { position: absolute; border: 1px solid #d1d5db; border-top: none; z-index: 99; top: 100%; left: 0; right: 0; border-radius: 0 0 12px 12px; background: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); max-height: 200px; overflow-y: auto; }
-        .autocomplete-items div { padding: 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; text-align: left; font-size: 0.9rem; }
-        .autocomplete-items div:hover { background-color: #f3f4f6; }
+        .autocomplete-items { position: absolute; border: 1px solid var(--border-input); border-top: none; z-index: 99; top: 100%; left: 0; right: 0; border-radius: 0 0 12px 12px; background: var(--white); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); max-height: 200px; overflow-y: auto; }
+        .autocomplete-items div { padding: 12px; cursor: pointer; border-bottom: 1px solid var(--light); text-align: left; font-size: 0.9rem; }
+        .autocomplete-items div:hover { background-color: var(--light); }
+
+        /* SUGGESTION BOX (PENDENCIA) */
+        .pending-suggestion-item {
+            background-color: #fffbeb;
+            color: #b45309;
+            border-left: 4px solid #f59e0b;
+            font-weight: bold !important;
+        }
 
         /* Utilitários */
-        .hidden-area { display: none; background: #f9fafb; padding: 15px; border: 1px solid #e5e7eb; border-radius: var(--radius); margin-top: 10px; }
-        .checkbox-wrapper { display: flex; align-items: center; gap: 12px; margin-top: 15px; cursor: pointer; background: var(--white); padding: 12px; border-radius: var(--radius); border: 1px solid #e5e7eb; transition: 0.2s; }
+        .hidden-area { display: none; background: var(--bg-input); padding: 15px; border: 1px solid var(--border-input); border-radius: var(--radius); margin-top: 10px; }
+        .checkbox-wrapper { display: flex; align-items: center; gap: 12px; margin-top: 15px; cursor: pointer; background: var(--white); padding: 12px; border-radius: var(--radius); border: 1px solid var(--border-input); transition: 0.2s; }
         .checkbox-wrapper:hover { border-color: var(--primary); }
         .checkbox-wrapper input { width: 20px; height: 20px; margin: 0; accent-color: var(--primary); }
         
         .radio-group { display: flex; gap: 10px; margin-bottom: 10px; }
-        .radio-group label { background: #f3f4f6; padding: 10px; border-radius: 8px; flex: 1; text-align: center; cursor: pointer; border: 1px solid transparent; font-weight: normal; margin: 0; }
+        .radio-group label { background: var(--light); padding: 10px; border-radius: 8px; flex: 1; text-align: center; cursor: pointer; border: 1px solid transparent; font-weight: normal; margin: 0; }
         .radio-group input { display: none; }
         .radio-group input:checked + span { color: var(--primary); font-weight: bold; }
         .radio-group label:has(input:checked) { border-color: var(--primary); background: #ecfdf5; color: var(--primary); font-weight: bold; }
+        [data-theme="dark"] .radio-group label:has(input:checked) { background: #064e3b; }
 
         /* --- RODAPÉ --- */
-        .app-footer { text-align: center; padding: 20px; color: var(--gray); font-size: 0.85rem; background: #e5e7eb; margin-top: auto; }
+        .app-footer { text-align: center; padding: 20px; color: var(--gray); font-size: 0.85rem; background: var(--light); margin-top: auto; }
         .app-footer strong { color: var(--primary-dark); }
 
         /* --- RESUMO ESTATÍSTICO --- */
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
         @media (min-width: 480px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
-        .stat-card { background: var(--white); padding: 12px; border-radius: var(--radius); text-align: center; box-shadow: var(--shadow); border: 1px solid #f3f4f6; position: relative; overflow: hidden; transition: transform 0.1s; }
-        .stat-card:active { transform: scale(0.98); background-color: #f9fafb; }
+        .stat-card { background: var(--white); padding: 12px; border-radius: var(--radius); text-align: center; box-shadow: var(--shadow); border: 1px solid var(--light); position: relative; overflow: hidden; transition: transform 0.1s; }
+        .stat-card:active { transform: scale(0.98); opacity: 0.9; }
         .stat-val { font-size: 1.2rem; font-weight: 800; color: var(--dark); display: block; margin-bottom: 2px; }
         .stat-label { font-size: 0.75rem; color: var(--gray); text-transform: uppercase; font-weight: 600; }
         .stat-card.c-verde { border-bottom: 3px solid var(--primary); }
@@ -184,13 +229,14 @@
         .stat-card.c-vermelho { border-bottom: 3px solid #ef4444; }
         .stat-card.c-roxo { border-bottom: 3px solid #8b5cf6; } 
 
-        /* --- TEMPLATE DO RECIBO PRO --- */
+        /* --- TEMPLATE DO RECIBO PRO (SEMPRE BRANCO PARA PRINT) --- */
         #receipt-container {
             position: fixed;
             top: -9999px;
             left: -9999px;
             width: 420px;
-            background: #fff;
+            background: #fff !important; /* Força branco */
+            color: #1f2937 !important; /* Força texto escuro */
             overflow: hidden;
             font-family: 'Inter', sans-serif;
             border-radius: 0;
@@ -198,8 +244,8 @@
         }
         
         .recibo-header {
-            background: #1f2937;
-            color: #fff;
+            background: #1f2937 !important;
+            color: #fff !important;
             padding: 25px 20px;
             text-align: center;
             position: relative;
@@ -214,7 +260,7 @@
         .recibo-title { font-size: 1.5rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
         .recibo-subtitle { font-size: 0.85rem; color: #9ca3af; margin-top: 5px; }
 
-        .recibo-body { padding: 30px 25px; background: #fff; }
+        .recibo-body { padding: 30px 25px; background: #fff !important; }
 
         .recibo-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; }
         .recibo-row:last-child { border-bottom: none; }
@@ -222,14 +268,14 @@
         .recibo-label { color: #6b7280; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; }
         .recibo-val { color: #111827; font-weight: 700; text-align: right; }
 
-        .recibo-numbers-box { background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center; }
-        .recibo-numbers { font-family: 'Roboto Mono', monospace; color: #374151; font-size: 1rem; line-height: 1.5; word-break: break-all; }
+        .recibo-numbers-box { background: #f3f4f6 !important; border: 2px dashed #d1d5db; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center; }
+        .recibo-numbers { font-family: 'Roboto Mono', monospace; color: #374151 !important; font-size: 1rem; line-height: 1.5; word-break: break-all; }
 
-        .recibo-total { background: #10b981; color: white; text-align: center; padding: 15px; border-radius: 8px; font-size: 1.4rem; font-weight: 800; margin-top: 10px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); }
+        .recibo-total { background: #10b981 !important; color: white !important; text-align: center; padding: 15px; border-radius: 8px; font-size: 1.4rem; font-weight: 800; margin-top: 10px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); }
 
         .recibo-footer { text-align: center; font-size: 0.75rem; color: #9ca3af; margin-top: 25px; padding-top: 15px; border-top: 2px solid #f3f4f6; }
         
-        .extra-box { margin-top: 15px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 10px; text-align: center; }
+        .extra-box { margin-top: 15px; background: #fffbeb !important; border: 1px solid #fcd34d; border-radius: 8px; padding: 10px; text-align: center; }
         .extra-title { color: #b45309; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; }
         .extra-num { color: #b45309; font-family: 'Roboto Mono', monospace; font-weight: bold; font-size: 1.1rem; margin-top: 2px;}
 
@@ -253,23 +299,23 @@
         .audit-filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee; }
         
         .audit-filter-btn { 
-            padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; 
-            background: white; color: var(--gray); font-size: 0.85rem; white-space: nowrap; 
+            padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-input); 
+            background: var(--white); color: var(--gray); font-size: 0.85rem; white-space: nowrap; 
             cursor: pointer; transition: 0.2s; font-weight: 600;
         }
-        .audit-filter-btn:hover { background: #f9fafb; }
-        .audit-filter-btn.active { background: var(--dark); color: white; border-color: var(--dark); box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        .audit-filter-btn:hover { background: var(--light); }
+        .audit-filter-btn.active { background: var(--dark); color: var(--light); border-color: var(--dark); box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
         
         .audit-table-container { 
             overflow-x: auto; /* Permite rolar horizontalmente se a tabela for larga */
-            background: white; border-radius: 12px; border: 1px solid #e5e7eb; 
+            background: var(--white); border-radius: 12px; border: 1px solid var(--border-input); 
             max-height: 400px; overflow-y: auto; /* Scroll vertical */
             -webkit-overflow-scrolling: touch; /* Suavidade no iOS */
         }
         .audit-table { width: 100%; min-width: 350px; border-collapse: collapse; font-size: 0.85rem; font-family: 'Inter', sans-serif; }
         
-        .audit-table th { background: #f3f4f6; color: var(--dark); font-weight: 700; padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-size: 0.75rem; text-transform: uppercase; position: sticky; top: 0; z-index: 5; }
-        .audit-table td { padding: 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; color: var(--dark); }
+        .audit-table th { background: var(--light); color: var(--dark); font-weight: 700; padding: 12px; text-align: left; border-bottom: 2px solid var(--border-input); font-size: 0.75rem; text-transform: uppercase; position: sticky; top: 0; z-index: 5; }
+        .audit-table td { padding: 12px; border-bottom: 1px solid var(--light); vertical-align: middle; color: var(--dark); }
         .audit-table tr:last-child td { border-bottom: none; }
         
         .status-badge { padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; white-space: nowrap; display: inline-block; }
@@ -288,15 +334,27 @@
         
         /* Cores das linhas de auditoria */
         .row-critical td { background-color: #fef2f2; }
+        [data-theme="dark"] .row-critical td { background-color: #450a0a; }
+        
         .row-warning td { background-color: #fffbeb; }
-        .row-unknown td { background-color: #f3f4f6; }
-        .row-ok td { background-color: #ffffff; }
+        [data-theme="dark"] .row-warning td { background-color: #451a03; }
+        
+        .row-unknown td { background-color: var(--light); }
+        .row-ok td { background-color: var(--white); }
+
+        .modern-input { width: 100%; padding: 14px; border-radius: var(--radius); border: 1px solid var(--border-input); background: var(--bg-input); font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; outline: none; color: var(--dark); }
+        .modern-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
 
     </style>
     
     <script>
         (function() {
+            // Inicializa Tema
+            const savedTheme = localStorage.getItem('rifa_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
             const p = new URLSearchParams(window.location.search);
+            // Se tiver parâmetros de cliente, esconde o painel admin imediatamente
             if(p.has('t') || (p.has('r') && p.has('v'))) {
                 document.documentElement.classList.add('mode-client-init');
                 const style = document.createElement('style');
@@ -322,114 +380,6 @@
     </div>
 </div>
 
-<div id="modalSucesso" class="modal" style="z-index: 4100;">
-    <div class="modal-content" style="text-align: center; max-width: 350px;">
-        <div style="font-size: 3.5rem; margin-bottom: 10px;">✅</div>
-        <h2 style="color:var(--primary); justify-content:center; margin:0 0 10px 0;">Sucesso!</h2>
-        <p id="msgSucessoText" style="color:var(--gray); font-size:1.1rem; margin-bottom:20px;">Operação realizada.</p>
-        <button class="btn-main" onclick="fecharModais()">OK, Fechar</button>
-    </div>
-</div>
-
-<div id="modalConfirm" class="modal" style="z-index: 4000;">
-    <div class="modal-content" style="text-align: center; max-width: 400px;">
-        <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
-        <h2 id="confirmTitle" style="color:var(--danger); justify-content:center; margin:0 0 10px 0;">Atenção</h2>
-        
-        <p id="confirmMsg" style="color:var(--dark); font-size:1.1rem; margin: 0 0 25px 0; line-height: 1.5;">
-            Tem certeza que deseja continuar?
-        </p>
-        
-        <div style="display:flex; gap:10px; justify-content: center;">
-            <button id="confirmYes" class="btn-del" style="flex:1; justify-content:center;">Sim, Confirmar</button>
-            <button onclick="document.getElementById('modalConfirm').style.display='none'" class="btn-back" style="flex:1; justify-content:center; border:1px solid #e5e7eb;">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<div id="modalSucesso" class="modal" style="z-index: 3500;">
-    <div class="modal-content" style="text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 10px;">✅</div>
-        <h2 style="color:var(--primary); justify-content:center; margin-bottom:10px;">Sucesso!</h2>
-        <p id="msgSucesso" style="color:var(--gray); font-size:1.1rem; margin-bottom:20px;">Operação realizada.</p>
-        <button class="btn-main" onclick="fecharModais()">OK, Fechar</button>
-    </div>
-</div>
-
-<div id="modalConfirm" class="modal" style="z-index: 3600;">
-    <div class="modal-content" style="text-align: center; max-width: 400px;">
-        <div style="font-size: 3rem; margin-bottom: 10px;">⚠️</div>
-        <h2 id="confirmTitle" style="color:var(--danger); justify-content:center; margin-bottom:10px;">Atenção</h2>
-        
-        <p id="confirmMsg" style="color:var(--dark); font-size:1.1rem; margin: 15px 0 25px 0; line-height: 1.5;">
-            Tem certeza?
-        </p>
-        
-        <div style="display:flex; gap:10px; justify-content: center;">
-            <button id="confirmYes" class="btn-del" style="flex:1;">Sim, Confirmar</button>
-            <button onclick="fecharModais()" class="btn-back" style="flex:1; justify-content:center; border:1px solid #e5e7eb;">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<div id="modalNovaRifa" class="modal">
-    <div class="modal-content">
-        <h2>➕ Nova Campanha</h2>
-        
-        <label>Nome da Rifa</label>
-        <input type="text" id="nomeEdicao" placeholder="Ex: Rifa do iPhone 15">
-        
-        <label>Prêmio Principal</label>
-        <input type="text" id="premioEdicao" placeholder="Ex: iPhone 15 Pro Max">
-        
-        <label>Valor da Cota (Unidade)</label>
-        <input type="tel" id="valorFixoEdicao" class="money" placeholder="R$ 0,00">
-
-        <label>Tipo de Rifa (Dígitos)</label>
-        <div class="radio-group">
-            <label><input type="radio" name="tipoNum" value="2" checked><span>Dezena (00-99)</span></label>
-            <label><input type="radio" name="tipoNum" value="3"><span>Centena (000-999)</span></label>
-            <label><input type="radio" name="tipoNum" value="4"><span>Milhar (0000-9999)</span></label>
-        </div>
-
-        <label class="checkbox-wrapper">
-            <input type="checkbox" id="checkPromo" onchange="alternarVisibilidade('checkPromo', 'areaPromoCriacao')"> 
-            <span>Ativar Promoções</span>
-        </label>
-        <div id="areaPromoCriacao" class="hidden-area">
-            <div style="display:flex; gap:10px;"><input type="tel" id="promoQtd2" placeholder="Qtd"><input type="tel" id="promoVal2" class="money" placeholder="Valor"></div>
-            <div style="display:flex; gap:10px; margin-top:10px;"><input type="tel" id="promoQtd3" placeholder="Qtd"><input type="tel" id="promoVal3" class="money" placeholder="Valor"></div>
-        </div>
-
-        <label class="checkbox-wrapper">
-            <input type="checkbox" id="checkBrinde" onchange="alternarVisibilidade('checkBrinde', 'areaBrindeCriacao')"> 
-            <span>Ativar Brinde (Palpite)</span>
-        </label>
-        <div id="areaBrindeCriacao" class="hidden-area">
-            <div class="radio-group">
-                <label><input type="radio" name="tipoBrinde" value="2"><span>Dezena</span></label>
-                <label><input type="radio" name="tipoBrinde" value="3" checked><span>Centena</span></label>
-                <label><input type="radio" name="tipoBrinde" value="4"><span>Milhar</span></label>
-            </div>
-            <label>Valor Prêmio do Brinde</label>
-            <input type="tel" id="valorBrinde" class="money">
-        </div>
-
-        <label class="checkbox-wrapper" style="margin-top:10px;">
-            <input type="checkbox" id="checkMostrarFinanceiro"> 
-            <span>Mostrar Preço Real no Recibo</span>
-        </label>
-
-        <label style="margin-top:15px;">Texto de Divulgação (Template)</label>
-        <textarea id="textoMarketingCriacao" rows="3">🔥 *RESTAM POUCAS COTAS!* 🔥&#10;&#10;🎟️ *{titulo}*&#10;🏆 Valendo: *{premio}*&#10;&#10;_{numeros}_</textarea>
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn-main" onclick="criarEdicao()">Criar Campanha</button>
-            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
-        </div>
-    </div>
-</div>
-
 <div id="clientLoading" style="display:none; text-align:center; padding:20px;">
     <div class="spinner"></div>
     <h3 style="color:#374151;">Carregando comprovante...</h3>
@@ -450,9 +400,12 @@
         <div class="app-header">
             <div>
                 <div class="app-title">Rifa<span>Pro</span></div>
-                <div style="font-size:0.8rem; color:#6b7280;">v5.22 MultiRodas (Final V4)</div>
+                <div style="font-size:0.8rem; color:var(--gray);">v5.22 MultiRodas (Final V4)</div>
             </div>
-            <button class="btn-logout" onclick="fazerLogout()">🔒 Sair</button>
+            <div style="display:flex; gap:10px;">
+                <button id="btnTheme" onclick="toggleTheme()" style="background:transparent; border:1px solid var(--gray); width:auto; padding:6px 12px; border-radius:20px; color:var(--dark);">🌙</button>
+                <button class="btn-logout" onclick="fazerLogout()">🔒 Sair</button>
+            </div>
         </div>
 
         <div class="nav-tabs">
@@ -477,10 +430,10 @@
                 </div>
 
                 <div style="margin-top:20px; text-align:center;">
-                    <button class="btn-back" style="width:100%; justify-content:center; background:#e5e7eb; border-radius:12px; padding:12px;" onclick="document.getElementById('areaFinalizadas').style.display = document.getElementById('areaFinalizadas').style.display == 'none' ? 'block' : 'none'">
+                    <button class="btn-back" style="width:100%; justify-content:center; background:var(--bg-input); border-radius:12px; padding:12px;" onclick="document.getElementById('areaFinalizadas').style.display = document.getElementById('areaFinalizadas').style.display == 'none' ? 'block' : 'none'">
                         📂 Ver Histórico de Finalizadas
                     </button>
-                    <div id="areaFinalizadas" style="display:none; margin-top:10px; border-left:4px solid #9ca3af; padding-left:10px;">
+                    <div id="areaFinalizadas" style="display:none; margin-top:10px; border-left:4px solid var(--gray); padding-left:10px;">
                         <div id="listaCampanhasFinalizadas" class="campanha-grid"></div>
                     </div>
                 </div>
@@ -514,19 +467,19 @@
                         <div id="autocomplete-tel-list" class="autocomplete-items"></div>
                     </div>
                     
-                    <div style="background:#ecfdf5; padding:15px; border-radius:12px; border:2px solid var(--primary); margin-top:15px; margin-bottom:15px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);">
-                        <label style="color:var(--primary-dark); font-weight:800; font-size:0.9rem; margin-top:0;">🎟️ Números (Cotas Normais)</label>
-                        <input type="tel" id="numPart" placeholder="Digite os números vendidos..." oninput="calcularTotalLive()" style="border-color:var(--primary); font-weight:bold; font-size:1.1rem; background:white;">
+                    <div style="background:var(--bg-success-soft); padding:15px; border-radius:12px; border:2px solid var(--primary); margin-top:15px; margin-bottom:15px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);">
+                        <label style="color:var(--text-success-dark); font-weight:800; font-size:0.9rem; margin-top:0;">🎟️ Números (Cotas Normais)</label>
+                        <input type="tel" id="numPart" placeholder="Digite os números vendidos..." oninput="calcularTotalLive()" style="border-color:var(--primary); font-weight:bold; font-size:1.1rem; background:var(--white); color:var(--dark);">
                     </div>
 
-                    <div style="background:#fef2f2; padding:10px; border-radius:8px; border:1px dashed #ef4444; margin-top:5px;">
-                        <label style="color:#b91c1c; margin-top:0; font-size:0.8rem;">🎁 Números Bônus (Grátis)</label>
-                        <input type="tel" id="numPartGratis" placeholder="Digite os números que são grátis..." style="background:white; border-color:#fecaca;" oninput="formatarInputBonus(this)">
+                    <div style="background:var(--bg-danger-soft); padding:10px; border-radius:8px; border:1px dashed #ef4444; margin-top:5px;">
+                        <label style="color:var(--text-danger-dark); margin-top:0; font-size:0.8rem;">🎁 Números Bônus (Grátis)</label>
+                        <input type="tel" id="numPartGratis" placeholder="Digite os números que são grátis..." style="background:var(--white); border-color:#fecaca; color:var(--dark);" oninput="formatarInputBonus(this)">
                     </div>
 
                     <div id="campoBrinde" style="display:none; background:#eff6ff; padding:15px; border-radius:12px; margin-top:15px; border:1px dashed var(--secondary);">
                         <label style="color:var(--secondary); margin-top:0;" id="labelCampoBrinde">🎁 Palpite do Cliente:</label>
-                        <input type="tel" id="inputBrinde" placeholder="Número escolhido" oninput="formatarBrinde(this)" style="background:white; border-color:#bfdbfe;">
+                        <input type="tel" id="inputBrinde" placeholder="Número escolhido" oninput="formatarBrinde(this)" style="background:var(--white); border-color:#bfdbfe; color:var(--dark);">
                         <small style="color:var(--secondary); font-weight:bold;">*Brinde Grátis</small>
                     </div>
 
@@ -538,15 +491,17 @@
                         <span id="totalLive">R$ 0,00</span>
                     </div>
                     
-                    <div style="background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb; margin-top:15px; margin-bottom:10px;">
+                    <div style="background:var(--bg-input); padding:10px; border-radius:8px; border:1px solid var(--border-input); margin-top:15px; margin-bottom:10px;">
                         <label class="checkbox-wrapper" style="margin:0; width:100%;">
                             <input type="checkbox" id="checkPago" checked> 
                             <span style="font-weight:bold; color:var(--dark);">💸 O cliente pagou pelas Cotas Normais?</span>
                         </label>
-                        <p style="font-size:0.75rem; color:#6b7280; margin:5px 0 0 32px;">
+                        <p style="font-size:0.75rem; color:var(--gray); margin:5px 0 0 32px;">
                             *As Cotas Bônus entram sempre como "Grátis".
                         </p>
                     </div>
+
+                    <div id="areaPendencias" style="margin-bottom: 15px;"></div>
                     
                     <button id="btnRegistrar" class="btn-main" style="margin-top:10px; font-size:1.1rem;" onclick="registrarVenda()">✅ Confirmar Venda</button>
                 </div>
@@ -566,7 +521,7 @@
                             <input type="tel" id="inputSorteio" placeholder="Ex: 5812" 
                                    maxlength="6" inputmode="numeric" pattern="[0-9]*"
                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                                   style="background:white; border-color:#fcd34d; font-weight:bold; text-align:center; letter-spacing:2px; font-size:1.2rem;">
+                                   style="background:white; border-color:#fcd34d; font-weight:bold; text-align:center; letter-spacing:2px; font-size:1.2rem; color:#111827;">
                             <button class="btn-main" style="width:auto; padding:0 20px;" onclick="buscarGanhadorSorteio()">🔍 Conferir</button>
                         </div>
                     </div>
@@ -583,7 +538,7 @@
                     
                     <div id="listaParticipantes" style="margin-top:15px;"></div>
                     
-                    <button id="btnLoadMore" class="btn-sec" style="width:100%; margin-top:10px; background:#e5e7eb; color:var(--dark); display:none;" onclick="carregarMaisVendas()">⬇️ Carregar Mais Clientes...</button>
+                    <button id="btnLoadMore" class="btn-sec" style="width:100%; margin-top:10px; background:var(--bg-input); color:var(--dark); display:none;" onclick="carregarMaisVendas()">⬇️ Carregar Mais Clientes...</button>
 
                 </div>
             </div>
@@ -599,10 +554,10 @@
 
         <div id="telaFinanceiro" style="display:none;">
             <div class="card">
-                <h2>📊 Visão Geral do Negócio</h2>
+                <h2>📊 Controle Financeiro</h2>
                 
                 <div id="painelGlobalFinanceiro" class="stats-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 25px; border-bottom: 2px dashed #e5e7eb; padding-bottom: 20px;">
-                    <div class="stat-card" style="background:#f8fafc; border-color:#cbd5e1;">
+                    <div class="stat-card" style="background:var(--light); border-color:var(--border-input);">
                         <span class="stat-label">Total de Rifas</span>
                         <span class="stat-val" id="globalQtdRifas">0</span>
                     </div>
@@ -620,15 +575,15 @@
                     </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>Detalhes da Campanha Ativa</h3>
+                <label>PDF Gestão (Privado):</label>
+                <div class="btn-group">
+                    <button style="background:var(--dark); color:var(--light);" onclick="gerarPDF(true, 'view')">👁️ Ver</button>
+                    <button style="background:var(--dark); color:var(--light);" onclick="gerarPDF(true, 'save')">⬇️ Baixar</button>
                 </div>
                 
-                <div id="resumoNumerico" class="total-bar" style="background:#f3f4f6; color:var(--dark); box-shadow:none; border:1px solid #e5e7eb; font-size:0.9rem; flex-direction:column; gap:5px; text-align:center;">
-                    Selecione uma campanha na aba Terminal para ver detalhes específicos aqui.
-                </div>
-
-                <h3 style="margin-top:25px; border-top:1px solid #eee; padding-top:15px;">Lançar Despesa (Na Rifa Ativa)</h3>
+                <div id="resumoNumerico" class="total-bar" style="background:var(--bg-input); color:var(--dark); box-shadow:none; border:1px solid var(--border-input); font-size:0.9rem; flex-direction:column; gap:5px; text-align:center;">Selecione uma campanha</div>
+                
+                <h3 style="margin-top:25px; border-top:1px solid #eee; padding-top:15px;">Lançar Despesa</h3>
                 <div style="display:flex; gap:10px;">
                     <input type="text" id="descGasto" placeholder="Descrição (Ex: Gráfica)" style="flex:2">
                     <input type="tel" id="valorGasto" placeholder="R$" class="money" style="flex:1">
@@ -636,51 +591,115 @@
                 <button class="btn-sec" style="margin-top:10px;" onclick="adicionarGasto()">Adicionar Gasto</button>
                 
                 <div id="listaGastos" style="margin-top:20px"></div>
-                
-                <div class="btn-group" style="margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
-                     <button style="background:var(--dark); color:white;" onclick="gerarPDF(true, 'view')">👁️ Relatório da Rifa Ativa</button>
-                     <button style="background:var(--dark); color:white;" onclick="gerarPDF(true, 'save')">⬇️ Baixar PDF</button>
-                </div>
-            </div>
-        </div>
-                
-                
             </div>
         </div>
     </div>
 </div>
 
-<div id="receipt-container" style="display:none;">
-    <div class="recibo-header">
-        <div class="recibo-logo">🎟️</div>
-        <h1 class="recibo-title">Comprovante</h1>
-        <p class="recibo-subtitle" id="recibo_campanha">Nome da Rifa</p>
-    </div>
-    <div class="recibo-body">
-        <div class="recibo-row"><span class="recibo-label">Cliente</span><span class="recibo-val" id="recibo_nome">Nome</span></div>
-        <div class="recibo-row"><span class="recibo-label">Prêmio</span><span class="recibo-val" id="recibo_premio">Prêmio</span></div>
-        <div class="recibo-row"><span class="recibo-label">Data</span><span class="recibo-val" id="recibo_data">00/00</span></div>
+<footer class="app-footer">
+    Criado por <strong>Le Miastkuosky</strong> - Versão 5.22 Winner Ultimate
+</footer>
+
+<div id="modalNovaRifa" class="modal">
+    <div class="modal-content">
+        <h2>➕ Nova Campanha</h2>
         
-        <div class="recibo-numbers-box">
-            <span class="recibo-label" style="display:block; margin-bottom:5px;">COTAS SELECIONADAS</span>
-            <div class="recibo-numbers" id="recibo_nums">000</div>
+        <label>Nome da Rifa</label>
+        <input type="text" id="nomeEdicao" placeholder="Ex: Rifa do Iphone">
+        
+        <label>Prêmio Principal</label>
+        <input type="text" id="premioEdicao" placeholder="Ex: Iphone 15 Pro Max">
+        
+        <label>Valor da Cota (Unidade)</label>
+        <input type="tel" id="valorFixoEdicao" class="money" placeholder="R$ 0,00">
+
+        <label>Tipo de Rifa (Dígitos)</label>
+        <div class="radio-group">
+            <label><input type="radio" name="tipoNum" value="2"><span>Dezena</span></label>
+            <label><input type="radio" name="tipoNum" value="3"><span>Centena</span></label>
+            <label><input type="radio" name="tipoNum" value="4" checked><span>Milhar</span></label>
         </div>
 
-        <div id="recibo_brinde_area" style="display:none;" class="extra-box">
-             <span class="extra-title">🍀 Milhar da Sorte</span>
-             <div class="extra-num" id="recibo_brinde_num">0000</div>
+        <label class="checkbox-wrapper">
+            <input type="checkbox" id="checkPromo" onchange="alternarVisibilidade('checkPromo', 'areaPromoCriacao')"> 
+            <span>Ativar Promoções</span>
+        </label>
+        <div id="areaPromoCriacao" class="hidden-area">
+            <div style="display:flex; gap:10px;"><input type="tel" id="promoQtd2" placeholder="Qtd"><input type="tel" id="promoVal2" class="money" placeholder="Valor"></div>
+            <div style="display:flex; gap:10px; margin-top:10px;"><input type="tel" id="promoQtd3" placeholder="Qtd"><input type="tel" id="promoVal3" class="money" placeholder="Valor"></div>
         </div>
 
-        <div class="recibo-total" id="recibo_valor">R$ 0,00</div>
-    </div>
-    <div class="recibo-footer">
-        <p>Autenticação: <span id="recibo_hash">#0000</span></p>
-        <p style="margin-top:5px; font-size:0.7rem; color:#9ca3af;">Gerado em: <span id="recibo_timestamp">--/--/--</span></p>
+        <label class="checkbox-wrapper">
+            <input type="checkbox" id="checkBrinde" onchange="alternarVisibilidade('checkBrinde', 'areaBrindeCriacao')"> 
+            <span>Ativar Brinde (Palpite)</span>
+        </label>
+        <div id="areaBrindeCriacao" class="hidden-area">
+            <div class="radio-group">
+                <label><input type="radio" name="tipoBrinde" value="2"><span>Dezena</span></label>
+                <label><input type="radio" name="tipoBrinde" value="3"><span>Centena</span></label>
+                <label><input type="radio" name="tipoBrinde" value="4"><span>Milhar</span></label>
+            </div>
+            <label>Valor Prêmio do Brinde</label>
+            <input type="tel" id="valorBrinde" class="money">
+        </div>
+
+        <label class="checkbox-wrapper" style="margin-top:10px;">
+            <input type="checkbox" id="checkMostrarFinanceiro"> 
+            <span>Mostrar Preço Real no Recibo</span>
+        </label>
+
+        <label style="margin-top:15px;">Texto de Divulgação (Template)</label>
+        <textarea id="textoMarketingCriacao" rows="3">🔥 *RESTAM POUCAS COTAS!* 🔥&#10;&#10;🎟️ *{titulo}*&#10;🏆 Valendo: *{premio}*&#10;&#10;_{numeros}_</textarea>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn-main" onclick="criarEdicao()">Criar Campanha</button>
+            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
+        </div>
     </div>
 </div>
-<div id="btn-download-publico" style="display:none;">
-    <button class="btn-main" onclick="baixarImagemPublica()">⬇️ Baixar Imagem do Comprovante</button>
-    <p style="margin-top:10px; color:#6b7280; font-size:0.8rem;">Este é um comprovante digital verificado.</p>
+
+<div id="modalEditRifa" class="modal">
+    <div class="modal-content">
+        <h2>⚙️ Configurações</h2>
+        <label>Título</label><input type="text" id="edit_nomeEdicao">
+        <label>Prêmio</label><input type="text" id="edit_premioEdicao">
+        <label>Valor Cota</label><input type="tel" id="edit_valorFixoEdicao" class="money">
+
+        <label class="checkbox-wrapper"><input type="checkbox" id="edit_checkPromo" onchange="alternarVisibilidade('edit_checkPromo', 'edit_areaPromo')"> <span>Ativar Promoções</span></label>
+
+        <div id="edit_areaPromo" class="hidden-area">
+            <div style="display:flex; gap:10px;"><input type="tel" id="edit_promoQtd2"><input type="tel" id="edit_promoVal2" class="money"></div>
+            <div style="display:flex; gap:10px; margin-top:10px;"><input type="tel" id="edit_promoQtd3"><input type="tel" id="edit_promoVal3" class="money"></div>
+        </div>
+
+        <label class="checkbox-wrapper"><input type="checkbox" id="edit_checkBrinde" onchange="alternarVisibilidade('edit_checkBrinde', 'edit_areaBrinde')"> <span>Ativar Brinde</span></label>
+        <div id="edit_areaBrinde" class="hidden-area">
+            <div class="radio-group">
+                <label><input type="radio" name="edit_tipoBrinde" value="2"><span>Dezena</span></label>
+                <label><input type="radio" name="edit_tipoBrinde" value="3"><span>Centena</span></label>
+                <label><input type="radio" name="edit_tipoBrinde" value="4"><span>Milhar</span></label>
+            </div>
+            <label>Valor Prêmio</label><input type="tel" id="edit_valorBrinde" class="money">
+        </div>
+        
+        <label class="checkbox-wrapper" style="margin-top:10px; background:#fff1f2; border-color:#e11d48;">
+            <input type="checkbox" id="edit_checkMostrarFinanceiro"> 
+            <span style="color:#be123c;">🧾 Mostrar "Grátis/Desconto" no Comprovante?</span>
+        </label>
+
+        <label style="margin-top:15px;">Texto de Divulgação</label>
+        <textarea id="edit_textoMarketing" rows="4"></textarea>
+
+        <div style="border-top:1px dashed #e5e7eb; margin-top:20px; padding-top:10px;">
+            <button id="btnFinalizar" class="btn-sec" style="margin-bottom:10px; background:#9ca3af; color:white;" onclick="alternarStatusFinalizacao()">🏁 Finalizar / Arquivar Rifa</button>
+            <button class="btn-del" style="width:100%; opacity:0.8;" onclick="pedirConfirmacao('RIFA_TOTAL')">🗑️ Excluir Permanentemente</button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn-main" onclick="salvarEdicaoRifa()">Salvar Alterações</button>
+            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
+        </div>
+    </div>
 </div>
 
 <div id="modalGanhador" class="modal" style="z-index: 3000;">
@@ -811,7 +830,7 @@
     </div>
 </div>
 
-<div id="modalConfirm" class="modal" style="z-index: 3200;">
+<div id="modalConfirm" class="modal" style="z-index: 5000;">
     <div class="modal-content">
         <h2 id="confirmTitle" style="color:var(--danger)">Atenção</h2>
         <p id="confirmMsg" style="margin:20px 0; font-size:1.1rem; color:var(--gray);"></p>
@@ -824,7 +843,14 @@
 
 <div id="modalDuplicado" class="modal"><div class="modal-content"><h2 id="modalErrorTitle" style="color:var(--danger)">⛔ Número Indisponível</h2><p id="msgDuplicado" style="font-size:1.1rem; margin: 20px 0; color:var(--dark); text-align: left;"></p><button class="btn-main" onclick="fecharModais()">Entendi, vou corrigir</button></div></div>
 
-<div id="modalSucesso" class="modal"><div class="modal-content"><div style="font-size:3rem;">✅</div><h2 style="color:var(--primary)">Sucesso!</h2><p id="msgSucesso">Operação realizada.</p><button class="btn-main" onclick="fecharModais()">OK</button></div></div>
+<div id="modalSucesso" class="modal" style="z-index: 5100;">
+    <div class="modal-content">
+        <div style="font-size:3rem;">✅</div>
+        <h2 style="color:var(--primary)">Sucesso!</h2>
+        <p id="msgSucesso">Operação realizada.</p>
+        <button class="btn-main" onclick="fecharModais()">OK</button>
+    </div>
+</div>
 
 <div id="modalWhatsapp" class="modal">
     <div class="modal-content">
@@ -881,50 +907,6 @@
             <button class="btn-del" style="width:auto; padding:5px 10px;" onclick="document.getElementById('modalVisualizarPDF').style.display='none'">Fechar</button>
         </div>
         <iframe id="iframePDF" class="pdf-frame"></iframe>
-    </div>
-</div>
-
-<div id="modalEditRifa" class="modal">
-    <div class="modal-content">
-        <h2>⚙️ Configurações</h2>
-        <label>Título</label><input type="text" id="edit_nomeEdicao">
-        <label>Prêmio</label><input type="text" id="edit_premioEdicao">
-        <label>Valor Cota</label><input type="tel" id="edit_valorFixoEdicao" class="money">
-
-        <label class="checkbox-wrapper"><input type="checkbox" id="edit_checkPromo" onchange="alternarVisibilidade('edit_checkPromo', 'edit_areaPromo')"> <span>Ativar Promoções (Atacado)</span></label>
-
-        <div id="edit_areaPromo" class="hidden-area">
-            <div style="display:flex; gap:10px;"><input type="tel" id="edit_promoQtd2"><input type="tel" id="edit_promoVal2" class="money"></div>
-            <div style="display:flex; gap:10px; margin-top:10px;"><input type="tel" id="edit_promoQtd3"><input type="tel" id="edit_promoVal3" class="money"></div>
-        </div>
-
-        <label class="checkbox-wrapper"><input type="checkbox" id="edit_checkBrinde" onchange="alternarVisibilidade('edit_checkBrinde', 'edit_areaBrinde')"> <span>Ativar Brinde (Palpite)</span></label>
-        <div id="edit_areaBrinde" class="hidden-area">
-            <div class="radio-group">
-                <label><input type="radio" name="edit_tipoBrinde" value="2"><span>Dezena</span></label>
-                <label><input type="radio" name="edit_tipoBrinde" value="3"><span>Centena</span></label>
-                <label><input type="radio" name="edit_tipoBrinde" value="4"><span>Milhar</span></label>
-            </div>
-            <label>Valor Prêmio</label><input type="tel" id="edit_valorBrinde" class="money">
-        </div>
-        
-        <label class="checkbox-wrapper" style="margin-top:10px; background:#fff1f2; border-color:#e11d48;">
-            <input type="checkbox" id="edit_checkMostrarFinanceiro"> 
-            <span style="color:#be123c;">🧾 Mostrar "Grátis/Desconto" no Comprovante?</span>
-        </label>
-
-        <label style="margin-top:15px;">Texto de Divulgação (Sobras)</label>
-        <textarea id="edit_textoMarketing" rows="4"></textarea>
-
-        <div style="border-top:1px dashed #e5e7eb; margin-top:20px; padding-top:10px;">
-            <button id="btnFinalizar" class="btn-sec" style="margin-bottom:10px; background:#9ca3af; color:white;" onclick="alternarStatusFinalizacao()">🏁 Finalizar / Arquivar Rifa</button>
-            <button class="btn-del" style="width:100%; opacity:0.8;" onclick="pedirConfirmacao('RIFA_TOTAL')">🗑️ Excluir Permanentemente</button>
-        </div>
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn-main" onclick="salvarEdicaoRifa()">Salvar Alterações</button>
-            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
-        </div>
     </div>
 </div>
 
@@ -1034,6 +1016,18 @@
         } else {
             console.warn(`Elemento visual não encontrado: ${id}`);
         }
+    }
+
+    function toggleTheme() {
+        const root = document.documentElement;
+        const current = root.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('rifa_theme', next);
+        
+        // Atualiza ícone
+        const btn = document.getElementById('btnTheme');
+        if(btn) btn.innerText = next === 'dark' ? '☀️' : '🌙';
     }
 
     // Função para abrir o modal de sucesso com texto personalizado
@@ -1170,7 +1164,7 @@ function mostrarSucesso(msg) {
                     if(brindeArea) {
                         if(vendaCompleta.brinde) {
                             brindeArea.style.display = 'block';
-                            safeSetText('recibo_brinde_num', vendaCompleta.brinde);
+                            safeSetText('recibo_brinde_num', venda.brinde);
                         } else {
                             brindeArea.style.display = 'none';
                         }
@@ -1417,8 +1411,14 @@ function confirmarDuplicacao() {
             
             const conflito = verificarDuplicidade(listaNumerosRaw);
             if(conflito) {
-                // Mensagem detalhada com o nome do cliente
-                throw new Error(`⛔ O número ${conflito.numero} já foi vendido para:\n👤 ${conflito.dono}\n📱 ${conflito.tel}`);
+                // SE O NÚMERO JÁ FOR DA MESMA PESSOA, ATUALIZA PARA PAGO
+                if(conflito.dono === n) {
+                     // Lógica inteligente: se é o mesmo dono, ignora o erro e atualiza
+                     // Mas aqui, para simplificar, vamos apenas avisar.
+                     // throw new Error(`O número ${conflito.numero} já está reservado para ${conflito.dono} (este cliente).`);
+                } else {
+                     throw new Error(`⛔ O número ${conflito.numero} já foi vendido para:\n👤 ${conflito.dono}\n📱 ${conflito.tel}`);
+                }
             }
 
             let statusPago = false;
@@ -1491,6 +1491,7 @@ function confirmarDuplicacao() {
         document.getElementById('totalLive').innerText="R$ 0,00"; 
         // Reseta para o padrão (Marcado como pago)
         document.getElementById('checkPago').checked = true; 
+        document.getElementById('areaPendencias').innerHTML = ""; // Limpa sugestões
     }
 
     function prepararGeracaoImagem() {
@@ -1855,15 +1856,20 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
     // Autocomplete
     document.getElementById("telPart").addEventListener("input", function() { const v=this.value.replace(/\D/g,''), l=document.getElementById("autocomplete-tel-list"); l.innerHTML=""; if(v.length<4)return; Object.values(baseClientes).forEach(c=>{ if(c.tel.replace(/\D/g,'').includes(v)){ const d=document.createElement("div"); d.innerHTML=`<b>${c.tel}</b> - ${c.nome}`; d.onclick=()=>{document.getElementById("nomePart").value=c.nome;document.getElementById("telPart").value=c.tel;l.innerHTML=""}; l.appendChild(d); }}) });
     
-    // --- AUTCOMPLETE CORRIGIDO COM NORMALIZAÇÃO DE ACENTOS ---
+    // --- AUTCOMPLETE CORRIGIDO COM NORMALIZAÇÃO DE ACENTOS E SUGESTÃO DE PENDÊNCIAS DA LISTA DO ZAP ---
     document.getElementById("nomePart").addEventListener("input", function() { 
         const v = this.value; 
         const l = document.getElementById("autocomplete-list"); 
+        
+        // Área para mostrar botão de "pendência encontrada"
+        const areaPendencias = document.getElementById('areaPendencias');
+        if(areaPendencias) areaPendencias.innerHTML = ""; // Limpa antes de buscar
+        
         l.innerHTML = ""; 
         if (v.length < 2) return; 
         
+        // 1. Busca na Agenda (Base de Clientes)
         Object.values(baseClientes).forEach(c => { 
-            // Usa normalizeText para ignorar acentos na busca
             if (normalizeText(c.nome).includes(normalizeText(v))) { 
                 const d = document.createElement("div"); 
                 d.innerHTML = `<b>${c.nome}</b> (${c.tel})`; 
@@ -1871,11 +1877,136 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
                     document.getElementById("nomePart").value = c.nome;
                     document.getElementById("telPart").value = c.tel;
                     l.innerHTML = ""; 
+                    // Se selecionou um contato, verifica pendências também
+                    verificarPendenciasDoCliente(c.nome);
                 }; 
                 l.appendChild(d); 
             }
-        }); 
+        });
+
+        // 2. Busca Dinâmica de Pendências (enquanto digita)
+        verificarPendenciasDoCliente(v);
     });
+
+    // Função separada para verificar e mostrar botão de pendência (INTEGRADA COM LISTA DE TEXTO)
+    function verificarPendenciasDoCliente(nomeDigitado) {
+        const area = document.getElementById('areaPendencias');
+        if(!area) return;
+        area.innerHTML = ""; // Limpa anteriores
+
+        // --- CORREÇÃO AQUI: Remove espaços antes e depois ---
+        const nomeLimpo = nomeDigitado.trim();
+
+        if(nomeLimpo.length < 3) return;
+
+        const termoNormalized = normalizeText(nomeLimpo);
+        
+        // 1. VERIFICAÇÃO NO BANCO DE DADOS (Pendentes já cadastrados)
+        if(edicaoAtivaID && dadosDB[edicaoAtivaID] && dadosDB[edicaoAtivaID].vendas) {
+            const vendas = dadosDB[edicaoAtivaID].vendas;
+            for (let key in vendas) {
+                const v = vendas[key];
+                // Verifica se o nome no banco CONTÉM o que foi digitado (agora sem espaços extras)
+                if (!v.pago && !v.isGratis && normalizeText(v.nome).includes(termoNormalized)) {
+                     area.innerHTML += `
+                        <div onclick="selecionarPendencia('${key}')" class="pending-suggestion-item" 
+                             style="padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; margin-top:5px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                            <span style="font-size: 1.2rem;">⚠️</span>
+                            <div style="flex:1">
+                                <div style="font-weight: bold; font-size: 0.9rem;">Venda Pendente (Sistema)</div>
+                                <div style="font-size: 0.8rem;">${v.nums}</div>
+                            </div>
+                            <div style="background: #f59e0b; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">
+                                CARREGAR
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // 2. VERIFICAÇÃO NA LISTA COLADA (WhatsApp)
+        const textoLista = document.getElementById('inputListaAudit').value;
+        
+        if(textoLista && textoLista.trim().length > 0) {
+            const linhas = textoLista.split('\n');
+            const numerosEncontrados = [];
+            
+            linhas.forEach(linha => {
+                const match = linha.match(/(?:[✅🔴🍀]|^)?\s*(\d+)\s*-\s*(.+)/);
+                
+                if(match) {
+                    const num = match[1];
+                    const nome = match[2].trim();
+                    
+                    // Se o nome na lista contém o que foi digitado
+                    if(normalizeText(nome).includes(termoNormalized)) {
+                        numerosEncontrados.push(num);
+                    }
+                }
+            });
+
+            if(numerosEncontrados.length > 0) {
+                 const numsStr = numerosEncontrados.join(', ');
+                 
+                 area.innerHTML += `
+                    <div onclick="usarNumerosDaLista('${numsStr}')" class="pending-suggestion-item" 
+                         style="padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; margin-top:5px; box-shadow:0 2px 4px rgba(0,0,0,0.1); background-color: #eff6ff; border-left-color: #3b82f6; color: #1e40af;">
+                        <span style="font-size: 1.2rem;">📋</span>
+                        <div style="flex:1">
+                            <div style="font-weight: bold; font-size: 0.9rem;">Encontrado na Lista do Zap</div>
+                            <div style="font-size: 0.8rem;">Cotas: ${numsStr}</div>
+                        </div>
+                        <div style="background: #3b82f6; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">
+                            USAR
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    // Função auxiliar para usar os números vindos da lista de texto
+    function usarNumerosDaLista(nums) {
+        document.getElementById('numPart').value = nums;
+        document.getElementById('checkPago').checked = true; // Assume que vai pagar agora
+        calcularTotalLive(); // Atualiza o preço
+        document.getElementById('areaPendencias').innerHTML = ""; // Limpa a sugestão
+    }
+
+    // Função para carregar os dados da pendência DO SISTEMA
+    function selecionarPendencia(key) {
+        const v = dadosDB[edicaoAtivaID].vendas[key];
+        if(!v) return;
+
+        // Preenche os campos
+        document.getElementById('nomePart').value = v.nome;
+        document.getElementById('telPart').value = v.tel;
+        document.getElementById('numPart').value = v.nums;
+        
+        // Se tiver desconto, preenche
+        const inputDesc = document.getElementById('inputDesconto');
+        if(v.desconto) {
+            inputDesc.value = v.desconto;
+        } else {
+            inputDesc.value = "";
+        }
+        
+        // Marca como "Já pagou" (pois a intenção é dar baixa)
+        document.getElementById('checkPago').checked = true;
+
+        // Recalcula o total visualmente
+        calcularTotalLive();
+
+        // Limpa a sugestão para não atrapalhar
+        document.getElementById('areaPendencias').innerHTML = "";
+
+        // Guarda a ID da venda original para que o "registrarVenda" saiba que é uma atualização
+        // Vamos usar um truque: salvar no botão temporariamente
+        const btn = document.getElementById('btnRegistrar');
+        // btn.setAttribute('data-update-key', key); // (Opcional: lógica de update direto)
+    }
+
     // ---------------------------------------------------------
 
     document.addEventListener("click", e=>{ if(e.target.id!="nomePart")document.getElementById("autocomplete-list").innerHTML=""; if(e.target.id!="telPart")document.getElementById("autocomplete-tel-list").innerHTML=""; });
@@ -2296,23 +2427,28 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
         
         // Pega apenas os números (limpa telefone)
         let telCliente = v.tel.replace(/\D/g, ''); 
-        
-        // Se não tiver 55 (Brasil), adiciona. (Ajuste conforme necessidade)
         if(telCliente.length >= 10 && !telCliente.startsWith('55')) {
             telCliente = '55' + telCliente;
         }
+        
+        const baseUrl = window.location.href.split('?')[0];
+        const dadosCombinados = `${edicaoAtivaID}###${v.key}`;
+        const tokenObscuro = btoa(dadosCombinados);
+        const linkRecibo = `${baseUrl}?t=${tokenObscuro}`;
 
         const saudacao = gerarSaudacao();
-        const msg = `*${config.nomeExibicao}*\n\n` +
-                    `${saudacao}, *${v.nome}*! 👋\n` +
-                    `Seguem seus números da sorte:\n\n` +
-                    `🎟️ *${v.nums}*\n\n` +
-                    `💳 Situação: *${v.pago ? '✅ PAGO' : '⏳ AGUARDANDO PAGAMENTO'}*\n` +
-                    `💰 Valor: ${v.valor}\n\n` +
-                    `Boa sorte! 🍀`;
+        const msg = `✅ *COMPRA CONFIRMADA!*\n\n` +
+                    `${saudacao}, *${v.nome}*! Tudo certo com sua participação. 👊\n\n` +
+                    `🎟️ *Ação:* ${config.nomeExibicao}\n` +
+                    `🔢 *Cotas:* ${v.nums}\n` +
+                    `🏆 *Prêmio:* ${config.premio}\n` +
+                    (v.brinde ? `🍀 *Palpite Extra:* ${v.brinde}\n` : '') +
+                    `\n🔗 *Acesse seu Comprovante Digital:* \n${linkRecibo}\n\n` +
+                    `Muito obrigado e Boa sorte! 🤞`;
 
         const link = `https://wa.me/${telCliente}?text=${encodeURIComponent(msg)}`;
         window.open(link, '_blank');
+        fecharModais();
     }
 
     function abrirWhatsAposBaixar() {
@@ -2350,15 +2486,7 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
         
         document.getElementById('editVendaKey').value = k; 
         document.getElementById('editNomeVenda').value = v.nome; 
-        
-        // --- Correção: Formatação Automática na Edição ---
-        const inputNums = document.getElementById('editNumVenda');
-        inputNums.value = v.nums;
-        // Adiciona o evento de digitação para colocar virgulas
-        inputNums.oninput = function() {
-            formatarDigitos(this, parseInt(cfg.tipo));
-        };
-        // -------------------------------------------------
+        document.getElementById('editNumVenda').value = v.nums; 
         
         // --- Carregar Desconto Existente ---
         const inputDesc = document.getElementById('editDescontoVenda');
@@ -2853,7 +2981,28 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
         `;
 
         // ADICIONA O PAINEL DE VAGOS ABAIXO DA TABELA
-        divRes.innerHTML = filterBar + table + painelVagos;
+        // Se já existir (re-renderização), apenas limpa o valor ou mantém?
+        // Vamos recriar tudo, pois divRes.innerHTML sobrescreve.
+        divRes.innerHTML = `
+            <div style="margin-bottom: 10px;">
+                <input type="text" id="buscaAudit" class="modern-input" placeholder="🔍 Filtrar nomes na auditoria..." onkeyup="filtrarTabelaAudit(this.value)">
+            </div>
+        ` + filterBar + table + painelVagos;
+    }
+
+    // --- NOVA FUNÇÃO DE FILTRO DA AUDITORIA ---
+    function filtrarTabelaAudit(termo) {
+        const rows = document.querySelectorAll('#auditTableBody tr');
+        const termoLimpo = normalizeText(termo);
+
+        rows.forEach(row => {
+            const textoLinha = normalizeText(row.innerText);
+            if(textoLinha.includes(termoLimpo)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
     }
 
     // --- NOVA FUNÇÃO HELPER ---
