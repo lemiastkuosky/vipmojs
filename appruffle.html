@@ -2412,7 +2412,7 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
     function gerarImagemRecibo(venda) {
         if(!venda || !edicaoAtivaID) return;
 
-        // 1. Preenche os dados no Recibo ORIGINAL (que está invisível)
+        // 1. Preenche os dados (nos bastidores)
         safeSetText('recibo_campanha', dadosDB[edicaoAtivaID].config.nomeExibicao);
         safeSetText('recibo_nome', venda.nome);
         safeSetText('recibo_premio', dadosDB[edicaoAtivaID].config.premio);
@@ -2436,42 +2436,44 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
             }
         }
 
-        // --- A MÁGICA DO CLONE (CORREÇÃO TELA BRANCA) ---
+        // 2. CRIA O CLONE (A Correção da Tela Branca)
         const original = document.getElementById('receipt-container');
-        const clone = original.cloneNode(true); // Cria uma cópia exata
+        if(!original) return alert("Erro: Elemento do recibo não encontrado no HTML.");
 
-        // Configura a cópia para ficar visível e no topo, mas sem atrapalhar
+        const clone = original.cloneNode(true);
+        
+        // Configura o clone para ser visível e ficar no topo da tela
+        clone.id = "receipt-clone-temp"; // ID diferente para não conflitar
         clone.style.display = 'block';
-        clone.style.position = 'fixed'; // Fixa na tela
+        clone.style.visibility = 'visible';
+        clone.style.position = 'fixed';
         clone.style.top = '0';
         clone.style.left = '0';
-        clone.style.zIndex = '999999'; // Fica em cima de tudo
-        clone.style.pointerEvents = 'none'; // Usuário não clica nele
-        clone.style.opacity = '1'; // Garante que é visível
-        clone.style.width = '420px'; // Força largura fixa
+        clone.style.zIndex = '9999999'; // Acima de qualquer modal
+        clone.style.background = '#ffffff'; // Fundo branco forçado
+        clone.style.width = '420px'; // Largura fixa
+        clone.style.maxWidth = '100%';
         
-        // Adiciona a cópia ao corpo do site
+        // Adiciona ao corpo do site
         document.body.appendChild(clone);
 
-        // Gera a imagem baseada na CÓPIA
+        // 3. Tira a foto do CLONE
         html2canvas(clone, { 
             scale: 2, 
             backgroundColor: "#ffffff",
             useCORS: true,
             scrollX: 0,
-            scrollY: 0,
-            windowWidth: document.documentElement.offsetWidth,
-            windowHeight: document.documentElement.offsetHeight
+            scrollY: 0
         }).then(canvas => {
-            // Remove a cópia imediatamente (ninguém vai perceber)
+            // Remove o clone imediatamente
             document.body.removeChild(clone);
             
-            // Joga a imagem no Modal de Preview
+            // Exibe o resultado
             const output = document.getElementById('imageOutput');
             output.innerHTML = "";
             output.appendChild(canvas);
             
-            // Configura o botão de baixar
+            // Configura download
             const link = document.getElementById('btnDownloadImage');
             const nomeArquivo = `Recibo_${venda.nome.split(' ')[0]}_${venda.cod}.png`;
             
@@ -2480,12 +2482,49 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
                 link.download = nomeArquivo;
             } catch(e) { console.error(e); }
             
-            // Abre o modal de preview
             document.getElementById('modalPreviewRecibo').style.display = 'flex';
         }).catch(err => {
+            console.error("Erro html2canvas:", err);
+            if(document.body.contains(clone)) document.body.removeChild(clone);
+            alert("Erro ao gerar imagem.");
+        });
+    }
+
+    // --- FUNÇÃO 2: BAIXAR IMAGEM PÚBLICA (CORRIGIDA COM CLONE) ---
+    function baixarImagemPublica() {
+        const original = document.getElementById('receipt-container');
+        if(!original) return;
+        
+        const clone = original.cloneNode(true);
+
+        // Configurações visuais para garantir que apareça na foto
+        clone.style.display = 'block';
+        clone.style.visibility = 'visible';
+        clone.style.position = 'fixed'; // Fixado na tela
+        clone.style.top = '0';
+        clone.style.left = '0';
+        clone.style.zIndex = '9999999';
+        clone.style.background = '#ffffff';
+        clone.style.width = '400px'; 
+        clone.style.maxWidth = '100vw'; 
+
+        document.body.appendChild(clone);
+
+        html2canvas(clone, { 
+            scale: 2,
+            backgroundColor: "#ffffff",
+            scrollX: 0,
+            scrollY: 0
+        }).then(canvas => {
+            document.body.removeChild(clone);
+            
+            const link = document.createElement('a');
+            link.download = `Meu_Comprovante.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        }).catch(err => {
+            if(document.body.contains(clone)) document.body.removeChild(clone);
             console.error(err);
-            document.body.removeChild(clone); // Garante que remove mesmo se der erro
-            alert("Erro ao gerar imagem. Tente novamente.");
         });
     }
 
