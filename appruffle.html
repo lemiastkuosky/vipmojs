@@ -986,47 +986,47 @@
         </div>
     </div>
     
-    <div id="receipt-container">
-        <div class="recibo-header">
-            <span class="recibo-logo">🎟️</span>
-            <h2 class="recibo-title">Comprovante</h2>
-            <p class="recibo-subtitle" id="recibo_campanha">Nome da Ação</p>
+    <div id="receipt-container" style="position: absolute; top: 0; left: 0; z-index: -9999; opacity: 0; pointer-events: none; width: 420px; background: white;">
+    <div class="recibo-header">
+        <span class="recibo-logo">🎟️</span>
+        <h2 class="recibo-title">Comprovante</h2>
+        <p class="recibo-subtitle" id="recibo_campanha">Nome da Ação</p>
+    </div>
+
+    <div class="recibo-body">
+        <div class="recibo-row">
+            <span class="recibo-label">Participante</span>
+            <span class="recibo-val" id="recibo_nome">Nome do Cliente</span>
+        </div>
+        <div class="recibo-row">
+            <span class="recibo-label">Prêmio</span>
+            <span class="recibo-val" id="recibo_premio">Prêmio Principal</span>
         </div>
 
-        <div class="recibo-body">
-            <div class="recibo-row">
-                <span class="recibo-label">Participante</span>
-                <span class="recibo-val" id="recibo_nome">Nome do Cliente</span>
-            </div>
-            <div class="recibo-row">
-                <span class="recibo-label">Prêmio</span>
-                <span class="recibo-val" id="recibo_premio">Prêmio Principal</span>
-            </div>
+        <div class="recibo-numbers-box">
+            <div style="font-size:0.75rem; color:#9ca3af; margin-bottom:5px; text-transform:uppercase;">Seus Números</div>
+            <div class="recibo-numbers" id="recibo_nums">--</div>
+        </div>
 
-            <div class="recibo-numbers-box">
-                <div style="font-size:0.75rem; color:#9ca3af; margin-bottom:5px; text-transform:uppercase;">Seus Números</div>
-                <div class="recibo-numbers" id="recibo_nums">--</div>
-            </div>
+        <div id="recibo_brinde_area" class="extra-box" style="display:none;">
+            <div class="extra-title">🍀 Palpite Extra</div>
+            <div class="extra-num" id="recibo_brinde_num">--</div>
+        </div>
 
-            <div id="recibo_brinde_area" class="extra-box" style="display:none;">
-                <div class="extra-title">🍀 Palpite Extra</div>
-                <div class="extra-num" id="recibo_brinde_num">--</div>
-            </div>
+        <div class="recibo-total">
+            <div style="font-size:0.7rem; opacity:0.8; font-weight:normal;">TOTAL REGISTRADO</div>
+            <span id="recibo_valor">R$ 0,00</span>
+        </div>
 
-            <div class="recibo-total">
-                <div style="font-size:0.7rem; opacity:0.8; font-weight:normal;">TOTAL REGISTRADO</div>
-                <span id="recibo_valor">R$ 0,00</span>
+        <div class="recibo-footer">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>DATA: <b id="recibo_data">--/--</b></span>
+                <span>HASH: <b id="recibo_hash">#---</b></span>
             </div>
-
-            <div class="recibo-footer">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span>DATA: <b id="recibo_data">--/--</b></span>
-                    <span>HASH: <b id="recibo_hash">#---</b></span>
-                </div>
-                <div id="recibo_timestamp" style="font-size:0.6rem; opacity:0.7;">00/00/0000 00:00:00</div>
-            </div>
+            <div id="recibo_timestamp" style="font-size:0.6rem; opacity:0.7;">00/00/0000 00:00:00</div>
         </div>
     </div>
+</div>
     <script>
     // Configuração do Firebase
     const firebaseConfig = {
@@ -2412,7 +2412,7 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
     function gerarImagemRecibo(venda) {
         if(!venda || !edicaoAtivaID) return;
 
-        // 1. Preenche os dados (nos bastidores)
+        // 1. Preenche dados
         safeSetText('recibo_campanha', dadosDB[edicaoAtivaID].config.nomeExibicao);
         safeSetText('recibo_nome', venda.nome);
         safeSetText('recibo_premio', dadosDB[edicaoAtivaID].config.premio);
@@ -2428,65 +2428,51 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 
         const brindeArea = document.getElementById('recibo_brinde_area');
         if(brindeArea) {
-            if(venda.brinde) {
-                brindeArea.style.display = 'block';
-                safeSetText('recibo_brinde_num', venda.brinde);
-            } else {
-                brindeArea.style.display = 'none';
-            }
+            brindeArea.style.display = venda.brinde ? 'block' : 'none';
+            if(venda.brinde) safeSetText('recibo_brinde_num', venda.brinde);
         }
 
-        // 2. CRIA O CLONE (A Correção da Tela Branca)
-        const original = document.getElementById('receipt-container');
-        if(!original) return alert("Erro: Elemento do recibo não encontrado no HTML.");
-
-        const clone = original.cloneNode(true);
+        const container = document.getElementById('receipt-container');
         
-        // Configura o clone para ser visível e ficar no topo da tela
-        clone.id = "receipt-clone-temp"; // ID diferente para não conflitar
-        clone.style.display = 'block';
-        clone.style.visibility = 'visible';
-        clone.style.position = 'fixed';
-        clone.style.top = '0';
-        clone.style.left = '0';
-        clone.style.zIndex = '9999999'; // Acima de qualquer modal
-        clone.style.background = '#ffffff'; // Fundo branco forçado
-        clone.style.width = '420px'; // Largura fixa
-        clone.style.maxWidth = '100%';
-        
-        // Adiciona ao corpo do site
-        document.body.appendChild(clone);
+        // --- TRUQUE FINAL ---
+        // Torna o elemento totalmente "real" para o navegador por um instante
+        // Ele está em z-index -9999, então continuará atrás do site, invisível ao usuário
+        container.style.opacity = '1'; 
 
-        // 3. Tira a foto do CLONE
-        html2canvas(clone, { 
-            scale: 2, 
-            backgroundColor: "#ffffff",
-            useCORS: true,
-            scrollX: 0,
-            scrollY: 0
-        }).then(canvas => {
-            // Remove o clone imediatamente
-            document.body.removeChild(clone);
-            
-            // Exibe o resultado
-            const output = document.getElementById('imageOutput');
-            output.innerHTML = "";
-            output.appendChild(canvas);
-            
-            // Configura download
-            const link = document.getElementById('btnDownloadImage');
-            const nomeArquivo = `Recibo_${venda.nome.split(' ')[0]}_${venda.cod}.png`;
-            
-            try {
-                link.href = canvas.toDataURL("image/png");
-                link.download = nomeArquivo;
-            } catch(e) { console.error(e); }
-            
-            document.getElementById('modalPreviewRecibo').style.display = 'flex';
-        }).catch(err => {
-            console.error("Erro html2canvas:", err);
-            if(document.body.contains(clone)) document.body.removeChild(clone);
-            alert("Erro ao gerar imagem.");
+        // Aguarda um frame de renderização
+        requestAnimationFrame(() => {
+            html2canvas(container, { 
+                scale: 2, 
+                backgroundColor: "#ffffff",
+                useCORS: true,
+                logging: true, // Ajuda a debugar se der erro
+                scrollX: 0,
+                scrollY: 0,
+                // Força o canvas a capturar exatamente as dimensões do elemento
+                width: 420,
+                windowWidth: 420
+            }).then(canvas => {
+                // Volta a esconder
+                container.style.opacity = '0';
+                
+                const output = document.getElementById('imageOutput');
+                output.innerHTML = "";
+                output.appendChild(canvas);
+                
+                const link = document.getElementById('btnDownloadImage');
+                const nomeArquivo = `Recibo_${venda.nome.split(' ')[0]}_${venda.cod}.png`;
+                
+                try {
+                    link.href = canvas.toDataURL("image/png");
+                    link.download = nomeArquivo;
+                } catch(e) { console.error(e); }
+                
+                document.getElementById('modalPreviewRecibo').style.display = 'flex';
+            }).catch(err => {
+                console.error(err);
+                container.style.opacity = '0'; // Garante que esconde se der erro
+                alert("Erro ao gerar imagem.");
+            });
         });
     }
 
