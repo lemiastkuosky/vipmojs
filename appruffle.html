@@ -1104,163 +1104,45 @@ function confirmarDuplicacao() {
         });
     }
 
-    // --- FUNÇÕES DE RENDERIZAÇÃO E NAVEGAÇÃO ---
-
-function renderCampanhasIniciais() {
-    const div = document.getElementById('listaCampanhasVisual');
-    if (!div) return;
-    div.innerHTML = "";
-    
-    // Inverte a ordem para mostrar as mais recentes primeiro
-    const ids = Object.keys(dadosDB).reverse();
-    
-    ids.forEach(id => {
-        const item = dadosDB[id];
-        if (!item || !item.config) return;
-        const c = item.config;
-        
-        div.innerHTML += `
-            <div class="campanha-item" onclick="selecionarCampanha('${id}')">
-                <div>
-                    <h3 style="margin:0;">${c.nomeExibicao}</h3>
-                    <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--gray);">🏆 ${c.premio}</p>
-                </div>
-                <span style="color:#d1d5db;">➜</span>
-            </div>`;
-    });
-}
-
-function selecionarCampanha(id) {
-    edicaoAtivaID = id;
-    document.getElementById('telaInicial').style.display = 'none';
-    document.getElementById('telaTerminal').style.display = 'block';
-    
-    const cfg = dadosDB[id].config;
-    const titulo = document.getElementById('tituloVenda');
-    if(titulo) titulo.innerText = cfg.nomeExibicao;
-    
-    renderVendas();
-}
-
-function voltarInicio() {
-    edicaoAtivaID = "";
-    document.getElementById('telaTerminal').style.display = 'none';
-    document.getElementById('telaInicial').style.display = 'block';
-}
-
-function switchTab(btn, t) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    
-    document.getElementById('telaRifas').style.display = (t === 'rifas') ? 'block' : 'none';
-    document.getElementById('telaFinanceiro').style.display = (t === 'financeiro') ? 'block' : 'none';
-    document.getElementById('telaClientes').style.display = (t === 'clientes') ? 'block' : 'none';
-    
-    if(t === 'financeiro') calcularResumoGlobal();
-}
-
-function renderVendas() {
-    const div = document.getElementById('listaParticipantes');
-    const resumo = document.getElementById('resumoStats');
-    if (!div || !edicaoAtivaID || !dadosDB[edicaoAtivaID]) return;
-    
-    div.innerHTML = "";
-    const vendas = Object.values(dadosDB[edicaoAtivaID].vendas || {});
-    
-    vendas.reverse().forEach(v => {
-        div.innerHTML += `
-            <div class="venda-item ${v.pago ? 'pago' : 'pendente'}">
-                <div><b>${v.nome}</b><br><small>${v.nums}</small></div>
-                <div style="font-weight:bold; color:var(--primary-dark);">${v.valor}</div>
-            </div>`;
-    });
-
-    // Atualiza estatística rápida
-    const totalCotas = vendas.reduce((acc, v) => acc + (v.nums.match(/\d+/g) || []).length, 0);
-    if(resumo) {
-        resumo.innerHTML = `
-            <div class="stat-card">
-                <span class="stat-val">${totalCotas}</span>
-                <span class="stat-label">Cotas Vendidas</span>
-            </div>`;
-    }
-}
-
-function calcularResumoGlobal() {
-    let entrada = 0;
-    Object.values(dadosDB).forEach(rifa => {
-        if (rifa.vendas) {
-            Object.values(rifa.vendas).forEach(v => {
-                if (v.pago && !v.isGratis) {
-                    let val = parseFloat(v.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                    entrada += val;
-                }
-            });
-        }
-    });
-    
-    safeSetText('globalEntrada', entrada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
-    safeSetText('globalLucro', entrada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
-}
-
     // --- GERADOR PUBLICO CORRIGIDO (MOSTRA NA TELA) ---
     function baixarImagemPublica() {
-    const original = document.getElementById('receipt-container');
-    if(!original) return alert("Erro: Recibo não encontrado.");
-    
-    window.scrollTo(0,0); // Evita erro de rolagem
-    const clone = original.cloneNode(true);
-    
-    // Configura o clone para ser capturado sem erros
-    clone.style.cssText = "position:fixed; top:0; left:0; z-index:9999; background:white; width:420px; display:block; visibility:visible; opacity:1;";
-    
-    // Remove qualquer máscara CSS que cause tela branca
-    const header = clone.querySelector('.recibo-header');
-    if(header) { header.style.mask = "none"; header.style.webkitMask = "none"; header.style.borderBottom = "4px solid #f59e0b"; }
-    
-    document.body.appendChild(clone);
+        window.scrollTo(0,0);
+        const original = document.getElementById('receipt-container');
+        if(!original) return alert("Erro: Recibo não encontrado.");
+        
+        const clone = original.cloneNode(true);
+        clone.style.display = 'block'; clone.style.position = 'fixed'; clone.style.top = '0'; clone.style.left = '0'; clone.style.zIndex = '9999999'; clone.style.background = '#ffffff'; clone.style.width = '420px'; clone.style.maxWidth = '100vw'; 
+        const headerDoClone = clone.querySelector('.recibo-header');
+        if(headerDoClone) { headerDoClone.style.mask = 'none'; headerDoClone.style.webkitMask = 'none'; headerDoClone.style.borderBottom = '4px solid #f59e0b'; }
+        document.body.appendChild(clone);
 
-    setTimeout(() => {
-        html2canvas(clone, { 
-            scale: 2, 
-            backgroundColor: "#ffffff", 
-            useCORS: true,
-            logging: false 
-        }).then(canvas => {
-            document.body.removeChild(clone);
-            
-            // Exibe a imagem no Modal em vez de tentar baixar direto
-            const modal = document.getElementById('generated-image-modal');
-            const container = document.getElementById('img-output-container');
-            container.innerHTML = "";
-            const img = new Image();
-            img.src = canvas.toDataURL("image/png");
-            img.style.maxWidth = "100%";
-            container.appendChild(img);
-            modal.style.display = 'flex';
-        }).catch(e => { 
-            if(document.body.contains(clone)) document.body.removeChild(clone);
-            alert("Erro ao gerar imagem. Tente tirar um print da tela."); 
-        });
-    }, 400);
-}
-
-// FUNÇÃO PARA O PAINEL ADMINISTRATIVO
-function gerarImagemRecibo(venda) {
-    if(!venda || !edicaoAtivaID) return;
-    
-    // Preenche dados nos bastidores
-    safeSetText('recibo_campanha', dadosDB[edicaoAtivaID].config.nomeExibicao);
-    safeSetText('recibo_nome', venda.nome);
-    safeSetText('recibo_premio', dadosDB[edicaoAtivaID].config.premio);
-    safeSetText('recibo_nums', venda.nums);
-    safeSetText('recibo_valor', venda.valor);
-    safeSetText('recibo_data', (venda.data || "").split(' ')[0]);
-    safeSetText('recibo_hash', '#' + venda.cod);
-
-    // Usa a mesma lógica de captura limpa
-    baixarImagemPublica(); 
-}
+        setTimeout(() => {
+            html2canvas(clone, { 
+                scale: 2, backgroundColor: "#ffffff", useCORS: true, scrollX: 0, scrollY: 0
+            }).then(canvas => {
+                document.body.removeChild(clone);
+                
+                // MOSTRA NO MODAL EM VEZ DE BAIXAR DIRETO
+                const imgContainer = document.getElementById('img-container-final');
+                const modal = document.getElementById('generated-image-modal');
+                const btnForce = document.getElementById('btn-force-download');
+                
+                imgContainer.innerHTML = "";
+                const img = new Image();
+                img.src = canvas.toDataURL("image/png");
+                imgContainer.appendChild(img);
+                
+                btnForce.href = img.src;
+                btnForce.download = "Comprovante_Rifa.png";
+                
+                modal.style.display = 'flex'; // Exibe o modal
+                
+            }).catch(err => {
+                if(document.body.contains(clone)) document.body.removeChild(clone);
+                alert("Erro ao gerar a imagem. Tente tirar um print.");
+            });
+        }, 500);
+    }
 </script>
 </body>
 </html>
