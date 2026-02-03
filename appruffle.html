@@ -2485,70 +2485,112 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
     }
 
     // --- FUNÇÃO 2: BAIXAR IMAGEM PÚBLICA (MODO CLIENTE) ---
+    // --- FUNÇÃO DE DIAGNÓSTICO PASSO-A-PASSO ---
     function baixarImagemPublica() {
-        // 1. Rola para o topo (MUITO IMPORTANTE)
-        window.scrollTo(0,0);
+        // PASSO 1: Verificar se os dados chegaram
+        const nome = document.getElementById('recibo_nome').innerText;
+        const nums = document.getElementById('recibo_nums').innerText;
+        
+        if(!nome || nome === "Nome do Cliente" || !nums || nums === "--") {
+            alert("ERRO DE DADOS: O recibo ainda não foi preenchido com as informações da venda.\n\nAguarde a página carregar ou verifique sua internet.");
+            return;
+        }
 
+        if(!confirm(`DADOS ENCONTRADOS:\nNome: ${nome}\nCotas: ${nums}\n\nPodemos gerar a imagem agora?`)) {
+            return;
+        }
+
+        // PASSO 2: Preparar o Recibo na Tela (Sem esconder)
         const original = document.getElementById('receipt-container');
-        if(!original) return alert("Erro: Recibo original não encontrado.");
-
-        // 2. Cria o Clone
         const clone = original.cloneNode(true);
 
-        // --- FORÇA VISIBILIDADE BRUTA ---
+        // Configurações para garantir que você VEJA o recibo
+        clone.id = "recibo-visual-teste";
         clone.style.display = 'block';
-        clone.style.visibility = 'visible';
-        clone.style.opacity = '1'; // Garante que não está transparente
-        clone.style.position = 'absolute';
-        clone.style.top = '100px'; // Joga um pouco pra baixo pra você ver
-        clone.style.left = '10px';
+        clone.style.position = 'absolute'; // Absolute é melhor que Fixed para mobile
+        clone.style.top = '50px';
+        clone.style.left = '50%';
+        clone.style.transform = 'translateX(-50%)'; // Centraliza
         clone.style.zIndex = '9999999';
-        clone.style.background = '#e5e7eb'; // Fundo cinza claro para destacar
-        clone.style.color = '#000000'; // Texto preto forçado
-        clone.style.width = '350px';
-        clone.style.border = '5px solid blue'; // BORDA AZUL = HTML (O CLONE)
+        clone.style.background = '#ffffff';
+        clone.style.color = '#000000';
+        clone.style.width = '380px';
+        clone.style.boxShadow = '0 0 0 1000px rgba(0,0,0,0.8)'; // Escurece o fundo
+        clone.style.border = '5px solid #10b981'; // Borda Verde para confirmar HTML
 
-        // Remove a máscara de serrilhado se existir
+        // Remove serrilhado problemático
         const header = clone.querySelector('.recibo-header');
         if(header) {
             header.style.mask = 'none';
             header.style.webkitMask = 'none';
-            header.style.borderBottom = '2px solid black';
+            header.style.borderBottom = '2px solid gold';
         }
 
+        // Adiciona à tela
         document.body.appendChild(clone);
+        
+        // Rola para o topo para garantir a foto
+        window.scrollTo(0,0);
 
-        alert("Olhe para a tela: \nO quadro com BORDA AZUL apareceu com os dados?\n(Clique OK para tentar gerar a foto)");
-
-        // 3. Tenta gerar a foto
+        // Pausa para você ver se o HTML está bonito
         setTimeout(() => {
-            html2canvas(clone, {
-                scale: 2,
+            if(!confirm("Olhe para a tela agora.\n\nVocê está vendo o recibo com BORDA VERDE e os dados corretos?\n\nClique OK para transformar em imagem.")) {
+                document.body.removeChild(clone);
+                return;
+            }
+
+            // PASSO 3: Gerar a Foto
+            const btn = document.getElementById('btn-download-publico');
+            if(btn) btn.innerText = "Gerando imagem...";
+
+            html2canvas(clone, { 
+                scale: 2, 
                 backgroundColor: "#ffffff",
                 useCORS: true,
                 scrollX: 0,
-                scrollY: -window.scrollY, // Compensa qualquer rolagem
-                width: 350, // Largura exata do clone
+                scrollY: 0,
+                // Força captura da área exata do clone
+                x: clone.offsetLeft,
+                y: clone.offsetTop,
+                width: clone.offsetWidth,
                 height: clone.offsetHeight
             }).then(canvas => {
-                
-                // Configura a FOTO para aparecer na tela
-                canvas.style.position = 'absolute';
-                canvas.style.top = '100px';
-                canvas.style.left = '380px'; // Ao lado do clone
-                canvas.style.zIndex = '9999999';
-                canvas.style.border = '5px solid red'; // BORDA VERMELHA = FOTO
-                canvas.style.width = '350px';
-                canvas.style.height = 'auto';
+                document.body.removeChild(clone); // Remove o HTML verde
+                if(btn) btn.innerText = "Baixar Imagem";
 
+                // Mostra a imagem final na tela antes de baixar
+                canvas.style.position = 'fixed';
+                canvas.style.top = '50%';
+                canvas.style.left = '50%';
+                canvas.style.transform = 'translate(-50%, -50%)';
+                canvas.style.zIndex = '10000000';
+                canvas.style.border = '5px solid blue'; // Borda Azul = IMAGEM FINAL
+                canvas.style.maxWidth = '90%';
+                canvas.style.height = 'auto';
+                
                 document.body.appendChild(canvas);
 
-                alert("Teste finalizado!\n\nAZUL = HTML (Tem que ter dados)\nVERMELHO = FOTO (Tem que ser igual ao azul)\n\nSe o Vermelho estiver branco, é erro do plugin.");
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.download = `Comprovante_Rifa.png`;
+                    link.href = canvas.toDataURL("image/png");
+                    link.click();
+                    
+                    alert("A imagem com BORDA AZUL apareceu?\nO download deve ter iniciado.\n\nSe a imagem azul estiver BRANCA, me avise.");
+                    
+                    // Limpa a imagem da tela depois de 5 segundos
+                    setTimeout(() => { 
+                        if(document.body.contains(canvas)) document.body.removeChild(canvas); 
+                    }, 5000);
+                }, 500);
 
             }).catch(err => {
-                alert("ERRO NO HTML2CANVAS: " + err.message);
+                alert("ERRO TÉCNICO: " + err.message);
                 console.error(err);
+                if(document.body.contains(clone)) document.body.removeChild(clone);
+                if(btn) btn.innerText = "Tentar Novamente";
             });
+
         }, 500);
     }
 
