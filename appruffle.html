@@ -367,13 +367,6 @@
 </head>
 <body>
     
-    <div id="receipt-container" style="position: absolute; top: 0; left: 0; z-index: -9999; opacity: 0; pointer-events: none; width: 420px; background: white;">
-        <div class="recibo-header">
-            <span class="recibo-logo">🎟️</span>
-            <h2 class="recibo-title">Comprovante</h2>
-            <p class="recibo-subtitle" id="recibo_campanha">Nome da Ação</p>
-        </div>
-
         <div class="recibo-body">
             <div class="recibo-row">
                 <span class="recibo-label">Participante</span>
@@ -2425,39 +2418,33 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 
 // --- FUNÇÃO 2: GERAÇÃO PARA O CLIENTE (MOBILE FRIENDLY) ---
 function baixarImagemPublica() {
-    window.scrollTo(0, 0); // Garante que a página está no topo
     const original = document.getElementById('receipt-container');
     if (!original) return alert("Erro: Recibo não encontrado.");
 
+    // Cria o clone, mas o mantém fora da visão do usuário (left: -9999px)
     const clone = original.cloneNode(true);
+    clone.style.cssText = "position:absolute; top:0; left:-9999px; display:block; visibility:visible; opacity:1; background:white; width:420px;";
     
-    // Mudamos para position: ABSOLUTE (mais estável que fixed para fotos)
-    clone.style.cssText = "position:absolute; top:0; left:0; z-index:99999; background:white; width:420px; display:block; visibility:visible; opacity:1;";
-    
-    // Remove efeitos que travam a renderização
+    // Força a remoção de máscaras no clone por segurança
     const header = clone.querySelector('.recibo-header');
-    if (header) {
-        header.style.mask = "none";
-        header.style.webkitMask = "none";
-        header.style.borderBottom = "4px solid #f59e0b";
+    if (header) { 
+        header.style.mask = "none"; 
+        header.style.webkitMask = "none"; 
+        header.style.borderBottom = "4px solid #f59e0b"; 
     }
-
+    
     document.body.appendChild(clone);
 
-    // Pequeno atraso para o navegador "desenhar" o clone antes da foto
+    // Pequeno atraso para garantir que o navegador "desenhou" o clone internamente
     setTimeout(() => {
-        html2canvas(clone, {
-            scale: 2,
-            backgroundColor: "#ffffff",
+        html2canvas(clone, { 
+            scale: 2, 
+            backgroundColor: "#ffffff", 
             useCORS: true,
-            logging: false,
-            // Força a captura da posição exata onde o clone foi colocado
-            x: 0,
-            y: 0,
             width: 420,
             height: clone.offsetHeight
         }).then(canvas => {
-            // SÓ REMOVE O CLONE DEPOIS QUE O CANVAS ESTÁ PRONTO
+            // Só remove o clone após a captura ter sucesso
             document.body.removeChild(clone);
 
             const modal = document.getElementById('generated-image-modal');
@@ -2468,18 +2455,17 @@ function baixarImagemPublica() {
                 const img = new Image();
                 img.src = canvas.toDataURL("image/png");
                 img.style.maxWidth = "100%";
-                img.style.height = "auto";
                 container.appendChild(img);
                 
-                // Exibe o modal com a foto final
+                // Exibe o modal com a foto pronta para o cliente salvar
                 modal.style.display = 'flex';
             }
         }).catch(err => {
             console.error("Erro na captura:", err);
             if (document.body.contains(clone)) document.body.removeChild(clone);
-            alert("Erro ao gerar imagem. Tente novamente ou tire um print.");
+            alert("Erro ao gerar imagem. Tente tirar um print da tela.");
         });
-    }, 5600); // Aumentamos o tempo de espera para 600ms
+    }, 600); 
 }
 
     // --- MODO DIAGNÓSTICO COM LOG NA TELA ---
