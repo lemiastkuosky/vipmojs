@@ -2425,57 +2425,61 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 
 // --- FUNÇÃO 2: GERAÇÃO PARA O CLIENTE (MOBILE FRIENDLY) ---
 function baixarImagemPublica() {
+    window.scrollTo(0, 0); // Garante que a página está no topo
     const original = document.getElementById('receipt-container');
-    if(!original) return alert("Erro: Estrutura do recibo não encontrada.");
+    if (!original) return alert("Erro: Recibo não encontrado.");
 
-    // 1. Cria um Clone visível para a "câmera" do sistema
     const clone = original.cloneNode(true);
-    clone.style.cssText = "position:fixed; top:0; left:0; z-index:99999; background:white; width:420px; display:block; opacity:1; visibility:visible;";
     
-    // Remove qualquer máscara restante que possa quebrar a imagem
+    // Mudamos para position: ABSOLUTE (mais estável que fixed para fotos)
+    clone.style.cssText = "position:absolute; top:0; left:0; z-index:99999; background:white; width:420px; display:block; visibility:visible; opacity:1;";
+    
+    // Remove efeitos que travam a renderização
     const header = clone.querySelector('.recibo-header');
-    if(header) { 
-        header.style.mask = "none"; 
-        header.style.webkitMask = "none"; 
+    if (header) {
+        header.style.mask = "none";
+        header.style.webkitMask = "none";
+        header.style.borderBottom = "4px solid #f59e0b";
     }
-    
-    document.body.appendChild(clone);
-    window.scrollTo(0,0); // Garante que a captura comece do topo
 
-    // 2. Tira a foto com atraso para garantir renderização de fontes
+    document.body.appendChild(clone);
+
+    // Pequeno atraso para o navegador "desenhar" o clone antes da foto
     setTimeout(() => {
-        html2canvas(clone, { 
-            scale: 2, 
-            backgroundColor: "#ffffff", 
+        html2canvas(clone, {
+            scale: 2,
+            backgroundColor: "#ffffff",
             useCORS: true,
-            logging: false
+            logging: false,
+            // Força a captura da posição exata onde o clone foi colocado
+            x: 0,
+            y: 0,
+            width: 420,
+            height: clone.offsetHeight
         }).then(canvas => {
+            // SÓ REMOVE O CLONE DEPOIS QUE O CANVAS ESTÁ PRONTO
             document.body.removeChild(clone);
-            
-            // Exibe no Modal de Visualização (já existe no seu HTML)
+
             const modal = document.getElementById('generated-image-modal');
             const container = document.getElementById('img-output-container');
-            const btnForce = document.getElementById('btn-force-download');
             
-            if(container) {
+            if (modal && container) {
                 container.innerHTML = "";
                 const img = new Image();
                 img.src = canvas.toDataURL("image/png");
                 img.style.maxWidth = "100%";
+                img.style.height = "auto";
                 container.appendChild(img);
                 
-                if(btnForce) {
-                    btnForce.href = img.src;
-                    btnForce.download = "Comprovante_Rifa.png";
-                }
-                
-                if(modal) modal.style.display = 'flex';
+                // Exibe o modal com a foto final
+                modal.style.display = 'flex';
             }
         }).catch(err => {
-            if(document.body.contains(clone)) document.body.removeChild(clone);
-            alert("Erro ao gerar imagem. Tire um print da tela.");
+            console.error("Erro na captura:", err);
+            if (document.body.contains(clone)) document.body.removeChild(clone);
+            alert("Erro ao gerar imagem. Tente novamente ou tire um print.");
         });
-    }, 500);
+    }, 600); // Aumentamos o tempo de espera para 600ms
 }
 
     // --- MODO DIAGNÓSTICO COM LOG NA TELA ---
