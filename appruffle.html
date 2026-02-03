@@ -1104,6 +1104,105 @@ function confirmarDuplicacao() {
         });
     }
 
+    // --- FUNÇÕES DE RENDERIZAÇÃO E NAVEGAÇÃO ---
+
+function renderCampanhasIniciais() {
+    const div = document.getElementById('listaCampanhasVisual');
+    if (!div) return;
+    div.innerHTML = "";
+    
+    // Inverte a ordem para mostrar as mais recentes primeiro
+    const ids = Object.keys(dadosDB).reverse();
+    
+    ids.forEach(id => {
+        const item = dadosDB[id];
+        if (!item || !item.config) return;
+        const c = item.config;
+        
+        div.innerHTML += `
+            <div class="campanha-item" onclick="selecionarCampanha('${id}')">
+                <div>
+                    <h3 style="margin:0;">${c.nomeExibicao}</h3>
+                    <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--gray);">🏆 ${c.premio}</p>
+                </div>
+                <span style="color:#d1d5db;">➜</span>
+            </div>`;
+    });
+}
+
+function selecionarCampanha(id) {
+    edicaoAtivaID = id;
+    document.getElementById('telaInicial').style.display = 'none';
+    document.getElementById('telaTerminal').style.display = 'block';
+    
+    const cfg = dadosDB[id].config;
+    const titulo = document.getElementById('tituloVenda');
+    if(titulo) titulo.innerText = cfg.nomeExibicao;
+    
+    renderVendas();
+}
+
+function voltarInicio() {
+    edicaoAtivaID = "";
+    document.getElementById('telaTerminal').style.display = 'none';
+    document.getElementById('telaInicial').style.display = 'block';
+}
+
+function switchTab(btn, t) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    document.getElementById('telaRifas').style.display = (t === 'rifas') ? 'block' : 'none';
+    document.getElementById('telaFinanceiro').style.display = (t === 'financeiro') ? 'block' : 'none';
+    document.getElementById('telaClientes').style.display = (t === 'clientes') ? 'block' : 'none';
+    
+    if(t === 'financeiro') calcularResumoGlobal();
+}
+
+function renderVendas() {
+    const div = document.getElementById('listaParticipantes');
+    const resumo = document.getElementById('resumoStats');
+    if (!div || !edicaoAtivaID || !dadosDB[edicaoAtivaID]) return;
+    
+    div.innerHTML = "";
+    const vendas = Object.values(dadosDB[edicaoAtivaID].vendas || {});
+    
+    vendas.reverse().forEach(v => {
+        div.innerHTML += `
+            <div class="venda-item ${v.pago ? 'pago' : 'pendente'}">
+                <div><b>${v.nome}</b><br><small>${v.nums}</small></div>
+                <div style="font-weight:bold; color:var(--primary-dark);">${v.valor}</div>
+            </div>`;
+    });
+
+    // Atualiza estatística rápida
+    const totalCotas = vendas.reduce((acc, v) => acc + (v.nums.match(/\d+/g) || []).length, 0);
+    if(resumo) {
+        resumo.innerHTML = `
+            <div class="stat-card">
+                <span class="stat-val">${totalCotas}</span>
+                <span class="stat-label">Cotas Vendidas</span>
+            </div>`;
+    }
+}
+
+function calcularResumoGlobal() {
+    let entrada = 0;
+    Object.values(dadosDB).forEach(rifa => {
+        if (rifa.vendas) {
+            Object.values(rifa.vendas).forEach(v => {
+                if (v.pago && !v.isGratis) {
+                    let val = parseFloat(v.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                    entrada += val;
+                }
+            });
+        }
+    });
+    
+    safeSetText('globalEntrada', entrada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+    safeSetText('globalLucro', entrada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+}
+
     // --- GERADOR PUBLICO CORRIGIDO (MOSTRA NA TELA) ---
     function baixarImagemPublica() {
     const original = document.getElementById('receipt-container');
