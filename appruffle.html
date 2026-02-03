@@ -2486,83 +2486,88 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 
     // --- FUNÇÃO 2: BAIXAR IMAGEM PÚBLICA (MODO CLIENTE) ---
     function baixarImagemPublica() {
-        console.log("1. Iniciando processo de download...");
+        alert("1. Iniciando teste...");
         
+        // 1. Rola a página para o topo (CRUCIAL PARA NÃO SAIR BRANCO)
+        window.scrollTo(0, 0);
+
         const original = document.getElementById('receipt-container');
-        if(!original) {
-            alert("ERRO CRÍTICO: Elemento 'receipt-container' não existe no HTML!");
-            return;
-        }
-
-        // 1. Cria o Clone
+        if(!original) return alert("Erro: Recibo não encontrado.");
+        
+        // 2. Cria o Clone
         const clone = original.cloneNode(true);
-        console.log("2. Clone criado.");
 
-        // 2. Configurações visuais (Força visibilidade extrema)
-        clone.id = "debug-receipt"; 
         clone.style.display = 'block';
-        clone.style.visibility = 'visible';
-        clone.style.opacity = '1';
         clone.style.position = 'fixed';
-        clone.style.top = '50px'; // Baixa um pouco pra você ver
-        clone.style.left = '50px';
+        clone.style.top = '0';
+        clone.style.left = '0';
         clone.style.zIndex = '9999999';
         clone.style.background = '#ffffff';
-        clone.style.width = '420px';
-        clone.style.border = '5px solid red'; // Borda vermelha para confirmar que existe
+        clone.style.width = '420px'; 
+        clone.style.maxWidth = '100vw'; 
 
-        // Limpa máscara
+        // Remove serrilhado
         const headerDoClone = clone.querySelector('.recibo-header');
         if(headerDoClone) {
             headerDoClone.style.mask = 'none';
             headerDoClone.style.webkitMask = 'none';
+            headerDoClone.style.borderBottom = '4px solid #f59e0b';
         }
 
         document.body.appendChild(clone);
-        console.log("3. Clone adicionado ao corpo da página. Altura:", clone.offsetHeight);
 
-        if(clone.offsetHeight === 0) {
-            alert("ALERTA: O recibo tem altura 0. O conteúdo está invisível.");
-        }
+        // 3. Pequeno delay para garantir que o navegador desenhou o clone
+        setTimeout(() => {
+            html2canvas(clone, { 
+                scale: 2,
+                backgroundColor: "#ffffff",
+                useCORS: true,
+                // Força a captura a começar do topo absoluto
+                scrollX: 0,
+                scrollY: 0,
+                x: 0,
+                y: 0,
+                width: clone.offsetWidth,
+                height: clone.offsetHeight
+            }).then(canvas => {
+                // Remove o clone HTML (o recibo "real")
+                document.body.removeChild(clone);
+                
+                // 4. EM VEZ DE BAIXAR, MOSTRA A FOTO NA TELA
+                alert("Foto gerada! Veja se aparece abaixo com borda azul.");
+                
+                canvas.style.position = 'fixed';
+                canvas.style.top = '50px';
+                canvas.style.left = '10px';
+                canvas.style.zIndex = '10000000';
+                canvas.style.border = '5px solid blue'; // Borda azul para identificar a FOTO
+                canvas.style.width = '300px'; // Reduz um pouco pra caber na tela
+                canvas.style.height = 'auto';
+                canvas.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+                
+                // Adiciona um botão para fechar a foto
+                const btnFechar = document.createElement('button');
+                btnFechar.innerText = "❌ FECHAR TESTE";
+                btnFechar.style.position = 'fixed';
+                btnFechar.style.top = '10px';
+                btnFechar.style.left = '10px';
+                btnFechar.style.zIndex = '10000001';
+                btnFechar.style.padding = '10px';
+                btnFechar.style.background = 'red';
+                btnFechar.style.color = 'white';
+                btnFechar.onclick = function() {
+                    document.body.removeChild(canvas);
+                    document.body.removeChild(btnFechar);
+                };
 
-        // Tira a foto
-        console.log("4. Chamando html2canvas...");
-        
-        // Rola para o topo para evitar bugs de scroll
-        window.scrollTo(0,0);
+                document.body.appendChild(canvas);
+                document.body.appendChild(btnFechar);
 
-        html2canvas(clone, { 
-            scale: 2,
-            backgroundColor: "#ffffff",
-            logging: true, // ATIVA O LOG NO CONSOLE DO PLUGIN
-            useCORS: true,
-            scrollX: 0,
-            scrollY: 0,
-            width: 420, // Força largura
-            windowWidth: document.documentElement.offsetWidth
-        }).then(canvas => {
-            console.log("5. Canvas gerado com sucesso!");
-            
-            // Verifica se o canvas está vazio
-            const context = canvas.getContext('2d');
-            const pixelData = context.getImageData(100, 100, 1, 1).data;
-            console.log("Cor do pixel (100,100):", pixelData); // Se for 0,0,0,0 é transparente
-
-            // Remove o clone (Deixei um delay de 2s para você ver o recibo na tela)
-            setTimeout(() => {
+            }).catch(err => {
+                alert("ERRO AO GERAR: " + err.message);
                 if(document.body.contains(clone)) document.body.removeChild(clone);
-            }, 2000);
-            
-            const link = document.createElement('a');
-            link.download = `Debug_Comprovante.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-            
-        }).catch(err => {
-            console.error("ERRO HTML2CANVAS:", err);
-            alert("ERRO NA GERAÇÃO: " + err.message);
-            // Não remove o clone para você poder inspecionar
-        });
+            });
+        }, 500); // Espera meio segundo antes de tirar a foto
     }
 
     function enviarTextoWhatsapp() {
