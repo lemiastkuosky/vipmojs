@@ -2486,88 +2486,70 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 
     // --- FUNÇÃO 2: BAIXAR IMAGEM PÚBLICA (MODO CLIENTE) ---
     function baixarImagemPublica() {
-        alert("1. Iniciando teste...");
-        
-        // 1. Rola a página para o topo (CRUCIAL PARA NÃO SAIR BRANCO)
-        window.scrollTo(0, 0);
+        // 1. Rola para o topo (MUITO IMPORTANTE)
+        window.scrollTo(0,0);
 
         const original = document.getElementById('receipt-container');
-        if(!original) return alert("Erro: Recibo não encontrado.");
-        
+        if(!original) return alert("Erro: Recibo original não encontrado.");
+
         // 2. Cria o Clone
         const clone = original.cloneNode(true);
 
+        // --- FORÇA VISIBILIDADE BRUTA ---
         clone.style.display = 'block';
-        clone.style.position = 'fixed';
-        clone.style.top = '0';
-        clone.style.left = '0';
+        clone.style.visibility = 'visible';
+        clone.style.opacity = '1'; // Garante que não está transparente
+        clone.style.position = 'absolute';
+        clone.style.top = '100px'; // Joga um pouco pra baixo pra você ver
+        clone.style.left = '10px';
         clone.style.zIndex = '9999999';
-        clone.style.background = '#ffffff';
-        clone.style.width = '420px'; 
-        clone.style.maxWidth = '100vw'; 
+        clone.style.background = '#e5e7eb'; // Fundo cinza claro para destacar
+        clone.style.color = '#000000'; // Texto preto forçado
+        clone.style.width = '350px';
+        clone.style.border = '5px solid blue'; // BORDA AZUL = HTML (O CLONE)
 
-        // Remove serrilhado
-        const headerDoClone = clone.querySelector('.recibo-header');
-        if(headerDoClone) {
-            headerDoClone.style.mask = 'none';
-            headerDoClone.style.webkitMask = 'none';
-            headerDoClone.style.borderBottom = '4px solid #f59e0b';
+        // Remove a máscara de serrilhado se existir
+        const header = clone.querySelector('.recibo-header');
+        if(header) {
+            header.style.mask = 'none';
+            header.style.webkitMask = 'none';
+            header.style.borderBottom = '2px solid black';
         }
 
         document.body.appendChild(clone);
 
-        // 3. Pequeno delay para garantir que o navegador desenhou o clone
+        alert("Olhe para a tela: \nO quadro com BORDA AZUL apareceu com os dados?\n(Clique OK para tentar gerar a foto)");
+
+        // 3. Tenta gerar a foto
         setTimeout(() => {
-            html2canvas(clone, { 
+            html2canvas(clone, {
                 scale: 2,
                 backgroundColor: "#ffffff",
                 useCORS: true,
-                // Força a captura a começar do topo absoluto
                 scrollX: 0,
-                scrollY: 0,
-                x: 0,
-                y: 0,
-                width: clone.offsetWidth,
+                scrollY: -window.scrollY, // Compensa qualquer rolagem
+                width: 350, // Largura exata do clone
                 height: clone.offsetHeight
             }).then(canvas => {
-                // Remove o clone HTML (o recibo "real")
-                document.body.removeChild(clone);
                 
-                // 4. EM VEZ DE BAIXAR, MOSTRA A FOTO NA TELA
-                alert("Foto gerada! Veja se aparece abaixo com borda azul.");
-                
-                canvas.style.position = 'fixed';
-                canvas.style.top = '50px';
-                canvas.style.left = '10px';
-                canvas.style.zIndex = '10000000';
-                canvas.style.border = '5px solid blue'; // Borda azul para identificar a FOTO
-                canvas.style.width = '300px'; // Reduz um pouco pra caber na tela
+                // Configura a FOTO para aparecer na tela
+                canvas.style.position = 'absolute';
+                canvas.style.top = '100px';
+                canvas.style.left = '380px'; // Ao lado do clone
+                canvas.style.zIndex = '9999999';
+                canvas.style.border = '5px solid red'; // BORDA VERMELHA = FOTO
+                canvas.style.width = '350px';
                 canvas.style.height = 'auto';
-                canvas.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
-                
-                // Adiciona um botão para fechar a foto
-                const btnFechar = document.createElement('button');
-                btnFechar.innerText = "❌ FECHAR TESTE";
-                btnFechar.style.position = 'fixed';
-                btnFechar.style.top = '10px';
-                btnFechar.style.left = '10px';
-                btnFechar.style.zIndex = '10000001';
-                btnFechar.style.padding = '10px';
-                btnFechar.style.background = 'red';
-                btnFechar.style.color = 'white';
-                btnFechar.onclick = function() {
-                    document.body.removeChild(canvas);
-                    document.body.removeChild(btnFechar);
-                };
 
                 document.body.appendChild(canvas);
-                document.body.appendChild(btnFechar);
+
+                alert("Teste finalizado!\n\nAZUL = HTML (Tem que ter dados)\nVERMELHO = FOTO (Tem que ser igual ao azul)\n\nSe o Vermelho estiver branco, é erro do plugin.");
 
             }).catch(err => {
-                alert("ERRO AO GERAR: " + err.message);
-                if(document.body.contains(clone)) document.body.removeChild(clone);
+                alert("ERRO NO HTML2CANVAS: " + err.message);
+                console.error(err);
             });
-        }, 500); // Espera meio segundo antes de tirar a foto
+        }, 500);
     }
 
     function enviarTextoWhatsapp() {
