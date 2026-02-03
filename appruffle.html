@@ -244,17 +244,14 @@
         }
         
         .recibo-header {
-            background: #1f2937 !important;
-            color: #fff !important;
-            padding: 25px 20px;
-            text-align: center;
-            position: relative;
-            mask: radial-gradient(circle at bottom, transparent 6px, black 7px) bottom;
-            mask-size: 20px 100%;
-            -webkit-mask: radial-gradient(circle at bottom, transparent 6px, black 7px) bottom;
-            -webkit-mask-size: 20px 100%;
-            padding-bottom: 40px;
-        }
+    background: #1f2937 !important;
+    color: #fff !important;
+    padding: 25px 20px;
+    text-align: center;
+    position: relative;
+    /* Removido o mask-image que causava erro */
+    border-bottom: 5px solid #f59e0b; /* Borda dourada no lugar do picote */
+}
 
         .recibo-logo { font-size: 50px; margin-bottom: 10px; display: block; }
         .recibo-title { font-size: 1.5rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
@@ -2411,78 +2408,75 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 
     // --- FUNÇÃO 1: GERAR IMAGEM (PAINEL ADMIN) ---
     function gerarImagemRecibo(venda) {
-        if(!venda || !edicaoAtivaID) return;
+    if(!venda || !edicaoAtivaID) return;
+    
+    // Preenche os dados no HTML invisível
+    safeSetText('recibo_campanha', dadosDB[edicaoAtivaID].config.nomeExibicao);
+    safeSetText('recibo_nome', venda.nome);
+    safeSetText('recibo_premio', dadosDB[edicaoAtivaID].config.premio);
+    safeSetText('recibo_nums', venda.nums);
+    safeSetText('recibo_valor', venda.isGratis ? "Grátis" : venda.valor);
+    safeSetText('recibo_data', (venda.data || "").split(' ')[0]);
+    safeSetText('recibo_hash', '#' + (venda.cod || '0000'));
+    
+    // Dispara a mesma lógica de captura do cliente
+    baixarImagemPublica();
+}
 
-        // 1. Preenche dados
-        safeSetText('recibo_campanha', dadosDB[edicaoAtivaID].config.nomeExibicao);
-        safeSetText('recibo_nome', venda.nome);
-        safeSetText('recibo_premio', dadosDB[edicaoAtivaID].config.premio);
-        safeSetText('recibo_nums', venda.nums);
-        
-        let valorFinal = venda.valor;
-        if(venda.isGratis) valorFinal = "Grátis";
-        safeSetText('recibo_valor', valorFinal);
+// --- FUNÇÃO 2: GERAÇÃO PARA O CLIENTE (MOBILE FRIENDLY) ---
+function baixarImagemPublica() {
+    const original = document.getElementById('receipt-container');
+    if(!original) return alert("Erro: Estrutura do recibo não encontrada.");
 
-        safeSetText('recibo_data', (venda.data || "").split(' ')[0]);
-        safeSetText('recibo_hash', '#' + venda.cod);
-        safeSetText('recibo_timestamp', venda.data);
+    // 1. Cria um Clone visível para a "câmera" do sistema
+    const clone = original.cloneNode(true);
+    clone.style.cssText = "position:fixed; top:0; left:0; z-index:99999; background:white; width:420px; display:block; opacity:1; visibility:visible;";
+    
+    // Remove qualquer máscara restante que possa quebrar a imagem
+    const header = clone.querySelector('.recibo-header');
+    if(header) { 
+        header.style.mask = "none"; 
+        header.style.webkitMask = "none"; 
+    }
+    
+    document.body.appendChild(clone);
+    window.scrollTo(0,0); // Garante que a captura comece do topo
 
-        const brindeArea = document.getElementById('recibo_brinde_area');
-        if(brindeArea) {
-            brindeArea.style.display = venda.brinde ? 'block' : 'none';
-            if(venda.brinde) safeSetText('recibo_brinde_num', venda.brinde);
-        }
-
-        // 2. CLONE E LIMPEZA DE MÁSCARA (CRUCIAL)
-        const original = document.getElementById('receipt-container');
-        const clone = original.cloneNode(true);
-
-        clone.style.display = 'block';
-        clone.style.position = 'fixed';
-        clone.style.top = '0';
-        clone.style.left = '0';
-        clone.style.zIndex = '9999999'; 
-        clone.style.background = '#ffffff'; 
-        clone.style.width = '420px';
-        
-        // REMOVE O EFEITO SERRILHADO (MÁSCARA) DO CLONE
-        const headerDoClone = clone.querySelector('.recibo-header');
-        if(headerDoClone) {
-            headerDoClone.style.mask = 'none';
-            headerDoClone.style.webkitMask = 'none';
-            headerDoClone.style.borderBottom = '4px solid #f59e0b';
-        }
-
-        document.body.appendChild(clone);
-
+    // 2. Tira a foto com atraso para garantir renderização de fontes
+    setTimeout(() => {
         html2canvas(clone, { 
             scale: 2, 
-            backgroundColor: "#ffffff",
+            backgroundColor: "#ffffff", 
             useCORS: true,
-            scrollX: 0,
-            scrollY: 0
+            logging: false
         }).then(canvas => {
             document.body.removeChild(clone);
             
-            const output = document.getElementById('imageOutput');
-            output.innerHTML = "";
-            output.appendChild(canvas);
+            // Exibe no Modal de Visualização (já existe no seu HTML)
+            const modal = document.getElementById('generated-image-modal');
+            const container = document.getElementById('img-output-container');
+            const btnForce = document.getElementById('btn-force-download');
             
-            const link = document.getElementById('btnDownloadImage');
-            const nomeArquivo = `Recibo_${venda.nome.split(' ')[0]}_${venda.cod}.png`;
-            
-            try {
-                link.href = canvas.toDataURL("image/png");
-                link.download = nomeArquivo;
-            } catch(e) { console.error(e); }
-            
-            document.getElementById('modalPreviewRecibo').style.display = 'flex';
+            if(container) {
+                container.innerHTML = "";
+                const img = new Image();
+                img.src = canvas.toDataURL("image/png");
+                img.style.maxWidth = "100%";
+                container.appendChild(img);
+                
+                if(btnForce) {
+                    btnForce.href = img.src;
+                    btnForce.download = "Comprovante_Rifa.png";
+                }
+                
+                if(modal) modal.style.display = 'flex';
+            }
         }).catch(err => {
-            console.error(err);
             if(document.body.contains(clone)) document.body.removeChild(clone);
-            alert("Erro ao gerar imagem.");
+            alert("Erro ao gerar imagem. Tire um print da tela.");
         });
-    }
+    }, 500);
+}
 
     // --- MODO DIAGNÓSTICO COM LOG NA TELA ---
     function baixarImagemPublica() {
@@ -3459,6 +3453,18 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
              }
         }
     }
+
+database.ref('/').on('value', s => {
+    const data = s.val() || {};
+    dadosDB = data.rifas || {};
+    baseClientes = data.clientes || {};
+    
+    if (typeof renderCampanhasIniciais === "function") {
+        renderCampanhasIniciais();
+    }
+    calcularResumoGlobal();
+});
+
 </script>
 </body>
 </html>
