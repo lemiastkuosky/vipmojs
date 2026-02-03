@@ -640,7 +640,7 @@
 </div>
 
 <footer class="app-footer">
-    Criado por <strong>Le Miastkuosky</strong> - Versão 5.23 Winner Ultimate
+    Criado por <strong>Le Miastkuosky</strong> - Versão 5.13 Winner Ultimate
 </footer>
 
 <div id="modalNovaRifa" class="modal">
@@ -2484,114 +2484,116 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
         });
     }
 
-    // --- FUNÇÃO 2: BAIXAR IMAGEM PÚBLICA (MODO CLIENTE) ---
-    // --- FUNÇÃO DE DIAGNÓSTICO PASSO-A-PASSO ---
+    // --- MODO DIAGNÓSTICO COM LOG NA TELA ---
     function baixarImagemPublica() {
-        // PASSO 1: Verificar se os dados chegaram
-        const nome = document.getElementById('recibo_nome').innerText;
-        const nums = document.getElementById('recibo_nums').innerText;
+        // 1. Cria a caixa de log (Console na Tela)
+        let logBox = document.getElementById('debug-console');
+        if(!logBox) {
+            logBox = document.createElement('div');
+            logBox.id = 'debug-console';
+            logBox.style.cssText = "position:fixed; top:0; left:0; width:100%; height:150px; background:rgba(0,0,0,0.9); color:#0f0; font-family:monospace; font-size:10px; z-index:99999999; overflow-y:scroll; padding:10px; pointer-events:none;";
+            document.body.appendChild(logBox);
+        }
         
-        if(!nome || nome === "Nome do Cliente" || !nums || nums === "--") {
-            alert("ERRO DE DADOS: O recibo ainda não foi preenchido com as informações da venda.\n\nAguarde a página carregar ou verifique sua internet.");
-            return;
+        function log(msg, isError = false) {
+            const line = document.createElement('div');
+            line.style.color = isError ? '#ff4444' : '#0f0';
+            line.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logBox.appendChild(line);
+            logBox.scrollTop = logBox.scrollHeight;
+            if(isError) alert("ERRO DETECTADO: " + msg); // Alerta se for erro grave
         }
 
-        if(!confirm(`DADOS ENCONTRADOS:\nNome: ${nome}\nCotas: ${nums}\n\nPodemos gerar a imagem agora?`)) {
-            return;
-        }
+        log("=== INICIANDO PROCESSO ===");
 
-        // PASSO 2: Preparar o Recibo na Tela (Sem esconder)
-        const original = document.getElementById('receipt-container');
-        const clone = original.cloneNode(true);
+        try {
+            // 2. Verifica Elemento Original
+            const original = document.getElementById('receipt-container');
+            if(!original) throw new Error("Elemento #receipt-container não existe no HTML!");
+            log("Elemento original encontrado.");
 
-        // Configurações para garantir que você VEJA o recibo
-        clone.id = "recibo-visual-teste";
-        clone.style.display = 'block';
-        clone.style.position = 'absolute'; // Absolute é melhor que Fixed para mobile
-        clone.style.top = '50px';
-        clone.style.left = '50%';
-        clone.style.transform = 'translateX(-50%)'; // Centraliza
-        clone.style.zIndex = '9999999';
-        clone.style.background = '#ffffff';
-        clone.style.color = '#000000';
-        clone.style.width = '380px';
-        clone.style.boxShadow = '0 0 0 1000px rgba(0,0,0,0.8)'; // Escurece o fundo
-        clone.style.border = '5px solid #10b981'; // Borda Verde para confirmar HTML
+            // 3. Verifica Dados
+            const nome = document.getElementById('recibo_nome').innerText;
+            log(`Dados lidos: Nome=${nome}`);
+            if(nome === "Nome do Cliente" || !nome) log("AVISO: Nome parece vazio ou padrão.", true);
 
-        // Remove serrilhado problemático
-        const header = clone.querySelector('.recibo-header');
-        if(header) {
-            header.style.mask = 'none';
-            header.style.webkitMask = 'none';
-            header.style.borderBottom = '2px solid gold';
-        }
-
-        // Adiciona à tela
-        document.body.appendChild(clone);
-        
-        // Rola para o topo para garantir a foto
-        window.scrollTo(0,0);
-
-        // Pausa para você ver se o HTML está bonito
-        setTimeout(() => {
-            if(!confirm("Olhe para a tela agora.\n\nVocê está vendo o recibo com BORDA VERDE e os dados corretos?\n\nClique OK para transformar em imagem.")) {
-                document.body.removeChild(clone);
-                return;
+            // 4. Cria o Clone
+            const clone = original.cloneNode(true);
+            clone.id = "clone-debug";
+            
+            // Estilização agressiva para garantir visibilidade
+            clone.style.cssText = "display:block !important; visibility:visible !important; opacity:1 !important; position:fixed !important; top:160px !important; left:10px !important; z-index:9999999 !important; background:white !important; width:350px !important; border:2px solid blue !important; box-shadow: 0 0 0 100vw rgba(0,0,0,0.5) !important;";
+            
+            // Remove CSS problemático (Máscaras/Serrilhado)
+            const header = clone.querySelector('.recibo-header');
+            if(header) {
+                header.style.mask = 'none';
+                header.style.webkitMask = 'none';
+                header.style.borderBottom = '4px solid #f59e0b';
+                log("Máscaras CSS removidas do clone.");
             }
 
-            // PASSO 3: Gerar a Foto
-            const btn = document.getElementById('btn-download-publico');
-            if(btn) btn.innerText = "Gerando imagem...";
+            document.body.appendChild(clone);
+            log("Clone adicionado ao DOM (Borda Azul).");
 
-            html2canvas(clone, { 
-                scale: 2, 
+            // 5. Tenta gerar a foto
+            log("Chamando html2canvas... Aguarde.");
+            
+            // Rola para o topo para evitar cortes
+            window.scrollTo(0,0);
+
+            html2canvas(clone, {
+                scale: 2,
                 backgroundColor: "#ffffff",
                 useCORS: true,
+                logging: true, // Log interno
                 scrollX: 0,
                 scrollY: 0,
-                // Força captura da área exata do clone
-                x: clone.offsetLeft,
-                y: clone.offsetTop,
                 width: clone.offsetWidth,
-                height: clone.offsetHeight
+                height: clone.offsetHeight,
+                onclone: (doc) => {
+                    log("html2canvas acessou o clone com sucesso.");
+                }
             }).then(canvas => {
-                document.body.removeChild(clone); // Remove o HTML verde
-                if(btn) btn.innerText = "Baixar Imagem";
-
-                // Mostra a imagem final na tela antes de baixar
-                canvas.style.position = 'fixed';
-                canvas.style.top = '50%';
-                canvas.style.left = '50%';
-                canvas.style.transform = 'translate(-50%, -50%)';
-                canvas.style.zIndex = '10000000';
-                canvas.style.border = '5px solid blue'; // Borda Azul = IMAGEM FINAL
-                canvas.style.maxWidth = '90%';
-                canvas.style.height = 'auto';
+                log("Canvas gerado! Verificando imagem...");
                 
-                document.body.appendChild(canvas);
+                // Verifica se o canvas tem pixels
+                const ctx = canvas.getContext('2d');
+                const pixel = ctx.getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data;
+                log(`Pixel central: R=${pixel[0]} G=${pixel[1]} B=${pixel[2]} A=${pixel[3]}`);
+                
+                if(pixel[3] === 0) {
+                    log("ERRO CRÍTICO: A IMAGEM GERADA ESTÁ TRANSPARENTE/BRANCA!", true);
+                    return; // Não remove o clone para analise
+                }
 
+                // Cria o link
+                const link = document.createElement('a');
+                link.download = `Comprovante_${Date.now()}.png`;
+                link.href = canvas.toDataURL("image/png");
+                
+                log("Iniciando download...");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                log("SUCESSO! Imagem baixada.");
+                
+                // Remove o clone só se deu certo
                 setTimeout(() => {
-                    const link = document.createElement('a');
-                    link.download = `Comprovante_Rifa.png`;
-                    link.href = canvas.toDataURL("image/png");
-                    link.click();
-                    
-                    alert("A imagem com BORDA AZUL apareceu?\nO download deve ter iniciado.\n\nSe a imagem azul estiver BRANCA, me avise.");
-                    
-                    // Limpa a imagem da tela depois de 5 segundos
-                    setTimeout(() => { 
-                        if(document.body.contains(canvas)) document.body.removeChild(canvas); 
-                    }, 5000);
-                }, 500);
+                    if(document.body.contains(clone)) document.body.removeChild(clone);
+                    log("Clone limpo.");
+                }, 3000);
 
             }).catch(err => {
-                alert("ERRO TÉCNICO: " + err.message);
+                log(`FALHA NO HTML2CANVAS: ${err.message}`, true);
                 console.error(err);
-                if(document.body.contains(clone)) document.body.removeChild(clone);
-                if(btn) btn.innerText = "Tentar Novamente";
+                // NÃO REMOVE O CLONE SE DER ERRO
             });
 
-        }, 500);
+        } catch (e) {
+            log(`ERRO GERAL: ${e.message}`, true);
+        }
     }
 
     function enviarTextoWhatsapp() {
