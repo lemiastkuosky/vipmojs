@@ -369,8 +369,49 @@
     </script>
 </head>
 <body>
+    
+    <div id="receipt-container" style="position: absolute; top: 0; left: 0; z-index: -9999; opacity: 0; pointer-events: none; width: 420px; background: white;">
+        <div class="recibo-header">
+            <span class="recibo-logo">🎟️</span>
+            <h2 class="recibo-title">Comprovante</h2>
+            <p class="recibo-subtitle" id="recibo_campanha">Nome da Ação</p>
+        </div>
 
-<div id="modalLogin" class="modal">
+        <div class="recibo-body">
+            <div class="recibo-row">
+                <span class="recibo-label">Participante</span>
+                <span class="recibo-val" id="recibo_nome">Nome do Cliente</span>
+            </div>
+            <div class="recibo-row">
+                <span class="recibo-label">Prêmio</span>
+                <span class="recibo-val" id="recibo_premio">Prêmio Principal</span>
+            </div>
+
+            <div class="recibo-numbers-box">
+                <div style="font-size:0.75rem; color:#9ca3af; margin-bottom:5px; text-transform:uppercase;">Seus Números</div>
+                <div class="recibo-numbers" id="recibo_nums">--</div>
+            </div>
+
+            <div id="recibo_brinde_area" class="extra-box" style="display:none;">
+                <div class="extra-title">🍀 Palpite Extra</div>
+                <div class="extra-num" id="recibo_brinde_num">--</div>
+            </div>
+
+            <div class="recibo-total">
+                <div style="font-size:0.7rem; opacity:0.8; font-weight:normal;">TOTAL REGISTRADO</div>
+                <span id="recibo_valor">R$ 0,00</span>
+            </div>
+
+            <div class="recibo-footer">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span>DATA: <b id="recibo_data">--/--</b></span>
+                    <span>HASH: <b id="recibo_hash">#---</b></span>
+                </div>
+                <div id="recibo_timestamp" style="font-size:0.6rem; opacity:0.7;">00/00/0000 00:00:00</div>
+            </div>
+        </div>
+    </div>
+    <div id="modalLogin" class="modal">
     <div class="modal-content" style="background:#1f2937; color:white; border:1px solid #374151;">
         <div style="font-size:3rem;">🔒</div>
         <h2 style="color:white;">Acesso Restrito</h2>
@@ -849,7 +890,7 @@
     <div class="modal-content">
         <div style="font-size:3rem;">✅</div>
         <h2 style="color:var(--primary)">Sucesso!</h2>
-        <p id="msgSucesso">Operação realizada.</p>
+        <p id="msgSucessoText">Operação realizada.</p>
         <button class="btn-main" onclick="fecharModais()">OK</button>
     </div>
 </div>
@@ -985,49 +1026,8 @@
             </div>
         </div>
     </div>
-    
-    <div id="receipt-container" style="position: absolute; top: 0; left: 0; z-index: -9999; opacity: 0; pointer-events: none; width: 420px; background: white;">
-    <div class="recibo-header">
-        <span class="recibo-logo">🎟️</span>
-        <h2 class="recibo-title">Comprovante</h2>
-        <p class="recibo-subtitle" id="recibo_campanha">Nome da Ação</p>
-    </div>
 
-    <div class="recibo-body">
-        <div class="recibo-row">
-            <span class="recibo-label">Participante</span>
-            <span class="recibo-val" id="recibo_nome">Nome do Cliente</span>
-        </div>
-        <div class="recibo-row">
-            <span class="recibo-label">Prêmio</span>
-            <span class="recibo-val" id="recibo_premio">Prêmio Principal</span>
-        </div>
-
-        <div class="recibo-numbers-box">
-            <div style="font-size:0.75rem; color:#9ca3af; margin-bottom:5px; text-transform:uppercase;">Seus Números</div>
-            <div class="recibo-numbers" id="recibo_nums">--</div>
-        </div>
-
-        <div id="recibo_brinde_area" class="extra-box" style="display:none;">
-            <div class="extra-title">🍀 Palpite Extra</div>
-            <div class="extra-num" id="recibo_brinde_num">--</div>
-        </div>
-
-        <div class="recibo-total">
-            <div style="font-size:0.7rem; opacity:0.8; font-weight:normal;">TOTAL REGISTRADO</div>
-            <span id="recibo_valor">R$ 0,00</span>
-        </div>
-
-        <div class="recibo-footer">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <span>DATA: <b id="recibo_data">--/--</b></span>
-                <span>HASH: <b id="recibo_hash">#---</b></span>
-            </div>
-            <div id="recibo_timestamp" style="font-size:0.6rem; opacity:0.7;">00/00/0000 00:00:00</div>
-        </div>
-    </div>
-</div>
-    <script>
+<script>
     // Configuração do Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyAHpLUE2MhiTz_J4VtLEoRd-a3b1cJzKlQ",
@@ -2409,6 +2409,7 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 
     // --- FUNÇÕES DE IMAGEM E WHATSAPP (QUE ESTAVAM FALTANDO) ---
 
+    // --- FUNÇÃO 1: GERAR IMAGEM (PAINEL ADMIN) ---
     function gerarImagemRecibo(venda) {
         if(!venda || !edicaoAtivaID) return;
 
@@ -2432,123 +2433,138 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
             if(venda.brinde) safeSetText('recibo_brinde_num', venda.brinde);
         }
 
-        const container = document.getElementById('receipt-container');
-        
-        // --- TRUQUE FINAL ---
-        // Torna o elemento totalmente "real" para o navegador por um instante
-        // Ele está em z-index -9999, então continuará atrás do site, invisível ao usuário
-        container.style.opacity = '1'; 
-
-        // Aguarda um frame de renderização
-        requestAnimationFrame(() => {
-            html2canvas(container, { 
-                scale: 2, 
-                backgroundColor: "#ffffff",
-                useCORS: true,
-                logging: true, // Ajuda a debugar se der erro
-                scrollX: 0,
-                scrollY: 0,
-                // Força o canvas a capturar exatamente as dimensões do elemento
-                width: 420,
-                windowWidth: 420
-            }).then(canvas => {
-                // Volta a esconder
-                container.style.opacity = '0';
-                
-                const output = document.getElementById('imageOutput');
-                output.innerHTML = "";
-                output.appendChild(canvas);
-                
-                const link = document.getElementById('btnDownloadImage');
-                const nomeArquivo = `Recibo_${venda.nome.split(' ')[0]}_${venda.cod}.png`;
-                
-                try {
-                    link.href = canvas.toDataURL("image/png");
-                    link.download = nomeArquivo;
-                } catch(e) { console.error(e); }
-                
-                document.getElementById('modalPreviewRecibo').style.display = 'flex';
-            }).catch(err => {
-                console.error(err);
-                container.style.opacity = '0'; // Garante que esconde se der erro
-                alert("Erro ao gerar imagem.");
-            });
-        });
-    }
-
-    // --- FUNÇÃO 2: BAIXAR IMAGEM PÚBLICA (CORRIGIDA COM CLONE) ---
-    function baixarImagemPublica() {
+        // 2. CLONE E LIMPEZA DE MÁSCARA (CRUCIAL)
         const original = document.getElementById('receipt-container');
-        if(!original) return;
-        
-        const clone = original.cloneNode(true);
-
-        // Configurações visuais para garantir que apareça na foto
-        clone.style.display = 'block';
-        clone.style.visibility = 'visible';
-        clone.style.position = 'fixed'; // Fixado na tela
-        clone.style.top = '0';
-        clone.style.left = '0';
-        clone.style.zIndex = '9999999';
-        clone.style.background = '#ffffff';
-        clone.style.width = '400px'; 
-        clone.style.maxWidth = '100vw'; 
-
-        document.body.appendChild(clone);
-
-        html2canvas(clone, { 
-            scale: 2,
-            backgroundColor: "#ffffff",
-            scrollX: 0,
-            scrollY: 0
-        }).then(canvas => {
-            document.body.removeChild(clone);
-            
-            const link = document.createElement('a');
-            link.download = `Meu_Comprovante.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-        }).catch(err => {
-            if(document.body.contains(clone)) document.body.removeChild(clone);
-            console.error(err);
-        });
-    }
-
-    // --- FUNÇÃO 2: BAIXAR IMAGEM (LINK PÚBLICO DO CLIENTE) ---
-    function baixarImagemPublica() {
-        const original = document.getElementById('receipt-container');
-        if(!original) return;
-        
-        // Aplica a mesma técnica do Clone
         const clone = original.cloneNode(true);
 
         clone.style.display = 'block';
         clone.style.position = 'fixed';
         clone.style.top = '0';
         clone.style.left = '0';
-        clone.style.zIndex = '999999';
-        clone.style.background = '#ffffff'; // Garante fundo branco
-        clone.style.width = '420px'; // Garante largura correta no celular
+        clone.style.zIndex = '9999999'; 
+        clone.style.background = '#ffffff'; 
+        clone.style.width = '420px';
+        
+        // REMOVE O EFEITO SERRILHADO (MÁSCARA) DO CLONE
+        const headerDoClone = clone.querySelector('.recibo-header');
+        if(headerDoClone) {
+            headerDoClone.style.mask = 'none';
+            headerDoClone.style.webkitMask = 'none';
+            headerDoClone.style.borderBottom = '4px solid #f59e0b';
+        }
 
         document.body.appendChild(clone);
 
         html2canvas(clone, { 
-            scale: 2,
+            scale: 2, 
             backgroundColor: "#ffffff",
+            useCORS: true,
             scrollX: 0,
             scrollY: 0
         }).then(canvas => {
             document.body.removeChild(clone);
             
-            const link = document.createElement('a');
-            link.download = `Meu_Comprovante.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
+            const output = document.getElementById('imageOutput');
+            output.innerHTML = "";
+            output.appendChild(canvas);
+            
+            const link = document.getElementById('btnDownloadImage');
+            const nomeArquivo = `Recibo_${venda.nome.split(' ')[0]}_${venda.cod}.png`;
+            
+            try {
+                link.href = canvas.toDataURL("image/png");
+                link.download = nomeArquivo;
+            } catch(e) { console.error(e); }
+            
+            document.getElementById('modalPreviewRecibo').style.display = 'flex';
         }).catch(err => {
-            document.body.removeChild(clone);
-            alert("Erro ao baixar. Tente atualizar a página.");
+            console.error(err);
+            if(document.body.contains(clone)) document.body.removeChild(clone);
+            alert("Erro ao gerar imagem.");
         });
     }
+
+    // --- FUNÇÃO 2: BAIXAR IMAGEM PÚBLICA (MODO CLIENTE) ---
+    function baixarImagemPublica() {
+        console.log("1. Iniciando processo de download...");
+        
+        const original = document.getElementById('receipt-container');
+        if(!original) {
+            alert("ERRO CRÍTICO: Elemento 'receipt-container' não existe no HTML!");
+            return;
+        }
+
+        // 1. Cria o Clone
+        const clone = original.cloneNode(true);
+        console.log("2. Clone criado.");
+
+        // 2. Configurações visuais (Força visibilidade extrema)
+        clone.id = "debug-receipt"; 
+        clone.style.display = 'block';
+        clone.style.visibility = 'visible';
+        clone.style.opacity = '1';
+        clone.style.position = 'fixed';
+        clone.style.top = '50px'; // Baixa um pouco pra você ver
+        clone.style.left = '50px';
+        clone.style.zIndex = '9999999';
+        clone.style.background = '#ffffff';
+        clone.style.width = '420px';
+        clone.style.border = '5px solid red'; // Borda vermelha para confirmar que existe
+
+        // Limpa máscara
+        const headerDoClone = clone.querySelector('.recibo-header');
+        if(headerDoClone) {
+            headerDoClone.style.mask = 'none';
+            headerDoClone.style.webkitMask = 'none';
+        }
+
+        document.body.appendChild(clone);
+        console.log("3. Clone adicionado ao corpo da página. Altura:", clone.offsetHeight);
+
+        if(clone.offsetHeight === 0) {
+            alert("ALERTA: O recibo tem altura 0. O conteúdo está invisível.");
+        }
+
+        // Tira a foto
+        console.log("4. Chamando html2canvas...");
+        
+        // Rola para o topo para evitar bugs de scroll
+        window.scrollTo(0,0);
+
+        html2canvas(clone, { 
+            scale: 2,
+            backgroundColor: "#ffffff",
+            logging: true, // ATIVA O LOG NO CONSOLE DO PLUGIN
+            useCORS: true,
+            scrollX: 0,
+            scrollY: 0,
+            width: 420, // Força largura
+            windowWidth: document.documentElement.offsetWidth
+        }).then(canvas => {
+            console.log("5. Canvas gerado com sucesso!");
+            
+            // Verifica se o canvas está vazio
+            const context = canvas.getContext('2d');
+            const pixelData = context.getImageData(100, 100, 1, 1).data;
+            console.log("Cor do pixel (100,100):", pixelData); // Se for 0,0,0,0 é transparente
+
+            // Remove o clone (Deixei um delay de 2s para você ver o recibo na tela)
+            setTimeout(() => {
+                if(document.body.contains(clone)) document.body.removeChild(clone);
+            }, 2000);
+            
+            const link = document.createElement('a');
+            link.download = `Debug_Comprovante.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            
+        }).catch(err => {
+            console.error("ERRO HTML2CANVAS:", err);
+            alert("ERRO NA GERAÇÃO: " + err.message);
+            // Não remove o clone para você poder inspecionar
+        });
+    }
+
     function enviarTextoWhatsapp() {
         if(!vendaRecenteParaEnvio || !edicaoAtivaID) return;
         
@@ -2584,35 +2600,6 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
     function abrirWhatsAposBaixar() {
         // Apenas reencaminha para a função de texto, já que a imagem o usuário já baixou
         enviarTextoWhatsapp();
-    }
-
-    function baixarImagemPublica() {
-        const container = document.getElementById('receipt-container');
-        if(!container) return;
-        
-        // Garante que está visível e posicionado
-        const oldDisplay = container.style.display;
-        container.style.display = 'block';
-        container.style.position = 'relative'; // Importante para o modo público
-        container.style.zIndex = '1';
-        container.style.top = '0';
-        container.style.left = '0';
-
-        setTimeout(() => {
-            html2canvas(container, { 
-                scale: 2,
-                backgroundColor: "#ffffff",
-                scrollX: 0,
-                scrollY: 0
-            }).then(canvas => {
-                if(oldDisplay === 'none') container.style.display = 'none';
-                
-                const link = document.createElement('a');
-                link.download = `Meu_Comprovante.png`;
-                link.href = canvas.toDataURL("image/png");
-                link.click();
-            });
-        }, 100);
     }
 
     function alternarStatusPagamento(key, novoStatus) { if(!edicaoAtivaID) return; database.ref('rifas/'+edicaoAtivaID+'/vendas/'+key).update({pago: novoStatus}); }
