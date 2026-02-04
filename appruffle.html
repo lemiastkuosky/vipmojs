@@ -37,29 +37,35 @@
 
         /* --- TEMA ESCURO (DARK MODE) --- */
         [data-theme="dark"] {
-            --dark: #f1f5f9;
-            --gray: #94a3b8;
-            --light: #121212; /* Chumbo Profundo */
-            --white: #1e1e1e; /* Grafite */
-            --bg-input: #2a2a2a;
-            --border-input: #3f3f3f;
-            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
-        }
+        --dark: #f1f5f9;
+        --gray: #94a3b8;
+        --light: #121212;
+        --white: #1e1e1e;
+        --bg-input: #2a2a2a;
+        --border-input: #3f3f3f;
+    }
 
-        /* --- DESIGN RECIBO PREMIUM MULTIRODAS --- */
-        #receipt-container {
-            position: fixed;
-            top: -9999px;
-            left: -9999px;
-            width: 450px;
-            background: #ffffff !important;
-            color: #111827 !important;
-            font-family: 'Inter', sans-serif;
-            border-radius: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
-        }
+    /* Forçar cor do texto nos inputs no modo dark */
+    [data-theme="dark"] input, 
+    [data-theme="dark"] select, 
+    [data-theme="dark"] textarea {
+        color: #ffffff !important; /* Resolve o problema do texto invisível/preto */
+    }
+
+    /* --- AJUSTE DE TAMANHO DO COMPROVANTE (RECIBO) --- */
+    #receipt-container {
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
+        width: 420px; /* Ajustado para 420px para melhor compatibilidade mobile */
+        background: #fffde7 !important; 
+        color: #1f2937 !important;
+        font-family: 'Inter', sans-serif;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #fef08a;
+    }
 
         .receipt-header {
             background: #0d3b66 !important; /* Azul Profundo */
@@ -265,7 +271,7 @@
         /* --- BANNERS --- */
         .promo-banner { background: #fffbeb; color: #92400e; padding: 12px; border-radius: var(--radius); border: 1px solid #fcd34d; margin-bottom: 15px; font-size: 0.9rem; text-align: center; line-height: 1.4; }
         .total-bar { background: var(--dark); color: var(--light); padding: 16px; border-radius: var(--radius); margin-top: 15px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        [data-theme="dark"] .total-bar { background: #000; border: 1px solid #333; }
+        [data-theme="dark"] .total-bar { background: #ffee00; border: 1px solid #333; }
 
         /* --- MODAIS --- */
         .modal { 
@@ -663,12 +669,12 @@
                         <div id="autocomplete-tel-list" class="autocomplete-items"></div>
                     </div>
                     
-                    <div style="background:var(--bg-success-soft); padding:15px; border-radius:12px; border:2px solid var(--primary); margin-top:15px; margin-bottom:15px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);">
-                        <label style="color:var(--text-success-dark); font-weight:800; font-size:0.9rem; margin-top:0;">🎟️ Números (Cotas Normais)</label>
+                    <div style="background:#ecfdf5; padding:15px; border-radius:12px; border:2px solid var(--primary); margin-top:15px; margin-bottom:15px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);">
+                        <label style="color:var(--text-success-dark); font-weight:800; font-size:1.1rem; margin-top:0;">🎟️ Números (Cotas Normais)</label>
                         <input type="tel" id="numPart" placeholder="Digite os números vendidos..." oninput="calcularTotalLive()" style="border-color:var(--primary); font-weight:bold; font-size:1.1rem; background:var(--white); color:var(--dark);">
                     </div>
 
-                    <div style="background:var(--bg-danger-soft); padding:10px; border-radius:8px; border:1px dashed #ef4444; margin-top:5px;">
+                    <div style="background:#fef2f2; padding:10px; border-radius:8px; border:1px dashed #ef4444; margin-top:5px;">
                         <label style="color:var(--text-danger-dark); margin-top:0; font-size:0.8rem;">🎁 Números Bônus (Grátis)</label>
                         <input type="tel" id="numPartGratis" placeholder="Digite os números que são grátis..." style="background:var(--white); border-color:#fecaca; color:var(--dark);" oninput="formatarInputBonus(this)">
                     </div>
@@ -2567,32 +2573,62 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 }
 
     function renderAgenda() { 
-        const c = document.getElementById('listaAgenda'); 
-        const termo = document.getElementById('buscaAgenda').value.toLowerCase().trim();
-        
-        // --- NOVO: Atualiza título Agenda ---
-        const totalContatos = Object.keys(baseClientes).length;
-        const tituloAgenda = document.getElementById('tituloAgenda');
-        if(tituloAgenda) {
-            tituloAgenda.innerHTML = `👥 Agenda de Contatos <span style="font-size:0.9rem; background:#e5e7eb; padding:2px 8px; border-radius:10px;">${totalContatos}</span>`;
-        }
-        // ------------------------------------
-
-        c.innerHTML = ""; 
-        let lista = Object.keys(baseClientes).map(key => ({ id: key, nome: baseClientes[key].nome, tel: baseClientes[key].tel }));
-        lista.sort((a, b) => a.nome.localeCompare(b.nome));
-        
-        // CORRIGIDO: Busca ignorando acentos
-        if (termo.length > 0) { 
-            lista = lista.filter(cliente => 
-                normalizeText(cliente.nome).includes(normalizeText(termo)) || 
-                cliente.tel.replace(/\D/g, '').includes(termo)
-            ); 
-        }
-        
-        if (lista.length === 0) { c.innerHTML = "<div style='text-align:center; padding:20px; color:#9ca3af;'>Nenhum contato encontrado.</div>"; return; }
-        lista.forEach(i => { c.innerHTML += `<div class="venda-item"><div><b>${i.nome}</b><br><small>${i.tel}</small></div><div class="acoes"><button class="btn-edit" onclick="abrirModalAgenda('${i.id}')">✏️</button><button class="btn-del" onclick="pedirConfirmacao('CONTATO','${i.id}')">X</button></div></div>`; }); 
+    const c = document.getElementById('listaAgenda'); 
+    const inputBusca = document.getElementById('buscaAgenda');
+    const termo = inputBusca ? inputBusca.value.toLowerCase().trim() : "";
+    
+    // 1. Verifica se a base de clientes existe
+    if (!baseClientes) {
+        c.innerHTML = "<p style='text-align:center; color:var(--gray);'>Nenhum dado carregado.</p>";
+        return;
     }
+
+    // 2. Converte para array tratando tanto Objetos quanto Arrays do Firebase
+    let lista = Object.keys(baseClientes).map(key => ({ 
+        id: key, 
+        nome: baseClientes[key].nome || "", 
+        tel: baseClientes[key].tel || "" 
+    }));
+
+    // 3. Filtro de busca (Só filtra se houver algo digitado)
+    if (termo.length > 0) { 
+        lista = lista.filter(cliente => {
+            const nomeNorm = normalizeText(cliente.nome);
+            const telNorm = cliente.tel.replace(/\D/g, '');
+            return nomeNorm.includes(normalizeText(termo)) || telNorm.includes(termo);
+        }); 
+    }
+
+    // 4. Ordenação Alfabética Segura
+    lista.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    // 5. Atualiza o Título com a contagem real
+    const tituloAgenda = document.getElementById('tituloAgenda');
+    if (tituloAgenda) {
+        tituloAgenda.innerHTML = `👥 Agenda <span style="font-size:0.8rem; background:var(--primary); color:white; padding:2px 8px; border-radius:10px;">${lista.length} contatos</span>`;
+    }
+
+    // 6. Renderização
+    c.innerHTML = ""; 
+    if (lista.length === 0) { 
+        c.innerHTML = "<div style='text-align:center; padding:20px; color:var(--gray);'>Nenhum contato encontrado.</div>"; 
+        return; 
+    }
+
+    lista.forEach(i => { 
+        c.innerHTML += `
+            <div class="venda-item">
+                <div>
+                    <b>${i.nome || "(Sem Nome)"}</b><br>
+                    <small style="color:var(--gray)">${i.tel || "(Sem Telefone)"}</small>
+                </div>
+                <div class="acoes">
+                    <button class="btn-edit" onclick="abrirModalAgenda('${i.id}')">✏️</button>
+                    <button class="btn-del" onclick="pedirConfirmacao('CONTATO','${i.id}')">X</button>
+                </div>
+            </div>`; 
+    }); 
+}
 
     // --- FUNÇÕES DE IMAGEM E WHATSAPP (QUE ESTAVAM FALTANDO) ---
 
