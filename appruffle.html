@@ -54,25 +54,26 @@
 
     /* --- AJUSTE DE TAMANHO DO COMPROVANTE (RECIBO) --- */
     #receipt-container {
-        position: fixed;
-        top: -9999px;
-        left: -9999px;
-        width: 420px; /* Ajustado para 420px para melhor compatibilidade mobile */
-        background: #fffde7 !important; 
-        color: #1f2937 !important;
-        font-family: 'Inter', sans-serif;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid #fef08a;
-    }
+    position: fixed;
+    top: -9999px; /* Escondido da tela */
+    left: -9999px;
+    width: 400px; /* Largura fixa ideal para WhatsApp */
+    height: auto !important; /* Altura cresce conforme o conteúdo */
+    background: #fffde7 !important; 
+    color: #1f2937 !important;
+    font-family: 'Inter', sans-serif;
+    overflow: visible !important; /* Remove qualquer trava de rolagem */
+    border: none;
+    padding: 0;
+    margin: 0;
+}
 
-        .receipt-header {
-            background: #0d3b66 !important; /* Azul Profundo */
-            padding: 45px 30px;
-            text-align: center;
-            position: relative;
-        }
+.receipt-content {
+    padding: 30px;
+    background: #fffde7 !important; 
+    height: auto !important;
+    overflow: visible !important;
+}
 
         .receipt-logo-main {
             width: 220px;
@@ -653,7 +654,7 @@
                 </div>
 
                 <div style="margin-top:20px; text-align:center;">
-                    <button class="btn-back" style="width:100%; justify-content:center; background:var(--bg-input); border-radius:12px; padding:12px;" onclick="document.getElementById('areaFinalizadas').style.display = document.getElementById('areaFinalizadas').style.display == 'none' ? 'block' : 'none'">
+                    <button class="btn-back" style="width:100%; justify-content:center; background:#e5e7eb; border-radius:12px; padding:12px;" onclick="document.getElementById('areaFinalizadas').style.display = document.getElementById('areaFinalizadas').style.display == 'none' ? 'block' : 'none'">
                         📂 Ver Histórico de Finalizadas
                     </button>
                     <div id="areaFinalizadas" style="display:none; margin-top:10px; border-left:4px solid var(--gray); padding-left:10px;">
@@ -2684,28 +2685,33 @@ function baixarImagemPublica() {
     const element = document.getElementById('receipt-container');
     if (!element) return;
 
-    // Torna o elemento visível temporariamente para medição de tamanho real
+    // 1. Prepara o elemento para captura sem cortes
     element.style.position = 'relative';
     element.style.top = '0';
     element.style.left = '0';
 
-    // Captura com altura dinâmica (scroll de altura total)
+    // 2. Captura ignorando a rolagem da janela
     html2canvas(element, {
-        scale: 2, // Melhora a qualidade
+        scale: 2, // Alta qualidade
         backgroundColor: "#fffde7",
         useCORS: true,
-        width: 400, // Força a largura do comprovante
-        height: element.scrollHeight, // Pega a altura total, mesmo que seja longa
-        windowHeight: element.scrollHeight 
+        logging: false,
+        width: 400,
+        // O segredo está aqui: capturar a altura total do conteúdo (scrollHeight)
+        height: element.scrollHeight, 
+        windowHeight: element.scrollHeight,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0
     }).then(canvas => {
-        // Volta o elemento para o modo oculto
+        // 3. Devolve o elemento para o estado escondido
         element.style.position = 'fixed';
         element.style.top = '-9999px';
         element.style.left = '-9999px';
 
         const imgData = canvas.toDataURL("image/png");
         
-        // Se estiver no painel admin, abre o modal de preview
+        // Exibe no modal de visualização
         const imgOutput = document.getElementById('imageOutput');
         if(imgOutput) {
             imgOutput.innerHTML = `<img src="${imgData}" style="width:100%; border-radius:12px;">`;
@@ -2713,7 +2719,7 @@ function baixarImagemPublica() {
             document.getElementById('btnDownloadImage').download = `Recibo_${Date.now()}.png`;
             document.getElementById('modalPreviewRecibo').style.display = 'flex';
         } else {
-            // Se for modo cliente direto, baixa automaticamente
+            // Download direto (modo cliente)
             const link = document.createElement('a');
             link.download = `Comprovante.png`;
             link.href = imgData;
