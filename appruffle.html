@@ -327,8 +327,26 @@
         .app-footer strong { color: var(--primary-dark); }
 
         /* --- RESUMO ESTATÍSTICO --- */
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        @media (min-width: 480px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+        .stats-grid { 
+    display: grid; 
+    grid-template-columns: repeat(5, 1fr); 
+    gap: 5px; /* Espaçamento menor entre os cards */
+    margin-bottom: 20px; 
+}
+
+/* Ajuste de tamanho para telas muito pequenas (Mobile) */
+@media (max-width: 480px) {
+    .stat-card {
+        padding: 8px 4px; /* Reduz o preenchimento interno */
+    }
+    .stat-val {
+        font-size: 0.9rem; /* Diminui o número para não quebrar */
+    }
+    .stat-label {
+        font-size: 0.6rem; /* Diminui o texto da legenda */
+        letter-spacing: 0;
+    }
+}
         .stat-card { background: var(--white); padding: 12px; border-radius: var(--radius); text-align: center; box-shadow: var(--shadow); border: 1px solid var(--light); position: relative; overflow: hidden; transition: transform 0.1s; }
         .stat-card:active { transform: scale(0.98); opacity: 0.9; }
         .stat-val { font-size: 1.2rem; font-weight: 800; color: var(--dark); display: block; margin-bottom: 2px; }
@@ -341,19 +359,24 @@
 
         /* --- TEMPLATE DO RECIBO PRO (SEMPRE BRANCO PARA PRINT) --- */
         #receipt-container {
-            position: fixed;
-            top: -9999px;
-            left: -9999px;
-            width: 450px;
-            /* Cor de papel amarelo claro */
-            background: #fffde7 !important; 
-            color: #1f2937 !important;
-            font-family: 'Inter', sans-serif;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-            border-radius: 4px; /* Mais quadrado como papel */
-            overflow: hidden;
-            border: 1px solid #fef08a;
-        }
+    position: fixed;
+    top: -9999px; /* Mantém fora da tela */
+    left: -9999px;
+    width: 400px; /* Largura ideal para WhatsApp */
+    height: auto; /* Deixa a altura crescer conforme o texto */
+    background: #fffde7 !important; 
+    color: #1f2937 !important;
+    font-family: 'Inter', sans-serif;
+    border-radius: 0; /* Remove arredondamento para parecer papel real */
+    overflow: visible; /* Garante que nada seja cortado */
+    border: none;
+}
+
+.receipt-content {
+    padding: 30px;
+    background: #fffde7 !important; /* Mesma cor do fundo pai */
+    min-height: 100%;
+}
         
         .recibo-header {
             /* Fundo chumbo que você pediu, mas com borda que combina com o amarelo */
@@ -1256,18 +1279,18 @@ function mostrarSucesso(msg) {
 
     // --- SISTEMA DE LOGIN ---
     function tentarLogin() {
-        const input = document.getElementById('inputSenhaAdmin');
-        const pass = input.value.trim().toLowerCase();
-        const token = btoa(pass);
-        
-        if (token === ADMIN_TOKEN) {
-            localStorage.setItem('auth_rifa_pro', 'true'); 
-            document.getElementById('modalLogin').style.display = 'none';
-        } else {
-            alert("Senha Incorreta!");
-            input.value = "";
-        }
+    const input = document.getElementById('inputSenhaAdmin');
+    const pass = input.value.trim().toLowerCase();
+    const token = btoa(pass);
+    
+    if (token === ADMIN_TOKEN) {
+        localStorage.setItem('auth_rifa_pro', 'true');
+        document.getElementById('modalLogin').style.display = 'none';
+    } else {
+        alert("Senha Incorreta!");
+        input.value = "";
     }
+}
     
     function fazerLogout() {
         if(confirm("Deseja sair e bloquear o sistema?")) {
@@ -1389,42 +1412,28 @@ function mostrarSucesso(msg) {
 
     } else {
         // --- MODO ADMIN (PADRÃO) ---
-        // Carrega tudo como antes
         database.ref('/').on('value', (s) => {
-        const r = s.val() || {};
-        
-        // Atualiza a variável local com o banco de dados atual
-        dadosDB = r.rifas || {}; 
-        baseClientes = r.clientes || {};
-        
-        // Gerenciamento de Login
-        document.body.classList.remove('mode-client');
-        if(localStorage.getItem('auth_rifa_pro') !== 'true') {
-            document.getElementById('modalLogin').style.display = 'flex';
-        } else {
-            document.getElementById('modalLogin').style.display = 'none';
-        }
-        
-        // Atualiza as telas
-        renderCampanhasIniciais();
-        renderAgenda();
-        
-        if(edicaoAtivaID) { 
-            // Se a rifa ativa foi excluída, volta pro início
-            if(!dadosDB[edicaoAtivaID]) {
-                voltarInicio();
-                alert("A campanha visualizada foi excluída.");
-            } else {
-                renderVendas(); 
-                renderGastos();
-            }
-        }
-
-        // --- AQUI ESTÁ O SEGREDO ---
-        // Recalcula o financeiro toda vez que algo mudar no banco (inclusive exclusão)
-        calcularResumoGlobal();
-    });
-}
+    const data = s.val() || {};
+    
+    // 1. Atualiza as variáveis na memória do sistema
+    dadosDB = data.rifas || {}; 
+    baseClientes = data.clientes || {};
+    
+    // 2. BACKUP DE SEGURANÇA: Salva uma cópia no LocalStorage do navegador
+    // Isso garante que você não perca dados se a internet cair
+    localStorage.setItem('backup_rifas_offline', JSON.stringify(dadosDB));
+    localStorage.setItem('backup_clientes_offline', JSON.stringify(baseClientes));
+    
+    // 3. Atualiza as telas com os dados vindos do banco
+    renderCampanhasIniciais();
+    renderAgenda();
+    
+    if(edicaoAtivaID) { 
+        renderVendas(); 
+        renderGastos();
+    }
+    calcularResumoGlobal();
+});}
 
     // --- LÓGICA DE NEGÓCIO ---
 
@@ -1657,29 +1666,23 @@ function confirmarDuplicacao() {
         };
 
         try {
-            if(numsBonus) await salvarLote(numsBonus, 'BONUS');
-            if(numsNormais) await salvarLote(numsNormais, 'NORMAL');
-
-            database.ref('clientes/'+t.replace(/\D/g,'')).set({nome:n, tel:t});
-            document.getElementById('modalWhatsapp').style.display = 'flex';
-            limparCamposVenda();
-            
-        } catch(e) {
-            // MOSTRA O ERRO REAL (Duplicidade ou Repetição)
-            if(e.message.includes("repetidos") || e.message.includes("já foi vendido") || e.message.includes("duas vezes")) {
-                // Se for erro de validação, mostra no modal de erro ou alert
-                 document.getElementById('msgDuplicado').innerText = e.message;
-                 document.getElementById('modalDuplicado').style.display = 'flex';
-            } else {
-                console.log(e); // Erros de rede silenciosos
-            }
-        } finally {
-            // DESTRAVA O BOTÃO NO FINAL (SEMPRE)
-            btn.disabled = false;
-            btn.style.opacity = "1";
-            btn.innerHTML = textoOriginal;
-        }
+        // Tentativa de salvar no Firebase e aguardar confirmação
+        const novaVendaRef = database.ref('rifas/'+edicaoAtivaID+'/vendas').push();
+        await novaVendaRef.set(venda); // O await agora vai funcionar corretamente aqui
+        
+        // Se houver sucesso, o Firebase já disparou o '.on(value)' que salvou no LocalStorage
+        document.getElementById('modalWhatsapp').style.display = 'flex';
+        limparCamposVenda();
+        
+    } catch(e) {
+        console.error("Erro ao salvar:", e);
+        alert("Erro de conexão! O dado pode não ter sido salvo na nuvem. Verifique sua internet.");
+    } finally {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.innerHTML = textoOriginal;
     }
+}
 
     function limparCamposVenda() { 
         document.getElementById('nomePart').value=""; 
@@ -2438,22 +2441,49 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
         listaVendas.sort((a, b) => parseData(b.data) - parseData(a.data));
 
         // 2. CÁLCULO DE ESTATÍSTICAS (Baseado na lista já ordenada)
-        let cotasPagas = 0, cotasAbertas = 0, cotasGratis = 0, cotasTotalVendidas = 0;
-        listaVendas.forEach(v => {
-            const qtd = v.nums ? (v.nums.match(/\d+/g) || []).length : 0;
-            cotasTotalVendidas += qtd;
-            if(v.isGratis) cotasGratis += qtd;
-            else if(v.pago) cotasPagas += qtd; 
-            else cotasAbertas += qtd;
-        });
-        const maxCotas = Math.pow(10, parseInt(config.tipo));
-        
-        r.innerHTML = `
-            <div class="stat-card c-verde"><span class="stat-val" style="color:var(--primary)">${cotasPagas}</span><span class="stat-label">Pagas ($)</span></div>
-            <div class="stat-card c-roxo"><span class="stat-val" style="color:#8b5cf6">${cotasGratis}</span><span class="stat-label">Grátis</span></div>
-            <div class="stat-card c-vermelho"><span class="stat-val" style="color:#ef4444">${cotasAbertas}</span><span class="stat-label">Abertas</span></div>
-            <div class="stat-card c-amarelo"><span class="stat-val" style="color:#f59e0b">${maxCotas - cotasTotalVendidas}</span><span class="stat-label">Restam</span></div>
-        `;
+        // --- CÁLCULO DE ESTATÍSTICAS REFORÇADO (DENTRO DE RENDERVENDAS) ---
+let cotasPagas = 0, cotasAbertas = 0, cotasGratis = 0, cotasTotalVendidas = 0;
+let participantesUnicos = new Set(); 
+
+listaVendas.forEach(v => {
+    const qtd = v.nums ? (v.nums.match(/\d+/g) || []).length : 0;
+    cotasTotalVendidas += qtd;
+    
+    // Identifica participantes únicos pelo nome
+    if (v.nome) participantesUnicos.add(v.nome.trim().toLowerCase());
+
+    if(v.isGratis) cotasGratis += qtd;
+    else if(v.pago) cotasPagas += qtd; 
+    else cotasAbertas += qtd;
+});
+
+// Calcula o que sobra baseado no tipo da rifa (100, 1000 ou 10000)
+const maxCotas = Math.pow(10, parseInt(config.tipo));
+const cotasRestantes = maxCotas - cotasTotalVendidas;
+
+// Renderiza os 5 cards de resumo
+r.innerHTML = `
+    <div class="stat-card c-azul">
+        <span class="stat-val" style="color:var(--secondary)">${participantesUnicos.size}</span>
+        <span class="stat-label">Pessoas</span>
+    </div>
+    <div class="stat-card c-verde">
+        <span class="stat-val" style="color:var(--primary)">${cotasPagas}</span>
+        <span class="stat-label">Pagas</span>
+    </div>
+    <div class="stat-card c-roxo">
+        <span class="stat-val" style="color:#8b5cf6">${cotasGratis}</span>
+        <span class="stat-label">Grátis</span>
+    </div>
+    <div class="stat-card c-vermelho">
+        <span class="stat-val" style="color:#ef4444">${cotasAbertas}</span>
+        <span class="stat-label">Abertas</span>
+    </div>
+    <div class="stat-card c-amarelo">
+        <span class="stat-val" style="color:#f59e0b">${cotasRestantes}</span>
+        <span class="stat-label">Restam</span>
+    </div>
+`;
 
         // 3. FILTRO DE BUSCA E PAGINAÇÃO
         let listaExibida = [...listaVendas];
@@ -2651,54 +2681,48 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
 
 // --- FUNÇÃO 2: GERAÇÃO PARA O CLIENTE (MOBILE FRIENDLY) ---
 function baixarImagemPublica() {
-    const original = document.getElementById('receipt-container');
-    if (!original) return alert("Erro: Recibo não encontrado.");
+    const element = document.getElementById('receipt-container');
+    if (!element) return;
 
-    // Cria o clone, mas o mantém fora da visão do usuário (left: -9999px)
-    const clone = original.cloneNode(true);
-    clone.style.cssText = "position:absolute; top:0; left:-9999px; display:block; visibility:visible; opacity:1; background:white; width:420px;";
-    
-    // Força a remoção de máscaras no clone por segurança
-    const header = clone.querySelector('.recibo-header');
-    if (header) { 
-        header.style.mask = "none"; 
-        header.style.webkitMask = "none"; 
-        header.style.borderBottom = "4px solid #f59e0b"; 
-    }
-    
-    document.body.appendChild(clone);
+    // Torna o elemento visível temporariamente para medição de tamanho real
+    element.style.position = 'relative';
+    element.style.top = '0';
+    element.style.left = '0';
 
-    // Pequeno atraso para garantir que o navegador "desenhou" o clone internamente
-    setTimeout(() => {
-        html2canvas(clone, { 
-            scale: 2, 
-            backgroundColor: "#ffffff", 
-            useCORS: true,
-            width: 420,
-            height: clone.offsetHeight
-        }).then(canvas => {
-            // Só remove o clone após a captura ter sucesso
-            document.body.removeChild(clone);
+    // Captura com altura dinâmica (scroll de altura total)
+    html2canvas(element, {
+        scale: 2, // Melhora a qualidade
+        backgroundColor: "#fffde7",
+        useCORS: true,
+        width: 400, // Força a largura do comprovante
+        height: element.scrollHeight, // Pega a altura total, mesmo que seja longa
+        windowHeight: element.scrollHeight 
+    }).then(canvas => {
+        // Volta o elemento para o modo oculto
+        element.style.position = 'fixed';
+        element.style.top = '-9999px';
+        element.style.left = '-9999px';
 
-            const modal = document.getElementById('generated-image-modal');
-            const container = document.getElementById('img-output-container');
-            
-            if (modal && container) {
-                container.innerHTML = "";
-                const img = new Image();
-                img.src = canvas.toDataURL("image/png");
-                img.style.maxWidth = "100%";
-                container.appendChild(img);
-                
-                // Exibe o modal com a foto pronta para o cliente salvar
-                modal.style.display = 'flex';
-            }
-        }).catch(err => {
-            console.error("Erro na captura:", err);
-            if (document.body.contains(clone)) document.body.removeChild(clone);
-            alert("Erro ao gerar imagem. Tente tirar um print da tela.");
-        });
-    }, 600); 
+        const imgData = canvas.toDataURL("image/png");
+        
+        // Se estiver no painel admin, abre o modal de preview
+        const imgOutput = document.getElementById('imageOutput');
+        if(imgOutput) {
+            imgOutput.innerHTML = `<img src="${imgData}" style="width:100%; border-radius:12px;">`;
+            document.getElementById('btnDownloadImage').href = imgData;
+            document.getElementById('btnDownloadImage').download = `Recibo_${Date.now()}.png`;
+            document.getElementById('modalPreviewRecibo').style.display = 'flex';
+        } else {
+            // Se for modo cliente direto, baixa automaticamente
+            const link = document.createElement('a');
+            link.download = `Comprovante.png`;
+            link.href = imgData;
+            link.click();
+        }
+    }).catch(err => {
+        console.error("Erro na captura:", err);
+        alert("Erro ao gerar imagem. Tente novamente.");
+    });
 }
 
     // --- MODO DIAGNÓSTICO COM LOG NA TELA ---
