@@ -418,7 +418,7 @@
         .btn-sec { background: var(--secondary); color: white; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); }
         .btn-del { background: var(--danger); color: white; width: auto; padding: 8px 12px; font-size: 0.85rem; }
         .btn-edit { background: #fbbf24; color: #78350f; width: auto; padding: 8px 12px; font-size: 0.85rem; }
-        .btn-whats { background: #25D366; color: white; width: auto; padding: 8px 12px; font-size: 0.85rem; }
+        .btn-whats { background: #25D366; color: white; width: auto; padding: 15px 12px; font-size: 1.0rem; }
         .btn-pay { background: #10b981; color: white; width: auto; padding: 8px 12px; font-size: 0.85rem; }
         .btn-undo { background: #9ca3af; color: white; width: auto; padding: 8px 12px; font-size: 0.85rem; }
         .btn-config { background: #e5e7eb; color: var(--dark); width: auto; padding: 8px 16px; font-size: 0.85rem; border-radius: 20px; }
@@ -835,6 +835,12 @@
     color: var(--text) !important;
 }
 
+#numPart, #numPartGratis, #editNumVenda {
+    font-family: 'Roboto Mono', monospace; /* Fonte monoespaçada */
+    letter-spacing: 1px; /* Um pouco mais de espaço entre os números */
+    font-weight: 700;
+}
+
     </style>
     
     <script>
@@ -1017,7 +1023,7 @@
                     
                     <div class="input-box-dynamic box-success">
     <label>🎟️ Números (Cotas Normais)</label>
-    <input type="tel" id="numPart" placeholder="Digite os números vendidos..." oninput="calcularTotalLive()" style="font-weight:bold; font-size:1.1rem;">
+    <input type="tel" id="numPart" placeholder="Digite os números vendidos..." oninput="calcularTotalLive()" style="font-weight:bold; font-size:1.0rem;">
 </div>
 
 <div class="input-box-dynamic box-danger">
@@ -1427,12 +1433,13 @@
         <p style="margin: 15px 0; color:var(--gray);">O que deseja fazer agora?</p>
         
         <div style="display:flex; flex-direction:column; gap:10px;">
-            <button class="btn-sec" style="justify-content:center; background:#3b82f6; color:white;" onclick="prepararGeracaoImagem()">
-                👁️ Visualizar Recibo
-            </button>
             
             <button class="btn-whats" style="justify-content:center;" onclick="enviarTextoWhatsapp()">
                 📲 Enviar no WhatsApp
+            </button>
+
+            <button class="btn-sec" style="justify-content:center; background:#3b82f6; color:white;" onclick="prepararGeracaoImagem()">
+                👁️ Visualizar Recibo
             </button>
             
             <button class="btn-back" style="justify-content:center;" onclick="fecharModais()">
@@ -1511,9 +1518,11 @@
 <div id="modalConferencia" class="modal">
     <div class="modal-content modal-large">
         <div class="modal-header">
-            <span>📋 Central de Conferência</span>
-            <button class="btn-del" style="width:auto; padding:5px 10px;" onclick="document.getElementById('modalConferencia').style.display='none'">Fechar</button>
-        </div>
+    <span>📋 Central de Conferência</span>
+    <button class="btn-back" style="width:auto; padding:5px 15px; border:1px solid var(--border-input); border-radius:8px; justify-content:center;" onclick="document.getElementById('modalConferencia').style.display='none'">
+        ⬅️ Voltar
+    </button>
+</div>
         <div style="padding: 20px; overflow-y: auto; height: 100%;">
             
             <p style="color:var(--gray); font-size:0.9rem; margin-bottom:20px;">
@@ -1556,29 +1565,44 @@
 
             </div>
 
-            <div style="margin-top:30px; padding-top:20px; border-top:4px solid #e5e7eb;">
-                <h3 style="color:var(--dark); display:flex; align-items:center; gap:8px;">
-                    🕵️ Auditoria WhatsApp vs Sistema
-                </h3>
-                <p style="font-size:0.85rem; color:var(--gray);">
-                    Cole sua lista do WhatsApp aqui. O sistema vai comparar os dados.
-                </p>
-                
-                <textarea id="inputListaAudit" rows="6" placeholder="Cole a lista completa aqui..." style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; margin-top:10px; font-family:'Roboto Mono'; font-size:0.8rem;"></textarea>
-                
-                <button class="btn-main" style="margin-top:10px;" onclick="auditarLista()">🔍 Comparar Dados</button>
+            div style="margin-top:30px; padding-top:20px; border-top:4px solid #e5e7eb;">
+    <h3 style="color:var(--dark); display:flex; align-items:center; gap:8px;">
+        🕵️ Auditoria WhatsApp vs Sistema
+    </h3>
+    <p style="font-size:0.85rem; color:var(--gray);">
+        Cole sua lista do WhatsApp aqui. O sistema vai comparar os dados.
+    </p>
+    
+    <textarea id="inputListaAudit" rows="6" placeholder="Cole a lista completa aqui..." 
+        style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; margin-top:10px; font-family:'Roboto Mono'; font-size:0.8rem;"
+        oninput="resetarBotaoAuditoria()"></textarea>
+    
+    <button id="btnAuditar" class="btn-main" style="margin-top:10px;" onclick="auditarLista()">
+        🔍 Comparar Dados
+    </button>
 
-                <div id="resultadoAuditoria" style="margin-top:20px; display:none;">
-                    </div>
-            </div>
+    <div id="resultadoAuditoria" style="margin-top:20px; display:none;"></div>
+</div>
+           <div style="margin-top:20px; border-top:4px solid #e5e7eb; padding-top:20px;">
+    <h3 style="color:var(--dark)">📤 Exportar para WhatsApp</h3>
+    <p style="font-size:0.85rem; color:var(--gray);">Gera listas formatadas para postar no grupo.</p>
+    
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <button class="btn-sec" style="flex:1;" onclick="gerarTextoLista()">
+            📝 Lista Completa (Números)
+        </button>
 
-            <div style="margin-top:20px; border-top:4px solid #e5e7eb; padding-top:20px;">
-                <h3 style="color:var(--dark)">📤 Exportar para WhatsApp</h3>
-                <p style="font-size:0.85rem; color:var(--gray);">Gera a lista formatada com Emojis para você postar no grupo.</p>
-                <button class="btn-sec" onclick="gerarTextoLista()">📝 Gerar Lista Completa</button>
-                <textarea id="outputListaZap" rows="6" style="width:100%; padding:10px; margin-top:10px; display:none;" readonly></textarea>
-                <button id="btnCopyZap" class="btn-main" style="margin-top:5px; display:none;" onclick="copiarTexto('outputListaZap')">Copiar Texto</button>
-            </div>
+        <button class="btn-sec" style="flex:1; background:#fef3c7; color:#92400e; border:1px solid #fcd34d;" onclick="gerarListaCobranca()">
+            📉 Lista de Cobrança (Quem deve)
+        </button>
+    </div>
+
+    <textarea id="outputListaZap" rows="8" style="width:100%; padding:10px; display:none; border-radius:8px; border:1px solid #d1d5db;" readonly></textarea>
+    
+    <button id="btnCopyZap" class="btn-main" style="margin-top:5px; display:none;" onclick="copiarTexto('outputListaZap')">
+        Copiar Texto
+    </button>
+</div>
         </div>
     </div>
 
@@ -1613,6 +1637,16 @@
             console.warn(`Elemento visual não encontrado: ${id}`);
         }
     }
+
+    function resetarBotaoAuditoria() {
+    const btn = document.getElementById('btnAuditar');
+    if(btn) {
+        btn.innerHTML = "🔍 Comparar Dados";
+        // Volta para a cor original (verde/padrão) se tiver mudado
+        btn.classList.remove('btn-sec'); 
+        btn.classList.add('btn-main');
+    }
+}
 
     function toggleTheme() {
         const root = document.documentElement;
@@ -1818,11 +1852,51 @@ function mostrarSucesso(msg) {
     }
 
     function formatarDigitos(input, tamanho) {
-        let val = input.value.replace(/\D/g, ''); 
-        let arr = [];
-        for(let i = 0; i < val.length; i += tamanho) arr.push(val.substr(i, tamanho));
-        input.value = arr.join(', ');
+    // 1. Salva a posição do cursor e o texto antes de mexer
+    const cursorStart = input.selectionStart;
+    const textoAntigo = input.value;
+    
+    // 2. Conta quantos DÍGITOS REAIS existem antes do cursor (ignorando espaços e vírgulas)
+    let digitosAntesCursor = 0;
+    for (let i = 0; i < cursorStart; i++) {
+        if (/[0-9]/.test(textoAntigo[i])) digitosAntesCursor++;
     }
+
+    // 3. Aplica a formatação padrão (sua lógica original)
+    let val = input.value.replace(/\D/g, ''); 
+    let arr = [];
+    for(let i = 0; i < val.length; i += tamanho) {
+        arr.push(val.substr(i, tamanho));
+    }
+    const novoTexto = arr.join(', ');
+    
+    // 4. Atualiza o input com o texto formatado
+    input.value = novoTexto;
+
+    // 5. RECUPERA A POSIÇÃO DO CURSOR
+    // Se o cursor estava no final, deixa o navegador lidar (joga pro final)
+    // Se estava no meio, calculamos a nova posição
+    if (cursorStart < textoAntigo.length) {
+        let novaPosicao = 0;
+        let contagemDigitos = 0;
+
+        // Percorre o novo texto para achar onde parar o cursor
+        for (let i = 0; i < novoTexto.length; i++) {
+            if (/[0-9]/.test(novoTexto[i])) {
+                contagemDigitos++;
+            }
+            
+            // Quando encontrarmos a mesma quantidade de dígitos que tinha antes...
+            if (contagemDigitos === digitosAntesCursor) {
+                novaPosicao = i + 1; // Define a posição logo após o dígito
+                break;
+            }
+        }
+        
+        // Aplica a posição calculada
+        input.setSelectionRange(novaPosicao, novaPosicao);
+    }
+}
 
     function formatarBrinde(input) {
         if(!edicaoAtivaID) return;
@@ -2613,13 +2687,54 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
         }
     }
 
-    // Função auxiliar para usar os números vindos da lista de texto
-    function usarNumerosDaLista(nums) {
-        document.getElementById('numPart').value = nums;
-        document.getElementById('checkPago').checked = true; // Assume que vai pagar agora
-        calcularTotalLive(); // Atualiza o preço
-        document.getElementById('areaPendencias').innerHTML = ""; // Limpa a sugestão
+   // Substitua a função inteira por esta versão filtrada:
+function usarNumerosDaLista(numsString) {
+    if (!edicaoAtivaID || !dadosDB[edicaoAtivaID]) return;
+
+    // 1. Converte a string "01, 02, 03" em um array limpo ['01', '02', '03']
+    let numerosDoZap = numsString.match(/\d+/g);
+    if (!numerosDoZap) return;
+
+    // 2. Prepara o mapa de números JÁ VENDIDOS no sistema
+    const vendasNoSistema = dadosDB[edicaoAtivaID].vendas || {};
+    const numerosOcupados = new Set();
+
+    Object.values(vendasNoSistema).forEach(v => {
+        let n = v.nums.match(/\d+/g);
+        if (n) n.forEach(num => numerosOcupados.add(parseInt(num)));
+    });
+
+    // 3. FILTRAGEM INTELIGENTE
+    // Mantém apenas os números que NÃO estão no conjunto de ocupados
+    const numerosParaImportar = numerosDoZap.filter(n => !numerosOcupados.has(parseInt(n)));
+
+    // 4. Feedback visual
+    if (numerosParaImportar.length === 0) {
+        alert("⚠️ Todos esses números já foram registrados no sistema!");
+        return; // Para aqui, não faz nada
     }
+
+    if (numerosParaImportar.length < numerosDoZap.length) {
+        // Se alguns foram removidos, avisa sutilmente (opcional, mas bom pra saber)
+        console.log("Alguns números duplicados foram removidos da importação.");
+    }
+
+    // 5. Preenche apenas os LIVRES
+    document.getElementById('numPart').value = numerosParaImportar.join(', ');
+    
+    // 6. Continua o fluxo normal (Marca pago, calcula e desce a tela)
+    document.getElementById('checkPago').checked = true; 
+    calcularTotalLive(); 
+    document.getElementById('areaPendencias').innerHTML = ""; 
+
+    const btnConfirmar = document.getElementById('btnRegistrar');
+    if(btnConfirmar) {
+        btnConfirmar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        btnConfirmar.style.transition = "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        btnConfirmar.style.transform = "scale(1.1)";
+        setTimeout(() => { btnConfirmar.style.transform = "scale(1)"; }, 300);
+    }
+}
 
     // Função para carregar os dados da pendência DO SISTEMA
     function selecionarPendencia(key) {
@@ -3463,6 +3578,73 @@ function pedirConfirmacao(tipo, key, extraVal) {
             document.getElementById('modalSucesso').style.display = 'flex';
         }).catch(err => { console.error(err); alert("Erro ao copiar."); });
     }
+
+    function gerarListaCobranca() {
+    if(!edicaoAtivaID || !dadosDB[edicaoAtivaID]) return alert("Selecione uma rifa.");
+
+    const config = dadosDB[edicaoAtivaID].config;
+    const vendas = dadosDB[edicaoAtivaID].vendas || {};
+    let totalDivida = 0;
+    let listaDevedores = [];
+
+    // 1. Filtra apenas quem deve
+    Object.values(vendas).forEach(v => {
+        // Se NÃO é grátis E NÃO pagou
+        if (!v.isGratis && !v.pago) {
+            
+            // Tenta converter o valor para somar (ex: "R$ 50,00" -> 50.00)
+            let valorNumerico = 0;
+            if(v.valor) {
+                let limpo = v.valor.replace(/[^\d,]/g, '').replace(',', '.');
+                valorNumerico = parseFloat(limpo) || 0;
+            }
+            totalDivida += valorNumerico;
+
+            // Adiciona na lista
+            listaDevedores.push({
+                nome: v.nome,
+                nums: v.nums,
+                valor: v.valor,
+                tel: v.tel
+            });
+        }
+    });
+
+    if (listaDevedores.length === 0) {
+        alert("Parabéns! Ninguém está devendo nesta rifa. 🎉");
+        return;
+    }
+
+    // 2. Ordena por nome para ficar organizado
+    listaDevedores.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    // 3. Monta o texto para o WhatsApp
+    let txt = `⚠️ *RELATÓRIO DE PENDÊNCIAS*\n`;
+    txt += `🎟️ Rifa: ${config.nomeExibicao}\n`;
+    txt += `📅 Data: ${new Date().toLocaleDateString()}\n`;
+    txt += `--------------------------------\n\n`;
+
+    listaDevedores.forEach(item => {
+        // Formato: Nome (Cotas) - R$ Valor
+        txt += `👤 *${item.nome}*\n`;
+        txt += `🔢 Cotas: ${item.nums}\n`;
+        txt += `💲 Valor: ${item.valor}\n\n`;
+    });
+
+    txt += `--------------------------------\n`;
+    txt += `💰 *TOTAL EM ABERTO: ${totalDivida.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}*\n`;
+    txt += `\n_Favor regularizar o pagamento._`;
+
+    // 4. Exibe o resultado
+    const area = document.getElementById('outputListaZap');
+    const btn = document.getElementById('btnCopyZap');
+    
+    area.style.display = 'block';
+    btn.style.display = 'block';
+    
+    area.value = txt;
+    area.scrollIntoView({behavior: "smooth"});
+}
     
     // --- FUNÇÕES DE CONFERÊNCIA (NOVO) ---
     function abrirModalConferencia() {
@@ -3808,7 +3990,16 @@ function pedirConfirmacao(tipo, key, extraVal) {
                 <input type="text" id="buscaAudit" class="modern-input" placeholder="🔍 Filtrar nomes na auditoria..." onkeyup="filtrarTabelaAudit(this.value)">
             </div>
         ` + filterBar + table + painelVagos;
+
+        // --- ADICIONE ISTO AQUI NO FINAL DA FUNÇÃO ---
+    const btn = document.getElementById('btnAuditar');
+    if(btn) {
+        btn.innerHTML = "🔄 Atualizar";
+        // Opcional: Mudar a cor para cinza/secundário para indicar que é só refresh
+        btn.classList.remove('btn-main');
+        btn.classList.add('btn-sec');
     }
+}
 
     // --- NOVA FUNÇÃO DE FILTRO DA AUDITORIA ---
     function filtrarTabelaAudit(termo) {
@@ -3957,110 +4148,70 @@ function pedirConfirmacao(tipo, key, extraVal) {
 
     async function gerarPDF(isGestao, mode) { 
         if(!edicaoAtivaID) return alert("Selecione uma campanha!");
+        
+        // Garante que o jsPDF foi carregado
         const { jsPDF } = window.jspdf; 
         const doc = new jsPDF(); 
+        
         const conf = dadosDB[edicaoAtivaID].config; 
         const vendasData = dadosDB[edicaoAtivaID].vendas || {}; 
         const vendas = Object.values(vendasData); 
-        // Clona os gastos para não alterar o original
         let gastos = [...Object.values(dadosDB[edicaoAtivaID].gastos || {})];
         
         const azulEscuro = [59, 130, 246]; const cinzaEscuro = [31, 41, 55]; const corHeader = isGestao ? cinzaEscuro : azulEscuro;
 
+        // --- MONTAGEM DO PDF (CABEÇALHO) ---
         doc.setFillColor(corHeader[0], corHeader[1], corHeader[2]); doc.rect(0, 0, 210, 35, 'F'); 
         doc.setFontSize(22); doc.setTextColor(255, 255, 255); doc.text(isGestao ? "RELATÓRIO DE GESTÃO" : "LISTA DE PARTICIPANTES", 105, 20, null, null, "center");
         doc.setFontSize(12); doc.text(`Rifa: ${conf.nomeExibicao}`, 105, 28, null, null, "center");
 
-        if(isGestao) {
-            // --- CÁLCULO FINANCEIRO DETALHADO ---
-            
-            // 1. Entrada (Entrada BRUTA e Saídas separadas)
-            let valorUnitario = parseFloat((conf.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
-            
-            // Calcula COTAS TOTAIS
-            let totalCotas = vendas.reduce((a,i) => a + (i.nums ? i.nums.match(/\d+/g).length : 0), 0);
-            
-            // Entrada BRUTA = Cotas Totais x Valor Unitário
-            let entradaBruta = totalCotas * valorUnitario;
+        let startY_Table = 70;
 
-            // Calcula entrada LÍQUIDA REAL (dinheiro que entrou de verdade)
+        if(isGestao) {
+            let valorUnitario = parseFloat((conf.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+            let totalCotas = vendas.reduce((a,i) => a + (i.nums ? i.nums.match(/\d+/g).length : 0), 0);
+            let entradaBruta = totalCotas * valorUnitario;
+            
             let entradaLiquidaReal = vendas.reduce((acc, item) => {
                 if(item.isGratis) return acc;
                 return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
             }, 0);
 
-            // A diferença são as cortesias e descontos
             let diferencaDescontos = entradaBruta - entradaLiquidaReal;
 
-            // Gastos Manuais
             let somaGastosManuais = gastos.reduce((acc, item) => {
                 return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
             }, 0);
 
-            // Total Saída GERAL = Gastos + Descontos
             let totalSaidaGeral = somaGastosManuais + diferencaDescontos;
-            
-            // Lucro
             let lucroLiquido = entradaBruta - totalSaidaGeral;
 
-            // --- GERA LINHAS DETALHADAS PARA O PDF ---
-            // Adiciona as perdas/descontos como "Gastos" no PDF para conferência
             vendas.forEach(item => {
                 if(item.isGratis) {
                     let qtdCotas = (item.nums.match(/\d+/g) || []).length;
                     let custo = qtdCotas * valorUnitario;
-                    gastos.push({
-                        desc: `CORTESIA: ${item.nome} (${qtdCotas} cotas)`,
-                        valor: custo.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
-                    });
-                } 
-                else if(item.desconto) {
+                    gastos.push({ desc: `CORTESIA: ${item.nome} (${qtdCotas} cotas)`, valor: custo.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) });
+                } else if(item.desconto) {
                     let valDesc = parseFloat((item.desconto||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
-                    if(valDesc > 0) {
-                        gastos.push({
-                            desc: `DESCONTO: ${item.nome}`,
-                            valor: valDesc.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
-                        });
-                    }
+                    if(valDesc > 0) gastos.push({ desc: `DESCONTO: ${item.nome}`, valor: valDesc.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) });
                 }
             });
 
-            // --- DESENHO DOS QUADROS (HEADER FINANCEIRO) ---
-            doc.setFillColor(243, 244, 246); 
-            doc.roundedRect(14, 40, 182, 25, 3, 3, 'F');
-            
-            // Colunas Principais
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("ENTRADA (BRUTA)", 20, 48); 
-            doc.setFontSize(14); doc.setTextColor(0); doc.text(`R$ ${entradaBruta.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 20, 58);
-            
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("SAÍDAS (TOTAL)", 70, 48); 
-            doc.setFontSize(14); doc.setTextColor(239, 68, 68); doc.text(`R$ ${totalSaidaGeral.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 70, 58);
-            
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("LUCRO LÍQUIDO", 120, 48); 
-            doc.setFontSize(14); 
+            doc.setFillColor(243, 244, 246); doc.roundedRect(14, 40, 182, 25, 3, 3, 'F');
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("ENTRADA (BRUTA)", 20, 48); doc.setFontSize(14); doc.setTextColor(0); doc.text(`R$ ${entradaBruta.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 20, 58);
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("SAÍDAS (TOTAL)", 70, 48); doc.setFontSize(14); doc.setTextColor(239, 68, 68); doc.text(`R$ ${totalSaidaGeral.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 70, 58);
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("LUCRO LÍQUIDO", 120, 48); doc.setFontSize(14); 
             if(lucroLiquido >= 0) doc.setTextColor(16, 185, 129); else doc.setTextColor(239, 68, 68); 
             doc.text(`R$ ${lucroLiquido.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, 120, 58);
+            doc.setFontSize(10); doc.setTextColor(50); doc.text("TOTAL COTAS", 170, 48); doc.setFontSize(14); doc.setTextColor(0); doc.text(`${totalCotas}`, 170, 58);
             
-            doc.setFontSize(10); doc.setTextColor(50); doc.text("TOTAL COTAS", 170, 48); 
-            doc.setFontSize(14); doc.setTextColor(0); doc.text(`${totalCotas}`, 170, 58);
-
-            // --- NOVO: LINHA DE DETALHAMENTO DE SAÍDAS ---
-            doc.setFontSize(8); doc.setTextColor(100);
-            const textoDetalhe = `DETALHES:   Gastos Fixos: R$ ${somaGastosManuais.toLocaleString('pt-BR',{minimumFractionDigits:2})}   •   Descontos/Cortesias: R$ ${diferencaDescontos.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
-            doc.text(textoDetalhe, 105, 69, null, null, "center");
-
-            // Define onde a tabela começa (um pouco mais baixo por causa do resumo)
-            var startY_Table = 75;
-
+            startY_Table = 75;
         } else {
-            // Header Modo Lista Simples
-            const totalNums = vendas.reduce((a,i) => a + (i.nums ? i.nums.match(/\d+/g).length : 0), 0);
-            doc.setFillColor(243, 244, 246); doc.roundedRect(14, 40, 182, 15, 3, 3, 'F');
-            doc.setFontSize(10); doc.setTextColor(0); doc.text(`Total de Participantes: ${vendas.length}`, 20, 50); doc.text(`Total de Cotas Vendidas: ${totalNums}`, 120, 50);
-            var startY_Table = 70;
+             const totalNums = vendas.reduce((a,i) => a + (i.nums ? i.nums.match(/\d+/g).length : 0), 0);
+             doc.setFillColor(243, 244, 246); doc.roundedRect(14, 40, 182, 15, 3, 3, 'F');
+             doc.setFontSize(10); doc.setTextColor(0); doc.text(`Total de Participantes: ${vendas.length}`, 20, 50); doc.text(`Total de Cotas Vendidas: ${totalNums}`, 120, 50);
         }
 
-        // --- TABELA PRINCIPAL (LISTA DE NOMES) ---
         const hasBrinde = conf.brinde && conf.brinde.ativo;
         let nomeBrinde = ""; if(hasBrinde) { nomeBrinde = conf.brinde.tipo == '2' ? 'DEZENA EXTRA' : (conf.brinde.tipo == '3' ? 'CENTENA EXTRA' : 'MILHAR EXTRA'); }
         
@@ -4070,48 +4221,46 @@ function pedirConfirmacao(tipo, key, extraVal) {
         
         const body = vendas.map((v, index) => { 
             const n = v.nums; const qtd = n.match(/\d+/g).length + ' cotas'; const b = v.brinde || '-'; const seq = index + 1; const d = v.data ? v.data.split(' ')[0] : '-';
-            
-            let valorDisplay = v.valor;
-            if(v.isGratis) valorDisplay = "GRÁTIS";
-
+            let valorDisplay = v.isGratis ? "GRÁTIS" : v.valor;
             if(isGestao) return hasBrinde ? [seq, d, v.nome, v.tel, n, b, valorDisplay] : [seq, d, v.nome, v.tel, n, valorDisplay];
             else return hasBrinde ? [seq, v.nome, qtd, n, b] : [seq, v.nome, qtd, n];
         });
 
         doc.autoTable({ startY: startY_Table, head: head, body: body, headStyles: {fillColor: corHeader, halign: 'center'}, bodyStyles: {halign: 'center'}, columnStyles: { 1: {halign: isGestao ? 'center' : 'left'} }, alternateRowStyles: {fillColor: [249, 250, 251]} });
 
-        // --- TABELA DE DESPESAS (SÓ NO MODO GESTÃO) ---
         if(isGestao && gastos.length > 0) {
             let finalY = doc.lastAutoTable.finalY + 15; if(finalY > 250) { doc.addPage(); finalY = 20; }
             doc.setFontSize(14); doc.setTextColor(239, 68, 68); doc.text("RELATÓRIO DE DESPESAS", 14, finalY);
-            
-            // Adiciona o prefixo GASTO: apenas para os manuais
             const bodyGastos = gastos.map(g => {
                 let d = g.desc || "Sem descrição";
-                if(!d.startsWith("CORTESIA") && !d.startsWith("DESCONTO")) {
-                    d = "GASTO: " + d;
-                }
+                if(!d.startsWith("CORTESIA") && !d.startsWith("DESCONTO")) d = "GASTO: " + d;
                 return [d, g.valor];
             });
-
             doc.autoTable({ startY: finalY + 5, head: [['DESCRIÇÃO DA DESPESA', 'VALOR']], body: bodyGastos, headStyles: {fillColor: [239, 68, 68], halign: 'left'}, bodyStyles: {halign: 'left'}, theme: 'grid' });
         }
 
         const pageCount = doc.internal.getNumberOfPages();
         for(let i = 1; i <= pageCount; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(150); doc.text(`Página ${i} de ${pageCount} - Gerado pelo Sistema Rifa Pro`, 105, 290, null, null, "center"); }
 
+        // --- COMUNICAÇÃO COM O KODULAR (WEBVIEWSTRING) ---
         if (window.AppInventor && window.AppInventor.setWebViewString) {
+             // Gera o PDF em Base64 (Texto)
              const dataUri = doc.output('datauristring');
              const base64Clean = dataUri.split(',')[1];
              const nomeArquivo = `${isGestao?'Gestao':'Lista'}_${conf.nomeExibicao.replace(/[^a-z0-9]/gi, '_')}.pdf`;
 
-             const dados = {
-                 acao: "SALVAR_PDF",
+             // Cria o objeto JSON para o Kodular ler
+             const jsonKodular = {
+                 acao: "PDF",
+                 modo: mode, // 'view' ou 'save'
                  nome: nomeArquivo,
-                 conteudo: base64Clean
+                 base64: base64Clean
              };
-             window.AppInventor.setWebViewString(JSON.stringify(dados));
+             
+             // Envia para o Kodular
+             window.AppInventor.setWebViewString(JSON.stringify(jsonKodular));
         } else {
+             // Fallback para PC (Testes)
              if(mode === 'save') {
                 doc.save(`${isGestao?'Gestao':'Lista'}_${conf.nomeExibicao}.pdf`);
              } else { 
