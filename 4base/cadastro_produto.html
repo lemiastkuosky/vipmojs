@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>4BASE - Produto</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        /* TEMA */
+        :root { 
+            --bg: #f4f6f9; --card: #fff; --text: #212529; --input: #fff; --border: #dee2e6;
+            --calc-bg: #f8f9fa; --green-neon: #198754; 
+        }
+        body.dark-mode { 
+            --bg: #000; --card: #1c1c1e; --text: #fff; --input: #2c2c2e; --border: #3a3a3c;
+            --calc-bg: #252527; --green-neon: #00ff88;
+        }
+
+        body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding-bottom: 90px; }
+        .card { background-color: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        .form-control, .form-select, .input-group-text { background-color: var(--input); border-color: var(--border); color: var(--text); padding: 12px; border-radius: 10px; }
+        .form-control:focus { background-color: var(--input); color: var(--text); border-color: var(--green-neon); box-shadow: none; }
+        
+        /* BOTÃO PREMIUM */
+        .btn-custom {
+            background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);
+            border: none; color: white; padding: 15px 20px; font-weight: 600;
+            border-radius: 12px; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+            width: 100%; display: flex; justify-content: center; align-items: center;
+        }
+        .btn-custom:active { transform: scale(0.98); }
+        .btn-custom:disabled { background: #6c757d; box-shadow: none; }
+
+        /* CALCULADORA (CORRIGIDA) */
+        .box-calc-container {
+            background-color: var(--calc-bg);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid var(--border);
+        }
+        
+        /* Inputs Readonly mais visíveis */
+        .input-readonly {
+            background-color: var(--card) !important;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .upload-area { border: 2px dashed var(--border); padding: 20px; text-align: center; border-radius: 12px; cursor: pointer; }
+        .preview-img { width: 100%; height: 200px; object-fit: contain; display: none; margin-top: 10px; }
+        
+        /* Menu Inferior */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: var(--card); border-top: 1px solid var(--border); z-index: 1050; display: flex; justify-content: space-around; padding: 12px 0; }
+        .nav-item-mobile { text-align: center; color: #6c757d; font-size: 0.75rem; text-decoration: none; display: flex; flex-direction: column; align-items: center; }
+        .nav-item-mobile i { font-size: 1.4rem; margin-bottom: 2px; transition: 0.2s; }
+        .nav-item-mobile.active { color: #0d6efd; font-weight: 600; }
+        .nav-item-mobile.active i { transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold m-0">Novo Produto</h4>
+        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="limparRascunho()">Limpar</button>
+    </div>
+    
+    <form id="formProduto">
+        <div class="card p-3 mb-3">
+            <div class="upload-area" onclick="document.getElementById('fotoProduto').click()">
+                <i class="bi bi-camera text-primary fs-2"></i>
+                <p class="mb-0 small opacity-75">Toque para adicionar foto</p>
+                <input type="file" id="fotoProduto" accept="image/*" hidden onchange="previewImage(this)">
+                <img id="preview" class="preview-img">
+            </div>
+        </div>
+
+        <div class="card p-3 mb-3">
+            <div class="mb-3">
+                <label class="small fw-bold opacity-75">Nome do Item</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="nome" oninput="salvarRascunho()">
+                    <span class="input-group-text" onclick="limpar('nome')">X</span>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="small fw-bold opacity-75">Material</label>
+                    <select class="form-select" id="tipoMaterial" onchange="calcularAuto()">
+                        <option value="pla">PLA</option><option value="petg">PETG</option><option value="abs">ABS</option><option value="resina">Resina</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="small fw-bold opacity-75">Cor</label>
+                    <input type="text" class="form-control" id="cor" list="coresList" oninput="salvarRascunho()">
+                    <datalist id="coresList"><option value="Preto"><option value="Branco"><option value="Cinza"></datalist>
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-3 mb-3">
+            <h6 class="fw-bold opacity-75 mb-3"><i class="bi bi-calculator"></i> Custo Automático</h6>
+            
+            <div class="box-calc-container">
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="small opacity-75">Peso (g)</label>
+                        <input type="text" inputmode="decimal" class="form-control" id="peso" oninput="calcularAuto()" placeholder="0">
+                    </div>
+                    <div class="col-6">
+                        <label class="small opacity-75">Tempo (h)</label>
+                        <input type="text" inputmode="decimal" class="form-control" id="tempo" oninput="calcularAuto()" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="small opacity-75"><i class="bi bi-box-seam"></i> Material</label>
+                        <input type="text" class="form-control input-readonly" id="custoMaterial" readonly value="R$ 0,00">
+                    </div>
+                    <div class="col-6">
+                        <label class="small opacity-75"><i class="bi bi-lightning-charge"></i> Energia</label>
+                        <input type="text" class="form-control input-readonly" id="custoExtra" readonly value="R$ 0,00">
+                    </div>
+                </div>
+                
+                <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                    <span class="small fw-bold">CUSTO TOTAL:</span>
+                    <span class="fs-5 fw-bold" style="color: var(--green-neon)" id="txtCustoTotal">R$ 0,00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="small fw-bold opacity-75">Preço Venda</label>
+                <span class="badge bg-primary rounded-pill" onclick="aplicarSugestao()" id="badgeSugestao" style="display:none; cursor:pointer">Sugerido: R$ 0,00</span>
+            </div>
+            
+            <div class="input-group input-group-lg">
+                <span class="input-group-text bg-transparent text-success border-success">R$</span>
+                <input type="text" inputmode="numeric" class="form-control border-success text-success fw-bold" id="precoVenda" oninput="mascaraMoeda(this); validarPreco(); salvarRascunho()" placeholder="0,00" style="font-size: 1.4rem;">
+                <span class="input-group-text" onclick="limpar('precoVenda')">X</span>
+            </div>
+            <span id="feedbackPreco" class="d-block mt-2 fw-bold small"></span>
+            
+            <div class="mt-3 text-end"><a class="text-decoration-none small opacity-75" data-bs-toggle="collapse" href="#links"><i class="bi bi-link"></i> Adicionar Links</a></div>
+            <div class="collapse mt-2" id="links">
+                <input type="url" class="form-control mb-2" id="linkFonte" placeholder="Link STL">
+                <input type="url" class="form-control" id="linkConcorrente" placeholder="Link Concorrente">
+            </div>
+        </div>
+
+        <button type="submit" class="btn-custom" id="btnSalvar">
+            <i class="bi bi-check-lg me-2"></i> SALVAR PRODUTO
+        </button>
+    </form>
+</div>
+
+<div class="bottom-nav">
+    <a href="index.html" class="nav-item-mobile"><i class="bi bi-house-door"></i> Home</a>
+    <a href="cadastro_produto.html" class="nav-item-mobile active"><i class="bi bi-box-seam"></i> Estoque</a>
+    <a href="registrar_venda.html" class="nav-item-mobile"><i class="bi bi-cart-plus"></i> Vender</a>
+    <a href="catalogo.html" class="nav-item-mobile"><i class="bi bi-images"></i> Catálogo</a>
+    <a href="relatorios.html" class="nav-item-mobile"><i class="bi bi-graph-up"></i> Finan.</a>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
+
+  const firebaseConfig = { apiKey: "SUA_API_KEY", projectId: "SEU_PROJECT_ID", storageBucket: "SEU_PROJECT_ID.appspot.com" }; 
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
+
+  window.mascaraMoeda = (i) => {
+      let v = i.value.replace(/\D/g,''); v = (v/100).toFixed(2) + '';
+      v = v.replace(".", ",").replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,").replace(/(\d)(\d{3}),/g, "$1.$2,");
+      i.value = v;
+  };
+  window.lerMoeda = (val) => val ? parseFloat(val.replace(/\./g, '').replace(',', '.')) : 0;
+  window.fmtMoeda = (val) => "R$ " + val.toFixed(2).replace('.',',');
+
+  let configCustos = { pla: 100, petg: 100, abs: 100, resina: 150, kwh: 0.90 };
+  let custoTotalAtual = 0;
+
+  async function carregarConfig() {
+      try {
+        const snap = await getDoc(doc(db, "configuracoes", "geral"));
+        if(snap.exists()) {
+            const d = snap.data();
+            configCustos = { pla: d.preco_pla||100, petg: d.preco_petg||100, abs: d.preco_abs||100, resina: d.preco_resina||150, kwh: d.kwh_custo||0.9 };
+            calcularAuto();
+        }
+      } catch(e) {}
+  }
+
+  window.calcularAuto = () => {
+      let peso = parseFloat(document.getElementById('peso').value.replace(',','.')) || 0;
+      let tempo = parseFloat(document.getElementById('tempo').value.replace(',','.')) || 0;
+      const mat = document.getElementById('tipoMaterial').value;
+      
+      const custoMat = (peso / 1000) * (configCustos[mat] || 100);
+      const custoLuz = tempo * 0.2 * configCustos.kwh;
+      custoTotalAtual = custoMat + custoLuz;
+
+      // Atualiza Inputs Readonly
+      document.getElementById('custoMaterial').value = fmtMoeda(custoMat);
+      document.getElementById('custoExtra').value = fmtMoeda(custoLuz);
+      document.getElementById('txtCustoTotal').innerText = fmtMoeda(custoTotalAtual);
+
+      if(custoTotalAtual > 0) {
+          const sug = custoTotalAtual * 3;
+          const badge = document.getElementById('badgeSugestao');
+          badge.style.display = 'inline-block';
+          badge.innerText = "Sugerido (3x): " + fmtMoeda(sug);
+          badge.dataset.valor = sug.toFixed(2).replace('.',',');
+      }
+      validarPreco(); salvarRascunho();
+  };
+
+  window.aplicarSugestao = () => {
+      const val = document.getElementById('badgeSugestao').dataset.valor;
+      const input = document.getElementById('precoVenda');
+      input.value = val; validarPreco(); salvarRascunho();
+  }
+
+  window.validarPreco = () => {
+      const preco = lerMoeda(document.getElementById('precoVenda').value);
+      const feedback = document.getElementById('feedbackPreco');
+      if(preco === 0) { feedback.innerText = ""; return; }
+      if(preco < custoTotalAtual) { feedback.innerText = "⚠️ Prejuízo!"; feedback.style.color = "#dc3545"; }
+      else if (preco < (custoTotalAtual * 2)) { feedback.innerText = "⚠️ Margem baixa"; feedback.style.color = "#ffca2c"; }
+      else { feedback.innerText = "✅ Margem Saudável"; feedback.style.color = "var(--green-neon)"; }
+  }
+
+  window.limpar = (id) => { document.getElementById(id).value = ''; document.getElementById(id).focus(); validarPreco(); };
+  window.limparRascunho = () => { if(confirm('Limpar?')) { document.getElementById('formProduto').reset(); localStorage.removeItem('rascunho'); document.getElementById('preview').style.display='none'; } };
+  
+  window.previewImage = (input) => {
+      if (input.files[0]) {
+          const img = document.getElementById('preview');
+          img.src = URL.createObjectURL(input.files[0]); img.style.display = 'block';
+      }
+  };
+
+  window.salvarRascunho = () => {
+      const d = { nome: document.getElementById('nome').value, preco: document.getElementById('precoVenda').value };
+      localStorage.setItem('rascunho', JSON.stringify(d));
+  }
+
+  document.getElementById('formProduto').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnSalvar');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...'; btn.disabled = true;
+
+      try {
+          const file = document.getElementById('fotoProduto').files[0];
+          if(!file) throw new Error("Foto obrigatória");
+          
+          const snap = await uploadBytes(ref(storage, 'produtos/'+Date.now()+'-'+file.name), file);
+          const url = await getDownloadURL(snap.ref);
+          
+          // Limpar formatação de moeda para salvar numero puro
+          const getVal = (id) => lerMoeda(document.getElementById(id).value.replace('R$','').trim());
+
+          await addDoc(collection(db, "produtos"), {
+              nome: document.getElementById('nome').value,
+              foto_url: url,
+              tipo_material: document.getElementById('tipoMaterial').value,
+              cores: document.getElementById('cor').value,
+              peso_g: parseFloat(document.getElementById('peso').value.replace(',','.')),
+              custos: { material: getVal('custoMaterial'), extras: getVal('custoExtra') },
+              preco_venda: lerMoeda(document.getElementById('precoVenda').value),
+              link_fonte: document.getElementById('linkFonte').value,
+              link_concorrente: document.getElementById('linkConcorrente').value,
+              estoque_qtd: 1,
+              data_criacao: new Date()
+          });
+
+          localStorage.removeItem('rascunho');
+          alert("Salvo!"); window.location.href='index.html';
+      } catch (err) { alert(err.message); } finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+  });
+
+  carregarConfig();
+  if(localStorage.getItem('rascunho')) {
+      const r = JSON.parse(localStorage.getItem('rascunho'));
+      document.getElementById('nome').value = r.nome || '';
+      document.getElementById('precoVenda').value = r.preco || '';
+  }
+</script>
+</body>
+</html>

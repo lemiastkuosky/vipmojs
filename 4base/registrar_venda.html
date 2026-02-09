@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>4BASE - Venda</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root { --bg: #f4f6f9; --card: #fff; --text: #212529; --input: #fff; --border: #dee2e6; --green-text: #198754; }
+        body.dark-mode { --bg: #000; --card: #1c1c1e; --text: #fff; --input: #2c2c2e; --border: #3a3a3c; --green-text: #4ade80; }
+
+        body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding-bottom: 80px; }
+        .card { background-color: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        .form-control, .form-select, .input-group-text { background-color: var(--input); border-color: var(--border); color: var(--text); padding: 12px; border-radius: 10px; }
+        .form-control:focus { background-color: var(--input); color: var(--text); border-color: var(--green-text); box-shadow: none; }
+        
+        /* BOTÃO PREMIUM */
+        .btn-custom {
+            background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);
+            border: none; color: white; padding: 14px 20px; font-weight: 600;
+            border-radius: 50px; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+            width: 100%;
+        }
+        .btn-custom:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4); color: white; }
+        .btn-custom:disabled { background: #6c757d; transform: none; box-shadow: none; }
+
+        .text-success-custom { color: var(--green-text) !important; }
+        .border-success-custom { border-color: var(--green-text) !important; }
+
+        #listaResultados { position: absolute; z-index: 1000; width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 8px; display: none; }
+        .item-resultado { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; }
+        
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: var(--card); border-top: 1px solid var(--border); z-index: 1050; display: flex; justify-content: space-around; padding: 12px 0; }
+        .nav-item-mobile { text-align: center; color: #6c757d; font-size: 0.75rem; text-decoration: none; display: flex; flex-direction: column; align-items: center; }
+        .nav-item-mobile i { font-size: 1.4rem; margin-bottom: 2px; }
+        .nav-item-mobile.active { color: #0d6efd; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <h4 class="mb-3 fw-bold">Registrar Venda</h4>
+
+    <form id="formVenda">
+        <div class="card p-3 mb-3 position-relative">
+            <label class="small fw-bold opacity-75">BUSCAR PRODUTO</label>
+            <div class="input-group" id="boxBusca">
+                <input type="text" class="form-control" id="inputBusca" placeholder="Digite nome..." autocomplete="off">
+                <span class="input-group-text" onclick="document.getElementById('inputBusca').value=''"><i class="bi bi-x-lg"></i></span>
+            </div>
+            <div id="listaResultados"></div>
+
+            <div id="produtoSelecionado" class="mt-2" style="display:none; background: rgba(13,110,253,0.1); padding: 10px; border-radius: 8px; color: var(--text);">
+                <div class="d-flex align-items-center">
+                    <img id="imgSelecionada" src="" style="width: 50px; height: 50px; border-radius: 5px; margin-right: 10px;">
+                    <div style="flex:1">
+                        <div class="fw-bold" id="nomeSelecionado">Nome</div>
+                        <small>Estoque: <span id="estoqueSelecionado">0</span></small>
+                    </div>
+                    <button type="button" class="btn-close" onclick="limparSelecao()" style="filter: invert(var(--invert-close));"></button>
+                </div>
+            </div>
+            <input type="hidden" id="produtoId">
+        </div>
+
+        <div class="card p-3 mb-3">
+            <div class="row g-2">
+                <div class="col-7">
+                    <label class="small fw-bold">Plataforma</label>
+                    <select class="form-select" id="plataforma">
+                        <option>Mercado Livre</option><option>Shopee</option><option>Instagram</option><option>OLX</option><option>Presencial</option>
+                    </select>
+                </div>
+                <div class="col-5">
+                    <label class="small fw-bold">Qtd</label>
+                    <input type="number" inputmode="decimal" class="form-control text-center fw-bold" id="qtdVendida" value="1">
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-3 mb-4">
+            <label class="small fw-bold opacity-75">FINANCEIRO</label>
+            
+            <div class="input-group mb-2">
+                <span class="input-group-text bg-transparent border-0 text-success-custom fw-bold">R$</span>
+                <input type="text" inputmode="numeric" class="form-control text-success-custom fw-bold border-success-custom" id="valorVenda" oninput="mascaraMoeda(this); calcularLucro()" placeholder="0,00" style="font-size: 1.2rem;">
+            </div>
+
+            <div class="row g-2">
+                <div class="col-6"><label class="small">Taxas</label><input type="text" inputmode="numeric" class="form-control" id="taxaPlataforma" oninput="mascaraMoeda(this); calcularLucro()" placeholder="0,00"></div>
+                <div class="col-6"><label class="small">Frete</label><input type="text" inputmode="numeric" class="form-control" id="custoFrete" oninput="mascaraMoeda(this); calcularLucro()" placeholder="0,00"></div>
+            </div>
+
+            <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
+                <span class="small opacity-75">Lucro Líquido:</span>
+                <span class="h4 mb-0 fw-bold" id="resumoLucro">R$ 0,00</span>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-custom">CONFIRMAR VENDA</button>
+    </form>
+</div>
+
+<div class="bottom-nav">
+    <a href="index.html" class="nav-item-mobile"><i class="bi bi-house-door"></i> Home</a>
+    <a href="cadastro_produto.html" class="nav-item-mobile"><i class="bi bi-box-seam"></i> Estoque</a>
+    <a href="registrar_venda.html" class="nav-item-mobile active"><i class="bi bi-cart-plus"></i> Vender</a>
+    <a href="catalogo.html" class="nav-item-mobile"><i class="bi bi-images"></i> Catálogo</a>
+    <a href="relatorios.html" class="nav-item-mobile"><i class="bi bi-graph-up"></i> Finan.</a>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+  const firebaseConfig = { apiKey: "SUA_API_KEY", projectId: "SEU_PROJECT_ID" }; 
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  if(localStorage.getItem('theme')==='dark') {
+      document.body.classList.add('dark-mode');
+      document.documentElement.style.setProperty('--invert-close', '1');
+  } else { document.documentElement.style.setProperty('--invert-close', '0'); }
+
+  window.mascaraMoeda = (i) => {
+      let v = i.value.replace(/\D/g,''); v = (v/100).toFixed(2) + '';
+      v = v.replace(".", ",").replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,").replace(/(\d)(\d{3}),/g, "$1.$2,");
+      i.value = v;
+  };
+  window.lerMoeda = (val) => val ? parseFloat(val.replace(/\./g, '').replace(',', '.')) : 0;
+
+  let produtosCache = [], custoUnitario = 0;
+
+  window.onload = async () => {
+      const qs = await getDocs(collection(db, "produtos"));
+      qs.forEach((d) => produtosCache.push({ id: d.id, ...d.data() }));
+  };
+
+  const lista = document.getElementById('listaResultados');
+  document.getElementById('inputBusca').addEventListener('keyup', (e) => {
+      const termo = e.target.value.toLowerCase();
+      lista.innerHTML = '';
+      if(termo.length < 2) { lista.style.display='none'; return; }
+      const fil = produtosCache.filter(p => p.nome.toLowerCase().includes(termo));
+      if(fil.length) {
+          lista.style.display='block';
+          fil.forEach(p => {
+              const div = document.createElement('div');
+              div.className = 'item-resultado';
+              div.innerHTML = `<img src="${p.foto_url}" style="width:40px;height:40px;margin-right:10px;border-radius:5px"><div><strong>${p.nome}</strong></div>`;
+              div.onclick = () => selecionar(p);
+              lista.appendChild(div);
+          });
+      }
+  });
+
+  function selecionar(p) {
+      document.getElementById('produtoId').value = p.id;
+      document.getElementById('nomeSelecionado').innerText = p.nome;
+      document.getElementById('estoqueSelecionado').innerText = p.estoque_qtd;
+      document.getElementById('imgSelecionada').src = p.foto_url;
+      custoUnitario = (p.custos?.material||0) + (p.custos?.extras||0);
+      document.getElementById('boxBusca').style.display='none';
+      lista.style.display='none';
+      document.getElementById('produtoSelecionado').style.display='block';
+      calcularLucro();
+  }
+
+  window.limparSelecao = () => {
+      document.getElementById('boxBusca').style.display='flex';
+      document.getElementById('produtoSelecionado').style.display='none';
+      document.getElementById('produtoId').value='';
+      document.getElementById('inputBusca').value='';
+  }
+
+  window.calcularLucro = () => {
+      const qtd = parseFloat(document.getElementById('qtdVendida').value)||1;
+      const venda = lerMoeda(document.getElementById('valorVenda').value);
+      const taxa = lerMoeda(document.getElementById('taxaPlataforma').value);
+      const frete = lerMoeda(document.getElementById('custoFrete').value);
+      const lucro = venda - ((custoUnitario * qtd) + taxa + frete);
+      const el = document.getElementById('resumoLucro');
+      el.innerText = `R$ ${lucro.toFixed(2).replace('.',',')}`;
+      if(lucro >= 0) { el.className = 'h4 mb-0 fw-bold text-success-custom'; }
+      else { el.className = 'h4 mb-0 fw-bold text-danger'; }
+  }
+
+  document.getElementById('formVenda').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pid = document.getElementById('produtoId').value;
+      if(!pid) return alert("Selecione produto");
+      
+      const btn = document.querySelector('button[type="submit"]');
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Confirmando...'; btn.disabled = true;
+
+      try {
+          await addDoc(collection(db, "vendas"), {
+              produto_id: pid,
+              produto_nome: document.getElementById('nomeSelecionado').innerText,
+              plataforma: document.getElementById('plataforma').value,
+              qtd: parseInt(document.getElementById('qtdVendida').value),
+              valor_venda_total: lerMoeda(document.getElementById('valorVenda').value),
+              lucro_final: lerMoeda(document.getElementById('resumoLucro').innerText.replace('R$ ','')),
+              data_venda: new Date()
+          });
+          await updateDoc(doc(db, "produtos", pid), { estoque_qtd: increment(-parseInt(document.getElementById('qtdVendida').value)) });
+          alert("Venda OK!"); location.reload();
+      } catch (err) { alert(err.message); btn.disabled = false; btn.innerText = 'CONFIRMAR VENDA'; }
+  });
+</script>
+</body>
+</html>
