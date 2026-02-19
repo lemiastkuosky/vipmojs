@@ -5714,6 +5714,107 @@ body.dark-mode .mcd-result-card.win-gold .mcd-badge {
     border-color: #92400e;
 }
 
+/* --- ESTILO PROFISSIONAL PARA LISTA DE ATRASADOS --- */
+
+.atrasados-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 350px;
+    overflow-y: auto;
+    padding: 5px;
+    background: #f8f9fa; /* Fundo leve */
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.atrasado-card {
+    display: flex;
+    align-items: center;
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 4px solid #6c757d; /* Cor padrão */
+    transition: transform 0.1s;
+}
+
+.atrasado-card:active {
+    transform: scale(0.98);
+}
+
+/* Bolinha da Posição (1º, 2º...) */
+.atrasado-pos-badge {
+    background-color: #343a40;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: bold;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+/* O Emoji Grande */
+.atrasado-emoji {
+    font-size: 1.6rem;
+    margin-right: 12px;
+    line-height: 1;
+}
+
+/* Texto do Nome e Status */
+.atrasado-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1;
+}
+
+.atrasado-nome {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #212529;
+    text-transform: uppercase;
+}
+
+.atrasado-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+/* Cores por Status */
+.status-critico {
+    color: #dc3545; /* Vermelho */
+}
+.border-critico { border-left-color: #dc3545; }
+
+.status-recente {
+    color: #198754; /* Verde */
+}
+.border-recente { border-left-color: #198754; }
+
+/* --- MODO ESCURO --- */
+body.dark-mode .atrasados-list-container {
+    background: #121212;
+    border-color: #333;
+}
+body.dark-mode .atrasado-card {
+    background-color: #1e1e1e;
+    box-shadow: none;
+    border-bottom: 1px solid #333;
+}
+body.dark-mode .atrasado-nome {
+    color: #f0f0f0;
+}
+body.dark-mode .atrasado-pos-badge {
+    background-color: #495057;
+}
+
 }
 
 </style>
@@ -18323,45 +18424,82 @@ function extrairDadosDoHTML(htmlString) {
 // 1. SUBSTITUA A FUNÇÃO 'gerarLinkWhatsapp' PELA VERSÃO ABAIXO:
 //
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
-    // *** CORREÇÃO 1: Captura o texto original ANTES de qualquer mudança ***
-    const textoOriginal = botao.innerHTML; 
+    const textoOriginal = botao.innerHTML;
     
     botao.disabled = true;
-    botao.innerHTML = 'Buscando...';
+    botao.innerHTML = '<span class="spinner-border" style="width: 1rem; height: 1rem; border-width: 0.15em;"></span> Buscando...';
 
     const urlProxy = '/api/proxy'; 
 
     try {
-        // (O bloco 'try' inteiro permanece o mesmo, buscando os dados)
         const response = await fetch(`${urlProxy}?loteria=${loteria}&tipo=atrasados`);
         if (!response.ok) {
              let errorDetails = await response.text();
-             if (errorDetails.length > 300) {
-                 errorDetails = errorDetails.substring(0, 300) + "...";
-             }
-             throw new Error(`Erro de rede: ${response.status} ${response.statusText}. Detalhes: ${errorDetails}`);
+             throw new Error(`Erro de rede: ${response.status}`);
         }
 
         const htmlTabela = await response.text();
-        if (htmlTabela.toLowerCase().includes("erro:")) throw new Error(`O proxy retornou um erro: ${htmlTabela}`);
+        if (htmlTabela.toLowerCase().includes("erro:")) throw new Error(`Proxy: ${htmlTabela}`);
 
         const dadosDosAtrasados = extrairDadosDoHTML(htmlTabela);
+        
         if (dadosDosAtrasados.length === 0) {
-            showToast("Não foi possível extrair os dados. O site de origem pode ter mudado.", "error");
+            showToast("Não foi possível ler os dados. O site fonte pode ter mudado.", "error");
         } else {
-            let textoMensagem = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n*GRUPO APP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
-            dadosDosAtrasados.forEach(bicho => {
-                textoMensagem += `*${bicho.posicao}*: ${bicho.emoji} *${bicho.nome}* ${bicho.status}\n`;
-            });
-
+            // 1. PREPARAÇÃO DO CABEÇALHO
             const hoje = new Date();
             const dataFormatada = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            textoMensagem += `\n━━━━━━━━━━━━━━━\n🗓️ _Análise gerada em: ${dataFormatada}_\n\n🍀 *Boa sorte!*`;
 
-            const linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`;
+            // --- A. CONSTROI O TEXTO PARA O WHATSAPP (Simples e Limpo) ---
+            let textoZap = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n`;
+            textoZap += `*GRUPO APP OFICIAL*\n━━━━━━━━━━━━━━━\n\n`;
+            
+            // --- B. CONSTROI O HTML PARA O PREVIEW (Bonito e Visual) ---
+            let htmlPreview = `<div style="text-align:center; margin-bottom:10px; color:#6c757d; font-size:0.9rem;">
+                                    Análise gerada em: <strong>${dataFormatada}</strong>
+                               </div>`;
+            htmlPreview += `<div class="atrasados-list-container">`;
 
+            dadosDosAtrasados.forEach(bicho => {
+                // Adiciona ao Texto do Zap
+                textoZap += `*${bicho.posicao}º*: ${bicho.emoji} *${bicho.nome}* ${bicho.status}\n`;
+
+                // Adiciona ao HTML do Preview (Lógica de cores)
+                let classeStatus = "";
+                let classeBorda = "";
+                
+                // Se tiver a palavra "dias" (atrasado) fica vermelho, se for "saiu" fica verde
+                if (bicho.status.includes("dias")) {
+                    classeStatus = "status-critico";
+                    classeBorda = "border-critico";
+                } else {
+                    classeStatus = "status-recente";
+                    classeBorda = "border-recente";
+                }
+
+                htmlPreview += `
+                    <div class="atrasado-card ${classeBorda}">
+                        <div class="atrasado-pos-badge">${bicho.posicao}º</div>
+                        <div class="atrasado-emoji">${bicho.emoji}</div>
+                        <div class="atrasado-info">
+                            <span class="atrasado-nome">${bicho.nome}</span>
+                            <span class="atrasado-status ${classeStatus}">${bicho.status}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            htmlPreview += `</div>`; // Fecha container
+            
+            // Finaliza Texto do Zap
+            textoZap += `\n━━━━━━━━━━━━━━━\n🗓️ _Gerado em: ${dataFormatada}_\n\n🍀 *Boa sorte!*`;
+            
+            // Cria o link
+            const linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoZap)}`;
+
+            // --- MOSTRA O MODAL COM O HTML BONITO ---
             const userConfirmed = await showCustomConfirm(
-                `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`,
+                htmlPreview, // Passa o HTML formatado aqui
                 "✅ Enviar no WhatsApp", 
                 "❌ Cancelar",         
                 'atrasadosRealTimeModal' 
@@ -18377,10 +18515,9 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         }
 
     } catch (error) { 
-        console.error("Falha na operação:", error);
-        showToast(`Falha na operação: ${error.message}`, "error", 7000); 
+        console.error("Falha:", error);
+        showToast(`Erro ao buscar dados: ${error.message}`, "error"); 
     } finally {
-        // *** CORREÇÃO 2: O 'finally' agora restaura o texto original correto ***
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
     }
