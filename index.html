@@ -5997,6 +5997,14 @@ body.dark-mode #clearAddNameX {
             </div>
         </button>
 
+        <button onclick="openMcdSearchFromHub()" class="view-button" style="background-color: #0d6efd; color: white;">
+    <span style="font-size: 1.5rem; line-height: 1;">🔎</span>
+    <div>
+        <strong>Consultar MCD</strong>
+        <small style="font-weight: normal;">(Histórico da Milhar)</small>
+    </div>
+</button>
+
         <button onclick="openResultadosLiveFromHub()" class="view-button" style="background-color: #28a745;">
             <span style="font-size: 1.5rem; line-height: 1;">📲</span>
             <div>
@@ -6014,6 +6022,38 @@ body.dark-mode #clearAddNameX {
         </button>
 
       </div>
+    </div>
+</div>
+
+<div id="mcdSearchModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close-modal" onclick="closeMcdSearchModal()">×</span>
+        <h3 class="modal-title">🔎 Consultar Histórico MCD</h3>
+        
+        <p style="text-align: center; color: #6c757d; margin-bottom: 15px;">
+            Pesquise quando uma milhar específica saiu no nosso banco de dados.
+        </p>
+
+        <div class="generator-step-card" style="padding: 15px;">
+            <label for="mcdLoteriaSelect" style="font-weight: bold;">1. Escolha a Extração:</label>
+            <select id="mcdLoteriaSelect" class="save-dialog-input" style="margin-bottom: 15px;">
+                <option value="rj">PT Rio (RJ)</option>
+                <option value="lk">Look Goiás (LK)</option>
+                <option value="ln">Loteria Nacional (LN)</option>
+                <option value="fd">Federal (FD)</option>
+            </select>
+
+            <label for="mcdInputMilhar" style="font-weight: bold;">2. Digite a Milhar:</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="tel" id="mcdInputMilhar" class="save-dialog-input" maxlength="4" placeholder="Ex: 1234" style="text-align: center; font-weight: bold; letter-spacing: 2px; margin: 0;">
+                <button onclick="performMcdSearch()" class="save-button" style="width: auto; min-width: 100px;">Buscar</button>
+            </div>
+        </div>
+
+        <div id="mcdSearchResults" style="margin-top: 15px; max-height: 300px; overflow-y: auto;">
+            </div>
+
+        <button onclick="closeMcdSearchModal()" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
     </div>
 </div>
 
@@ -7583,6 +7623,116 @@ function renderNamePickerList() {
         `;
         container.appendChild(div);
     });
+}
+
+// --- FUNÇÕES DE CONSULTA MCD (HISTÓRICO) ---
+
+// 1. Abre o modal vindo do Hub
+function openMcdSearchFromHub() {
+    closeAnalysisHubModal();
+    setTimeout(() => {
+        // Limpa campos anteriores
+        document.getElementById('mcdInputMilhar').value = '';
+        document.getElementById('mcdSearchResults').innerHTML = '';
+        document.getElementById('mcdSearchModal').classList.add('active');
+        document.getElementById('mcdInputMilhar').focus();
+    }, 300);
+}
+
+// 2. Fecha o modal
+function closeMcdSearchModal() {
+    document.getElementById('mcdSearchModal').classList.remove('active');
+}
+
+// 3. Executa a busca no Firebase
+async function performMcdSearch() {
+    const loteria = document.getElementById('mcdLoteriaSelect').value;
+    const milharInput = document.getElementById('mcdInputMilhar').value.trim();
+    const resultsContainer = document.getElementById('mcdSearchResults');
+
+    // Validação
+    if (!milharInput || milharInput.length !== 4 || isNaN(milharInput)) {
+        showToast('Por favor, digite uma milhar válida (4 números).', 'error');
+        return;
+    }
+
+    // Feedback visual
+    showLoadingIndicator(`Buscando a milhar ${milharInput}...`);
+    resultsContainer.innerHTML = ''; // Limpa resultados anteriores
+
+    try {
+        // Busca no Firestore na coleção 'resultados'
+        // Nota: Pode exigir a criação de um índice no Firebase se houver muitos dados.
+        // Se der erro de índice, olhe o console do navegador, haverá um link para criar.
+        const querySnapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', loteria)
+            .where('milhar', '==', milharInput) // Busca exata da milhar
+            .orderBy('data', 'desc') // Ordena do mais recente para o mais antigo
+            .limit(50) // Limita a 50 resultados para não pesar
+            .get();
+
+        hideLoadingIndicator();
+
+        if (querySnapshot.empty) {
+            resultsContainer.innerHTML = `
+                <div class="no-saved-items" style="padding: 20px; background-color: rgba(220, 53, 69, 0.1); border-radius: 8px; color: #dc3545;">
+                    ❌ A milhar <strong>${milharInput}</strong> não foi encontrada nesta loteria no nosso banco de dados.
+                </div>`;
+            return;
+        }
+
+        let html = `<div style="margin-bottom: 10px; font-size: 0.9rem; color: #28a745;">✅ Encontrado(s) <strong>${querySnapshot.size}</strong> resultado(s):</div>`;
+
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            
+            // Formata a data (Firestore Timestamp -> JS Date)
+            const dateObj = data.data ? data.data.toDate() : new Date();
+            const diaSemana = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
+            const dataFormatada = dateObj.toLocaleDateString('pt-BR');
+            const horaFormatada = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            // Pega o nome do sorteio (Ex: RIO 14:20)
+            const nomeSorteio = data.nomeSorteio || 'Sorteio';
+            const posicao = data.posicao ? `${data.posicao}º Prêmio` : 'Prêmio';
+
+            // Monta o Card do Resultado
+            html += `
+            <div class="saved-item" style="padding: 12px; border-left: 5px solid #007bff; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="font-weight: bold; font-size: 1.1rem; color: #333;" class="bicho-number">${milharInput}</span>
+                    <span class="badge available" style="font-size: 0.8rem;">${posicao}</span>
+                </div>
+                <div style="font-size: 0.9rem; color: #555;">
+                    <div>📅 <strong>${dataFormatada}</strong> (${diaSemana})</div>
+                    <div>⏰ <strong>${nomeSorteio}</strong></div>
+                </div>
+            </div>`;
+        });
+
+        resultsContainer.innerHTML = html;
+
+        // Ajuste para modo escuro nos novos elementos
+        if (document.body.classList.contains('dark-mode')) {
+            const itens = resultsContainer.querySelectorAll('.saved-item');
+            itens.forEach(item => {
+                item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                item.querySelector('.bicho-number').style.color = '#fff';
+                item.querySelectorAll('div').forEach(d => d.style.color = '#ddd');
+            });
+        }
+
+    } catch (error) {
+        hideLoadingIndicator();
+        console.error("Erro na busca MCD:", error);
+        
+        // Verifica se é erro de índice do Firestore
+        if (error.message.includes('requires an index')) {
+            showToast('Erro de Índice: O administrador precisa criar um índice no Firebase.', 'error');
+        } else {
+            showToast('Erro ao buscar dados. Verifique sua conexão.', 'error');
+        }
+    }
 }
 
 // Ação ao selecionar um nome
