@@ -5564,6 +5564,156 @@ body.dark-mode .mcd-result-card.win-1 .mcd-milhar-display {
     color: #ffc107; /* Número Dourado */
 }
 
+/* --- ESTILOS DO CARD DE RESULTADO MCD (PROFISSIONAL) --- */
+
+/* Container do Cartão */
+.mcd-result-card {
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    border-left: 5px solid #3b82f6; /* Azul padrão */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.mcd-result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Cabeçalho: Número e Posição */
+.mcd-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 10px;
+    margin-bottom: 2px;
+}
+
+/* O Número (Destaque) */
+.mcd-number-display {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: 2px;
+    font-family: 'Roboto Mono', monospace;
+}
+
+/* Etiqueta da Posição (ex: 5º Prêmio) */
+.mcd-badge {
+    background-color: #f1f5f9;
+    color: #64748b;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Corpo: Informações da Loteria */
+.mcd-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mcd-lottery-info {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mcd-lottery-icon {
+    font-size: 1.2rem;
+}
+
+/* Rodapé: Data e Hora */
+.mcd-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
+    font-size: 0.85rem;
+    color: #64748b;
+    background-color: #f8fafc;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+/* --- ESTILO ESPECIAL: 1º PRÊMIO (OURO) --- */
+.mcd-result-card.win-gold {
+    border-left-color: #f59e0b; /* Amarelo Ouro */
+    background: linear-gradient(to right, #fffbeb, #fff);
+    border: 1px solid #fcd34d;
+}
+
+.mcd-result-card.win-gold .mcd-badge {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+.mcd-result-card.win-gold .mcd-number-display {
+    color: #b45309; /* Cor cobre/ouro escuro */
+}
+
+/* --- MODO ESCURO (DARK MODE) --- */
+body.dark-mode .mcd-result-card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    box-shadow: none;
+}
+
+body.dark-mode .mcd-card-header {
+    border-bottom-color: #333;
+}
+
+body.dark-mode .mcd-number-display {
+    color: #f8fafc;
+}
+
+body.dark-mode .mcd-badge {
+    background-color: #334155;
+    color: #cbd5e1;
+}
+
+body.dark-mode .mcd-lottery-info {
+    color: #e2e8f0;
+}
+
+body.dark-mode .mcd-card-footer {
+    background-color: #0f172a;
+    color: #94a3b8;
+}
+
+/* 1º Prêmio no Escuro */
+body.dark-mode .mcd-result-card.win-gold {
+    background: #3a2d05; /* Fundo ouro muito escuro */
+    border-color: #714a08;
+    border-left-color: #fbbf24;
+}
+
+body.dark-mode .mcd-result-card.win-gold .mcd-number-display {
+    color: #fbbf24; /* Ouro brilhante */
+}
+
+body.dark-mode .mcd-result-card.win-gold .mcd-badge {
+    background-color: #451a03;
+    color: #fbbf24;
+    border-color: #92400e;
+}
+
 }
 
 </style>
@@ -6147,7 +6297,7 @@ body.dark-mode .mcd-result-card.win-1 .mcd-milhar-display {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V5.25</strong>
+            <strong>V6.37</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -7912,7 +8062,7 @@ async function performMcdSearch() {
     const inputValor = document.getElementById('mcdInputMilhar').value.trim();
     const resultsContainer = document.getElementById('mcdSearchResults');
 
-    // 1. VALIDAÇÃO INTELIGENTE (2, 3 ou 4 dígitos)
+    // 1. Validação Inteligente do Tipo (M, C ou D)
     let campoBusca = "";
     let nomeTipo = "";
     
@@ -7940,72 +8090,84 @@ async function performMcdSearch() {
     resultsContainer.innerHTML = ''; 
 
     try {
-        // 2. BUSCA DINÂMICA NO FIRESTORE
-        // O '.where' agora usa a variável 'campoBusca' (milhar, centena ou dezena)
+        // Busca no Firestore
         const querySnapshot = await firestoreDB.collection('resultados')
             .where('loteria', '==', loteria)
-            .where(campoBusca, '==', inputValor) // <--- A MÁGICA ESTÁ AQUI
+            .where(campoBusca, '==', inputValor)
             .orderBy('data', 'desc')
             .limit(50)
             .get();
 
         hideLoadingIndicator();
 
+        // Se não encontrar nada
         if (querySnapshot.empty) {
             resultsContainer.innerHTML = `
-                <div class="no-saved-items" style="padding: 30px; background-color: rgba(220, 53, 69, 0.05); border: 1px solid rgba(220, 53, 69, 0.2); border-radius: 12px; color: #dc3545; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 10px;">❌</div>
-                    A ${nomeTipo} <strong>${inputValor}</strong> não foi encontrada nesta loteria.
+                <div class="no-saved-items" style="padding: 30px; text-align: center; border: 1px dashed #ccc; border-radius: 12px; margin-top: 10px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;">🔍</div>
+                    <div style="color: #666; margin-bottom: 5px;">Nada encontrado.</div>
+                    <div style="font-size: 0.9rem; color: #999;">A ${nomeTipo} <strong>${inputValor}</strong> não consta no histórico desta loteria.</div>
                 </div>`;
             return;
         }
 
-        // Cabeçalho de sucesso
-        let html = `<div style="margin-bottom: 15px; font-size: 0.95rem; color: #28a745; text-align: center; background: #e6fffa; padding: 10px; border-radius: 8px; border: 1px solid #b7eb8f;">
+        // Cabeçalho de Sucesso
+        let html = `<div style="margin-bottom: 15px; font-size: 0.9rem; color: #155724; background-color: #d4edda; border-color: #c3e6cb; padding: 12px; border-radius: 8px; border: 1px solid; text-align: center;">
                         ✅ Encontrado(s) <strong>${querySnapshot.size}</strong> resultado(s) para a ${nomeTipo} <strong>${inputValor}</strong>
                     </div>`;
 
         querySnapshot.forEach(doc => {
             const data = doc.data();
             
+            // Formatação de Data e Hora
             const dateObj = data.data ? data.data.toDate() : new Date();
-            const diaSemana = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
+            // Dia da semana com primeira letra maiúscula
+            let diaSemana = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
+            diaSemana = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+            
             const dataFormatada = dateObj.toLocaleDateString('pt-BR');
             const horaFormatada = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             
             const nomeSorteio = data.nomeSorteio || 'Sorteio';
             
+            // Lógica de Destaque (1º Prêmio)
             let posicaoTexto = `${data.posicao}º Prêmio`;
-            let winClass = ''; 
-            
+            let winClass = ''; // Classe padrão (azul)
+            let iconeLoteria = '🎰';
+
             if (data.posicao == 1) {
                 posicaoTexto = '🏆 1º PRÊMIO';
-                winClass = 'win-1';
+                winClass = 'win-gold'; // Classe dourada
+                iconeLoteria = '👑';
             }
 
-            // --- MOSTRAR O NÚMERO COMPLETO NO CARD ---
-            // Mesmo buscando por dezena, é legal mostrar a milhar completa que saiu
-            // Ex: Buscou dezena 85, mostra a milhar 1285.
-            const numeroExibido = data.milhar || "----";
+            // Define qual número mostrar (Sempre tenta mostrar a Milhar completa para contexto)
+            // Se o registro tiver milhar, mostra ela. Se não, mostra o que buscou.
+            const numeroExibido = data.milhar || inputValor;
 
+            // --- HTML DO CARD PROFISSIONAL ---
             html += `
             <div class="mcd-result-card ${winClass}">
                 <div class="mcd-card-header">
-                    <span class="mcd-milhar-display">${numeroExibido}</span>
-                    <span class="mcd-position-badge">${posicaoTexto}</span>
+                    <div class="mcd-number-display">${numeroExibido}</div>
+                    <div class="mcd-badge">${posicaoTexto}</div>
                 </div>
                 
                 <div class="mcd-card-body">
-                    <div class="mcd-lottery-name">
-                        <span>🎰</span> ${nomeSorteio}
+                    <div class="mcd-lottery-info">
+                        <span class="mcd-lottery-icon">${iconeLoteria}</span> ${nomeSorteio}
                     </div>
-                    
-                    <div class="mcd-date-row">
+                </div>
+
+                <div class="mcd-card-footer">
+                    <div style="display:flex; align-items:center; gap:5px;">
                         <span>📅 ${dataFormatada}</span>
-                        <span>⏰ ${horaFormatada}</span>
+                        <span style="font-size:0.7em; opacity:0.6;">•</span>
+                        <span>${diaSemana}</span>
                     </div>
-                    
-                    <div class="mcd-weekday">${diaSemana}</div>
+                    <div style="font-weight:600;">
+                        ⏰ ${horaFormatada}
+                    </div>
                 </div>
             </div>`;
         });
@@ -8018,7 +8180,7 @@ async function performMcdSearch() {
         
         if (error.message.includes('requires an index')) {
             showToast('Erro de Índice: O administrador precisa criar um índice no Firebase.', 'error');
-            console.log("LINK DO ÍNDICE NO CONSOLE");
+            console.log("CLIQUE NO LINK NO CONSOLE PARA CRIAR O ÍNDICE");
         } else {
             showToast('Erro ao buscar dados.', 'error');
         }
