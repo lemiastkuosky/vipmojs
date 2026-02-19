@@ -5301,6 +5301,143 @@ body.dark-mode .multiplier-btn:active {
 body.dark-mode #clearAddNameX {
     color: #ff4d4d !important;
 }
+/* --- ESTILOS PARA O CARD DE CONSULTA MCD (PROFISSIONAL) --- */
+
+.mcd-result-card {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px; /* Bordas mais arredondadas */
+    padding: 15px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Sombra suave */
+    border-left: 5px solid #007bff; /* Cor padrão (Azul) */
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.mcd-result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* Cabeçalho do Card (Número e Posição) */
+.mcd-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.mcd-milhar-display {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #333;
+    letter-spacing: 3px;
+    font-family: 'Courier New', monospace; /* Fonte monoespaçada para números alinhados */
+}
+
+.mcd-position-badge {
+    background-color: #e9ecef;
+    color: #495057;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Corpo do Card (Detalhes) */
+.mcd-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mcd-lottery-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #007bff;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.mcd-date-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 4px;
+}
+
+.mcd-weekday {
+    font-size: 0.85rem;
+    color: #999;
+    font-style: italic;
+    text-transform: capitalize;
+}
+
+/* --- DESTAQUE PARA 1º PRÊMIO (OURO) --- */
+.mcd-result-card.win-1 {
+    border-left-color: #ffc107; /* Borda Amarela */
+    background: linear-gradient(to right, #fffbf0, #fff); /* Fundo levemente dourado */
+    border: 1px solid #ffeeba;
+}
+
+.mcd-result-card.win-1 .mcd-position-badge {
+    background-color: #ffc107;
+    color: #212529;
+    box-shadow: 0 2px 5px rgba(255, 193, 7, 0.4);
+}
+
+.mcd-result-card.win-1 .mcd-milhar-display {
+    color: #d63384; /* Um destaque de cor diferente para o número premiado (ex: rosa/magenta) */
+}
+
+/* --- MODO ESCURO (DARK MODE) --- */
+body.dark-mode .mcd-result-card {
+    background-color: #2a2a2a;
+    border-color: #444;
+    box-shadow: none;
+    background: #2a2a2a; /* Reseta gradient */
+}
+
+body.dark-mode .mcd-card-header {
+    border-bottom-color: #444;
+}
+
+body.dark-mode .mcd-milhar-display {
+    color: #fff;
+}
+
+body.dark-mode .mcd-lottery-name {
+    color: #4da3ff;
+}
+
+body.dark-mode .mcd-date-row, 
+body.dark-mode .mcd-weekday {
+    color: #aaa;
+}
+
+body.dark-mode .mcd-position-badge {
+    background-color: #3a3f44;
+    color: #e0e0e0;
+}
+
+/* Destaque 1º Prêmio Dark */
+body.dark-mode .mcd-result-card.win-1 {
+    background: linear-gradient(to right, #3a332a, #2a2a2a);
+    border-left-color: #ffc107;
+    border-color: #554422;
+}
+
+body.dark-mode .mcd-result-card.win-1 .mcd-milhar-display {
+    color: #ffc107; /* Número amarelo no escuro */
+}
 
 }
 
@@ -7658,75 +7795,86 @@ async function performMcdSearch() {
 
     // Feedback visual
     showLoadingIndicator(`Buscando a milhar ${milharInput}...`);
-    resultsContainer.innerHTML = ''; // Limpa resultados anteriores
+    resultsContainer.innerHTML = ''; 
 
     try {
-        // Busca no Firestore na coleção 'resultados'
-        // Nota: Pode exigir a criação de um índice no Firebase se houver muitos dados.
-        // Se der erro de índice, olhe o console do navegador, haverá um link para criar.
         const querySnapshot = await firestoreDB.collection('resultados')
             .where('loteria', '==', loteria)
-            .where('milhar', '==', milharInput) // Busca exata da milhar
-            .orderBy('data', 'desc') // Ordena do mais recente para o mais antigo
-            .limit(50) // Limita a 50 resultados para não pesar
+            .where('milhar', '==', milharInput)
+            .orderBy('data', 'desc')
+            .limit(50)
             .get();
 
         hideLoadingIndicator();
 
         if (querySnapshot.empty) {
             resultsContainer.innerHTML = `
-                <div class="no-saved-items" style="padding: 20px; background-color: rgba(220, 53, 69, 0.1); border-radius: 8px; color: #dc3545;">
-                    ❌ A milhar <strong>${milharInput}</strong> não foi encontrada nesta loteria no nosso banco de dados.
+                <div class="no-saved-items" style="padding: 30px; background-color: rgba(220, 53, 69, 0.05); border: 1px solid rgba(220, 53, 69, 0.2); border-radius: 12px; color: #dc3545; text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">❌</div>
+                    A milhar <strong>${milharInput}</strong> não foi encontrada nesta loteria no nosso banco de dados.
                 </div>`;
             return;
         }
 
-        let html = `<div style="margin-bottom: 10px; font-size: 0.9rem; color: #28a745;">✅ Encontrado(s) <strong>${querySnapshot.size}</strong> resultado(s):</div>`;
+        // Cabeçalho de sucesso
+        let html = `<div style="margin-bottom: 15px; font-size: 0.95rem; color: #28a745; text-align: center; background: #e6fffa; padding: 10px; border-radius: 8px; border: 1px solid #b7eb8f;">
+                        ✅ Encontrado(s) <strong>${querySnapshot.size}</strong> resultado(s)
+                    </div>`;
 
         querySnapshot.forEach(doc => {
             const data = doc.data();
             
-            // Formata a data (Firestore Timestamp -> JS Date)
+            // Formata a data e hora
             const dateObj = data.data ? data.data.toDate() : new Date();
             const diaSemana = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
             const dataFormatada = dateObj.toLocaleDateString('pt-BR');
             const horaFormatada = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             
-            // Pega o nome do sorteio (Ex: RIO 14:20)
             const nomeSorteio = data.nomeSorteio || 'Sorteio';
-            const posicao = data.posicao ? `${data.posicao}º Prêmio` : 'Prêmio';
+            
+            // Tratamento da posição
+            let posicaoTexto = 'Prêmio';
+            let winClass = ''; // Classe para destacar o ganhador
+            
+            if (data.posicao) {
+                // Se for número 1, adiciona classe de destaque
+                if (data.posicao == 1) {
+                    posicaoTexto = '🏆 1º PRÊMIO';
+                    winClass = 'win-1'; // Ativa o estilo dourado
+                } else {
+                    posicaoTexto = `${data.posicao}º Prêmio`;
+                }
+            }
 
-            // Monta o Card do Resultado
+            // --- HTML DO CARTÃO PROFISSIONAL ---
             html += `
-            <div class="saved-item" style="padding: 12px; border-left: 5px solid #007bff; margin-bottom: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <span style="font-weight: bold; font-size: 1.1rem; color: #333;" class="bicho-number">${milharInput}</span>
-                    <span class="badge available" style="font-size: 0.8rem;">${posicao}</span>
+            <div class="mcd-result-card ${winClass}">
+                <div class="mcd-card-header">
+                    <span class="mcd-milhar-display">${milharInput}</span>
+                    <span class="mcd-position-badge">${posicaoTexto}</span>
                 </div>
-                <div style="font-size: 0.9rem; color: #555;">
-                    <div>📅 <strong>${dataFormatada}</strong> (${diaSemana})</div>
-                    <div>⏰ <strong>${nomeSorteio}</strong></div>
+                
+                <div class="mcd-card-body">
+                    <div class="mcd-lottery-name">
+                        <span>🎰</span> ${nomeSorteio}
+                    </div>
+                    
+                    <div class="mcd-date-row">
+                        <span>📅 ${dataFormatada}</span>
+                        <span>⏰ ${horaFormatada}</span>
+                    </div>
+                    
+                    <div class="mcd-weekday">${diaSemana}</div>
                 </div>
             </div>`;
         });
 
         resultsContainer.innerHTML = html;
 
-        // Ajuste para modo escuro nos novos elementos
-        if (document.body.classList.contains('dark-mode')) {
-            const itens = resultsContainer.querySelectorAll('.saved-item');
-            itens.forEach(item => {
-                item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                item.querySelector('.bicho-number').style.color = '#fff';
-                item.querySelectorAll('div').forEach(d => d.style.color = '#ddd');
-            });
-        }
-
     } catch (error) {
         hideLoadingIndicator();
         console.error("Erro na busca MCD:", error);
         
-        // Verifica se é erro de índice do Firestore
         if (error.message.includes('requires an index')) {
             showToast('Erro de Índice: O administrador precisa criar um índice no Firebase.', 'error');
         } else {
