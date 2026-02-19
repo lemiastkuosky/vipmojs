@@ -1186,6 +1186,36 @@
                         </p>
                     </div>
 
+                    <div style="background:var(--bg-input); padding:15px; border-radius:12px; border:1px solid var(--border-input); margin-top:15px; margin-bottom:15px;">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <label class="checkbox-wrapper" style="margin:0; border:none; padding:0; background:transparent;">
+            <input type="checkbox" id="checkPago" checked onchange="toggleMetodoPgto(this.checked)"> 
+            <span style="font-weight:bold; color:var(--dark); font-size:1rem;">💸 Recebido / Pago?</span>
+        </label>
+    </div>
+
+    <div id="areaMetodoPgto" style="display:flex; gap:10px;">
+        <label style="flex:1; cursor:pointer;">
+            <input type="radio" name="inputMetodo" value="PIX" checked style="display:none;" onchange="atualizarEstiloMetodo()">
+            <div id="btnMetodoPix" style="text-align:center; padding:10px; border-radius:8px; border:2px solid var(--primary); background:#ecfdf5; color:#065f46; font-weight:bold; transition:0.2s;">
+                💠 PIX
+            </div>
+        </label>
+        
+        <label style="flex:1; cursor:pointer;">
+            <input type="radio" name="inputMetodo" value="ADMIN" style="display:none;" onchange="atualizarEstiloMetodo()">
+            <div id="btnMetodoAdmin" style="text-align:center; padding:10px; border-radius:8px; border:1px solid var(--border-input); background:var(--white); color:var(--gray); font-weight:bold; transition:0.2s;">
+                💵 Dinheiro
+            </div>
+        </label>
+    </div>
+    
+    <p style="font-size:0.75rem; color:var(--gray); margin:10px 0 0 5px;">
+        *Selecione "Dinheiro" para vendas manuais/físicas.
+    </p>
+</div>
+
                     <div id="areaPendencias" style="margin-bottom: 15px;"></div>
                     
                     <button id="btnRegistrar" class="btn-main" style="margin-top:10px; font-size:1.1rem;" onclick="registrarVenda()">✅ Confirmar Venda</button>
@@ -1481,6 +1511,16 @@
 
         <label>Desconto (R$)</label>
         <input type="tel" id="editDescontoVenda" placeholder="R$ 0,00" class="money">
+
+        <label style="margin-top:10px;">Método de Pagamento</label>
+<div style="display:flex; gap:10px; margin-bottom:10px;">
+    <label style="flex:1; display:flex; align-items:center; gap:5px; background:var(--bg-input); padding:10px; border-radius:8px; cursor:pointer;">
+        <input type="radio" name="editMetodoPgto" value="PIX"> 💠 Pix
+    </label>
+    <label style="flex:1; display:flex; align-items:center; gap:5px; background:var(--bg-input); padding:10px; border-radius:8px; cursor:pointer;">
+        <input type="radio" name="editMetodoPgto" value="ADMIN"> 💵 Dinheiro
+    </label>
+</div>
 
         <div style="display:flex; gap:10px; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
             <label class="checkbox-wrapper" style="margin:0; flex:1; justify-content:center;">
@@ -2350,6 +2390,12 @@ function confirmarDuplicacao() {
         
         const isPagoNormais = document.getElementById('checkPago').checked; 
 
+        // --- CORREÇÃO 1: CAPTURAR O MÉTODO DE PAGAMENTO AQUI ---
+        let metodoSelecionado = "ADMIN";
+        const radioPix = document.querySelector('input[name="inputMetodo"][value="PIX"]');
+        if(radioPix && radioPix.checked) metodoSelecionado = "PIX";
+        // -------------------------------------------------------
+
         // --- VALIDAÇÃO COM MODAL VISUAL ---
         if(!n || (!numsNormais && !numsBonus)) {
             document.getElementById('modalErrorTitle').innerText = "⚠️ Dados Incompletos";
@@ -2370,45 +2416,41 @@ function confirmarDuplicacao() {
                 throw new Error(`Erro: Você digitou números repetidos na mesma venda: ${numeros}`);
             }
             
-            // --- CORREÇÃO AQUI: BLOQUEIO TOTAL DE DUPLICIDADE ---
             const conflito = verificarDuplicidade(listaNumerosRaw);
             if(conflito) {
-                // Removemos o "if(conflito.dono !== n)"
-                // Agora ele estoura o erro SEMPRE que achar o número, não importa de quem seja.
                 throw new Error(`⛔ O número <b>${conflito.numero}</b> já pertence a:<br><br>👤 <b>${conflito.dono}</b><br>📱 ${conflito.tel}<br><br>Não é possível vender o mesmo número duas vezes.`);
             }
-            // ----------------------------------------------------
 
             let statusPago = false;
             let ehGratis = false;
             let valorRegistro = "R$ 0,00";
-            let descontoRegistro = "0";
-            let brindeRegistro = (tipo === 'NORMAL') ? brindeInput : "";
+            let metodoRegistro = ""; 
 
             if(tipo === 'NORMAL') {
                 statusPago = isPagoNormais;
                 ehGratis = false;
                 valorRegistro = valorFinalVenda;
-                descontoRegistro = descInput;
+                // Usa a variável que capturamos acima
+                metodoRegistro = isPagoNormais ? metodoSelecionado : ""; 
             } else {
                 statusPago = true;
                 ehGratis = true;
                 valorRegistro = "Grátis";
-                descontoRegistro = "0";
+                metodoRegistro = ""; 
             }
 
             const vendaObjeto = { 
-                cod: Math.random().toString(36).substr(2,6).toUpperCase(), 
-                nome: n, 
-                tel: t, 
-                nums: numeros, 
-                brinde: brindeRegistro, 
-                valor: valorRegistro, 
-                desconto: descontoRegistro, 
-                timestamp: Date.now(),
+                nome: n,
+                tel: t,
+                nums: numeros,
+                brinde: brindeInput,
                 data: new Date().toLocaleString('pt-BR'),
+                cod: Math.floor(1000 + Math.random() * 9000),
+                valor: valorRegistro,
+                desconto: descInput,
                 pago: statusPago, 
-                isGratis: ehGratis 
+                isGratis: ehGratis,
+                metodo: metodoRegistro 
             };
 
             // Salva na Agenda
@@ -2433,15 +2475,12 @@ function confirmarDuplicacao() {
             
         } catch(e) {
             console.error("Erro ao salvar:", e);
-            
             let msg = e.message || "Erro desconhecido.";
-            
             if(msg.includes('já pertence')) {
                 document.getElementById('modalErrorTitle').innerText = "⛔ Número Indisponível";
             } else {
                 document.getElementById('modalErrorTitle').innerText = "❌ Erro ao Registrar";
             }
-
             document.getElementById('msgDuplicado').innerHTML = msg.replace(/\n/g, '<br>');
             document.getElementById('modalDuplicado').style.display = 'flex';
 
@@ -3786,65 +3825,73 @@ function baixarImagemPublica() {
     function confirmarEdicaoAgenda() { const o=document.getElementById('editOldTel').value, n=document.getElementById('editNomeCli').value, t=document.getElementById('editTelCli').value, k=t.replace(/\D/g,''); if(o!==k) database.ref('clientes/'+o).remove(); database.ref('clientes/'+k).set({nome:n, tel:t}).then(()=>fecharModais()); }
     
     function abrirModalVenda(k) { 
+    // Busca os dados da venda e da configuração
     const v = dadosDB[edicaoAtivaID].vendas[k]; 
     const cfg = dadosDB[edicaoAtivaID].config;
     
+    // Preenche campos básicos
     document.getElementById('editVendaKey').value = k; 
     document.getElementById('editNomeVenda').value = v.nome; 
     
-    // --- NOVO: Carrega o Telefone e aplica Máscara ---
+    // Telefone
     const inputTelEdit = document.getElementById('editTelVenda');
     inputTelEdit.value = v.tel; 
     VMasker(inputTelEdit).maskPattern("(99) 99999-9999");
-    // -----------------------
-        
-        document.getElementById('editVendaKey').value = k; 
-        document.getElementById('editNomeVenda').value = v.nome; 
-        document.getElementById('editNumVenda').value = v.nums; 
-        
-        // --- Carregar Desconto Existente ---
-        const inputDesc = document.getElementById('editDescontoVenda');
-        inputDesc.value = v.desconto || ""; // Carrega o desconto salvo
-        VMasker(inputDesc).maskMoney({unit: "R$"}); // Garante a máscara de R$
+    
+    // Números
+    document.getElementById('editNumVenda').value = v.nums; 
+    
+    // Desconto
+    const inputDesc = document.getElementById('editDescontoVenda');
+    inputDesc.value = v.desconto || ""; 
+    VMasker(inputDesc).maskMoney({unit: "R$"}); 
 
-        // --- Status ---
-        const isGratis = v.isGratis === true;
-        const isPago = v.pago === true;
-        document.getElementById('editCheckGratis').checked = isGratis;
-        document.getElementById('editCheckPago').checked = !isGratis && isPago;
+    // Status (Pago/Grátis)
+    const isGratis = v.isGratis === true;
+    const isPago = v.pago === true;
+    document.getElementById('editCheckGratis').checked = isGratis;
+    document.getElementById('editCheckPago').checked = !isGratis && isPago;
 
-        // --- Brinde ---
-        const divBrinde = document.getElementById('divEditBrinde');
-        const inpBrinde = document.getElementById('editBrindeVenda');
-        const lblBrinde = document.getElementById('lblEditBrinde');
-        
-        if (cfg.brinde && cfg.brinde.ativo) {
-            divBrinde.style.display = 'block';
-            inpBrinde.value = v.brinde || "";
-            let nomeTipo = cfg.brinde.tipo == '2' ? 'Dezena' : (cfg.brinde.tipo == '3' ? 'Centena' : 'Milhar');
-            lblBrinde.innerText = `🎁 Palpite Extra (${nomeTipo}):`;
-            inpBrinde.oninput = function() { formatarDigitos(this, parseInt(cfg.brinde.tipo)); };
-        } else { divBrinde.style.display = 'none'; inpBrinde.value = ""; }
-        
-        document.getElementById('modalVenda').style.display = 'flex'; 
+    // Brinde (Palpite Extra)
+    const divBrinde = document.getElementById('divEditBrinde');
+    const inpBrinde = document.getElementById('editBrindeVenda');
+    const lblBrinde = document.getElementById('lblEditBrinde');
+    
+    if (cfg.brinde && cfg.brinde.ativo) {
+        divBrinde.style.display = 'block';
+        inpBrinde.value = v.brinde || "";
+        let nomeTipo = cfg.brinde.tipo == '2' ? 'Dezena' : (cfg.brinde.tipo == '3' ? 'Centena' : 'Milhar');
+        lblBrinde.innerText = `🎁 Palpite Extra (${nomeTipo}):`;
+        inpBrinde.oninput = function() { formatarDigitos(this, parseInt(cfg.brinde.tipo)); };
+    } else { 
+        divBrinde.style.display = 'none'; 
+        inpBrinde.value = ""; 
     }
     
+    // --- LÓGICA DO MÉTODO DE PAGAMENTO (AGORA DENTRO DA FUNÇÃO) ---
+    const metodoSalvo = v.metodo || "ADMIN"; // Se não tiver, assume Admin
+    const radios = document.getElementsByName('editMetodoPgto');
+    for(let r of radios) {
+        if(r.value === metodoSalvo) r.checked = true;
+    }
+    
+    // Abre o Modal
+    document.getElementById('modalVenda').style.display = 'flex'; 
+}
     function confirmarEdicaoVenda() { 
     const k = document.getElementById('editVendaKey').value; 
     const n = document.getElementById('editNomeVenda').value;
-    
-    // --- NOVO: Pega o valor do telefone editado ---
     const t = document.getElementById('editTelVenda').value;
-    // ----------------------------------------------
-
     const nu = document.getElementById('editNumVenda').value; 
     const b = document.getElementById('editBrindeVenda').value; 
     const dInput = document.getElementById('editDescontoVenda').value;
     
+    // Checkboxes
     const novoGratis = document.getElementById('editCheckGratis').checked;
     const novoPagoCheck = document.getElementById('editCheckPago').checked;
     const finalPago = novoGratis ? true : novoPagoCheck;
     
+    // Cálculo do Valor
     let novoValor = "R$ 0,00";
     let descontoSalvar = dInput;
 
@@ -3852,30 +3899,37 @@ function baixarImagemPublica() {
         novoValor = "Grátis";
         descontoSalvar = "0"; 
     } else {
-        // 1. Calcula o preço base das cotas
         let valorBase = calcularValorBaseNumerico(nu, dadosDB[edicaoAtivaID].config);
-        
-        // 2. Subtrai o Desconto
         let descClean = dInput.replace(/[^\d]/g, '');
         let valorDesc = descClean.length > 0 ? parseFloat(descClean) / 100 : 0;
-        
         if(valorDesc > valorBase) valorDesc = valorBase;
-        
         let final = valorBase - valorDesc;
         novoValor = final.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     }
 
-    // --- ATUALIZAÇÃO NO BANCO DE DADOS (INCLUINDO TEL) ---
+    // Captura Método de Pagamento (PIX ou ADMIN)
+    let novoMetodo = "";
+    const radios = document.getElementsByName('editMetodoPgto');
+    for(let r of radios) { if(r.checked) novoMetodo = r.value; }
+
+    // Se não for pago ou for grátis, removemos o método financeiro
+    if(!novoPagoCheck || novoGratis) novoMetodo = "";
+
+    // ATUALIZAÇÃO UNIFICADA NO BANCO DE DADOS
     database.ref('rifas/' + edicaoAtivaID + '/vendas/' + k).update({ 
         nome: n, 
-        tel: t,  // <--- Salva o telefone aqui
+        tel: t,
         nums: nu, 
         brinde: b,
         desconto: descontoSalvar, 
         pago: finalPago,
         isGratis: novoGratis,
-        valor: novoValor
-    }).then(() => fecharModais()); 
+        valor: novoValor,
+        metodo: novoMetodo 
+    }).then(() => {
+        fecharModais();
+        mostrarSucesso("Venda atualizada!");
+    }); 
 }
 
 function pedirConfirmacao(tipo, key, extraVal) { 
@@ -3981,63 +4035,89 @@ function pedirConfirmacao(tipo, key, extraVal) {
     function renderGastos() { const c=document.getElementById('listaGastos'); c.innerHTML=""; const g=dadosDB[edicaoAtivaID]?.gastos; if(!g)return; Object.keys(g).forEach(k=>{ c.innerHTML+=`<div class="venda-item" style="border-left-color:var(--danger)"><span>${g[k].desc} - ${g[k].valor}</span><button class="btn-del" onclick="pedirConfirmacao('GASTO','${k}')">X</button></div>`}) }
     
     function atualizarResumoFinanceiro() { 
-        const r = document.getElementById('resumoNumerico'); 
-        if(!dadosDB[edicaoAtivaID]) return; 
-        
-        const config = dadosDB[edicaoAtivaID].config;
-        const v = Object.values(dadosDB[edicaoAtivaID].vendas || {});
-        const g = Object.values(dadosDB[edicaoAtivaID].gastos || {}); 
+    const r = document.getElementById('resumoNumerico'); 
+    
+    // Verificação de segurança: se não tiver rifa selecionada, para.
+    if(!edicaoAtivaID || !dadosDB[edicaoAtivaID]) return; 
+    
+    const config = dadosDB[edicaoAtivaID].config;
+    
+    // CORREÇÃO AQUI: Definimos 'listaVendas' e usamos ela no loop abaixo
+    const listaVendas = Object.values(dadosDB[edicaoAtivaID].vendas || {});
+    const gastosLista = Object.values(dadosDB[edicaoAtivaID].gastos || {}); 
 
-        // 1. Descobre o Valor Unitário da cota (ex: 49,99)
-        let valorUnitario = parseFloat((config.valorFixo || "0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+    // Variáveis de contabilidade
+    let totalPix = 0;
+    let totalAdmin = 0; // Dinheiro
+    let totalCotasVendidas = 0;
+    
+    // Loop nas vendas (Agora usando 'listaVendas' corretamente)
+    listaVendas.forEach(item => {
+        // Conta cotas
+        let qtd = (item.nums.match(/\d+/g) || []).length;
+        totalCotasVendidas += qtd;
 
-        // 2. Calcula a ENTRADA BRUTA (Cotas Vendidas x Valor Cheio)
-        let totalCotasVendidas = 0;
-        v.forEach(item => {
-            // Conta quantos números tem nessa venda
-            let qtd = (item.nums.match(/\d+/g) || []).length;
-            totalCotasVendidas += qtd;
-        });
-        
-        let entradaBruta = totalCotasVendidas * valorUnitario;
+        // Só soma financeiro se for PAGO e NÃO GRÁTIS
+        if(item.pago && !item.isGratis) {
+            let valorItem = parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+            
+            // Verifica o método
+            if(item.metodo === 'PIX') {
+                totalPix += valorItem;
+            } else {
+                totalAdmin += valorItem;
+            }
+        }
+    });
 
-        // 3. Calcula o valor REAL que foi registrado (com descontos/promoções) para achar a diferença
-        let entradaLiquidaReal = v.reduce((acc, item) => {
-            if(item.isGratis) return acc;
-            return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
-        }, 0);
+    // Soma Total (Pix + Admin)
+    let entradaLiquidaReal = totalPix + totalAdmin;
 
-        // 4. A diferença é o que deixamos de ganhar (Descontos + Cortesias + Promoções)
-        let diferencaDescontos = entradaBruta - entradaLiquidaReal;
+    // Calcula Gastos
+    let gastosManuais = gastosLista.reduce((acc, item) => {
+        return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
+    }, 0);
 
-        // 5. Soma os Gastos Manuais (que você lançou no botão)
-        let gastosManuais = g.reduce((acc, item) => {
-            return acc + parseFloat((item.valor||"0").replace(/[^\d,]/g,'').replace(',','.') || 0);
-        }, 0);
+    // Lucro Final
+    let lucroReal = entradaLiquidaReal - gastosManuais;
 
-        // 6. Total Saída = Gastos Manuais + A Diferença de valores
-        let totalSaida = gastosManuais + diferencaDescontos;
-
-        // 7. Lucro Real
-        let lucroReal = entradaBruta - totalSaida;
-
-        r.innerHTML = `
-            <div>
-                <small>Entrada (Bruta)</small><br>
-                R$ ${entradaBruta.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+    // HTML DO RELATÓRIO FINANCEIRO ATUALIZADO
+    r.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div style="background:#ecfdf5; padding:10px; border-radius:8px; border:1px solid #a7f3d0; text-align:center;">
+                    <div style="font-size:0.75rem; color:#065f46; font-weight:bold;">💠 RECEBIDO PIX</div>
+                    <div style="font-size:1.1rem; font-weight:900; color:#059669;">R$ ${totalPix.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                </div>
+                
+                <div style="background:#fffbeb; padding:10px; border-radius:8px; border:1px solid #fcd34d; text-align:center;">
+                    <div style="font-size:0.75rem; color:#92400e; font-weight:bold;">💵 RECEBIDO DINHEIRO</div>
+                    <div style="font-size:1.1rem; font-weight:900; color:#b45309;">R$ ${totalAdmin.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                </div>
             </div>
-            <div>
-                <small>Saída (+ Descontos)</small><br>
-                <span style="color:#ef4444">R$ ${totalSaida.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--white); padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+                <div style="text-align:center;">
+                    <small style="color:var(--gray)">Entrada Total</small><br>
+                    <b style="color:var(--dark)">R$ ${entradaLiquidaReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b>
+                </div>
+                <div style="width:1px; height:30px; background:#e5e7eb;"></div>
+                <div style="text-align:center;">
+                    <small style="color:var(--gray)">Saídas/Gastos</small><br>
+                    <b style="color:#ef4444">- R$ ${gastosManuais.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b>
+                </div>
+                <div style="width:1px; height:30px; background:#e5e7eb;"></div>
+                <div style="text-align:center;">
+                    <small style="color:var(--gray)">Lucro Caixa</small><br>
+                    <b style="color:${lucroReal>=0?'var(--primary)':'var(--danger)'}; font-size:1.1rem;">R$ ${lucroReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b>
+                </div>
             </div>
-            <div style="font-size:1.2rem; font-weight:bold; color:${lucroReal>=0?'var(--primary)':'var(--danger)'}">
-                <small>Lucro Real</small><br>
-                R$ ${lucroReal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-            </div>
-        `; 
-        r.style.display = "flex"; 
-        r.style.justifyContent = "space-around"; 
-    }
+        </div>
+    `; 
+    
+    r.style.display = "block"; 
+}
 
     function buscarPorTel(t) { /* Listener */ }
 
@@ -4629,6 +4709,42 @@ function pedirConfirmacao(tipo, key, extraVal) {
         btn.style.display = 'block';
         area.scrollIntoView({behavior:"smooth"});
     }
+
+    function toggleMetodoPgto(isChecked) {
+    const area = document.getElementById('areaMetodoPgto');
+    if(isChecked) {
+        area.style.opacity = "1";
+        area.style.pointerEvents = "all";
+    } else {
+        area.style.opacity = "0.5";
+        area.style.pointerEvents = "none";
+    }
+}
+
+function atualizarEstiloMetodo() {
+    const pixChecked = document.querySelector('input[name="inputMetodo"][value="PIX"]').checked;
+    
+    const btnPix = document.getElementById('btnMetodoPix');
+    const btnAdmin = document.getElementById('btnMetodoAdmin');
+    
+    if(pixChecked) {
+        btnPix.style.background = "#ecfdf5";
+        btnPix.style.borderColor = "var(--primary)";
+        btnPix.style.color = "#065f46";
+        
+        btnAdmin.style.background = "var(--white)";
+        btnAdmin.style.borderColor = "var(--border-input)";
+        btnAdmin.style.color = "var(--gray)";
+    } else {
+        btnAdmin.style.background = "#fffbeb"; // Amarelo claro para dinheiro
+        btnAdmin.style.borderColor = "#f59e0b";
+        btnAdmin.style.color = "#92400e";
+        
+        btnPix.style.background = "var(--white)";
+        btnPix.style.borderColor = "var(--border-input)";
+        btnPix.style.color = "var(--gray)";
+    }
+}
 
     async function gerarPDF(isGestao, mode) { 
         if(!edicaoAtivaID) return alert("Selecione uma campanha!");
