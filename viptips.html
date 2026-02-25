@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP TIPS - Mercado de Previsões Global</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden { display: none; }
+        .diagonal-bg { 
+            clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); 
+            background-color: #003366; 
+        }
+        .card-container { height: 260px; transition: all 0.3s ease; border-radius: 1.5rem; overflow: hidden; background: white; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .card-container:hover { transform: translateY(-5px); }
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body>
+
+    <nav class="bg-white border-b sticky top-0 z-50 p-4 shadow-sm">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-black text-[#003366] cursor-pointer" onclick="showPage('home')">VIP TIPS</h1>
+            <div id="user-nav-area" class="flex items-center space-x-6">
+                </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-8 p-4 pb-24">
+        
+        <section id="how-it-works" class="page-content hidden">
+            <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-xl border">
+                <h2 class="text-3xl font-black text-[#003366] mb-6 italic">Como funciona o VIP TIPS?</h2>
+                <div class="space-y-6 text-slate-700 leading-relaxed">
+                    <p class="font-bold text-lg">Aqui você não aposta contra a casa, você negocia com outros usuários em uma <span class="text-indigo-600">Bolsa de Valores de Previsões</span>.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h3 class="font-bold text-[#003366] mb-2">1. O Valor das Ações</h3>
+                            <p class="text-sm">A soma do preço do "Sim" e do "Não" sempre totaliza <strong>R$ 1,00</strong>. Se o mercado acha que algo é muito provável, o preço sobe.</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h3 class="font-bold text-[#003366] mb-2">2. Resgate Final</h3>
+                            <p class="text-sm">Se você acertar o resultado final, cada ação que você possui passa a valer <strong>R$ 1,00</strong> na sua conta.</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h3 class="font-bold text-[#003366] mb-2">3. Venda Antecipada</h3>
+                            <p class="text-sm">Você pode vender suas ações a qualquer momento pelo preço atual de mercado para garantir seu lucro ou evitar prejuízos.</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h3 class="font-bold text-[#003366] mb-2">4. Taxa de Lucro</h3>
+                            <p class="text-sm">Nós cobramos uma taxa de <strong>10% apenas sobre o seu lucro líquido</strong> no momento da venda ou resgate.</p>
+                        </div>
+                    </div>
+                    
+                    <button onclick="showPage('home')" class="w-full bg-[#003366] text-white py-4 rounded-2xl font-bold text-lg mt-4 shadow-lg hover:bg-blue-900 transition">Voltar para os Mercados</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="home" class="page-content">
+            <div id="market-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-8"></div>
+        </section>
+
+        <section id="portfolio" class="page-content hidden">
+            <h2 class="text-2xl font-bold mb-6 text-[#003366]">Meus Investimentos</h2>
+            <div id="portfolio-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
+        <section id="login-page" class="page-content hidden">
+            <div class="max-w-md mx-auto bg-white p-8 rounded-3xl shadow-xl border text-center">
+                <h2 class="text-2xl font-bold mb-6 text-[#003366]">Acessar VIPTIPS</h2>
+                <div class="space-y-4">
+                    <input type="text" id="login-user" placeholder="Usuário" class="w-full p-4 border rounded-2xl outline-none">
+                    <input type="password" id="login-pass" placeholder="Senha" class="w-full p-4 border rounded-2xl outline-none">
+                    <div class="flex gap-2">
+                        <button onclick="handleLogin()" class="flex-1 bg-[#003366] text-white py-4 rounded-2xl font-bold">Entrar</button>
+                        <button onclick="handleRegister()" class="flex-1 bg-slate-100 py-4 rounded-2xl font-bold">Cadastrar</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="admin" class="page-content hidden">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border mb-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-bold italic">Admin - Gestão VIP</h2>
+                    <div class="bg-green-50 p-4 rounded-2xl border border-green-200 text-right">
+                        <span class="text-[10px] font-bold text-green-600 uppercase">Ganhos da Casa (10% s/ lucro)</span>
+                        <p id="admin-house-profit" class="text-3xl font-black text-green-700">R$ 0,00</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-slate-50 p-6 rounded-2xl border">
+                        <h3 class="font-bold mb-4 text-xs uppercase" id="form-title">Cadastrar Mercado</h3>
+                        <div class="space-y-3">
+                            <input type="hidden" id="edit-id">
+                            <input type="text" id="adm-title" placeholder="Pergunta" class="w-full p-3 border rounded-xl outline-none">
+                            <input type="text" id="adm-img" placeholder="Link da Imagem" class="w-full p-3 border rounded-xl outline-none">
+                            <input type="number" id="adm-price" step="0.01" placeholder="Preço Inicial SIM" class="w-full p-3 border rounded-xl outline-none">
+                            <button onclick="handleMarketAction()" id="btn-submit" class="w-full bg-[#003366] text-white py-3 rounded-xl font-bold">Salvar</button>
+                            <button onclick="resetForm()" id="btn-cancel" class="w-full text-slate-400 text-xs hidden underline mt-2">Cancelar</button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 space-y-4">
+                        <h3 class="font-bold mb-4 text-xs uppercase">Gestão de Mercados</h3>
+                        <div id="admin-market-list" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="modal-details" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl p-8">
+            <h2 id="detail-title" class="text-xl font-bold mb-8 border-l-4 border-[#003366] pl-4"></h2>
+            <div id="choice-buttons" class="grid grid-cols-2 gap-4 mb-8">
+                <button onclick="selectSide('yes')" id="btn-yes" class="border-2 p-4 rounded-2xl text-center">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase">Sim</span>
+                    <span id="price-yes-label" class="text-2xl font-black text-[#003366]"></span>
+                </button>
+                <button onclick="selectSide('no')" id="btn-no" class="border-2 p-4 rounded-2xl text-center">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase">Não</span>
+                    <span id="price-no-label" class="text-2xl font-black text-[#003366]"></span>
+                </button>
+            </div>
+            <div id="purchase-area" class="hidden bg-slate-50 p-6 rounded-2xl border text-center">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Ações</span>
+                    <input type="number" id="buy-qty" value="10" min="1" oninput="calculateOrder()" class="w-24 p-2 text-center font-bold border-b-2 border-[#003366] bg-transparent outline-none">
+                </div>
+                <div class="border-t pt-4">
+                    <div class="flex justify-between text-xs text-slate-400 mb-1"><span>Preço Médio:</span><span id="avg-price-display">R$ 0,00</span></div>
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase">Investimento Total</span>
+                    <span id="display-final-cost" class="text-3xl font-black text-[#003366]">R$ 0,00</span>
+                    <button onclick="confirmPurchase()" class="w-full mt-4 bg-[#003366] text-white py-4 rounded-xl font-bold">Confirmar Investimento</button>
+                </div>
+            </div>
+            <button onclick="closeModals()" class="w-full text-slate-300 mt-6 text-xs font-bold uppercase tracking-widest">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        const PROFIT_FEE = 0.10; 
+        const SLIPPAGE = 0.0001; 
+
+        let state = JSON.parse(localStorage.getItem('predict_vFinal_Santos_Audit')) || {
+            houseProfit: 0,
+            currentUser: null,
+            users: [],
+            markets: [
+                { id: 1, title: "O Dólar ultrapassará a marca de R$ 6,00 até o final de 2026?", priceYes: 0.52, active: true, year: "2026", category: "Câmbio", volume: 0, img: "https://images.unsplash.com/photo-1611974717535-7c8059622843?auto=format&fit=crop&w=600&q=80" },
+                { id: 2, title: "Donald Trump será reeleito Presidente dos EUA em 2024?", priceYes: 0.48, active: true, year: "2024", category: "Política Int.", volume: 0, img: "https://images.unsplash.com/photo-1580129923231-238a6493dd0a?auto=format&fit=crop&w=600&q=80" },
+                { id: 3, title: "A SpaceX fará o primeiro pouso humano em Marte antes de 2030?", priceYes: 0.15, active: true, year: "2030", category: "Espaço", volume: 0, img: "https://images.unsplash.com/photo-1614728263952-84ea256f9679?auto=format&fit=crop&w=600&q=80" },
+                { id: 4, title: "O Brasil conquistará o Hexa na Copa do Mundo de 2026?", priceYes: 0.35, active: true, year: "2026", category: "Esportes", volume: 0, img: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80" }
+            ]
+        };
+
+        let activeId = null, activeSide = null, currentExecutionPrice = 0;
+
+        function save() { localStorage.setItem('predict_vFinal_Santos_Audit', JSON.stringify(state)); render(); }
+        function showPage(id) { 
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden')); 
+            document.getElementById(id).classList.remove('hidden'); 
+        }
+
+        function calculateOrder() {
+            const m = state.markets.find(x => x.id === activeId);
+            const qty = parseInt(document.getElementById('buy-qty').value) || 0;
+            const startPrice = activeSide === 'yes' ? m.priceYes : (1 - m.priceYes);
+            const endPrice = Math.min(0.99, startPrice + (qty * SLIPPAGE));
+            const avgPrice = (startPrice + endPrice) / 2;
+            const total = qty * avgPrice;
+            currentExecutionPrice = avgPrice;
+            document.getElementById('avg-price-display').innerText = `R$ ${avgPrice.toFixed(4)}`;
+            document.getElementById('display-final-cost').innerText = `R$ ${total.toFixed(2)}`;
+            return { total, endPrice };
+        }
+
+        function confirmPurchase() {
+            const u = state.users.find(x => x.name === state.currentUser);
+            const m = state.markets.find(x => x.id === activeId);
+            const { total, endPrice } = calculateOrder();
+            const qty = parseInt(document.getElementById('buy-qty').value);
+            if (u.balance < total) return alert("Saldo insuficiente.");
+            u.balance -= total;
+            u.invested += total;
+            u.portfolio.push({ marketId: m.id, marketTitle: m.title, side: activeSide, qty, buyPrice: currentExecutionPrice });
+            if(activeSide === 'yes') m.priceYes = endPrice;
+            else m.priceYes = 1 - endPrice;
+            m.volume += total;
+            save(); closeModals();
+        }
+
+        function sellPosition(index) {
+            const u = state.users.find(x => x.name === state.currentUser);
+            const pos = u.portfolio[index];
+            const m = state.markets.find(x => x.id === pos.marketId);
+            const startPrice = pos.side === 'yes' ? m.priceYes : (1 - m.priceYes);
+            const endPrice = Math.max(0.01, startPrice - (pos.qty * SLIPPAGE));
+            const avgSellPrice = (startPrice + endPrice) / 2;
+            const bruteVal = pos.qty * avgSellPrice;
+            const originalCost = pos.qty * pos.buyPrice;
+            const profit = bruteVal - originalCost;
+            let tax = profit > 0 ? profit * PROFIT_FEE : 0;
+            const netVal = bruteVal - tax;
+            u.balance += netVal;
+            u.invested -= originalCost;
+            state.houseProfit += tax;
+            if(pos.side === 'yes') m.priceYes = endPrice;
+            else m.priceYes = 1 - endPrice;
+            u.portfolio.splice(index, 1);
+            save();
+        }
+
+        function handleMarketAction() {
+            const id = document.getElementById('edit-id').value;
+            const title = document.getElementById('adm-title').value;
+            const img = document.getElementById('adm-img').value;
+            const price = parseFloat(document.getElementById('adm-price').value);
+            if(id) {
+                const m = state.markets.find(x => x.id == id);
+                m.title = title; m.img = img; if(!isNaN(price)) m.priceYes = price;
+            } else {
+                state.markets.push({ id: Date.now(), title, img, priceYes: price || 0.50, active: true, year: "2026", category: "Geral", volume: 0 });
+            }
+            resetForm(); save();
+        }
+
+        function settleMarket(id, winner) {
+            const m = state.markets.find(x => x.id === id); m.active = false;
+            state.users.forEach(u => {
+                u.portfolio.filter(p => p.marketId === id).forEach(p => {
+                    if(p.side === winner) {
+                        const profit = (1.00 - p.buyPrice) * p.qty;
+                        const tax = profit * PROFIT_FEE;
+                        u.balance += (p.qty * 1.00) - tax;
+                        state.houseProfit += tax;
+                    }
+                    u.invested -= (p.qty * p.buyPrice);
+                });
+                u.portfolio = u.portfolio.filter(p => p.marketId !== id);
+            });
+            save();
+        }
+
+        function handleLogin() {
+            const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value;
+            let found = state.users.find(x => x.name === u);
+            if(!found) { state.users.push({ name: u, pass: p, balance: 1000.00, invested: 0, portfolio: [] }); found = state.users[state.users.length-1]; }
+            if(found.pass === p) { state.currentUser = u; save(); showPage('home'); }
+        }
+
+        function render() {
+            const user = state.currentUser ? state.users.find(u => u.name === state.currentUser) : null;
+            const navArea = document.getElementById('user-nav-area');
+            let infoBtns = `<button onclick="showPage('how-it-works')" class="text-[#003366] font-bold text-xs uppercase hover:underline">Como Funciona</button>`;
+
+            if(user) {
+                navArea.innerHTML = `
+                    ${infoBtns}
+                    <div class="text-right leading-none border-l pl-4"><span class="text-[10px] font-bold text-slate-400">SALDO</span><p class="font-black text-blue-900">R$ ${user.balance.toFixed(2)}</p></div>
+                    <button onclick="showPage('portfolio')" class="text-xs font-bold text-slate-500 uppercase">Portfólio</button>
+                    <button onclick="logout()" class="text-xs font-bold text-red-500 uppercase">Sair</button>
+                    <button onclick="checkAdmin()" class="text-slate-300 text-[10px]">ADM</button>
+                `;
+            } else {
+                navArea.innerHTML = `${infoBtns} <button onclick="showPage('login-page')" class="bg-[#003366] text-white px-6 py-2 rounded-full font-bold">ACESSAR</button>`;
+            }
+
+            document.getElementById('market-grid').innerHTML = state.markets.filter(m => m.active).map(m => `
+                <div onclick="openMarket(${m.id})" class="card-container relative flex shadow-xl cursor-pointer group">
+                    <div class="w-7/12 p-6 flex flex-col justify-between">
+                        <h3 class="text-xl font-bold text-slate-700 leading-tight">${m.title}</h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-3xl font-black text-[#003366]">R$ ${m.priceYes.toFixed(2)}</span>
+                            <span class="text-slate-300 font-bold text-sm uppercase">Sim</span>
+                        </div>
+                    </div>
+                    <div class="w-5/12 relative">
+                        <div class="absolute inset-0 diagonal-bg" style="background-image: url('${m.img}'); background-size: cover; background-position: center;">
+                            <div class="absolute inset-0 bg-[#003366]/60"></div>
+                        </div>
+                        <div class="relative z-10 h-full flex flex-col items-end justify-between p-6 text-white text-right font-black italic">
+                            <span class="text-4xl opacity-30">${m.year}</span>
+                            <span class="text-sm uppercase tracking-widest">${m.category}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('admin-house-profit').innerText = `R$ ${state.houseProfit.toFixed(2)}`;
+            document.getElementById('admin-market-list').innerHTML = state.markets.filter(m => m.active).map(m => `
+                <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+                    <div class="w-1/2 leading-tight"><p class="font-bold text-sm truncate">${m.title}</p><button onclick="editMarket(${m.id})" class="text-blue-600 text-[10px] font-bold uppercase underline">Editar</button></div>
+                    <div class="flex gap-1">
+                        <button onclick="settleMarket(${m.id}, 'yes')" class="bg-green-600 text-white px-3 py-2 rounded-lg text-[10px] font-bold">SIM VENCEU</button>
+                        <button onclick="settleMarket(${m.id}, 'no')" class="bg-red-600 text-white px-3 py-2 rounded-lg text-[10px] font-bold">NÃO VENCEU</button>
+                    </div>
+                </div>
+            `).join('');
+
+            if(user) {
+                document.getElementById('portfolio-list').innerHTML = user.portfolio.map((p, i) => `
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border-l-8 ${p.side === 'yes' ? 'border-green-500' : 'border-red-500'} flex justify-between items-center">
+                        <div><p class="font-bold text-slate-800">${p.marketTitle}</p><p class="text-xs text-slate-400">${p.qty} ações - Pago R$ ${p.buyPrice.toFixed(4)}</p></div>
+                        <button onclick="sellPosition(${i})" class="bg-[#003366] text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">Vender</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function openMarket(id) { if(!state.currentUser) return showPage('login-page'); activeId = id; const m = state.markets.find(x => x.id === id); document.getElementById('detail-title').innerText = m.title; document.getElementById('price-yes-label').innerText = `R$ ${m.priceYes.toFixed(2)}`; document.getElementById('price-no-label').innerText = `R$ ${(1-m.priceYes).toFixed(2)}`; document.getElementById('purchase-area').classList.add('hidden'); document.getElementById('modal-details').classList.remove('hidden'); }
+        function selectSide(s) { activeSide = s; document.getElementById('purchase-area').classList.remove('hidden'); calculateOrder(); }
+        function closeModals() { document.getElementById('modal-details').classList.add('hidden'); }
+        function logout() { state.currentUser = null; save(); showPage('home'); }
+        function checkAdmin() { if(prompt("Senha:") === "admin") showPage('admin'); }
+        function editMarket(id) { const m = state.markets.find(x => x.id == id); document.getElementById('edit-id').value = m.id; document.getElementById('adm-title').value = m.title; document.getElementById('adm-img').value = m.img; document.getElementById('adm-price').value = m.priceYes; document.getElementById('form-title').innerText = "Editando Mercado"; document.getElementById('btn-cancel').classList.remove('hidden'); }
+        function resetForm() { document.getElementById('edit-id').value = ""; document.getElementById('adm-title').value = ""; document.getElementById('adm-img').value = ""; document.getElementById('adm-price').value = ""; document.getElementById('form-title').innerText = "Novo Mercado"; document.getElementById('btn-cancel').classList.add('hidden'); }
+
+        window.onload = render;
+    </script>
+</body>
+</html>
