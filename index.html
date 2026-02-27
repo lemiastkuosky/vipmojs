@@ -7739,6 +7739,95 @@ function showLoadingIndicator(message = 'Processando...') {
   }
 }
 
+  // ============================================================
+// === CONTROLE DO MODAL DE SELEÇÃO DE NOMES (CLIENTES) ===
+// ============================================================
+
+function openNamePickerModal(event) {
+    if (event) event.preventDefault();
+    
+    const modal = document.getElementById('namePickerModal');
+    if (modal) {
+        // Limpa o campo de busca de utilizações anteriores
+        const searchInput = document.getElementById('namePickerSearch');
+        if (searchInput) searchInput.value = '';
+        
+        // Puxa a lista atualizada de nomes
+        renderNamePickerList();
+        
+        // Abre a janela
+        modal.classList.add('active');
+        
+        // Foca automaticamente no campo de pesquisa (ajuda no celular)
+        setTimeout(() => {
+            if (searchInput) searchInput.focus();
+        }, 300);
+    }
+}
+
+function closeNamePickerModal() {
+    const modal = document.getElementById('namePickerModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function renderNamePickerList() {
+    const container = document.getElementById('namePickerList');
+    const searchInput = document.getElementById('namePickerSearch');
+    if (!container) return;
+
+    // Pega o que o usuário digitou na busca
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    container.innerHTML = '';
+
+    // Filtra os nomes baseados no texto da busca
+    const nomes = typeof nomesSalvos !== 'undefined' ? nomesSalvos : [];
+    const nomesFiltrados = nomes.filter(nome => nome.toLowerCase().includes(searchTerm));
+
+    if (nomesFiltrados.length === 0) {
+        container.innerHTML = '<div class="no-saved-items" style="padding: 20px; text-align: center; color: #6c757d;">Nenhum nome encontrado.</div>';
+        return;
+    }
+
+    // Monta a lista visualmente
+    nomesFiltrados.forEach(nome => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'picker-item';
+        
+        const nomeSpan = document.createElement('span');
+        nomeSpan.textContent = nome;
+        nomeSpan.style.flexGrow = '1';
+        nomeSpan.style.padding = '5px 0';
+        nomeSpan.style.fontWeight = '500';
+        
+        // Quando clicar no nome, seleciona ele
+        nomeSpan.onclick = () => {
+            if (typeof selectNameFromPicker === 'function') {
+                selectNameFromPicker(nome);
+            }
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'picker-delete-btn';
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.title = 'Excluir este nome';
+        
+        // Quando clicar na lixeira, deleta o nome
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation(); // Evita que selecione o nome ao clicar na lixeira
+            if (typeof deleteNameFromPicker === 'function') {
+                deleteNameFromPicker(nome);
+            }
+        };
+
+        itemDiv.appendChild(nomeSpan);
+        itemDiv.appendChild(deleteBtn);
+        container.appendChild(itemDiv);
+    });
+}
+
+
 // --- Funções para o Modal de Seleção de Cópia ---
 
 function showCopySelectionModal(hasMilhar, hasCentena, hasDezena) {
