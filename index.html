@@ -8161,6 +8161,103 @@ async function performMcdSearch() {
     }
 }
 
+  // ============================================================
+// === BLOCO DE CORREÇÃO FINAL (MODAIS E HORÁRIOS) ===
+// ============================================================
+
+// 1. Recria as funções do Menu de Análises que haviam sumido
+function closeAnalysisHubModal() {
+    const modal = document.getElementById('analysisHubModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function openAtrasadosFromHub() {
+    closeAnalysisHubModal();
+    setTimeout(() => {
+        if (typeof showAtrasadosRealTimeModal === 'function') {
+            showAtrasadosRealTimeModal();
+        }
+    }, 300);
+}
+
+// 2. Força a Caixa de Horários do Recibo a funcionar corretamente
+window.updateExtractionTimes = async function() {
+    const extractionSelect = document.getElementById('receiptExtractionSelect');
+    const timeSelect = document.getElementById('receiptTimeSelect');
+    
+    if (!extractionSelect || !timeSelect) return;
+    
+    const selectedExtraction = extractionSelect.value;
+    timeSelect.innerHTML = ''; // Limpa a caixa
+
+    // SE NADA FOI ESCOLHIDO, MOSTRA O AVISO DE "ESCOLHA A EXTRAÇÃO"
+    if (!selectedExtraction || selectedExtraction === '') {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '⬅️ Escolha a Extração acima';
+        timeSelect.appendChild(option);
+        
+        if (typeof generateReceiptText === 'function') generateReceiptText(); 
+        return; 
+    }
+
+    // Se escolheu, carrega os horários
+    const schedule = extractionSchedules[selectedExtraction] || [];
+    schedule.forEach(sorteioInfo => {
+        const option = document.createElement('option');
+        option.value = sorteioInfo.display;
+        option.textContent = sorteioInfo.display;
+        timeSelect.appendChild(option);
+    });
+
+    // Puxa o horário de corte global
+    let cutoffMinutosGlobal = 5;
+    try {
+        const savedCutoff = await getData('cutoffTimePreference'); 
+        if (savedCutoff !== null && savedCutoff !== undefined) {
+             cutoffMinutosGlobal = parseInt(savedCutoff, 10);
+        }
+    } catch(e) { console.warn("Erro ao ler cutoff", e); }
+
+    if (schedule.length > 0) {
+        const agora = new Date();
+        let proximoSorteioDisponivel = null;
+
+        for (const sorteioInfo of schedule) {
+            const timeMatch = sorteioInfo.display.match(/(\d{2}):(\d{2})/);
+            if (!timeMatch) continue;
+
+            const sorteioHora = parseInt(timeMatch[1], 10);
+            const sorteioMinuto = parseInt(timeMatch[2], 10);
+            const dataSorteioHoje = new Date();
+            dataSorteioHoje.setHours(sorteioHora, sorteioMinuto, 0, 0);
+
+            const dataLimite = new Date(dataSorteioHoje);
+            let cutoffParaEsteSorteio = sorteioInfo.corteMinutos === 0 ? 0 : cutoffMinutosGlobal;
+            
+            if (selectedExtraction === 'Look') {
+                cutoffParaEsteSorteio = -15; 
+            }
+            
+            dataLimite.setMinutes(dataSorteioHoje.getMinutes() - cutoffParaEsteSorteio);
+
+            if (agora < dataLimite) {
+                proximoSorteioDisponivel = sorteioInfo;
+                break;
+            }
+        }
+
+        if (proximoSorteioDisponivel) {
+            timeSelect.value = proximoSorteioDisponivel.display;
+        } else if (schedule.length > 0) {
+            timeSelect.value = schedule[schedule.length - 1].display;
+        }
+    }
+
+    if (typeof generateReceiptText === 'function') generateReceiptText();
+};
+ 
+
 // --- FUNÇÕES DE CONSULTA MCD (CORREÇÃO) ---
 
 // 1. Abre o modal vindo do Hub de Análises
