@@ -6230,6 +6230,44 @@ body.dark-mode .logo-mojs {
     <button type="button" id="btnMenuTabela" onclick="showTabelaBichosModal()" class="view-button">📊 Mostrar Tabela Bichos</button>
     <button type="button" id="btnMenuAnalises" onclick="showAnalysisHubModal()" class="analysis-button">🔮 Análises e Consultas</button>
 </div>
+
+<div id="mcdSearchModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close-modal" onclick="closeMcdSearchModal()">×</span>
+        <h3 class="modal-title">🔎 Consultar Histórico MCD</h3>
+        
+        <p style="text-align: center; color: #6c757d; margin-bottom: 15px;">
+            Pesquise quando uma milhar específica saiu no nosso banco de dados.
+        </p>
+
+        <div class="generator-step-card" style="padding: 15px;">
+            <label for="mcdLoteriaSelect" style="font-weight: bold;">1. Escolha a Extração:</label>
+            <select id="mcdLoteriaSelect" class="save-dialog-input" style="margin-bottom: 15px;">
+                <option value="rj">PT Rio (RJ)</option>
+                <option value="lk">Look Goiás (LK)</option>
+                <option value="ln">Loteria Nacional (LN)</option>
+                <option value="fd">Federal (FD)</option>
+            </select>
+
+            <label for="mcdInputMilhar" style="font-weight: bold;">2. Digite a Milhar:</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="tel" id="mcdInputMilhar" class="save-dialog-input" maxlength="4" placeholder="Ex: 1234" style="text-align: center; font-weight: bold; letter-spacing: 2px; margin: 0;">
+                <button onclick="performMcdSearch()" class="save-button" style="width: auto; min-width: 100px;">Buscar</button>
+            </div>
+        </div>
+
+        <div id="mcdSearchResults" style="margin-top: 15px; max-height: 300px; overflow-y: auto;"></div>
+
+        <div class="button-group" style="margin-top: 20px; gap: 10px;">
+            <button onclick="backToAnalysisHubFromMcd()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">
+                ⬅️ Voltar
+            </button>
+            <button onclick="closeMcdSearchModal()" class="import-btn" style="flex: 1; padding: 12px;">
+                ❌ Sair
+            </button>
+        </div>
+    </div>
+</div>
     <section aria-labelledby="input-label">
     <label id="input-label" for="input">Entrada de números:</label>
     <textarea id="input" placeholder="Digite ou cole os números, grupos ou bichos aqui. Use espaço ou enter para separar." aria-describedby="errorMessage"></textarea>
@@ -6502,13 +6540,17 @@ body.dark-mode .logo-mojs {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V7.77</strong>
+            <strong>V7.87</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
             <span>Database:</span>
             <strong id="milharTotalCount">...</strong>
         </div>
+        <div class="footer-info-item" id="iaStatusContainer">
+    <span>🧠 I.A:</span>
+    <strong id="iaLastUpdateDate" style="color: #6c757d;">Verificando...</strong>
+</div>
     </div>
     <div>👨‍💻 Criado por: Le Miastkuosky</div><br>
      <div class="footer-system-status">
@@ -6517,9 +6559,7 @@ body.dark-mode .logo-mojs {
             <button id="logout-button" style="display: none;" onclick="handleLogout()">Sair</button>
             
         </div>
-        <div class="status-row">
-            <span id="db-connection-status">Verificando conexão...</span>
-        </div>
+        
     </div>
 </footer>
 
@@ -6534,30 +6574,37 @@ body.dark-mode .logo-mojs {
             </p>
                   
             <div class="modal-card-grid" id="atrasadosLotteryGrid">
-    <button data-loteria="fd" data-nome="Federal" class="lottery-card-button btn-share">
-        <div class="lottery-card-text">
-            <strong>FD</strong><small>(FD)</small>
-        </div>
-    </button>
-    <button data-loteria="rj" data-nome="PT Rio" class="lottery-card-button btn-share">
-        <div class="lottery-card-text">
-            <strong>RJ</strong><small>(RJ)</small>
-        </div>
-    </button>
-    <button data-loteria="lk" data-nome="Look Goiás" class="lottery-card-button btn-share">
-        <div class="lottery-card-text">
-            <strong>LK</strong><small>(LK)</small>
-        </div>
-    </button>
-    <button data-loteria="ln" data-nome="Loteria Nacional" class="lottery-card-button btn-share">
-        <div class="lottery-card-text">
-            <strong>NC</strong><small>(LN)</small>
-        </div>
-    </button>
-</div>
+                <button data-loteria="fd" data-nome="Federal" class="lottery-card-button btn-share">
+                    <div class="lottery-card-text">
+                        <strong>FD</strong><small>(FD)</small>
+                    </div>
+                </button>
+                <button data-loteria="rj" data-nome="PT Rio" class="lottery-card-button btn-share">
+                    <div class="lottery-card-text">
+                        <strong>RJ</strong><small>(RJ)</small>
+                    </div>
+                </button>
+                <button data-loteria="lk" data-nome="Look Goiás" class="lottery-card-button btn-share">
+                    <div class="lottery-card-text">
+                        <strong>LK</strong><small>(LK)</small>
+                    </div>
+                </button>
+                <button data-loteria="ln" data-nome="Loteria Nacional" class="lottery-card-button btn-share">
+                    <div class="lottery-card-text">
+                        <strong>NC</strong><small>(LN)</small>
+                    </div>
+                </button>
+            </div>
         </div>
 
-        <button onclick="closeAtrasadosRealTimeModal()" class="load-button" style="width: 100%; margin-top: 20px;">Fechar</button>
+        <div class="button-group" style="margin-top: 20px; gap: 10px;">
+            <button onclick="backToAnalysisHub()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">
+                ⬅️ Voltar
+            </button>
+            <button onclick="closeAtrasadosRealTimeModal()" class="import-btn" style="flex: 1; padding: 12px;">
+                ❌ Sair
+            </button>
+        </div>
     </div>
 </div>
 
@@ -6636,35 +6683,71 @@ body.dark-mode .logo-mojs {
     </div>
 </div>
 
-<div id="mcdSearchModal" class="modal modal-advanced" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width: 500px;">
-        <span class="close-modal" onclick="closeMcdSearchModal()">×</span>
-        <h3 class="modal-title">🔎 Consultar Histórico MCD</h3>
-        
-        <p style="text-align: center; color: #6c757d; margin-bottom: 15px;">
-            Pesquise quando uma milhar específica saiu no nosso banco de dados.
-        </p>
-
-        <div class="generator-step-card" style="padding: 15px;">
-            <label for="mcdLoteriaSelect" style="font-weight: bold;">1. Escolha a Extração:</label>
-            <select id="mcdLoteriaSelect" class="save-dialog-input" style="margin-bottom: 15px;">
-                <option value="rj">PT Rio (RJ)</option>
-                <option value="lk">Look Goiás (LK)</option>
-                <option value="ln">Loteria Nacional (LN)</option>
-                <option value="fd">Federal (FD)</option>
-            </select>
-
-            <label for="mcdInputMilhar" style="font-weight: bold;">2. Digite a Milhar:</label>
-            <div style="display: flex; gap: 10px;">
-                <input type="tel" id="mcdInputMilhar" class="save-dialog-input" maxlength="4" placeholder="Ex: 1234" style="text-align: center; font-weight: bold; letter-spacing: 2px; margin: 0;">
-                <button onclick="performMcdSearch()" class="save-button" style="width: auto; min-width: 100px;">Buscar</button>
+<div id="palpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true" aria-labelledby="palpitesIAModalTitle">
+    <div class="modal-content" style="max-width: 550px;">
+      <span class="close-modal" onclick="closePalpitesIAModal()" aria-label="Fechar">×</span>
+      <h3 id="palpitesIAModalTitle" class="modal-title">🧠 Palpites da I.A.</h3>
+      
+      <div id="iaPalpiteForm">
+          <div class="generator-step-card" style="padding: 15px; margin-bottom: 20px;">
+            <p style="text-align: center; margin-top: -5px; margin-bottom: 15px;">
+                Selecione a loteria para a análise da I.A.:
+            </p>
+            <div class="modal-card-grid" id="iaLotteryGrid">            
+                <button class="lottery-card-button" onclick="generateIAPalpites('rj', 'PT Rio (RJ)')">
+                    <div class="lottery-card-text">
+                        <strong>RJ</strong><small>(RJ)</small>
+                    </div>
+                </button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('lk', 'Look Goiás (LK)')">
+                    <div class="lottery-card-text">
+                        <strong>LK</strong><small>(LK)</small>
+                    </div>
+                </button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('ln', 'Loteria Nacional (LN)')">
+                    <div class="lottery-card-text">
+                        <strong>NC</strong><small>(LN)</small>
+                    </div>
+                </button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('fd', 'Federal (FD)')">
+                    <div class="lottery-card-text">
+                        <strong>FD</strong><small>(FD)</small>
+                    </div>
+                </button>
             </div>
-        </div>
+          </div>
+          
+          <div class="button-group" style="gap: 10px;">
+              <button onclick="backToAnalysisHubFromIA()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">
+                  ⬅️ Voltar
+              </button>
+              <button onclick="closePalpitesIAModal()" class="import-btn" style="flex: 1; padding: 12px;">
+                  ❌ Sair
+              </button>
+          </div>
+      </div>
 
-        <div id="mcdSearchResults" style="margin-top: 15px; max-height: 300px; overflow-y: auto;">
-            </div>
-
-        <button onclick="closeMcdSearchModal()" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
+      <div id="iaPalpiteResultsContainer" style="display: none;">
+          <div class="generator-step-card" style="padding: 15px;">
+              <div class="step-title" style="margin-bottom: 15px;">
+                  🔮 Análise I.A. para <span id="iaPalpiteLoteriaNome"></span>
+              </div>
+              <div id="iaPalpiteResultsOutput"></div>
+          </div>
+          
+          <button id="iaPalpiteShareBtn" onclick="shareIAPalpites()" class="save-button" style="background-color: #25D366; width: 100%; margin-top: 15px; padding: 12px; font-size: 1rem;">
+              📲 Compartilhar no WhatsApp
+          </button>
+          
+          <div class="button-group" style="margin-top: 15px; gap: 10px;">
+              <button onclick="backToIASelection()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">
+                  ⬅️ Voltar
+              </button>
+              <button onclick="closePalpitesIAModal()" class="import-btn" style="flex: 1; padding: 12px;">
+                  ❌ Sair
+              </button>
+          </div>
+      </div>
     </div>
 </div>
 
@@ -6735,12 +6818,19 @@ body.dark-mode .logo-mojs {
     <div class="modal-content">
       <span class="close-modal" onclick="closeShareResultsModal()" aria-label="Fechar">×</span>
       <h3 id="shareResultsModalTitle" class="modal-title">📲 Compartilhar Resultado</h3>
-<div id="shareResultsModalBody">
-  </div>
+      <div id="shareResultsModalBody"></div>
 
-<div class="button-group" style="margin-top: 15px;">
-  <button onclick="closeShareResultsModal()" class="load-button" style="display: none; flex-grow: 0; min-width: 150px;" id="shareCancelButton">Cancelar</button>
+      <div class="button-group" style="margin-top: 20px; gap: 10px;">
+          <button onclick="backToAnalysisHubFromShare()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">
+              ⬅️ Voltar
+          </button>
+          <button onclick="closeShareResultsModal()" class="import-btn" style="flex: 1; padding: 12px;">
+              ❌ Sair
+          </button>
+      </div>
+    </div>
 </div>
+
 </div>
     </div>
 
@@ -11707,6 +11797,16 @@ function undoReceiptValueChange() {
     }
 }
 
+function backToAnalysisHub() {
+    // 1. Fecha a janela de Atrasados
+    closeAtrasadosRealTimeModal();
+    
+    // 2. Abre o menu principal de Análises após um pequeno delay para suavidade
+    setTimeout(() => {
+        showAnalysisHubModal();
+    }, 300);
+}
+
 function openChunkCopyModal() {
     let tempNumbers = [];
     
@@ -12892,6 +12992,28 @@ async function openFoundReceipt(historyItemId, highlightNumber = null) {
             }
         }, 500); // Pequeno delay para garantir que o modal abriu e renderizou
     }
+}
+
+// Funções de retorno ao Hub de Análises
+function backToAnalysisHubFromMcd() {
+    closeMcdSearchModal();
+    setTimeout(() => { showAnalysisHubModal(); }, 300);
+}
+
+function backToAnalysisHubFromShare() {
+    closeShareResultsModal();
+    setTimeout(() => { showAnalysisHubModal(); }, 300);
+}
+
+function backToAnalysisHubFromIA() {
+    closePalpitesIAModal();
+    setTimeout(() => { showAnalysisHubModal(); }, 300);
+}
+
+// Função específica para voltar do resultado da IA para a escolha de loteria
+function backToIASelection() {
+    document.getElementById('iaPalpiteResultsContainer').style.display = 'none';
+    document.getElementById('iaPalpiteForm').style.display = 'block';
 }
 
 function getCombinations(sourceArray, comboLength) {
