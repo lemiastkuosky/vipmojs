@@ -6492,20 +6492,15 @@ body.dark-mode .logo-mojs {
         </div>
     </div>
 </div>
-
-    </section>
-
+  </section>
   </main>
-
-   <footer>
-   
-    <div class="footer-info-wrapper">
+  <footer>
+       <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V7.77</strong>
+            <strong>V7.79</strong>
         </div>
-        
-        <div class="footer-info-item" id="milharCounterContainer">
+            <div class="footer-info-item" id="milharCounterContainer">
             <span>Database:</span>
             <strong id="milharTotalCount">...</strong>
         </div>
@@ -8944,34 +8939,57 @@ async function generateIAPalpites(loteria, loteriaNome) {
         showToast("Erro: Nenhuma loteria selecionada.", "error"); return;
     }
 
+    console.log(`>>> [DEBUG IA] Iniciando processo para: ${loteriaNome} (${loteria})`);
     const nextDrawName = getNextDrawName(loteria);
-    const drawDisplayInfo = horariosLoterias[loteria]?.find(h => h.nome === nextDrawName);
-    const drawDisplay = drawDisplayInfo ? drawDisplayInfo.display : 'Geral';
+    console.log(`>>> [DEBUG IA] Próximo sorteio identificado: ${nextDrawName}`);
 
-    showLoadingIndicator(`Análise Completa I.A: ${drawDisplay}...`);
+    showLoadingIndicator(`Analisando I.A: ${loteria.toUpperCase()}...`);
 
-    const agora = new Date();
-    const horaFormatada = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const dataSimplesFormatada = agora.toLocaleDateString('pt-BR');
+    try {
+        console.log(">>> [DEBUG IA] Disparando Promise.all (8 consultas)...");
+        
+        // Medir tempo de resposta
+        const startTime = performance.now();
 
-    const dataDoDiaArray = generateDateBasedDezenas();
+        // Executa as consultas com log individual para cada uma
+        const [
+            bichosAtrasados, bichosFrequentes, dezenasAtrasadas, 
+            centenasAtrasadas, unidadesAtrasadas, puxada, afinidades, ciclos
+        ] = await Promise.all([
+            getPalpitesIA(loteria, nextDrawName).then(d => { console.log("   ✓ Bichos Atrasados OK"); return d; }),
+            getBichosFrequentesIA(loteria, nextDrawName).then(d => { console.log("   ✓ Frequentes OK"); return d; }),
+            getDezenasAtrasadasIA(loteria, nextDrawName).then(d => { console.log("   ✓ Dezenas OK"); return d; }),
+            getCentenasAtrasadasIA(loteria, nextDrawName).then(d => { console.log("   ✓ Centenas OK"); return d; }),
+            getUnidadesAtrasadasIA(loteria, nextDrawName).then(d => { console.log("   ✓ Unidades OK"); return d; }),
+            getPuxadaDoDiaIA(loteria).then(d => { console.log("   ✓ Puxada OK"); return d; }),
+            getAfinidadesIA(loteria, nextDrawName).then(d => { console.log("   ✓ Afinidades OK"); return d; }),
+            getCiclosIA(loteria, nextDrawName).then(d => { console.log("   ✓ Ciclos OK"); return d; })
+        ]);
 
-    const [
-        bichosAtrasados, bichosFrequentes, dezenasAtrasadas, centenasAtrasadas, unidadesAtrasadas, puxada, afinidades, ciclos
-    ] = await Promise.all([
-        getPalpitesIA(loteria, nextDrawName),
-        getBichosFrequentesIA(loteria, nextDrawName),
-        getDezenasAtrasadasIA(loteria, nextDrawName),
-        getCentenasAtrasadasIA(loteria, nextDrawName),
-        getUnidadesAtrasadasIA(loteria, nextDrawName),
-        getPuxadaDoDiaIA(loteria),
-        getAfinidadesIA(loteria, nextDrawName),
-        getCiclosIA(loteria, nextDrawName)
-    ]);
+        const endTime = performance.now();
+        console.log(`>>> [DEBUG IA] Todas as promessas resolvidas em ${((endTime - startTime)/1000).toFixed(2)}s`);
 
-    const analiseCompleta = {
-        bichosAtrasados, bichosFrequentes, dezenasAtrasadas, centenasAtrasadas, unidadesAtrasadas, puxada, afinidades, ciclos, dataDoDia: dataDoDiaArray
-    };
+        const analiseCompleta = {
+            bichosAtrasados, bichosFrequentes, dezenasAtrasadas, 
+            centenasAtrasadas, unidadesAtrasadas, puxada, afinidades, 
+            ciclos, dataDoDia: generateDateBasedDezenas()
+        };
+
+        console.log(">>> [DEBUG IA] Iniciando Processamento de Scoring...");
+        const { palpites, rankingTop5, rankingTop10 } = getPalpitesMisturadosIA(analiseCompleta);
+        console.log(">>> [DEBUG IA] Scoring concluído. Montando HTML...");
+
+        // Chama a renderização (aqui é onde montamos o texto na tela)
+        renderIAResultsUI(palpites, rankingTop5, rankingTop10, analiseCompleta, loteriaNome, nextDrawName);
+
+    } catch (error) {
+        console.error(">>> [CRÍTICO IA] Erro durante a geração:", error);
+        showToast("Falha no processamento da I.A. Verifique o console.", "error");
+    } finally {
+        console.log(">>> [DEBUG IA] Finalizando indicador de loading.");
+        hideLoadingIndicator();
+    }
+
 
     // --- MUDANÇA AQUI: Puxamos o rankingTop10 ---
     const { palpites, rankingTop5, rankingTop10 } = getPalpitesMisturadosIA(analiseCompleta);
@@ -9368,11 +9386,20 @@ async function getIaSummaryDocument(loteria) {
 // 2. FUNÇÕES DE CONSULTA (Com foco no Horário ou Fallback pro Geral)
 async function getIaDataForDraw(loteria, drawName) {
     const summary = await getIaSummaryDocument(loteria);
-    if (!summary) return null;
-    // Se tiver dados específicos do horário e eles não estiverem vazios, usa eles. Senão, usa o 'geral'
+    if (!summary) {
+        console.warn(`>>> [DB IA] Documento para ${loteria} não existe no Firestore.`);
+        return null;
+    }
+
+    console.log(`>>> [DB IA] Chaves encontradas no documento ${loteria}:`, Object.keys(summary));
+
+    // Verifica se o horário solicitado existe e tem dados
     if (summary[drawName] && summary[drawName].bichosAtrasados1Premio && summary[drawName].bichosAtrasados1Premio.length > 0) {
+        console.log(`>>> [DB IA] Usando dados específicos de: ${drawName}`);
         return summary[drawName];
     }
+    
+    console.log(`>>> [DB IA] Horário '${drawName}' sem dados. Usando 'geral'.`);
     return summary['geral'];
 }
 
