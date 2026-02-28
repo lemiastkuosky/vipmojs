@@ -6498,7 +6498,7 @@ body.dark-mode .logo-mojs {
        <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V7.79</strong>
+            <strong>V7.19</strong>
         </div>
             <div class="footer-info-item" id="milharCounterContainer">
             <span>Database:</span>
@@ -8989,6 +8989,7 @@ async function generateIAPalpites(loteria, loteriaNome) {
         console.log(">>> [DEBUG IA] Finalizando indicador de loading.");
         hideLoadingIndicator();
     }
+}
 
 
     // --- MUDANÇA AQUI: Puxamos o rankingTop10 ---
@@ -9143,6 +9144,77 @@ async function generateIAPalpites(loteria, loteriaNome) {
     document.getElementById('iaPalpiteForm').style.display = 'none';
     document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
     document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+
+
+// --- FUNÇÃO DE RENDERIZAÇÃO QUE ESTAVA FALTANDO ---
+function renderIAResultsUI(palpites, rankingTop5, rankingTop10, analise, loteriaNome, drawDisplay) {
+    const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
+    if (!resultsOutput) return;
+
+    // Funções auxiliares para criar as listas
+    const criarListaPalpitesHTML = (lista) => lista.map(p => `<li>${p.palpite} <small>(${p.tipo})</small></li>`).join('');
+    const criarListaDuplasHTML = (lista) => lista.map(p => `<li style="width: 100%; display: block; margin-bottom: 5px;">${p}</li>`).join('');
+
+    // Gera o Termômetro Visual
+    const criarTermometroHTML = (ranking) => {
+        return ranking.map((b, i) => {
+            let corBarra = b.forca >= 80 ? '#28a745' : (b.forca >= 50 ? '#ffc107' : '#dc3545');
+            return `
+            <div style="margin-bottom: 12px; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold;">
+                    <span>${i + 1}º ${b.emoji} ${b.animal}</span>
+                    <span style="color: ${corBarra};">${b.forca}% Força</span>
+                </div>
+                <div style="width: 100%; background: rgba(0,0,0,0.1); border-radius: 4px; height: 8px; overflow: hidden;">
+                    <div style="width: ${b.forca}%; background: ${corBarra}; height: 100%;"></div>
+                </div>
+            </div>`;
+        }).join('');
+    };
+
+    // Alerta de Ciclo Estourado
+    let alertaCicloHTML = '';
+    if (analise.ciclos) {
+        let alertas = [];
+        Object.keys(analise.ciclos).forEach(g => {
+            let c = analise.ciclos[g];
+            if (c && c.estourado) {
+                let b = tabelaDeGrupos.find(x => x.grupo === g);
+                alertas.push(`<li>⚠️ ${b.emoji} <strong>${b.animal}:</strong> Média ${c.medio}d, está há <strong>${c.atual}d</strong> sem sair!</li>`);
+            }
+        });
+        if (alertas.length > 0) {
+            alertaCicloHTML = `<div class="ia-result-card" style="border-left-color: #dc3545; background: rgba(220,53,69,0.05); padding: 15px; margin-bottom: 15px;">
+                <h4 style="color: #dc3545; margin: 0 0 10px 0;">🚨 Alerta de Ciclo Estourado</h4>
+                <ul class="ia-analysis-list">${alertas.slice(0, 3).join('')}</ul>
+            </div>`;
+        }
+    }
+
+    // Monta o HTML final na tela
+    resultsOutput.innerHTML = `
+        <div style="background-color: #28a745; color: white; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold;">
+            🎯 Sorteio Alvo: ${drawDisplay}
+        </div>
+        ${alertaCicloHTML}
+        <div class="ia-result-card" style="border-left-color: #6f42c1;">
+            <h4 style="color: #6f42c1;">🔥 Termômetro de Força</h4>
+            ${criarTermometroHTML(rankingTop5)}
+        </div>
+        <div class="ia-result-card" style="border-left-color: #fd7e14;">
+            <h4 style="color: #fd7e14;">🤝 Duplas por Afinidade</h4>
+            <ul class="ia-palpite-list">${criarListaDuplasHTML(palpites.duques)}</ul>
+        </div>
+        <div class="ia-result-card">
+            <h4>🎯 Milhares Sugeridas</h4>
+            <ul class="ia-palpite-list">${criarListaPalpitesHTML(palpites.milhar)}</ul>
+        </div>
+    `;
+
+    // Atualiza o Título e exibe o container
+    document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
+    document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+    document.getElementById('iaPalpiteForm').style.display = 'none';
 }
 
 function showAnalysisHubModal() {
