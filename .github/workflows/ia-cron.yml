@@ -1,0 +1,30 @@
+name: Treinador Diario da IA
+
+on:
+  schedule:
+    # Roda todos os dias às 06:00 UTC (Que equivale a 03:00 da manhã no Brasil/Brasília)
+    - cron: '0 6 * * *'
+  
+  # Permite que você clique em um botão para rodar manualmente a qualquer momento
+  workflow_dispatch:
+
+jobs:
+  treinar:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Baixando o código
+        uses: actions/checkout@v4
+      
+      - name: Configurando o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Instalando as dependências do robô
+        run: npm install firebase-admin
+        
+      - name: Rodando o Cérebro da I.A.
+        env:
+          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
+        run: node train-ia.js
