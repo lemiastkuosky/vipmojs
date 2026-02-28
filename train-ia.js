@@ -1,4 +1,4 @@
-const admin = require('firebase-admin');
+import admin from 'firebase-admin';
 
 // Conecta no seu Firebase usando a Chave Secreta do GitHub
 let serviceAccount;
@@ -105,5 +105,6 @@ async function runTreinamento() {
     }
     console.log("🚀 ROTINA FINALIZADA COM SUCESSO!");
 }
+
 
 runTreinamento().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
