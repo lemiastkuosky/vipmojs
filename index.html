@@ -7936,36 +7936,47 @@ async function handleFechamentoToggle(checkbox) {
         showToast('Selecione os bichos desejados para calcular as combinações do fechamento.', 'info');
         checkbox.checked = false; // Desmarca o checkbox pois não é válido
     }
-    // Se calculatedCombinations === currentQuantity, não faz nada (já está correto)
 }
 
-// --- FUNÇÃO CORRIGIDA PARA MOSTRAR O AVISO ---
+let loadingTimerInterval;
+
 function showLoadingIndicator(message = 'Processando...') {
-  // Ajustado para usar o ID 'loadingOverlay' que já existe no seu HTML
   const indicator = document.getElementById('loadingOverlay');
   const textElement = indicator ? indicator.querySelector('.loading-text') : null;
   
   if (indicator && textElement) {
-    textElement.textContent = message; // Define a sua mensagem personalizada
-    indicator.style.opacity = '1';     // Torna visível
-    indicator.style.display = 'flex';  // Garante que apareça no centro
+    clearInterval(loadingTimerInterval);
+    let segundos = 0;
+    
+    // Atualiza o texto com um contador de tempo
+    textElement.innerHTML = `${message}<br><small style="opacity:0.7; font-size:0.7em;">Iniciado há ${segundos}s (Aguardando resposta do servidor...)</small>`;
+    
+    indicator.style.display = 'flex';
+    indicator.style.opacity = '1';
+    indicator.style.pointerEvents = 'auto'; // Bloqueia cliques durante o processo
+
+    // Inicia o relógio de atividade
+    loadingTimerInterval = setInterval(() => {
+        segundos++;
+        textElement.innerHTML = `${message}<br><small style="opacity:0.7; font-size:0.7em;">Processando há ${segundos}s... O sistema está ativo.</small>`;
+        
+        // Se demorar mais de 20 segundos, oferece uma saída
+        if (segundos === 20) {
+            textElement.innerHTML += `<br><button onclick="window.location.reload()" style="margin-top:10px; background:#dc3545; font-size:0.8rem; padding:5px 10px;">Recarregar Página</button>`;
+        }
+    }, 1000);
   }
 }
 
-// --- FUNÇÃO CORRIGIDA PARA ESCONDER O AVISO ---
 function hideLoadingIndicator() {
   const indicator = document.getElementById('loadingOverlay');
+  clearInterval(loadingTimerInterval); // Para o relógio
   if (indicator) {
     indicator.style.opacity = '0';
-    setTimeout(() => {
-        indicator.style.display = 'none';
-    }, 500); // Aguarda a animação de sumir
+    indicator.style.pointerEvents = 'none'; // Libera cliques
+    setTimeout(() => { indicator.style.display = 'none'; }, 400);
   }
 }
-
-  // ============================================================
-// === CONTROLE DO MODAL DE SELEÇÃO DE NOMES (CLIENTES) ===
-// ============================================================
 
 function openNamePickerModal(event) {
     if (event) event.preventDefault();
@@ -9002,15 +9013,22 @@ async function generateIAPalpites(loteria, loteriaNome) {
     };
 
     const criarAlertaCicloHTML = () => {
-        if (!analiseCompleta.ciclos) return '';
-        let alertasHTML = [];
-        Object.keys(analiseCompleta.ciclos).forEach(g => {
-            let c = analiseCompleta.ciclos[g];
-            if (c.alerta && c.atual > (c.medio * 1.5)) { 
+    if (!analiseCompleta.ciclos) return '';
+    let alertasHTML = [];
+    
+    Object.keys(analiseCompleta.ciclos).forEach(g => {
+        let c = analiseCompleta.ciclos[g];
+        
+        // SEGURANÇA: Só processa se o dado de ciclo existir e for válido
+        if (c && c.alerta && c.medio > 0) { 
+            if (c.atual > (c.medio * 1.5)) { 
                 let b = tabelaDeGrupos.find(x => x.grupo === g);
-                alertasHTML.push(`<li style="margin-bottom: 8px;">⚠️ ${b.emoji} <strong>${b.animal}:</strong> Média de saída é ${c.medio} dias, mas <strong>não sai há ${c.atual} dias!</strong></li>`);
+                if (b) {
+                    alertasHTML.push(`<li style="margin-bottom: 8px;">⚠️ ${b.emoji} <strong>${b.animal}:</strong> Média é ${c.medio}d, mas <strong>não sai há ${c.atual}d!</strong></li>`);
+                }
             }
-        });
+        }
+    });
         if (alertasHTML.length === 0) return '';
         return `
         <div class="ia-result-card" style="border-left-color: #dc3545; background-color: rgba(220,53,69,0.05); padding: 15px; margin-bottom: 15px;">
@@ -9310,26 +9328,41 @@ function getNextDrawName(loteria) {
 }
 
 // 1. LEITURA OTIMIZADA DO FIREBASE
+let iaFetchPromises = {};
+
 async function getIaSummaryDocument(loteria) {
     if (!loteria) return null;
     const now = new Date().getTime();
     
+    // 1. Se já está no cache local, retorna na hora
     if (iaSummaryCache[loteria] && (now - iaSummaryCache[loteria].time < IA_CACHE_DURATION)) {
         return iaSummaryCache[loteria].data;
     }
 
-    console.log(`[IA V2] Lendo I.A. do Firebase para ${loteria.toUpperCase()}`);
-    try {
-        const doc = await firestoreDB.collection('analises_ia').doc(loteria).get();
+    // 2. SE JÁ EXISTE UM PEDIDO EM ANDAMENTO, NÃO PEDE DE NOVO. ESPERA O ANTERIOR.
+    if (iaFetchPromises[loteria]) {
+        console.log(`[IA V2] Aguardando leitura já iniciada para ${loteria.toUpperCase()}...`);
+        return iaFetchPromises[loteria];
+    }
+
+    console.log(`[IA V2] Iniciando leitura ÚNICA do Firebase para ${loteria.toUpperCase()}`);
+    
+    // Cria a promessa de leitura e guarda na "trava"
+    iaFetchPromises[loteria] = firestoreDB.collection('analises_ia').doc(loteria).get().then(doc => {
+        delete iaFetchPromises[loteria]; // Libera a trava ao terminar
         if (doc.exists) {
             const data = doc.data();
             iaSummaryCache[loteria] = { data: data, time: now };
             return data;
         }
         return null;
-    } catch (e) {
-        console.error(`Erro ao ler I.A.:`, e); return null;
-    }
+    }).catch(e => {
+        delete iaFetchPromises[loteria]; // Libera a trava em caso de erro
+        console.error(`Erro ao ler I.A.:`, e);
+        return null;
+    });
+
+    return iaFetchPromises[loteria];
 }
 
 // 2. FUNÇÕES DE CONSULTA (Com foco no Horário ou Fallback pro Geral)
