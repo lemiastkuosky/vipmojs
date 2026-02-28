@@ -24,7 +24,7 @@ async function runTreinamento() {
 
     for (const loteria of loterias) {
         console.log(`Processando: ${loteria.toUpperCase()}`);
-        const snapshot = await db.collection('resultados').where('loteria', '==', loteria).orderBy('data', 'desc').limit(3000).get();
+        const snapshot = await db.collection('resultados').where('loteria', '==', loteria).orderBy('data', 'desc').limit(1000).get();
         if (snapshot.empty) continue;
 
         const c = { 
@@ -75,29 +75,6 @@ async function runTreinamento() {
     }
 
     console.log("🤖 Calculando Placar de Marketing...");
-    const tresDiasAtras = new Date(); tresDiasAtras.setDate(tresDiasAtras.getDate() - 3);
-    const snapRecentes = await db.collection('resultados').where('data', '>=', admin.firestore.Timestamp.fromDate(tresDiasAtras)).where('posicao', '==', 1).get();
-
-    let acertos = 0; let loteriasHit = new Set();
-    for (const loteria of loterias) {
-        const docIA = await db.collection('analises_ia').doc(loteria).get();
-        if(!docIA.exists) continue;
-        const analise = docIA.data().geral;
-
-        let bichosScore = tabelaDeGrupos.map(b => {
-            let score = 25;
-            if(analise.bichosAtrasados1Premio.find(x => x.grupo === b.grupo)) score += 30;
-            if(analise.bichosFrequentes.find(x => x.grupo === b.grupo)) score += 20;
-            if(analise.ciclos[b.grupo] && analise.ciclos[b.grupo].atual > analise.ciclos[b.grupo].medio) score += 20;
-            return { grupo: b.grupo, score: score };
-        });
-        const top5 = bichosScore.sort((a,b) => b.score - a.score).slice(0, 5).map(b => b.grupo);
-
-        snapRecentes.forEach(doc => {
-            const data = doc.data();
-            if (data.loteria === loteria && top5.includes(data.bichoGrupo)) { acertos++; loteriasHit.add(loteria.toUpperCase()); }
-        });
-    }
 
     if (acertos > 0) {
         const autoText = `🔥 A I.A. cravou <strong>${acertos} Grupos na Cabeça</strong> nos últimos 3 dias nas loterias ${Array.from(loteriasHit).join(', ')}!`;
@@ -108,3 +85,4 @@ async function runTreinamento() {
 
 
 runTreinamento().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
+
