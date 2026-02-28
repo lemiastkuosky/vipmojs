@@ -6235,11 +6235,7 @@ body.dark-mode .logo-mojs {
     <div class="modal-content" style="max-width: 500px;">
         <span class="close-modal" onclick="closeMcdSearchModal()">×</span>
         <h3 class="modal-title">🔎 Consultar Histórico MCD</h3>
-        
-        <p style="text-align: center; color: #6c757d; margin-bottom: 15px;">
-            Pesquise quando uma milhar específica saiu no nosso banco de dados.
-        </p>
-
+        <p style="text-align: center; color: #6c757d; margin-bottom: 15px;">Pesquise quando uma milhar específica saiu no banco de dados.</p>
         <div class="generator-step-card" style="padding: 15px;">
             <label for="mcdLoteriaSelect" style="font-weight: bold;">1. Escolha a Extração:</label>
             <select id="mcdLoteriaSelect" class="save-dialog-input" style="margin-bottom: 15px;">
@@ -6248,24 +6244,46 @@ body.dark-mode .logo-mojs {
                 <option value="ln">Loteria Nacional (LN)</option>
                 <option value="fd">Federal (FD)</option>
             </select>
-
             <label for="mcdInputMilhar" style="font-weight: bold;">2. Digite a Milhar:</label>
             <div style="display: flex; gap: 10px;">
                 <input type="tel" id="mcdInputMilhar" class="save-dialog-input" maxlength="4" placeholder="Ex: 1234" style="text-align: center; font-weight: bold; letter-spacing: 2px; margin: 0;">
                 <button onclick="performMcdSearch()" class="save-button" style="width: auto; min-width: 100px;">Buscar</button>
             </div>
         </div>
-
         <div id="mcdSearchResults" style="margin-top: 15px; max-height: 300px; overflow-y: auto;"></div>
-
         <div class="button-group" style="margin-top: 20px; gap: 10px;">
-            <button onclick="backToAnalysisHubFromMcd()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">
-                ⬅️ Voltar
-            </button>
-            <button onclick="closeMcdSearchModal()" class="import-btn" style="flex: 1; padding: 12px;">
-                ❌ Sair
-            </button>
+            <button onclick="backToAnalysisHubFromMcd()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">⬅️ Voltar</button>
+            <button onclick="closeMcdSearchModal()" class="import-btn" style="flex: 1; padding: 12px;">❌ Sair</button>
         </div>
+    </div>
+</div>
+
+<div id="palpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 550px;">
+      <span class="close-modal" onclick="closePalpitesIAModal()">×</span>
+      <h3 class="modal-title">🧠 Palpites da I.A.</h3>
+      <div id="iaPalpiteForm">
+          <div class="generator-step-card" style="padding: 15px; margin-bottom: 20px;">
+            <p style="text-align: center; margin-bottom: 15px;">Selecione a loteria para a análise:</p>
+            <div class="modal-card-grid" id="iaLotteryGrid">            
+                <button class="lottery-card-button" onclick="generateIAPalpites('rj', 'PT Rio (RJ)')"><div class="lottery-card-text"><strong>RJ</strong><small>(RJ)</small></div></button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('lk', 'Look Goiás (LK)')"><div class="lottery-card-text"><strong>LK</strong><small>(LK)</small></div></button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('ln', 'Loteria Nacional (LN)')"><div class="lottery-card-text"><strong>NC</strong><small>(LN)</small></div></button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('fd', 'Federal (FD)')"><div class="lottery-card-text"><strong>FD</strong><small>(FD)</small></div></button>
+            </div>
+          </div>
+          <div class="button-group" style="gap: 10px;">
+              <button onclick="backToAnalysisHubFromIA()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">⬅️ Voltar</button>
+              <button onclick="closePalpitesIAModal()" class="import-btn" style="flex: 1; padding: 12px;">❌ Sair</button>
+          </div>
+      </div>
+      <div id="iaPalpiteResultsContainer" style="display: none;">
+          <div class="generator-step-card" style="padding: 15px;"><div id="iaPalpiteResultsOutput"></div></div>
+          <div class="button-group" style="margin-top: 15px; gap: 10px;">
+              <button onclick="backToIASelection()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">⬅️ Voltar</button>
+              <button onclick="closePalpitesIAModal()" class="import-btn" style="flex: 1; padding: 12px;">❌ Sair</button>
+          </div>
+      </div>
     </div>
 </div>
     <section aria-labelledby="input-label">
@@ -6540,7 +6558,7 @@ body.dark-mode .logo-mojs {
     <div class="footer-info-wrapper">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V7.87</strong>
+            <strong>V7.88</strong>
         </div>
         
         <div class="footer-info-item" id="milharCounterContainer">
@@ -6634,52 +6652,6 @@ body.dark-mode .logo-mojs {
       </div>
 
       <button onclick="closePaymentMethodModal()" class="load-button" style="width: 100%; margin-top: 20px;">Cancelar</button>
-    </div>
-</div>
-
-<div id="analysisHubModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="analysisHubModalTitle">
-    <div class="modal-content" style="max-width: 450px;">
-      <span class="close-modal" onclick="closeAnalysisHubModal()" aria-label="Fechar">×</span>
-      <h3 id="analysisHubModalTitle" class="modal-title">🔮 Análises e Consultas</h3>
-      <p style="text-align: center; margin-top: -10px; margin-bottom: 25px; color: #6c757d;">
-          Escolha o tipo de análise que deseja executar.
-      </p>
-
-      <div class="data-management-buttons">
-
-        <button onclick="openAtrasadosFromHub()" class="import-btn">
-            <span style="font-size: 1.5rem; line-height: 1;">⏱️</span>
-            <div>
-                <strong>Bichos Atrasados</strong>
-                <small style="font-weight: normal;">(Analise ao vivo)</small>
-            </div>
-        </button>
-
-        <button onclick="openMcdSearchFromHub()" class="view-button" style="background-color: #0d6efd; color: white;">
-    <span style="font-size: 1.5rem; line-height: 1;">🔎</span>
-    <div>
-        <strong>Consultar MCD</strong>
-        <small style="font-weight: normal;">(Histórico da Milhar)</small>
-    </div>
-</button>
-
-        <button onclick="openResultadosLiveFromHub()" class="view-button" style="background-color: #28a745;">
-            <span style="font-size: 1.5rem; line-height: 1;">📲</span>
-            <div>
-                <strong>Resultados Live</strong>
-                <small style="font-weight: normal;">(Resultado da extração)</small>
-            </div>
-        </button>
-
-        <button onclick="openPalpitesIAFromHub()" class="analysis-button" style="background-color: #6f42c1; color: white;">
-            <span style="font-size: 1.5rem; line-height: 1;">🧠</span>
-            <div>
-                <strong>Palpites da I.A.</strong>
-                <small style="font-weight: normal;">(Análise do nosso banco de dados)</small>
-            </div>
-        </button>
-
-      </div>
     </div>
 </div>
 
@@ -7115,6 +7087,40 @@ body.dark-mode .logo-mojs {
             <span class="admin-config-label">#️⃣ Contar Números</span>
             <label class="ios-switch">
                 <input type="checkbox" id="checkBtnMainCount" onchange="toggleMenuButton('btnMainCount', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+<div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 15px 0 5px 5px; text-transform: uppercase;">Sub-Menu Análises</div>
+
+        <div class="admin-config-row">
+            <span class="admin-config-label">⏱️ Bichos Atrasados</span>
+            <label class="ios-switch">
+                <input type="checkbox" id="checkBtnSubAtrasados" onchange="toggleMenuButton('btnSubAtrasados', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="admin-config-row">
+            <span class="admin-config-label">🔎 Consultar MCD</span>
+            <label class="ios-switch">
+                <input type="checkbox" id="checkBtnSubMcdSearch" onchange="toggleMenuButton('btnSubMcdSearch', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="admin-config-row">
+            <span class="admin-config-label">📲 Resultados Live</span>
+            <label class="ios-switch">
+                <input type="checkbox" id="checkBtnSubResultadosLive" onchange="toggleMenuButton('btnSubResultadosLive', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="admin-config-row">
+            <span class="admin-config-label">🧠 Palpites da I.A.</span>
+            <label class="ios-switch">
+                <input type="checkbox" id="checkBtnSubPalpitesIA" onchange="toggleMenuButton('btnSubPalpitesIA', this.checked)">
                 <span class="slider"></span>
             </label>
         </div>
@@ -7804,6 +7810,52 @@ body.dark-mode .logo-mojs {
         </div>
 
         <button onclick="closeSurpresinhaModal()" class="load-button" style="width: 100%; margin-top: 20px;">Fechar</button>
+    </div>
+</div>
+
+<div id="analysisHubModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="analysisHubModalTitle">
+    <div class="modal-content" style="max-width: 450px;">
+      <span class="close-modal" onclick="closeAnalysisHubModal()" aria-label="Fechar">×</span>
+      <h3 id="analysisHubModalTitle" class="modal-title">🔮 Análises e Consultas</h3>
+      <p style="text-align: center; margin-top: -10px; margin-bottom: 25px; color: #6c757d;">
+          Escolha o tipo de análise que deseja executar.
+      </p>
+
+      <div class="data-management-buttons">
+
+        <button id="btnSubAtrasados" onclick="openAtrasadosFromHub()" class="import-btn">
+            <span style="font-size: 1.5rem; line-height: 1;">⏱️</span>
+            <div>
+                <strong>Bichos Atrasados</strong>
+                <small style="font-weight: normal;">(Analise ao vivo)</small>
+            </div>
+        </button>
+
+        <button id="btnSubMcdSearch" onclick="openMcdSearchFromHub()" class="view-button" style="background-color: #0d6efd; color: white;">
+            <span style="font-size: 1.5rem; line-height: 1;">🔎</span>
+            <div>
+                <strong>Consultar MCD</strong>
+                <small style="font-weight: normal;">(Histórico da Milhar)</small>
+            </div>
+        </button>
+
+        <button id="btnSubResultadosLive" onclick="openResultadosLiveFromHub()" class="view-button" style="background-color: #28a745;">
+            <span style="font-size: 1.5rem; line-height: 1;">📲</span>
+            <div>
+                <strong>Resultados Live</strong>
+                <small style="font-weight: normal;">(Resultado da extração)</small>
+            </div>
+        </button>
+
+        <button id="btnSubPalpitesIA" onclick="openPalpitesIAFromHub()" class="analysis-button" style="background-color: #6f42c1; color: white;">
+            <span style="font-size: 1.5rem; line-height: 1;">🧠</span>
+            <div>
+                <strong>Palpites da I.A.</strong>
+                <small style="font-weight: normal;">(Análise do nosso banco de dados)</small>
+            </div>
+        </button>
+
+      </div>
     </div>
 </div>
 
@@ -9074,8 +9126,7 @@ async function generateIAPalpites(loteria, loteriaNome) {
     // =====================================
     const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
     const criarListaPalpitesHTML = (lista) => lista.map(p => `<li title="Foco: ${p.tipo}">${p.palpite}</li>`).join('');
-    const criarListaDuplasHTML = (lista) => lista.map(p => `<li style="width: 100%; display: block; margin-bottom: 5px;">${p}</li>`).join('');
-
+    
     const criarTermometroHTML = (ranking) => {
         return ranking.map((b, i) => {
             let corBarra = b.forca >= 80 ? '#28a745' : (b.forca >= 50 ? '#ffc107' : '#dc3545');
@@ -9131,6 +9182,42 @@ async function generateIAPalpites(loteria, loteriaNome) {
         </div>`;
     };
 
+    const criarListaComCercadoHTML = (lista, tipo) => {
+        return lista.map((item, index) => {
+            const divId = `cercado_${tipo}_${index}`;
+            
+            // 1. NOVO FORMATO RESPONSIVO (Não quebra os números no hífen)
+            let formattedCombos = `<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">`;
+            formattedCombos += item.combinacoes.map(c => `<span style="white-space: nowrap; font-size: 1.05rem;">${c}</span>`).join('');
+            formattedCombos += `</div>`;
+
+            // 2. Monta o texto para o WhatsApp (mantém as 4 colunas bonitinhas no app)
+            let whatsText = `🔮 *I.A. Premium - Cercado de ${tipo}*\n\n🎯 *Loteria:* ${loteriaNome}\n⏰ *Horário:* ${drawDisplay}\n\n🐾 *Palpite:* ${item.titulo}\n\n🚀 *Combinações Geradas (${item.combinacoes.length}x):*\n`;
+            for(let i=0; i<item.combinacoes.length; i+=4) {
+                whatsText += item.combinacoes.slice(i, i+4).join('  ') + '\n';
+            }
+            whatsText += `\n🍀 *Boa sorte!*`;
+            
+            // 3. Retorna o Card HTML com o botão de expandir
+            return `
+            <li style="margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; list-style: none; border-left: 4px solid ${tipo === 'Duque' ? '#fd7e14' : '#17a2b8'};">
+                <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.05rem;">${item.titulo}</div>
+                
+                <button onclick="document.getElementById('${divId}').style.display = document.getElementById('${divId}').style.display === 'none' ? 'block' : 'none'" class="view-button" style="width: 100%; padding: 8px; font-size: 0.9rem; border-radius: 6px;">👀 Ver Todas as ${item.combinacoes.length} Combinações</button>
+                
+                <div id="${divId}" style="display: none; margin-top: 10px;">
+                    <div style="font-family: monospace; text-align: center; background: rgba(0,0,0,0.08); padding: 10px; border-radius: 5px; border: 1px solid rgba(128,128,128,0.3); margin-bottom: 8px;">
+                        ${formattedCombos}
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="copyToClipboard('${item.combinacoes.join(' ')}', this)" class="load-button" style="flex: 1; padding: 10px; font-size: 0.9rem; border-radius: 6px;">📋 Copiar</button>
+                        <button onclick="window.open('https://wa.me/?text=${encodeURIComponent(whatsText)}', '_blank')" class="save-button" style="flex: 1; background-color: #25D366; padding: 10px; font-size: 0.9rem; border-radius: 6px;">📲 Enviar ZAP</button>
+                    </div>
+                </div>
+            </li>`;
+        }).join('');
+    };
+
     resultsOutput.innerHTML = `
         <div style="background-color: #28a745; color: white; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold;">
             🎯 Foco da Análise: ${drawDisplay}
@@ -9150,12 +9237,12 @@ async function generateIAPalpites(loteria, loteriaNome) {
         
         <div class="ia-result-card" style="border-left-color: #fd7e14;">
             <h4 style="color: #fd7e14;">🤝 Duques de Grupo (Por Afinidade)</h4>
-            <ul class="ia-palpite-list" style="display: block;">${criarListaDuplasHTML(palpites.duques)}</ul>
+            <ul style="padding-left: 0; margin: 0;">${criarListaComCercadoHTML(palpites.duques, 'Duque')}</ul>
         </div>
         
         <div class="ia-result-card" style="border-left-color: #17a2b8;">
             <h4 style="color: #17a2b8;">🤝 Ternos de Grupo (Por Afinidade)</h4>
-            <ul class="ia-palpite-list" style="display: block;">${criarListaDuplasHTML(palpites.ternos)}</ul>
+            <ul style="padding-left: 0; margin: 0;">${criarListaComCercadoHTML(palpites.ternos, 'Terno')}</ul>
         </div>
 
         <div class="ia-result-card">
@@ -9166,13 +9253,17 @@ async function generateIAPalpites(loteria, loteriaNome) {
             <h4>🎯 Centena</h4>
             <ul class="ia-palpite-list">${criarListaPalpitesHTML(palpites.centena)}</ul>
         </div>
+
+        <button onclick="shareIAPalpites()" class="save-button" style="background-color: #25D366; width: 100%; margin-top: 15px; padding: 15px; font-size: 1.05rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white;">
+            📲 Compartilhar Análise Completa
+        </button>
     `;
 
     // =====================================
     // TEXTO PARA O WHATSAPP
     // =====================================
     const formatarListaHorizontal = (lista) => '• ' + lista.map(p => `\`${p.palpite}\``).join(' • ');
-    const formatarDuplasWhats = (lista) => lista.map(p => `• ${p}`).join('\n');
+    const formatarDuplasWhats = (lista) => lista.map(p => `• ${p.titulo}`).join('\n');
 
     let termometroWhatsApp = rankingTop5.map((b, i) => {
         let fogo = b.forca >= 80 ? '🔥' : (b.forca >= 50 ? '⚡' : '❄️');
@@ -9273,20 +9364,77 @@ async function gerarPalpitesTerminaisIA() {
     }
 }
 
-/**
- * (Placeholder) Função que o botão de compartilhar vai chamar
- */
+// --- FUNÇÃO PARA COMPARTILHAR A ANÁLISE COMPLETA (MÉTODO DO RECIBO) ---
 function shareIAPalpites() {
     if (!window.iaPalpiteShareText) {
         showToast('Erro: Nenhum texto de palpite para compartilhar.', 'error');
         return;
     }
 
+    // Codifica a mensagem para formato de link
     const encodedMessage = encodeURIComponent(window.iaPalpiteShareText);
-    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+    
+    // URL EXATA usada no recibo que funciona perfeitamente
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
 
-    window.open(whatsappUrl, '_blank');
-    showToast('Abrindo WhatsApp...', 'success');
+    // A MÁGICA DO RECIBO: Altera a URL atual forçando o app a abrir
+    window.location.href = whatsappUrl;
+
+    // Fecha o modal da I.A. após acionar o WhatsApp
+    setTimeout(() => {
+        closePalpitesIAModal();
+    }, 300);
+}
+
+// --- FUNÇÃO PARA COMPARTILHAR OS DUQUES/TERNOS (MÉTODO DO RECIBO) ---
+function shareCercadoFromIA(tipo, index) {
+    let item = tipo === 'Duque' ? window.currentIADuques[index] : window.currentIATernos[index];
+    if(!item) return;
+
+    // Monta o texto limpo
+    let whatsText = `🔮 *I.A. Premium - Cercado de ${tipo}*\n\n🎯 *Loteria:* ${window.currentIALoteriaNome}\n⏰ *Horário:* ${window.currentIADrawDisplay}\n\n🐾 *Palpite:* ${item.titulo}\n\n🚀 *Combinações Geradas (${item.combinacoes.length}x):*\n`;
+    for(let i=0; i<item.combinacoes.length; i+=4) {
+        whatsText += item.combinacoes.slice(i, i+4).join('  ') + '\n';
+    }
+    whatsText += `\n🍀 *Boa sorte!*`;
+
+    // Codifica a mensagem para formato de link
+    const encodedMessage = encodeURIComponent(whatsText);
+    
+    // URL EXATA usada no recibo que funciona perfeitamente
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+
+    // A MÁGICA DO RECIBO: Altera a URL atual forçando o app a abrir
+    window.location.href = whatsappUrl;
+    
+    // Fecha o modal da I.A. após acionar o WhatsApp
+    setTimeout(() => {
+        closePalpitesIAModal();
+    }, 300);
+}
+
+// NOVA FUNÇÃO: Específica para os botões dentro das sanfonas (Duques e Ternos)
+function shareCercadoFromIA(tipo, index) {
+    let item = tipo === 'Duque' ? window.currentIADuques[index] : window.currentIATernos[index];
+    if(!item) return;
+
+    // Monta o texto de forma limpa
+    let whatsText = `🔮 *I.A. Premium - Cercado de ${tipo}*\n\n🎯 *Loteria:* ${window.currentIALoteriaNome}\n⏰ *Horário:* ${window.currentIADrawDisplay}\n\n🐾 *Palpite:* ${item.titulo}\n\n🚀 *Combinações Geradas (${item.combinacoes.length}x):*\n`;
+    for(let i=0; i<item.combinacoes.length; i+=4) {
+        whatsText += item.combinacoes.slice(i, i+4).join('  ') + '\n';
+    }
+    whatsText += `\n🍀 *Boa sorte!*`;
+
+    const encodedMessage = encodeURIComponent(whatsText);
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+    
+    // Aciona o APP nativo
+    window.location.href = whatsappUrl;
+    
+    // Fecha o modal
+    setTimeout(() => {
+        closePalpitesIAModal();
+    }, 300);
 }
 
 // Abre o novo modal de atualização
@@ -10170,33 +10318,35 @@ function showShareResultsModal() {
     // Restaura o conteúdo inicial (seleção de loteria com os novos cards SEM ÍCONES)
     modalBody.innerHTML = `
         <p style="text-align: center;">Escolha a loteria para consultar:</p>
-<div class="modal-card-grid">            <button class="lottery-card-button" onclick="populateShareTimeSlots('rj', 'PT Rio')">
-                
+        <div class="modal-card-grid">            
+            <button class="lottery-card-button" onclick="populateShareTimeSlots('rj', 'PT Rio')">
                 <div class="lottery-card-text">
                     <strong>PT Rio</strong><small>(RJ)</small>
                 </div>
             </button>
             <button class="lottery-card-button" onclick="populateShareTimeSlots('lk', 'Look Goiás')">
-                
                 <div class="lottery-card-text">
                     <strong>Look Goiás</strong><small>(LK)</small>
                 </div>
             </button>
             <button class="lottery-card-button" onclick="populateShareTimeSlots('ln', 'Loteria Nacional')">
-                
                 <div class="lottery-card-text">
                     <strong>Loteria Nacional</strong><small>(NAC)</small>
                 </div>
             </button>
             <button class="lottery-card-button" onclick="populateShareTimeSlots('fd', 'Federal')">
-                
                 <div class="lottery-card-text">
                     <strong>Federal</strong><small>(FED)</small>
                 </div>
             </button>
         </div>`;
 
-    document.getElementById('shareCancelButton').style.display = 'block'; // Mostra o botão Cancelar/Fechar
+    // CORREÇÃO: Só tenta alterar o botão se ele realmente existir na tela
+    const cancelButton = document.getElementById('shareCancelButton');
+    if (cancelButton) {
+        cancelButton.style.display = 'block'; 
+    }
+    
     modal.classList.add('active');
 }
 
@@ -10342,7 +10492,10 @@ function populateShareTimeSlots(loteria, nomeLoteriaDisplay) {
     backButton.onclick = showShareResultsModal;
     modalBody.appendChild(backButton);
 
-    document.getElementById('shareCancelButton').style.display = 'none';
+    const cancelButton = document.getElementById('shareCancelButton');
+    if (cancelButton) {
+        cancelButton.style.display = 'none';
+    }
 }
 
 async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay, nomeHorarioDisplay, buttonElement) {
@@ -10720,11 +10873,37 @@ function getPalpitesMisturadosIA(analise) {
             if (companheiros.length >= 1) {
                 const comp1 = tabelaDeGrupos.find(b => b.grupo === companheiros[0]);
                 if (comp1) {
-                    palpites.duques.push(`${bicho.emoji} ${bicho.animal} + ${comp1.emoji} ${comp1.animal}`);
+                    // Monta as 16 combinações do Duque (4 x 4 dezenas)
+                    let combosDuque = [];
+                    bicho.dezenas.forEach(d1 => {
+                        comp1.dezenas.forEach(d2 => {
+                            combosDuque.push(`${d1}-${d2}`);
+                        });
+                    });
+                    
+                    // Salva como um objeto contendo o Título e a Lista de Combinações
+                    palpites.duques.push({
+                        titulo: `${bicho.emoji} ${bicho.animal} + ${comp1.emoji} ${comp1.animal}`,
+                        combinacoes: combosDuque
+                    });
+
                     if (companheiros.length >= 2) {
                         const comp2 = tabelaDeGrupos.find(b => b.grupo === companheiros[1]);
                         if (comp2) {
-                            palpites.ternos.push(`${bicho.emoji} ${bicho.animal} + ${comp1.emoji} ${comp1.animal} + ${comp2.emoji} ${comp2.animal}`);
+                            // Monta as 64 combinações do Terno (4 x 4 x 4 dezenas)
+                            let combosTerno = [];
+                            bicho.dezenas.forEach(d1 => {
+                                comp1.dezenas.forEach(d2 => {
+                                    comp2.dezenas.forEach(d3 => {
+                                        combosTerno.push(`${d1}-${d2}-${d3}`);
+                                    });
+                                });
+                            });
+
+                            palpites.ternos.push({
+                                titulo: `${bicho.emoji} ${bicho.animal} + ${comp1.emoji} ${comp1.animal} + ${comp2.emoji} ${comp2.animal}`,
+                                combinacoes: combosTerno
+                            });
                         }
                     }
                 }
@@ -15773,6 +15952,112 @@ function processNumbers(numbers) {
     return { milhares, centenas, dezenas, ternos, duques, bichos: bichosForDisplay };
 }
 
+// --- FUNÇÃO DE DESENHO DA TELA COM BOTÕES CERCADOS ---
+function renderIAResultsUI(palpites, rankingTop5, rankingTop10, analise, loteriaNome, drawDisplay) {
+    const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
+    if (!resultsOutput) return;
+
+    // Gera o Cercado de 20 dezenas (Top 5 animais x 4 dezenas)
+    // --- GERANDO O CERCADO DE 20 DEZENAS PARA OS BOTÕES ---
+    const dezenasCercadas = rankingTop5.flatMap(b => b.dezenasBase).sort((a, b) => a - b).join(' - ');
+    const dezenasCercadasZap = rankingTop5.flatMap(b => b.dezenasBase).sort((a, b) => a - b).join('/');
+
+    // Salva as variáveis globais para o WhatsApp puxar corretamente e sem bugs
+    window.currentIADuques = palpites.duques;
+    window.currentIATernos = palpites.ternos;
+    window.currentIALoteriaNome = loteriaNome;
+    window.currentIADrawDisplay = drawDisplay;
+
+    // --- CRIADOR DA LISTA SANFONA COM CERCADO E BOTÕES ---
+    const criarListaComCercadoHTML = (lista, tipo) => {
+        return lista.map((item, index) => {
+            const divId = `cercado_${tipo}_${index}`;
+            
+            // NOVO FORMATO RESPONSIVO (Não quebra os números no hífen)
+            let formattedCombos = `<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">`;
+            formattedCombos += item.combinacoes.map(c => `<span style="white-space: nowrap; font-size: 1.05rem;">${c}</span>`).join('');
+            formattedCombos += `</div>`;
+            
+            // Retorna o Card HTML com o botão seguro apontando para a nova função
+            return `
+            <li style="margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; list-style: none; border-left: 4px solid ${tipo === 'Duque' ? '#fd7e14' : '#17a2b8'};">
+                <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.05rem;">${item.titulo}</div>
+                
+                <button onclick="document.getElementById('${divId}').style.display = document.getElementById('${divId}').style.display === 'none' ? 'block' : 'none'" class="view-button" style="width: 100%; padding: 8px; font-size: 0.9rem; border-radius: 6px;">👀 Ver Todas as ${item.combinacoes.length} Combinações</button>
+                
+                <div id="${divId}" style="display: none; margin-top: 10px;">
+                    <div style="font-family: monospace; text-align: center; background: rgba(0,0,0,0.08); padding: 10px; border-radius: 5px; border: 1px solid rgba(128,128,128,0.3); margin-bottom: 8px;">
+                        ${formattedCombos}
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="copyToClipboard('${item.combinacoes.join(' ')}', this)" class="load-button" style="flex: 1; padding: 10px; font-size: 0.9rem; border-radius: 6px;">📋 Copiar</button>
+                        <button onclick="shareCercadoFromIA('${tipo}', ${index})" class="save-button" style="flex: 1; background-color: #25D366; padding: 10px; font-size: 0.9rem; border-radius: 6px;">📲 Enviar ZAP</button>
+                    </div>
+                </div>
+            </li>`;
+        }).join('');
+    };
+
+    resultsOutput.innerHTML = `
+        <div style="background-color: #28a745; color: white; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold;">
+            🎯 Foco da Análise: ${drawDisplay}
+        </div>
+        
+        ${criarAlertaCicloHTML()}
+
+        <div class="ia-result-card" style="border-left-color: #6f42c1; padding: 15px;">
+            <h4 style="margin-bottom: 15px; color: #6f42c1;">🔥 Termômetro Detalhado (Top 5)</h4>
+            ${criarTermometroHTML(rankingTop5)}
+        </div>
+
+        <div class="ia-result-card" style="border-left-color: #28a745; padding: 15px;">
+            <h4 style="margin-bottom: 15px; color: #28a745;">🐾 Top 10 Grupos Prováveis</h4>
+            ${criarTop10HTML(rankingTop10)}
+        </div>
+        
+        <div class="ia-result-card" style="border-left-color: #fd7e14;">
+            <h4 style="color: #fd7e14;">🤝 Duques de Grupo (Por Afinidade)</h4>
+            <ul style="padding-left: 0; margin: 0;">${criarListaComCercadoHTML(palpites.duques, 'Duque')}</ul>
+        </div>
+        
+        <div class="ia-result-card" style="border-left-color: #17a2b8;">
+            <h4 style="color: #17a2b8;">🤝 Ternos de Grupo (Por Afinidade)</h4>
+            <ul style="padding-left: 0; margin: 0;">${criarListaComCercadoHTML(palpites.ternos, 'Terno')}</ul>
+        </div>
+
+        <div class="ia-result-card">
+            <h4>🎯 Milhar (Focadas no Top 5)</h4>
+            <ul class="ia-palpite-list">${criarListaPalpitesHTML(palpites.milhar)}</ul>
+        </div>
+        <div class="ia-result-card">
+            <h4>🎯 Centena</h4>
+            <ul class="ia-palpite-list">${criarListaPalpitesHTML(palpites.centena)}</ul>
+        </div>
+
+        <button onclick="shareIAPalpites()" class="save-button" style="background-color: #25D366; width: 100%; margin-top: 15px; padding: 15px; font-size: 1.05rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white;">
+            📲 Compartilhar Análise Completa
+        </button>
+    `;
+
+    document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+    document.getElementById('iaPalpiteForm').style.display = 'none';
+}
+
+// --- FUNÇÃO PARA COMPARTILHAR O CERCADO ESPECÍFICO ---
+function shareCercadoIA(tipo, loteria, horario, cercado, itens) {
+    const dataH = new Date().toLocaleDateString('pt-BR');
+    let msg = `🔮 *I.A. Premium - ${tipo} de Grupo* 🔮\n\n`;
+    msg += `🎯 *Loteria:* ${loteria}\n`;
+    msg += `⏰ *Horário:* ${horario}\n`;
+    msg += `🗓️ *Data:* ${dataH}\n\n`;
+    msg += `*Sugestões de ${tipo}:*\n${itens.map(i => `• ${i}`).join('\n')}\n\n`;
+    msg += `🚀 *CERCADO INTELIGENTE (20 DEZENAS):*\n`;
+    msg += `\`${cercado}\`\n\n`;
+    msg += `🍀 *Boa sorte! Jogue com moderação.*`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
 function parseNumbers(inputText) {
     const errorMessageElement = document.getElementById('errorMessage');
     errorMessageElement.textContent = '';
@@ -19577,15 +19862,21 @@ const DEFAULT_VISIBLE_BUTTONS = {
     'btnMenuFechamento': false, // 🔢 2- Gerador Duque e Terno
     'btnMenuBolao': false,      // 📋 Gerar Lista Bolão
     'btnMenuTabela': true,      // 📊 Mostrar Tabela Bichos
-    'btnMenuAnalises': true,   // 🔮 Análises e Consultas
+    'btnMenuAnalises': true,    // 🔮 Análises e Consultas
 
     // --- Menu Inferior (Botões de Ação) ---
-    'btnMainClear': true,       // 🛑 Limpar Lista
+    'btnMainClear': true,        // 🛑 Limpar Lista
     'btnMainSave': false,        // 💾 Salvar Lista
     'btnMainLists': false,       // 👁️ Listas Salvas
     'btnMainCheckWinner': false, // 🏆 Conferir Ganhadores
     'btnMainAddNames': false,    // 👥 Add Nomes
-    'btnMainCount': false        // #️⃣ Contar Números
+    'btnMainCount': false,       // #️⃣ Contar Números
+
+    // --- Sub-Menu Análises ---
+    'btnSubAtrasados': true,      // ⏱️ Bichos Atrasados
+    'btnSubMcdSearch': false,      // 🔎 Consultar MCD
+    'btnSubResultadosLive': false, // 📲 Resultados Live
+    'btnSubPalpitesIA': false      // 🧠 Palpites da I.A.
 };
 
 const ADMIN_MENU_HASH = "MTIxMjEy";
