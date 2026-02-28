@@ -6509,6 +6509,10 @@ body.dark-mode .logo-mojs {
             <span>Database:</span>
             <strong id="milharTotalCount">...</strong>
         </div>
+        <div class="footer-info-item" id="iaStatusContainer">
+    <span>🧠 I.A:</span>
+    <strong id="iaLastUpdateDate" style="color: #6c757d;">Verificando...</strong>
+</div>
     </div>
     <div>👨‍💻 Criado por: Le Miastkuosky</div><br>
      <div class="footer-system-status">
@@ -6517,9 +6521,7 @@ body.dark-mode .logo-mojs {
             <button id="logout-button" style="display: none;" onclick="handleLogout()">Sair</button>
             
         </div>
-        <div class="status-row">
-            <span id="db-connection-status">Verificando conexão...</span>
-        </div>
+        
     </div>
 </footer>
 
@@ -13234,6 +13236,47 @@ function verificarCombinacoes() {
     
     outputDiv.innerHTML = htmlResult;
 }
+
+async function checkIAStatus() {
+    const statusEl = document.getElementById('iaLastUpdateDate');
+    if (!statusEl) return;
+
+    try {
+        // Consulta o documento da I.A. no Firestore (usando o RJ como base)
+        const doc = await firestoreDB.collection('analises_ia').doc('rj').get();
+        
+        if (doc.exists && doc.data().lastUpdated) {
+            const lastUpdate = doc.data().lastUpdated.toDate();
+            const agora = new Date();
+            const diffHoras = Math.abs(agora - lastUpdate) / 36e5; // Calcula a diferença em horas
+
+            const dataFormatada = lastUpdate.toLocaleDateString('pt-BR');
+            
+            if (diffHoras < 24) {
+                // ATUALIZADA (Verde)
+                statusEl.textContent = `Atualizada (${dataFormatada})`;
+                statusEl.style.color = '#28a745';
+            } else {
+                // DESATUALIZADA (Vermelho)
+                statusEl.textContent = `Desatualizada! (${dataFormatada})`;
+                statusEl.style.color = '#dc3545';
+                statusEl.style.animation = 'fade-attention 1.5s infinite'; // Faz o aviso piscar
+            }
+        } else {
+            statusEl.textContent = 'Não Treinada';
+        }
+    } catch (e) {
+        statusEl.textContent = 'Erro ao checar';
+        console.error("Erro status IA:", e);
+    }
+}
+
+// Chama a função sempre que o usuário logar
+firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+        setTimeout(checkIAStatus, 2000); // Aguarda a conexão estabilizar
+    }
+});
 
 // Função chamada pelos botões 📋 de cada bicho
 function copyBichoNumbers(encodedAnimalName, type, buttonElement) {
