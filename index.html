@@ -6651,7 +6651,7 @@ body.dark-mode .ia-scoreboard-banner {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V9.28</strong>
+            <strong>V9.25</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -6714,6 +6714,27 @@ body.dark-mode .ia-scoreboard-banner {
             <button onclick="closeAtrasadosRealTimeModal()" class="import-btn" style="flex: 1; padding: 12px;">
                 ❌ Sair
             </button>
+        </div>
+    </div>
+</div>
+
+<div id="atrasadosResultModal" class="modal modal-top" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close-modal" onclick="closeAtrasadosResultModal()">×</span>
+        <h3 class="modal-title">⏰ Ranking de Atrasados</h3>
+        
+        <div class="generator-step-card" style="padding: 15px; background: rgba(0,0,0,0.02);">
+            <div id="atrasadosResultHeader" style="text-align: center; margin-bottom: 15px; font-weight: bold; color: #007bff;"></div>
+            <div id="atrasadosResultList" style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                </div>
+        </div>
+
+        <button onclick="shareAtrasadosWhatsApp()" class="save-button" style="background-color: #25D366; width: 100%; margin-top: 15px; padding: 12px; font-size: 1rem;">
+            📲 Compartilhar no WhatsApp
+        </button>
+        
+        <div class="button-group" style="margin-top: 10px; gap: 10px;">
+            <button onclick="closeAtrasadosResultModal()" class="load-button" style="flex: 1;">⬅️ Voltar</button>
         </div>
     </div>
 </div>
@@ -9882,32 +9903,44 @@ async function fetchAndCacheIaPrefixes(loteria) {
         return; 
     }
     
-    // Puxa os dados gerais e a puxada ao mesmo tempo
-    const [data, puxada] = await Promise.all([
-        getIaDataForDraw(loteria, 'geral'),
-        getPuxadaDoDiaIA(loteria)
-    ]);
-    
-    if (data) {
-        if (!iaHistoricalPrefixesCache) iaHistoricalPrefixesCache = {};
-        iaHistoricalPrefixesCache[loteria] = {};
+    // Feedback visual nos botões enquanto busca
+    const countSpans = document.querySelectorAll('.ia-suggestion-count');
+    countSpans.forEach(span => span.innerHTML = '<small>...</small>');
+
+    try {
+        // Busca 3 coisas ao mesmo tempo: Dados da IA, Puxada e Atrasados AO VIVO via Proxy
+        const [data, puxada, htmlAtrasados] = await Promise.all([
+            getIaDataForDraw(loteria, 'geral'),
+            getPuxadaDoDiaIA(loteria),
+            fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text())
+        ]);
         
-        if(data.prefixosPorBicho) {
-            for (const [grupo, prefixos] of Object.entries(data.prefixosPorBicho)) {
-                iaHistoricalPrefixesCache[loteria][grupo] = new Set(prefixos);
+        // Processa os atrasados reais do site bichocerto.com
+        const atrasadosReais = typeof extrairDadosDoHTML === 'function' ? extrairDadosDoHTML(htmlAtrasados) : [];
+
+        if (data) {
+            if (!iaHistoricalPrefixesCache) iaHistoricalPrefixesCache = {};
+            iaHistoricalPrefixesCache[loteria] = {};
+            
+            if(data.prefixosPorBicho) {
+                for (const [grupo, prefixos] of Object.entries(data.prefixosPorBicho)) {
+                    iaHistoricalPrefixesCache[loteria][grupo] = new Set(prefixos);
+                }
             }
+
+            // Armazena os dados para o cálculo da interface
+            window.iaRankingsVisuais = {
+                atrasadosDB: data.bichosAtrasados1Premio || [],
+                atrasadosRealTime: atrasadosReais, // <-- O SEGREDO ESTÁ AQUI
+                frequentes: data.bichosFrequentes || [],
+                ciclos: data.ciclos || {},
+                puxada: puxada
+            };
+
+            updateIaSuggestionCountsDisplay(loteria);
         }
-
-        // Armazena todos os fatores para o Motor calcular a tela
-        window.iaRankingsVisuais = {
-            atrasados: data.bichosAtrasados1Premio || [],
-            frequentes: data.bichosFrequentes || [],
-            ciclos: data.ciclos || {},
-            puxada: puxada
-        };
-
-        updateIaSuggestionCountsDisplay(loteria);
-    } else {
+    } catch (e) {
+        console.error("Erro na sincronização IA Real-Time:", e);
         updateIaSuggestionCountsDisplay(null);
     }
 }
@@ -9921,30 +9954,28 @@ function updateIaSuggestionCountsDisplay(lottery) {
 
         countSpans.forEach(span => {
             const bichoGroup = span.dataset.group;
+            const bichoNome = tabelaDeGrupos.find(b => b.grupo === bichoGroup)?.animal.toLowerCase();
             
-            // CHAMA O MOTOR ÚNICO AQUI
-            const avaliacao = calcularPontuacaoBicho(bichoGroup, analise, false);
-            const forca = avaliacao.forca;
+            // 1. Pega a posição do bicho no ranking de atrasados real (1 a 25)
+            const idxAtrasadoReal = analise.atrasadosRealTime.findIndex(b => b.nome.toLowerCase() === bichoNome);
             
-            let icon = '⬇️';
-            let color = '#6c757d'; // Cinza (Frio)
-
-            // Hierarquia das Cores baseada na força real
-            if (avaliacao.isCritico || forca >= 90) {
-                icon = '🚨 🔥';
-                color = '#dc3545'; // Vermelho - Bomba
-            } else if (forca >= 75) {
-                icon = '⬆️';
-                color = '#28a745'; // Verde - Muito Forte
-            } else if (forca >= 55) {
-                icon = '🔥';
-                color = '#fd7e14'; // Laranja - Aquecendo
-            } else if (forca >= 35) {
-                icon = '↗️';
-                color = '#17a2b8'; // Ciano - Neutro/Leve
+            // 2. Calcula uma pontuação baseada no atraso (Ex: 1º mais atrasado = 99%)
+            let forcaRealTime = 0;
+            if (idxAtrasadoReal !== -1) {
+                // Inverte a posição: quem tá em 0 (1º lugar) ganha mais pontos
+                forcaRealTime = Math.round(99 - (idxAtrasadoReal * 3.5));
             }
 
-            span.innerHTML = `${icon} ${forca}%`;
+            // 3. Define ícone e cor baseado no "Calor" do bicho
+            let icon = '⬇️';
+            let color = '#6c757d'; 
+
+            if (forcaRealTime >= 90) { icon = '🚨 🔥'; color = '#dc3545'; }
+            else if (forcaRealTime >= 75) { icon = '⬆️ 🔥'; color = '#fd7e14'; }
+            else if (forcaRealTime >= 50) { icon = '↗️'; color = '#28a745'; }
+            else if (forcaRealTime >= 30) { icon = '↘️'; color = '#17a2b8'; }
+
+            span.innerHTML = `${icon} ${forcaRealTime}%`;
             span.style.color = color;
         });
     } else {
@@ -20119,54 +20150,84 @@ function extrairDadosDoHTML(htmlString) {
     return dadosExtraidos;
 }
 
-// --- FUNÇÃO QUE CONECTA AO SEU PROXY NATIVO ---
+// Variável global para guardar o texto da mensagem formatada
+let pendingAtrasadosMessage = "";
+
+function closeAtrasadosResultModal() {
+    document.getElementById('atrasadosResultModal').classList.remove('active');
+}
+
+// --- FUNÇÃO ATUALIZADA PARA ABRIR O POPUP ANTES ---
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     const textoOriginal = botao.innerHTML; 
     botao.disabled = true;
     botao.innerHTML = 'Buscando...';
 
     try {
-        // Chamada direta para o seu endpoint na Vercel
         const urlProxy = `/api/proxy?tipo=atrasados&loteria=${loteria}`;
         const response = await fetch(urlProxy);
-
         if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
         const htmlTabela = await response.text();
-        const dadosDosAtrasados = extrairDadosDoHTML(htmlTabela);
+        const dados = extrairDadosDoHTML(htmlTabela);
 
-        if (dadosDosAtrasados.length === 0) {
-            showToast("Dados não disponíveis no momento. Tente outra loteria.", "error");
+        if (dados.length === 0) {
+            showToast("Dados não disponíveis no momento.", "error");
             return;
         }
 
-        // Construção da mensagem estruturada
-        let msg = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n`;
-        msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-        
-        dadosDosAtrasados.forEach(bicho => {
-            msg += `*${bicho.posicao}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${bicho.status}_\n`;
+        // 1. Prepara o Cabeçalho do Popup
+        document.getElementById('atrasadosResultHeader').innerHTML = `🎯 ${nomeLoteria.toUpperCase()}<br><small>${new Date().toLocaleDateString('pt-BR')}</small>`;
+
+        // 2. Monta a Lista Visual para o Usuário Ver no Site
+        let listHTML = '';
+        let zapText = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n`;
+        zapText += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+        dados.forEach(bicho => {
+            const rowColor = bicho.posicao <= 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent';
+            listHTML += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: ${rowColor}; border-radius: 6px; margin-bottom: 2px;">
+                    <span style="font-weight: bold; width: 30px;">${bicho.posicao}º</span>
+                    <span style="font-size: 1.2rem; width: 35px;">${bicho.emoji}</span>
+                    <span style="flex-grow: 1; text-align: left; font-weight: 500;">${bicho.nome.toUpperCase()}</span>
+                    <span style="color: #666; font-size: 0.85rem;">${bicho.status}</span>
+                </div>`;
+            
+            zapText += `*${bicho.posicao}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${bicho.status}_\n`;
         });
-        
-        msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-        msg += `📲 _VIPmojs - Consultoria Inteligente_`;
 
-        const encodedMessage = encodeURIComponent(msg);
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+        zapText += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+        zapText += `📲 _VIPmojs - Inteligência Real-Time_`;
 
-        // Abre o WhatsApp usando o redirecionamento de URL (evita bloqueio de popup)
-        window.location.href = whatsappUrl;
-        showToast('Relatório gerado! Abrindo WhatsApp...', 'success');
+        // 3. Salva o texto formatado para o botão do WhatsApp usar depois
+        pendingAtrasadosMessage = zapText;
+
+        // 4. Mostra o Popup com os resultados
+        document.getElementById('atrasadosResultList').innerHTML = listHTML;
+        closeAtrasadosRealTimeModal(); // Fecha a seleção de loterias
+        document.getElementById('atrasadosResultModal').classList.add('active'); // Abre o resultado
 
     } catch (error) { 
-        console.error("Erro ao gerar link de atrasados:", error);
+        console.error("Falha ao buscar atrasados:", error);
         showToast(`Erro de conexão com o servidor.`, "error"); 
     } finally {
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
-        // Fecha a janela de seleção automaticamente após o sucesso
-        setTimeout(closeAtrasadosRealTimeModal, 1000);
     }
+}
+
+// --- FUNÇÃO QUE REALMENTE ENVIA PARA O WHATSAPP ---
+function shareAtrasadosWhatsApp() {
+    if (!pendingAtrasadosMessage) return;
+    
+    const encodedMessage = encodeURIComponent(pendingAtrasadosMessage);
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+    
+    window.location.href = whatsappUrl;
+    showToast('Abrindo WhatsApp...', 'success');
+    
+    setTimeout(closeAtrasadosResultModal, 500);
 }
         
 
