@@ -6651,7 +6651,7 @@ body.dark-mode .ia-scoreboard-banner {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V9.25</strong>
+            <strong>V9.26</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -20217,17 +20217,27 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     }
 }
 
-// --- FUNÇÃO QUE REALMENTE ENVIA PARA O WHATSAPP ---
+// --- FUNÇÃO PARA ABRIR O WHATSAPP DIRETAMENTE ---
 function shareAtrasadosWhatsApp() {
-    if (!pendingAtrasadosMessage) return;
+    if (!pendingAtrasadosMessage) {
+        showToast('Erro: Nenhuma mensagem carregada.', 'error');
+        return;
+    }
     
+    // Codifica o texto para garantir que espaços e emojis funcionem
     const encodedMessage = encodeURIComponent(pendingAtrasadosMessage);
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
     
-    window.location.href = whatsappUrl;
+    // O uso do wa.me/ sem número força a abertura da lista de contatos do App
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+    
+    // Altera a localização da janela atual. 
+    // Em celulares, isso costuma disparar o App na hora sem avisos extras.
+    window.location.assign(whatsappUrl);
+    
     showToast('Abrindo WhatsApp...', 'success');
     
-    setTimeout(closeAtrasadosResultModal, 500);
+    // Fecha o popup de visualização após o disparo
+    setTimeout(closeAtrasadosResultModal, 800);
 }
         
 
