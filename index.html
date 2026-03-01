@@ -5717,11 +5717,12 @@ body:has(input[value="ia_bichos"]:checked) .ia-progress-container {
     /* Efeito de Ouro Metálico */
     background: linear-gradient(135deg, #ff8c00 0%, #ffc107 50%, #ffeb3b 100%);
     -webkit-background-clip: text;
+    background-clip: text; /* ADICIONE ESTA LINHA PARA COMPATIBILIDADE PADRÃO */
     -webkit-text-fill-color: transparent;
     font-weight: 900; 
     text-transform: uppercase;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1); 
-    margin-right: 0px; /* <--- Isso aqui dá o "respiro" entre o VIP e o mojs */
+    margin-right: 0px;
 }
 
 .logo-mojs {
@@ -6651,7 +6652,7 @@ body.dark-mode .ia-scoreboard-banner {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V9.56</strong>
+            <strong>V9.06</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -10173,13 +10174,13 @@ function toggleRegistrationForm(event) {
 async function shareReceiptToWhatsApp() {
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) {
-        showToast('Erro: Faça o login novamente.', 'error');
+        showToast('Erro: Você não está logado.', 'error');
         return;
     }
     
     const valor = document.getElementById('receiptValueInput').value;
     if (!valor || valor.trim() === '' || valor.trim() === 'R$ 0,00') {
-        showToast('Preencha o valor da aposta.', 'error');
+        showToast('Por favor, preencha o valor da aposta.', 'error');
         return;
     }
 
@@ -10196,7 +10197,6 @@ async function shareReceiptToWhatsApp() {
     const receiptContent = receiptClone.textContent;
 
     try {
-        // Lógica de salvamento e link (mantida conforme seu original)
         const timeMatch = horarioSelecionado.match(/(\d{2}):(\d{2})/);
         const dataSorteioFinal = new Date();
         if (timeMatch) dataSorteioFinal.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
@@ -10213,23 +10213,31 @@ async function shareReceiptToWhatsApp() {
         });
 
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
-        const codigo = (receiptContent.match(/Código.*:\s*(\S+)/) || [])[1] || 'N/A';
+        const codigo = (receiptContent.match(/Código\.*:\s*(\S+)/) || [])[1] || 'N/A';
         
-        // --- CONSTRUÇÃO DA MENSAGEM PREMIUM ---
-        const divisor = "━━━━━━━━━━━━━━━";
-        const separadorCurto = "-----------------------------------";
+        // --- 1. LÓGICA DE SAUDAÇÃO DINÂMICA ---
+        const hora = new Date().getHours();
+        let saudacao = "Bom dia";
+        if (hora >= 12 && hora < 18) saudacao = "Boa tarde";
+        else if (hora >= 18 || hora < 5) saudacao = "Boa noite";
 
-        let msg = `🌟 *COMPROVANTE DE APOSTA - VIPmojs* 🌟\n\n`;
+        // --- 2. MONTAGEM DA MENSAGEM PREMIUM ---
+        const divisor = "━━━━━━━━━━━━━━━";
+        const linhaSecao = "-----------------------------------";
+
+        let msg = `${saudacao}, Segue suas milhares da sorte!\n\n`;
+        msg += `🌟 *COMPROVANTE REGISTRADO* 🌟\n\n`;
         msg += `*GRUPO APP OFICIAL*\n`;
         msg += `${divisor}\n\n`;
         
-        msg += `🔑 *CÓDIGO:* \`${codigo}\`\n`;
+        msg += `🔑 *ID:* \`${codigo}\`\n`;
         msg += `💰 *VALOR:* *${valor}*\n`;
         msg += `🎯 *EXTRAÇÃO:* ${extracaoNome} - ${horarioSelecionado}\n\n`;
         
-        msg += `${separadorCurto}\n\n`;
+        msg += `${linhaSecao}\n\n`;
+        msg += `🐾 *RESUMO POR BICHO:*\n`;
         
-        // Extração do Resumo por Bicho (mantendo sua lógica de regex)
+        // Extração dos dados dos bichos para o formato Premium
         const bichoRegex = /Gr\.\s(\d+)\s-\s(?:.*?\s)?([A-Za-zçãáéíóúâêôûà\s]+):\s(.*?)\n/g;
         let match;
         while ((match = bichoRegex.exec(receiptContent)) !== null) {
@@ -10239,22 +10247,23 @@ async function shareReceiptToWhatsApp() {
             msg += `${emoji} *${animal}* ➔ _${detalhes}_\n`;
         }
 
-        msg += `\n${separadorCurto}\n\n`;
-        msg += `🔗 *VER RECIBO COMPLETO:*\n${link}\n\n`;
+        msg += `\n${linhaSecao}\n\n`;
+        msg += `🔗 *VER MILHARES DA SORTE:*\n${link}\n\n`;
         msg += `${divisor}\n`;
         msg += `⚠️ _O link acima expira após o sorteio._\n\n`;
-        msg += `📲 *VIP - Comprovante Gerado com I.A.*`;
+        msg += `Obrigado e Boa sorte! 🍀\n\n`;
+        msg += `📲 *VIP - I.A in Real-Time*`;
 
-        // Disparo direto via wa.me (protocolo mais rápido)
+        // Disparo direto via wa.me (pula a tela de confirmação no mobile)
         const encodedMessage = encodeURIComponent(msg);
         window.location.assign(`https://wa.me/?text=${encodedMessage}`);
         
-        showToast('Comprovante enviado!', 'success');
+        showToast('Comprovante enviado com sucesso!', 'success');
         setTimeout(closeReceiptModal, 800);
 
     } catch (error) {
-        console.error("Erro ao gerar comprovante:", error);
-        showToast(`Erro no servidor.`, 'error');
+        console.error("Erro no envio:", error);
+        showToast(`Erro ao gerar link de compartilhamento.`, 'error');
     }
 }
 // --- Funções para o Modal de Compartilhamento de Resultados ---
