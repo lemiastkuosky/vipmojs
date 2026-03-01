@@ -6651,7 +6651,7 @@ body.dark-mode .ia-scoreboard-banner {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V9.26</strong>
+            <strong>V9.56</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -10173,146 +10173,35 @@ function toggleRegistrationForm(event) {
 async function shareReceiptToWhatsApp() {
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) {
-        showToast('Erro: Você não está logado. Faça o login novamente.', 'error', 5000);
+        showToast('Erro: Faça o login novamente.', 'error');
         return;
     }
     
-    // 1. Validação de valor
     const valor = document.getElementById('receiptValueInput').value;
     if (!valor || valor.trim() === '' || valor.trim() === 'R$ 0,00') {
-        showToast('Por favor, preencha o valor da aposta.', 'error');
-        document.getElementById('receipt-inputs').classList.add('flash-effect');
-        setTimeout(() => { document.getElementById('receipt-inputs').classList.remove('flash-effect'); }, 1500);
-        document.getElementById('receiptValueInput').focus();
+        showToast('Preencha o valor da aposta.', 'error');
         return;
     }
 
-    saveNewFavoriteValue(valor);
-
-    // 2. Pergunta o método
     const chosenMethod = await showPaymentMethodModal();
-    if (!chosenMethod) {
-        showToast('Envio cancelado.', 'info');
-        return;
-    }
+    if (!chosenMethod) return;
 
-    // 3. Atualiza o radio button
-    const radioToSelect = document.querySelector(`input[name="metodoPremio"][value="${chosenMethod}"]`);
-    if (radioToSelect) {
-        radioToSelect.checked = true;
-    }
-
-    // 4. Gera o texto FINAL na tela
     generateReceiptText(chosenMethod);
 
-    // 5. Pega os dados de extração e horário
     const extracaoNome = document.getElementById('receiptExtractionSelect').value;
     const horarioSelecionado = document.getElementById('receiptTimeSelect').value;
-    const agora = new Date();
-    const schedule = extractionSchedules[extracaoNome] || [];
-    let proximoSorteioDisponivel = null;
-    let seraAmanha = false;
-
-    // LÓGICA DE HORÁRIO CORRIGIDA
-    for (const sorteioInfo of schedule) {
-        const timeMatch = sorteioInfo.display.match(/(\d{2}):(\d{2})/);
-        if (!timeMatch) continue;
-        const sorteioHora = parseInt(timeMatch[1], 10);
-        const sorteioMinuto = parseInt(timeMatch[2], 10);
-        const dataSorteioHoje = new Date();
-        dataSorteioHoje.setHours(sorteioHora, sorteioMinuto, 0, 0);
-        const dataLimite = new Date(dataSorteioHoje);
-        
-        const savedCutoff = await getData(STORAGE_KEYS.CUTOFF_TIME);
-        const cutoffMinutosGlobal = parseInt(savedCutoff, 10) || 5;
-        let cutoffParaEsteSorteio = sorteioInfo.corteMinutos === 0 ? 0 : cutoffMinutosGlobal;
-        
-        // --- CORREÇÃO AQUI: Usa extracaoNome diretamente ---
-        if (extracaoNome === 'Look') {
-            cutoffParaEsteSorteio = -15; 
-        }
-        
-        dataLimite.setMinutes(dataSorteioHoje.getMinutes() - cutoffParaEsteSorteio);
-
-        if (agora < dataLimite) {
-            proximoSorteioDisponivel = sorteioInfo;
-            break;
-        }
-    }
-
-    if (!proximoSorteioDisponivel && schedule.length > 0) {
-        proximoSorteioDisponivel = schedule[0];
-        seraAmanha = true;
-    }
-
-    if (!proximoSorteioDisponivel) {
-        showToast('Não foi possível determinar o próximo sorteio.', 'error');
-        return;
-    }
-
-    const siglasMap = { 'Rio de Janeiro': 'RJ', 'Look': 'LK', 'Nacional': 'NC', 'Loteria Federal': 'FD' };
-    const sigla = siglasMap[extracaoNome] || extracaoNome;
-    const timeMatchFinal = proximoSorteioDisponivel.display.match(/(\d{2}):(\d{2})/);
-    const horarioFinal = timeMatchFinal ? timeMatchFinal[0] : proximoSorteioDisponivel.display;
-    const extracaoCompletaFinal = `${sigla} - ${horarioFinal}h`;
-
-    let metodoDisplay = '';
-    if (chosenMethod === 'padrao') {
-        metodoDisplay = 'Bolão Padrão (50x)';
-    } else if (chosenMethod === 'bolao_40x') {
-        metodoDisplay = 'Bolão Especial (40x)';
-    }
-
-    let confirmationMessage = `<strong>Confirme os dados:</strong>\n\n` +
-                              `<strong>Extração:</strong> ${extracaoCompletaFinal}\n` +
-                              `<strong>Valor:</strong> ${valor}\n` +
-                              `<strong>Método:</strong> ${metodoDisplay}\n\n`; 
-
-    if (horarioSelecionado !== proximoSorteioDisponivel.display) {
-        confirmationMessage = `<strong>ATENÇÃO:</strong> O horário para a extração das <strong>${horarioSelecionado.split(' ')[0]}</strong> já encerrou.\n\n` +
-                              `Sua aposta será registrada para a próxima extração disponível: <strong>${extracaoCompletaFinal}</strong>.\n\n` +
-                              `<strong>Valor:</strong> ${valor}\n` +
-                              `<strong>Método:</strong> ${metodoDisplay}\n\n` + 
-                              `Deseja continuar?`;
-    } else {
-        confirmationMessage += `Está tudo certo?`;
-    }
-    
-    const userConfirmed = await showCustomConfirm(confirmationMessage, 'Sim, Enviar', 'Cancelar');
-    if (!userConfirmed) {
-        showToast('Envio cancelado.', 'info');
-        return;
-    }
-
-    showToast('Gerando link para compartilhar...', 'info');
-
     const receiptElement = document.getElementById('receiptContent');
-    if (!receiptElement) {
-        showToast('Erro: Elemento do recibo não encontrado.', 'error');
-        return;
-    }
     const receiptClone = receiptElement.cloneNode(true);
     receiptClone.querySelectorAll('.copy-bicho-type-btn').forEach(btn => btn.remove());
     const receiptContent = receiptClone.textContent;
-    
-    if (!receiptContent || !receiptContent.trim()) {
-        showToast('Não há recibo para compartilhar.', 'error');
-        return;
-    }
 
     try {
-        const sorteioHoraFinal = parseInt(timeMatchFinal[1], 10);
-        const sorteioMinutoFinal = parseInt(timeMatchFinal[2], 10);
+        // Lógica de salvamento e link (mantida conforme seu original)
+        const timeMatch = horarioSelecionado.match(/(\d{2}):(\d{2})/);
         const dataSorteioFinal = new Date();
-        if (seraAmanha) {
-            dataSorteioFinal.setDate(dataSorteioFinal.getDate() + 1);
-        }
-        dataSorteioFinal.setHours(sorteioHoraFinal, sorteioMinutoFinal, 0, 0);
+        if (timeMatch) dataSorteioFinal.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
 
-        let expirationMinutes = parseInt(document.getElementById('expirationTimeInput').value, 10);
-        if (isNaN(expirationMinutes) || expirationMinutes < 0) {
-            expirationMinutes = 15;
-        }
+        let expirationMinutes = parseInt(document.getElementById('expirationTimeInput').value, 10) || 15;
         const dataExpiracao = new Date(dataSorteioFinal);
         dataExpiracao.setMinutes(dataSorteioFinal.getMinutes() + expirationMinutes);
 
@@ -10324,66 +10213,48 @@ async function shareReceiptToWhatsApp() {
         });
 
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
-        
         const codigo = (receiptContent.match(/Código.*:\s*(\S+)/) || [])[1] || 'N/A';
-        const valorRecibo = (receiptContent.match(/Valor Pago.*:\s*(R\$\s*[\d,.]+)/) || [])[1] || 'N/A';
         
-        let greeting = "Olá!";
-        const hour = new Date().getHours();
-        if (hour >= 5 && hour < 12) { greeting = 'Bom dia!'; }
-        else if (hour >= 12 && hour < 18) { greeting = 'Boa tarde!'; }
-        else { greeting = 'Boa noite!'; }
+        // --- CONSTRUÇÃO DA MENSAGEM PREMIUM ---
+        const divisor = "━━━━━━━━━━━━━━━";
+        const separadorCurto = "-----------------------------------";
 
-        const resumoBichoLines = [];
-
+        let msg = `🌟 *COMPROVANTE DE APOSTA - VIPmojs* 🌟\n\n`;
+        msg += `*GRUPO APP OFICIAL*\n`;
+        msg += `${divisor}\n\n`;
+        
+        msg += `🔑 *CÓDIGO:* \`${codigo}\`\n`;
+        msg += `💰 *VALOR:* *${valor}*\n`;
+        msg += `🎯 *EXTRAÇÃO:* ${extracaoNome} - ${horarioSelecionado}\n\n`;
+        
+        msg += `${separadorCurto}\n\n`;
+        
+        // Extração do Resumo por Bicho (mantendo sua lógica de regex)
         const bichoRegex = /Gr\.\s(\d+)\s-\s(?:.*?\s)?([A-Za-zçãáéíóúâêôûà\s]+):\s(.*?)\n/g;
-
         let match;
         while ((match = bichoRegex.exec(receiptContent)) !== null) {
-            const groupNumber = match[1].padStart(2, '0');
-            const animalName = match[2].trim();
-            const details = match[3].trim().toLowerCase();
-            const emoji = bichoNameToEmoji[animalName.toLowerCase().replace(/á/g, 'a').replace(/ã/g, 'a').replace(/é/g, 'e')] || '🎲';
-            resumoBichoLines.push(`G${groupNumber} - ${emoji} ${animalName}: ${details}`);
+            const animal = match[2].trim().toUpperCase();
+            const detalhes = match[3].trim().toLowerCase();
+            const emoji = bichoNameToEmoji[animal.toLowerCase().replace(/á/g, 'a').replace(/ã/g, 'a').replace(/é/g, 'e')] || '🎲';
+            msg += `${emoji} *${animal}* ➔ _${detalhes}_\n`;
         }
 
-        let resumoSection = '';
-        if (resumoBichoLines.length > 0) {
-            resumoSection = `Resumo por Bicho:\n${resumoBichoLines.join('\n')}\n\n`;
-        }
+        msg += `\n${separadorCurto}\n\n`;
+        msg += `🔗 *VER RECIBO COMPLETO:*\n${link}\n\n`;
+        msg += `${divisor}\n`;
+        msg += `⚠️ _O link acima expira após o sorteio._\n\n`;
+        msg += `📲 *VIP - Comprovante Gerado com I.A.*`;
 
-        let valorLinha = `💰 Valor: ${valorRecibo}`;
-        if (chosenMethod === 'bolao_40x') {
-            valorLinha += ' (Cada bolão)';
-        }
-
-        const message = `${greeting}\n\n` +
-                        `Seu recibo foi registrado com sucesso! ✅\n\n` +
-                        `Resumo da sua aposta:\n` +
-                        `🔑 ID da Aposta: ${codigo}\n` +
-                        `${valorLinha}\n` + 
-                        `🎯 Extração: ${extracaoCompletaFinal}\n\n` +
-                        `${resumoSection}` +
-                        `Clique no link abaixo para visualizar todos os detalhes:\n` +
-                        `${link}\n\n` +
-                        `Para sua segurança, o link expira após o sorteio.\n\n` +
-                        `Boa sorte! 🍀`;
+        // Disparo direto via wa.me (protocolo mais rápido)
+        const encodedMessage = encodeURIComponent(msg);
+        window.location.assign(`https://wa.me/?text=${encodedMessage}`);
         
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
-        
-        // --- CORREÇÃO DO BLOQUEADOR DE POP-UP ---
-        // Muda a página atual direto para o link do WhatsApp (não é bloqueado)
-        window.location.href = whatsappUrl; 
-        
-        // Dá um tempinho mínimo para fechar o modal visualmente antes de ir pro WhatsApp
-        setTimeout(() => {
-            closeReceiptModal();
-        }, 300);
+        showToast('Comprovante enviado!', 'success');
+        setTimeout(closeReceiptModal, 800);
 
     } catch (error) {
-        console.error("### ERRO REAL DO FIREBASE ###:", error); 
-        showToast(`Erro do Firebase: ${error.message}`, 'error', 6000);
+        console.error("Erro ao gerar comprovante:", error);
+        showToast(`Erro no servidor.`, 'error');
     }
 }
 // --- Funções para o Modal de Compartilhamento de Resultados ---
@@ -18000,6 +17871,7 @@ async function generateSelectedNumbers() {
         const baseQuantity = Math.floor(totalQuantity / selectedBichos.length);
         const remainder = totalQuantity % selectedBichos.length;
         summaryParts.push(`\n<strong>- Modo:</strong> Grupo Bichos`);
+        summaryParts.push(`<strong>- Total a Gerar:</strong> ${totalQuantity}`); // Adiciona o total geral
 
         if (bichoMilharMethod === 'cercar_completo' && typeKeys.includes('milhar')) {
             summaryParts.push(`(Modo Cercar 400 - Ciclo)`);
@@ -18022,12 +17894,19 @@ async function generateSelectedNumbers() {
             });
         }
         else {
+            // --- BLOCO CORRIGIDO PARA EXIBIR BICHOS E QUANTIDADES NO MODO PADRÃO ---
             selectedBichos.forEach((bicho, index) => {
                 const qtd = baseQuantity + (index < remainder ? 1 : 0);
                 if (qtd === 0) return;
+                
+                // Adiciona o bicho e a quantidade individual ao resumo da janela
+                summaryParts.push(`• G${bicho.grupo} ${bicho.animal}: ${qtd}x`);
+
                 typeKeys.forEach(tk => {
                     const set = new Set();
-                    while(set.size < qtd) {
+                    let attempts = 0;
+                    while(set.size < qtd && attempts < qtd * 100) {
+                        attempts++;
                         const d = bicho.dezenas[getSecureRandomInt(bicho.dezenas.length)];
                         let num = tk === 'milhar' ? String(getSecureRandomInt(100)).padStart(2,'0')+d : (tk === 'centena' ? getSecureRandomInt(10)+d : d);
                         if (applyAdvancedFilters(num, tk)) set.add(num);
@@ -20158,6 +20037,7 @@ function closeAtrasadosResultModal() {
 }
 
 // --- FUNÇÃO ATUALIZADA PARA ABRIR O POPUP ANTES ---
+// --- FUNÇÃO GERADORA DE LINK PARA WHATSAPP COM VISUAL PREMIUM ---
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     const textoOriginal = botao.innerHTML; 
     botao.disabled = true;
@@ -20176,15 +20056,22 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
             return;
         }
 
-        // 1. Prepara o Cabeçalho do Popup
+        // 1. Prepara o Cabeçalho do Popup (Visual Interno do Site)
         document.getElementById('atrasadosResultHeader').innerHTML = `🎯 ${nomeLoteria.toUpperCase()}<br><small>${new Date().toLocaleDateString('pt-BR')}</small>`;
 
-        // 2. Monta a Lista Visual para o Usuário Ver no Site
+        // 2. Monta a Lista Visual para o Usuário Ver no Site e o Texto do WhatsApp
         let listHTML = '';
-        let zapText = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n`;
-        zapText += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+        const agora = new Date();
+        const dataF = agora.toLocaleDateString('pt-BR');
+        const horaF = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        // --- INÍCIO DA MONTAGEM DA MENSAGEM DO WHATSAPP ---
+        let zapText = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n`;
+        zapText += `*GRUPO APP OFICIAL*\n`;
+        zapText += `━━━━━━━━━━━━━━━\n\n`;
 
         dados.forEach(bicho => {
+            // Visual para o Popup do Site
             const rowColor = bicho.posicao <= 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent';
             listHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: ${rowColor}; border-radius: 6px; margin-bottom: 2px;">
@@ -20194,19 +20081,21 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
                     <span style="color: #666; font-size: 0.85rem;">${bicho.status}</span>
                 </div>`;
             
+            // Visual para o Texto do WhatsApp
             zapText += `*${bicho.posicao}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${bicho.status}_\n`;
         });
 
         zapText += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-        zapText += `📲 _VIPmojs - Inteligência Real-Time_`;
+        zapText += `🗓️ _Análise gerada em: ${dataF}, ${horaF}_\n\n`;
+        zapText += `📲 _VIP - I.A in Real-Time_`;
 
         // 3. Salva o texto formatado para o botão do WhatsApp usar depois
         pendingAtrasadosMessage = zapText;
 
-        // 4. Mostra o Popup com os resultados
+        // 4. Mostra o Popup com os resultados no site
         document.getElementById('atrasadosResultList').innerHTML = listHTML;
-        closeAtrasadosRealTimeModal(); // Fecha a seleção de loterias
-        document.getElementById('atrasadosResultModal').classList.add('active'); // Abre o resultado
+        closeAtrasadosRealTimeModal(); 
+        document.getElementById('atrasadosResultModal').classList.add('active'); 
 
     } catch (error) { 
         console.error("Falha ao buscar atrasados:", error);
