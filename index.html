@@ -6651,7 +6651,7 @@ body.dark-mode .ia-scoreboard-banner {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V7.88</strong>
+            <strong>V9.88</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -14906,17 +14906,18 @@ if(mcdOfferCheckbox) mcdOfferCheckbox.checked = offerCentenasAfterMilhar;
             }
             
             if (success) {
-                console.log(`Dados salvos com sucesso para ${key}`);
-                saveIndicator.textContent = "Salvo ✓";
-                saveIndicator.style.backgroundColor = "rgba(40,167,69,0.9)";
-                
-                setTimeout(async () => {
-                    const verifyData = await getData(key);
-                    if (!verifyData || JSON.stringify(verifyData) !== JSON.stringify(value)) {
-                        console.warn(`Verificação posterior falhou para ${key}`);
-                        showToast("Aviso: Verificação de dados falhou. Tente salvar novamente.", "warning");
-                    }
-                }, 1000);
+    console.log(`Dados salvos com sucesso para ${key}`);
+    saveIndicator.textContent = "Salvo ✓";
+    saveIndicator.style.backgroundColor = "rgba(40,167,69,0.9)";
+    
+    // Aumentamos o tempo de espera para garantir a sincronização
+    setTimeout(async () => {
+        const verifyData = await getData(key);
+        if (verifyData === null || verifyData === undefined) {
+            console.warn(`Verificação pendente para ${key} (Aguardando IndexedDB)`);
+        }
+    }, 500); 
+
             } else {
                 console.error(`Falha ao salvar dados para ${key}`);
                 saveIndicator.textContent = "Erro ao salvar!";
@@ -15491,57 +15492,23 @@ async function loadIAScoreboard() {
 
         if (doc.exists) {
             const data = doc.data();
-            
-            // Prioriza o manual se existir, senão usa o automático humano
-            if (data.texto_manual && data.texto_manual.trim() !== '') {
-                textoExibicao = data.texto_manual;
-            } else if (data.texto_automatico) {
-                textoExibicao = data.texto_automatico;
-            }
-            
-            // Verifica se a frase fala de Milhar para ativar o brilho de ouro
-            if (textoExibicao.toLowerCase().includes('milhar')) {
-                ehMilhar = true;
-            }
+            // Prioridade para o texto manual do Admin, senão usa o automático humano
+            textoExibicao = (data.texto_manual && data.texto_manual.trim() !== '') ? data.texto_manual : (data.texto_automatico || textoExibicao);
+            // Ativa o brilho se a frase contiver a palavra "milhar"
+            if (textoExibicao.toLowerCase().includes('milhar')) ehMilhar = true;
         }
 
         textEl.innerHTML = textoExibicao;
         
-        // Gerencia o efeito visual de Ouro
-        if (ehMilhar) {
-            banner.classList.add('milhar-exata-glow');
-        } else {
-            banner.classList.remove('milhar-exata-glow');
-        }
+        // Gerencia o Gold Glow
+        if (ehMilhar) banner.classList.add('milhar-exata-glow');
+        else banner.classList.remove('milhar-exata-glow');
 
         banner.style.display = 'block';
-
-    } catch (e) {
-        console.error("Erro ao carregar placar da IA:", e);
-    }
+    } catch (e) { console.error("Erro placar IA:", e); }
 }
 
-// 2. FUNÇÃO DO ADMIN PARA SALVAR TEXTO CUSTOMIZADO
-async function salvarPlacarAdmin() {
-    const texto = document.getElementById('adminPlacarText').value;
-    const btn = document.querySelector('#adminPlacarText + button');
-    btn.textContent = 'Salvando...';
-
-    try {
-        await firestoreDB.collection('config').doc('placar_ia').set({
-            texto_manual: texto
-        }, { merge: true });
-
-        showToast("Banner atualizado com sucesso!", "success");
-        loadIAScoreboard(); // Atualiza a tela de todo mundo na hora
-    } catch (e) {
-        showToast("Erro ao salvar banner.", "error");
-    } finally {
-        btn.innerHTML = '💾 Salvar Banner';
-    }
-}
-
-// 3. MATEMÁTICA AUTOMÁTICA DE ACERTOS (Roda quando compila a I.A.)
+// 2. GERA AS FRASES HUMANAS AUTOMATICAMENTE
 async function calcularPlacarAutomatico() {
     try {
         const tresDiasAtras = new Date();
@@ -15551,59 +15518,39 @@ async function calcularPlacarAutomatico() {
             .where('data', '>=', firebase.firestore.Timestamp.fromDate(tresDiasAtras))
             .get();
 
-        let acertos = 0;
-        let bichoVencedor = "";
-        let loteriaVencedora = "";
-        let dataVencedora = "";
-
+        let acertos = 0, bichoV = "", loteriaV = "", dataV = "";
         const loterias = ['rj', 'lk', 'ln', 'fd'];
+
         for (const loteria of loterias) {
             const analise = await getIaDataForDraw(loteria, 'geral');
             if (!analise) continue;
-
-            let bichosScore = tabelaDeGrupos.map(b => {
-                let avaliacao = calcularPontuacaoBicho(b.grupo, analise, false);
-                return { ...b, forca: avaliacao.forca };
-            });
-            const top5Grupos = bichosScore.sort((a,b) => b.forca - a.forca).slice(0, 5).map(b => b.grupo);
+            const top5 = tabelaDeGrupos.map(b => ({ ...b, forca: calcularPontuacaoBicho(b.grupo, analise).forca }))
+                         .sort((a,b) => b.forca - a.forca).slice(0, 5).map(b => b.grupo);
 
             snapshot.forEach(doc => {
-                const data = doc.data();
-                if (data.loteria === loteria && data.posicao === 1) {
-                    if (top5Grupos.includes(data.bichoGrupo)) {
-                        acertos++;
-                        bichoVencedor = data.bichoNome;
-                        loteriaVencedora = loteria.toUpperCase();
-                        dataVencedora = data.data.toDate().toLocaleDateString('pt-BR');
-                    }
+                const d = doc.data();
+                if (d.loteria === loteria && d.posicao === 1 && top5.includes(d.bichoGrupo)) {
+                    acertos++; bichoV = d.bichoNome; loteriaV = loteria.toUpperCase(); dataV = d.data.toDate().toLocaleDateString('pt-BR');
                 }
             });
         }
 
-        // --- MONTAGEM DO TEXTO HUMANO ---
         let autoText = "⚡ A I.A. está mapeando tendências de explosão para hoje!";
-
-if (acertos > 0) {
-    const frases = [
-        `🎯 <b>Cravado!</b> A I.A acertou o grupo <b>${bichoVencedor}</b> no 1º prêmio da ${loteriaVencedora} dia ${dataVencedora}!`,
-        `🔥 <b>Que fase!</b> Nossa inteligência previu o bicho <b>${bichoVencedor}</b> na cabeça na ${loteriaVencedora} recente!`,
-        `🌟 <b>Palpite certeiro!</b> O bicho <b>${bichoVencedor}</b> veio no 1º prêmio conforme a I.A indicou na ${loteriaVencedora}.`
-    ];
-    // Escolhe uma frase aleatória
-    autoText = frases[Math.floor(Math.random() * frases.length)];
-}
-
-// Salva o novo texto humano no lugar do robótico
-await firestoreDB.collection('config').doc('placar_ia').set({
-    texto_automatico: autoText,
-    ultimaAtualizacaoAuto: firebase.firestore.FieldValue.serverTimestamp()
-}, { merge: true });
-
+        if (acertos > 0) {
+            const frases = [
+                `🎯 <b>Cravado!</b> A I.A acertou o grupo <b>${bichoV}</b> no 1º prêmio da ${loteriaV} dia ${dataV}!`,
+                `🔥 <b>Que fase!</b> Nossa inteligência previu o bicho <b>${bichoV}</b> na cabeça na ${loteriaV} recente!`,
+                `🌟 <b>Palpite certeiro!</b> O bicho <b>${bichoV}</b> veio no 1º prêmio conforme a I.A indicou na ${loteriaV}.`
+            ];
+            autoText = frases[Math.floor(Math.random() * frases.length)];
+        }
+        
+        await firestoreDB.collection('config').doc('placar_ia').set({
+            texto_automatico: autoText,
+            ultimaAtualizacaoAuto: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
         loadIAScoreboard(); 
-
-    } catch (e) {
-        console.error("Erro ao calcular placar automático:", e);
-    }
+    } catch (e) { console.error("Erro no cálculo do placar:", e); }
 }
 
     function atualizarSelectNomes() {
