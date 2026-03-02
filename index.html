@@ -9277,89 +9277,120 @@ async function generateIAPalpites(loteria, loteriaNome) {
 
     showLoadingIndicator(`Análise Estratégica: ${drawDisplay}...`);
 
-    // Busca dados da IA e do site Bicho Certo SIMULTANEAMENTE
-    const [dataIA, puxada, htmlAtrasados] = await Promise.all([
-        getIaSummaryDocument(loteria),
-        getPuxadaDoDiaIA(loteria),
-        fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text()).catch(() => '')
-    ]);
+    try {
+        // Busca dados da IA e do site Bicho Certo SIMULTANEAMENTE
+        const [dataIA, puxada, htmlAtrasados] = await Promise.all([
+            getIaSummaryDocument(loteria),
+            getPuxadaDoDiaIA(loteria),
+            fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text()).catch(() => '')
+        ]);
 
-    const analiseHorario = dataIA ? (dataIA[nextDrawName] || dataIA['geral']) : {};
-    const analiseCompleta = { ...analiseHorario, puxada, prefixosPorBicho: dataIA ? dataIA.prefixosPorBicho : {} };
+        const analiseHorario = dataIA ? (dataIA[nextDrawName] || dataIA['geral']) : {};
+        const analiseCompleta = { ...analiseHorario, puxada, prefixosPorBicho: dataIA ? dataIA.prefixosPorBicho : {} };
 
-    // Extrai os atrasados do site Bicho Certo
-    const atrasadosReais = typeof extrairDadosDoHTML === 'function' && htmlAtrasados 
-        ? extrairDadosDoHTML(htmlAtrasados) 
-        : [];
+        // Extrai os atrasados do site Bicho Certo (Bichos e Unidades)
+        const dadosReais = typeof extrairDadosDoHTML === 'function' && htmlAtrasados 
+            ? extrairDadosDoHTML(htmlAtrasados) 
+            : { bichos: [], unidades: [] };
 
-    const agora = new Date();
-    const dataSimples = agora.toLocaleDateString('pt-BR');
-    const horaAgora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const seed = `${dataSimples}-${loteria}-${nextDrawName}`;
-    
-    // Envia os atrasados reais para a I.A. misturar
-    const { palpites, rankingTop5, rankingTop10 } = getPalpitesMisturadosIA(analiseCompleta, seed, atrasadosReais);
+        const agora = new Date();
+        const dataSimples = agora.toLocaleDateString('pt-BR');
+        const horaAgora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const seed = `${dataSimples}-${loteria}-${nextDrawName}`;
+        
+        // Envia os dados reais para a I.A. processar
+        const { palpites, rankingTop5, rankingTop10, unidadesAtrasadas } = getPalpitesMisturadosIA(analiseCompleta, seed, dadosReais);
 
-    const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
-    if (!resultsOutput) return;
+        const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
+        if (!resultsOutput) return;
 
-    const divisor = "───────────────────";
-    
-    let shareText = `🔮 *I.A. PREMIUM - ${loteriaNome.toUpperCase()}* 🔮\n`;
-    shareText += `${divisor}\n`;
-    shareText += `🎯 *FOCO:* ${drawDisplay}\n`;
-    shareText += `🗓️ ${dataSimples} às ${horaAgora}\n`;
-    shareText += `${divisor}\n\n`;
-    
-    shareText += `📊 *TERMÔMETRO DETALHADO:*\n`;
-    rankingTop5.forEach((b, i) => {
-        shareText += `*${i + 1}º* ${b.emoji} *${b.animal}* ➔ _${b.motivos[0]}_\n`;
-    });
+        const divisor = "───────────────────";
+        
+        let shareText = `🔮 *I.A. PREMIUM - ${loteriaNome.toUpperCase()}* 🔮\n`;
+        shareText += `${divisor}\n`;
+        shareText += `🎯 *FOCO:* ${drawDisplay}\n`;
+        shareText += `🗓️ ${dataSimples} às ${horaAgora}\n`;
+        shareText += `${divisor}\n\n`;
+        
+        shareText += `📊 *TERMÔMETRO DETALHADO:*\n`;
+        if (rankingTop5 && rankingTop5.length > 0) {
+            rankingTop5.forEach((b, i) => {
+                shareText += `*${i + 1}º* ${b.emoji} *${b.animal}* ➔ ${b.motivos && b.motivos[0] ? b.motivos[0] : 'Tendência Forte'}\n`;
+            });
+        }
 
-    shareText += `\n${divisor}\n`;
-    shareText += `🐾 *TOP 10 (Atrasados + I.A):*\n`;
-    for (let i = 0; i < 5; i++) {
-        shareText += `${i + 1}º ${rankingTop10[i].emoji} ${rankingTop10[i].animal.padEnd(8, ' ')} | ${i + 6}º ${rankingTop10[i + 5].emoji} ${rankingTop10[i + 5].animal}\n`;
+        shareText += `\n${divisor}\n`;
+        shareText += `🐾 *TOP 10 (Atrasados + I.A):*\n`;
+        if (rankingTop10 && rankingTop10.length >= 10) {
+            for (let i = 0; i < 5; i++) {
+                shareText += `${i + 1}º ${rankingTop10[i].emoji} ${rankingTop10[i].animal.padEnd(8, ' ')} | ${i + 6}º ${rankingTop10[i + 5].emoji} ${rankingTop10[i + 5].animal}\n`;
+            }
+        }
+        shareText += `${divisor}\n\n`;
+
+        // Bloco de Unidades Atrasadas (Destaque Milhar)
+        if (unidadesAtrasadas && unidadesAtrasadas.length > 0) {
+            shareText += `🎯 *UNIDADES ATRASADAS (M):*\n`;
+            shareText += `* ${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')} *\n`;
+            shareText += `_(Dígitos iniciais mais potentes)_\n\n`;
+        }
+
+        shareText += `🚀 *MILHARES SUGERIDAS:*\n`;
+        if (palpites && palpites.milhar) {
+            palpites.milhar.slice(0, 8).forEach(m => {
+                shareText += `🔹 *${m.palpite}* - ${m.tipo}\n`;
+            });
+        }
+
+        shareText += `\n💯 *CENTENAS QUENTES:*\n`;
+        if (palpites && palpites.centena) {
+            shareText += `* ${palpites.centena.slice(0, 10).map(c => c.palpite).join(' • ')}\n`;
+        }
+        shareText += `\n${divisor}\n`;
+
+        shareText += `🤝 *DUQUES DE DEZENA:*\n`;
+        if (palpites && palpites.duques) {
+            palpites.duques.forEach(d => { 
+                // Removido o caractere \` que envolvia a combinação
+                shareText += `💠 ${d.combinacoes[0]}  `; 
+            });
+        }
+        shareText += `\n\n`;
+
+        shareText += `🤝 *TERNOS DE DEZENA:*\n`;
+        if (palpites && palpites.ternos) {
+            palpites.ternos.forEach(t => { 
+                // Removido o caractere \` que envolvia a combinação
+                shareText += `🏆 ${t.combinacoes[0]}  `; 
+            });
+        }
+        
+        shareText += `\n\n${divisor}\n`;
+        shareText += `🍀 *BOA SORTE!* 🍀`;
+
+        window.iaPalpiteShareText = shareText;
+
+        resultsOutput.innerHTML = `
+            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; margin-bottom: 5px;">Palpite Fixo Gerado</div>
+                <div style="font-size: 1.2rem;">${drawDisplay}</div>
+            </div>
+            <div style="text-align:left; font-family: 'Courier New', monospace; background:rgba(0,0,0,0.05); padding:15px; border-radius:10px; border: 1px solid rgba(0,0,0,0.1); font-size:0.9rem; white-space:pre-wrap; line-height: 1.4;">${shareText.replace(/\*/g, '')}</div>
+            <button onclick="shareIAPalpites()" class="save-button" style="background:#25D366; width:100%; margin-top:20px; padding:15px; font-weight:bold; font-size:1.1rem; border-radius:10px; box-shadow: 0 4px 0 #128c7e;">
+                📲 Enviar para WhatsApp
+            </button>
+        `;
+
+        document.getElementById('iaPalpiteForm').style.display = 'none';
+        document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
+        document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+
+    } catch (error) {
+        console.error("Erro ao gerar palpites IA:", error);
+        showToast("Erro ao processar análise inteligente.", "error");
+    } finally {
+        hideLoadingIndicator();
     }
-    shareText += `${divisor}\n\n`;
-
-    shareText += `🤝 *DUQUES DE DEZENA:*\n`;
-    palpites.duques.forEach(d => { 
-        shareText += `💠 \`${d.combinacoes[0]}\`  `; 
-    });
-    shareText += `\n\n`;
-
-    shareText += `🤝 *TERNOS DE DEZENA:*\n`;
-    palpites.ternos.forEach(t => { 
-        shareText += `🏆 \`${t.combinacoes[0]}\`  `; 
-    });
-    shareText += `\n\n${divisor}\n`;
-
-    shareText += `🚀 *MILHARES DO RANKING:*\n`;
-    shareText += `* ${palpites.milhar.map(m => m.palpite).join(' • ')}\n\n`;
-
-    shareText += `💯 *CENTENAS DO RANKING:*\n`;
-    shareText += `* ${palpites.centena.slice(0, 10).map(c => c.palpite).join(' • ')}\n`;
-    shareText += `${divisor}\n`;
-    shareText += `🍀 *BOA SORTE!* 🍀`;
-
-    window.iaPalpiteShareText = shareText;
-
-    resultsOutput.innerHTML = `
-        <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-            <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; margin-bottom: 5px;">Palpite Fixo Gerado</div>
-            <div style="font-size: 1.2rem;">${drawDisplay}</div>
-        </div>
-        <div style="text-align:left; font-family: 'Courier New', monospace; background:rgba(0,0,0,0.05); padding:15px; border-radius:10px; border: 1px solid rgba(0,0,0,0.1); font-size:0.9rem; white-space:pre-wrap; line-height: 1.4;">${shareText.replace(/\*/g, '')}</div>
-        <button onclick="shareIAPalpites()" class="save-button" style="background:#25D366; width:100%; margin-top:20px; padding:15px; font-weight:bold; font-size:1.1rem; border-radius:10px; box-shadow: 0 4px 0 #128c7e;">
-            📲 Enviar para WhatsApp
-        </button>
-    `;
-
-    hideLoadingIndicator();
-    document.getElementById('iaPalpiteForm').style.display = 'none';
-    document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
-    document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
 }
 
 // --- FUNÇÃO PARA COMPARTILHAR A ANÁLISE COMPLETA (MÉTODO DO RECIBO) ---
@@ -19920,7 +19951,7 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
                 topAtrasados.push({
                     ...bData,
                     forca: 99 - topAtrasados.length, 
-                    motivos: [`⏰ Atrasado há ${a.dias} dias, , no milhar`],
+                    motivos: [`⏰ Atrasado há ${a.dias} dias`],
                     dezenasBase: bData.dezenas
                 });
             }
@@ -19938,7 +19969,7 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
                 topAtrasados.push({
                     ...bData,
                     forca: 99 - topAtrasados.length, 
-                    motivos: [`⏰ Atrasado há ${bInt.dias || 0} dias, , no milhar`],
+                    motivos: [`⏰ Atrasado há ${bInt.dias || 0} dias`],
                     dezenasBase: bData.dezenas
                 });
             }
@@ -19982,37 +20013,47 @@ function closeAtrasadosResultModal() {
 }
 
 function extrairDadosDoHTML(htmlString) {
-    const dadosExtraidos = [];
+    const dadosExtraidos = { bichos: [], unidades: [] };
     try {
-        if (!htmlString || htmlString.trim() === '') return [];
+        if (!htmlString || htmlString.trim() === '') return dadosExtraidos;
 
-        // Converte o HTML em texto puro, sem acentos e minúsculo
+        // Converte o HTML em texto puro e remove acentos
         let textoPuro = htmlString.replace(/<[^>]*>?/gm, ' ');
         textoPuro = textoPuro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
         textoPuro = textoPuro.replace(/\s+/g, ' '); 
 
-        // Caça cada bicho e seus dias de atraso no texto do site
+        // 1. Extração de Bichos Atrasados
         tabelaDeGrupos.forEach(bicho => {
             const nomeAnimal = bicho.animal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-            const regexBusca = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*dias?`, 'i');
-            const match = textoPuro.match(regexBusca);
-
-            if (match) {
-                const diasDeAtraso = parseInt(match[1], 10);
-                dadosExtraidos.push({
+            const regexBicho = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*dias?`, 'i');
+            const matchBicho = textoPuro.match(regexBicho);
+            if (matchBicho) {
+                dadosExtraidos.bichos.push({
                     nome: bicho.animal,
+                    grupo: bicho.grupo,
                     emoji: bicho.emoji,
-                    dias: diasDeAtraso,
-                    status: `${diasDeAtraso} dias`
+                    dias: parseInt(matchBicho[1], 10)
                 });
             }
         });
+        dadosExtraidos.bichos.sort((a, b) => b.dias - a.dias);
 
-        // Ordena do maior atraso para o menor
-        dadosExtraidos.sort((a, b) => b.dias - a.dias);
-        dadosExtraidos.forEach((item, index) => { item.posicao = index + 1; });
+        // 2. Extração das Unidades (Milhar) mais atrasadas
+        for (let i = 0; i <= 9; i++) {
+            const regexUnidade = new RegExp(`unidade\\s*${i}.{0,50}?(\\d+)\\s*dias?`, 'i');
+            const matchUnidade = textoPuro.match(regexUnidade);
+            if (matchUnidade) {
+                dadosExtraidos.unidades.push({
+                    numero: i.toString(),
+                    dias: parseInt(matchUnidade[1], 10)
+                });
+            }
+        }
+        dadosExtraidos.unidades.sort((a, b) => b.dias - a.dias);
 
-    } catch (error) { console.error("Erro na extração:", error); }
+    } catch (error) { 
+        console.error("Erro na extração I.A.:", error); 
+    }
     return dadosExtraidos;
 }
 
