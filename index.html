@@ -16,7 +16,7 @@
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-
+<header style="position: relative; text-align: center; margin-bottom: 10px;">
   <style>
     /* Reset e Estilos Base */
     * {
@@ -578,7 +578,7 @@ body.dark-mode #nomeContainerInModal select {
     }
     
     body.dark-mode .manage-data-button {
-        background-color: #5a00f5; 
+        background-color: #ff0000; 
     }
     
     .manage-data-button:active {
@@ -2201,7 +2201,7 @@ body.dark-mode .generator-button {
 }
 
 body.dark-mode .generator-button:active {
-    background-color: #9932CC;
+    background-color: #525252;
 }
 /* --- Estilo para Milhares Pesquisáveis --- */
 .searchable-milhar {
@@ -2913,27 +2913,36 @@ body.dark-mode .quick-value-btn.undo-btn {
     background-color: #e0a800;
 }
 
-/* --- Estilo do Botão QUANDO HÁ ATUALIZAÇÃO --- */
-#header-update-btn.update-available {
-  color: #dc3545;
-  animation: fade-attention 1.8s infinite; /* <-- Mude para a nova animação */
+/* --- EFEITOS DA LOGO BOTÃO --- */
+
+/* 1. Animação de carregamento (Quando você clica para buscar dados) */
+#header-update-btn.loading {
+  animation: pulse-loading 1s infinite;
+  pointer-events: none; /* Impede vários cliques seguidos */
 }
 
-/* Animação de pulsação */
-@keyframes pulse-animation {
-  0% {
-    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-  }
+@keyframes pulse-loading {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
 }
-body.dark-mode .view-button {
-    background-color: #525252; /* Cinza escuro */
-} 
+
+/* 2. Efeito visual para quando houver uma nova atualização do App disponível */
+#header-update-btn.update-available .logo-mojs {
+  color: #ff3333 !important; /* Fica um vermelho vivo chamando atenção */
+  animation: pulse-attention 1.5s infinite;
+}
+
+@keyframes pulse-attention {
+  0% { text-shadow: 0 0 0 rgba(220, 53, 69, 0.7); }
+  50% { text-shadow: 0 0 15px rgba(220, 53, 69, 0.9); }
+  100% { text-shadow: 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+/* Efeito de apertar a logo (feedback de clique tátil) */
+#header-update-btn:active {
+    transform: scale(0.95);
+}
 
 
 
@@ -3614,69 +3623,32 @@ header h1 {
   padding: 0 40px; 
 }
 
+/* Botão Atualizar Discreto no Canto Superior Direito */
+/* --- ESTILO DA LOGO QUE ATUALIZA --- */
 #header-update-btn {
-  /* REMOVEMOS o position: fixed ou absolute */
-  position: relative !important; 
-  display: inline-flex !important; /* Faz ele ficar na mesma linha do texto */
-  vertical-align: middle; /* Alinha a altura com o meio das letras */
-  margin-left: 8px; /* Dá um espacinho elegante do seu nome */
-  
-  /* Reset de estilo para modo "embutido" */
-  background: none !important; 
-  border: none !important;
-  padding: 4px !important;
-  cursor: pointer !important;
-  box-shadow: none !important; /* Tira a sombra de botão flutuante */
-  width: auto !important;
-  height: auto !important;
-  transition: transform 0.2s ease;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    opacity: 1 !important;
+    display: inline-block !important;
+    margin: 0 auto 10px auto !important; /* Espaço abaixo da logo */
 }
 
-/* Cor do ícone */
-#header-update-btn svg {
-  color: #007bff; /* Azul padrão, ou mude para #ffc107 se quiser dourado */
-}
-
-/* Efeito de giro quando você clica */
-#header-update-btn.loading svg {
-  animation: spinIA 1s linear infinite;
-}
-
-@keyframes spinIA {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-
-body.dark-mode #header-update-btn svg {
-  color: #4da3ff;
-}
-
-/* 7. Ajuste para o Modo Escuro */
-body.dark-mode #header-update-btn {
-    color: #4da3ff;
-}
-
-/* 8. Animação de loading (giro) */
+/* Animação de carregamento (Quando você clica para buscar dados) */
 #header-update-btn.loading {
-    animation: spin 1s linear infinite;
-    transform-origin: center;
-    color: #dc3545; /* <-- ADICIONE ESTA LINHA (Fica vermelho) */
-    opacity: 1 !important; /* <-- ADICIONE ESTA LINHA (Garante que não pisque) */
+  animation: pulse-loading 1s infinite;
+  pointer-events: none; 
 }
 
-/* Temos que redefinir a animação de giro para incluir o translateY */
-@keyframes spin {
-    from { 
-        transform: translateY(-50%) rotate(0deg); 
-    }
-    to { 
-        transform: translateY(-50%) rotate(360deg); 
-    }
+@keyframes pulse-loading {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
 }
-/* Correção da animação de clique quando em loading */
-#header-update-btn.loading:active {
-    transform: translateY(-50%) scale(1);
+
+/* Efeito tátil ao clicar */
+#header-update-btn:active {
+    transform: scale(0.95);
 }
 
 /* --- Estilos para o novo seletor de modo de milhar de bicho --- */
@@ -3760,11 +3732,11 @@ body:not(.dark-mode) #bichoMilharMethodContainer .button-style-radios label:has(
     background-color: #117a8b;
 }
 body.dark-mode .analysis-button {
-    background-color: #00bcd4; /* Ciano mais vibrante */
+    background-color: #d49500; /* Ciano mais vibrante */
     color: #212529; /* Texto escuro para contraste */
 }
 body.dark-mode .analysis-button:active {
-    background-color: #0097a7;
+    background-color: #525252;
 }
 
 /* --- Estilos para o Modal de Palpites I.A. --- */
@@ -4004,20 +3976,20 @@ body.dark-mode #bichosSelectorContainer {
     justify-content: center; /* Centraliza o conteúdo do botão */
 }
 
-/* --- NOVO ESTILO: Grade de 2 Colunas para Modais --- */
 .modal-card-grid {
-    display: flex;          /* MUDADO DE 'grid' */
-    flex-direction: column; /* ADICIONADO para empilhar */
-    gap: 10px;              /* Espaçamento vertical */
+    display: flex;          
+    flex-direction: column; 
+    align-items: center;    /* <-- Centraliza os botões horizontalmente */
+    gap: 10px;              
     margin-top: 10px;
 }
 
 /* Estilo dos botões dentro da grade */
 .modal-card-grid .lottery-card-button {
-    justify-content: center; /* Centraliza o texto */
-    padding: 16px 15px;
+    width: 80%;             /* <-- Define uma largura menor (ex: 80%) para não colar nas bordas */
+    max-width: 300px;       /* <-- Evita que fiquem gigantes em telas maiores */
+    justify-content: center; 
     text-align: center;
-    /* Remove o 'gap' que era para o emoji */
     gap: 5px; 
 }
 
@@ -4693,17 +4665,50 @@ body.dark-mode .password-display {
 
 @media (max-height: 650px) {
     #customInputModal .modal-content {
-        padding: 15px !important; /* Reduz borda da janela */
-        max-width: 320px; /* Janela mais estreita */
-    }
-    #customInputModalTitle {
-        font-size: 1.1rem;
-        margin-bottom: 5px;
-    }
-    #customInputModalMessage {
-        margin-bottom: 5px !important;
-        font-size: 0.8rem;
-    }
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Força tudo a ficar no centro horizontalmente */
+    max-width: 300px !important;    /* Deixa a janela um pouco mais compacta e proporcional */
+    padding: 25px 20px !important;
+}
+
+#customInputModalTitle,
+#customInputModalMessage {
+    width: 100%;
+    text-align: center;
+}
+
+#customInputModalMessage {
+    margin-bottom: 20px !important; /* Dá um respiro antes do visor da senha */
+}
+
+/* Ajuste do visor da senha */
+#customInputModal .password-display {
+    width: 100% !important;
+    margin-bottom: 15px !important; /* Espaço entre o visor e o teclado */
+    box-sizing: border-box;
+}
+
+/* Ajuste da grade do teclado */
+#customInputModal .keypad-grid {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+}
+
+/* Ajuste dos botões Cancelar e Confirmar no final */
+#customInputModal .button-group {
+    width: 100% !important;
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: 20px !important;
+}
+
+#customInputModal .button-group button {
+    flex: 1 !important; /* Divide o espaço exatamente em 50% para cada botão */
+    margin: 0 !important;
+}
     .password-display {
         font-size: 1.2rem;
         padding: 5px;
@@ -5152,17 +5157,29 @@ body.dark-mode #clearAddNameX {
 }
 
 /* O Cartão do Resultado */
+/* O Cartão do Resultado (Card) */
 .mcd-result-card {
-    background-color: #ffffff; /* Branco Real */
-    border: 1px solid #e2e8f0; /* Cinza suave */
-    border-radius: 16px;       /* Bordas bem arredondadas */
+    background-color: #ffffff !important; 
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
     padding: 20px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Sombra profissional */
-    border-left: 6px solid #007bff; /* Faixa azul lateral */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-left: 6px solid #007bff; 
     text-align: left !important;
     position: relative;
     overflow: hidden;
-    transition: transform 0.2s;
+    margin-bottom: 0; 
+    flex-shrink: 0 !important; /* <--- A MÁGICA AQUI: Impede que o card seja esmagado */
+}
+
+/* O Número Grande (Milhar/Centena) */
+.mcd-number-display {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1e293b; 
+    letter-spacing: 2px;
+    font-family: 'Courier New', monospace; 
+    line-height: 1.2; /* <--- Garante que o número não corte no topo/base */
 }
 
 .mcd-result-card:hover {
@@ -6256,8 +6273,9 @@ body.dark-mode .ia-scoreboard-banner {
 
 <div id="toast-container"></div>
 
-  <header style="position: relative; text-align: center; margin-bottom: 10px;">
-    <h1 class="main-logo">
+  <header style="text-align: center; margin-bottom: 5px; padding-top: 15px;">
+      
+    <h1 class="main-logo" id="header-update-btn" onclick="handleUpdateClick()" title="Clique para sincronizar" style="cursor: pointer; -webkit-tap-highlight-color: transparent;">
         <span class="logo-vip">VIP</span><span class="logo-mojs">MOJS</span>
     </h1>
 
@@ -6270,7 +6288,8 @@ body.dark-mode .ia-scoreboard-banner {
           </div>
           <div style="font-size: 1.2rem; opacity: 0.7;">👉</div>
       </div>
-  </div>
+    </div>
+</header>
    <style id="notificationBannerStyles">
     #resultNotificationBanner {
         display: none; 
@@ -6341,10 +6360,14 @@ body.dark-mode .ia-scoreboard-banner {
             </div>
         </div>
         <div id="mcdSearchResults" style="margin-top: 15px; max-height: 300px; overflow-y: auto;"></div>
-        <div class="button-group" style="margin-top: 20px; gap: 10px;">
-            <button onclick="backToAnalysisHubFromMcd()" class="load-button" style="background-color: #6c757d; flex: 1; padding: 12px;">⬅️ Voltar</button>
-            <button onclick="closeMcdSearchModal()" class="import-btn" style="flex: 1; padding: 12px;">❌ Sair</button>
-        </div>
+        <div class="button-group" style="margin-top: 20px; gap: 15px; justify-content: center;">
+    <button onclick="backToAnalysisHubFromShare()" class="load-button" style="background-color: #6c757d; padding: 12px 25px; width: auto;">
+        ⬅️ Voltar
+    </button>
+    <button onclick="closeShareResultsModal()" class="import-btn" style="padding: 12px 25px; width: auto;">
+        ❌ Sair
+    </button>
+</div>
     </div>
 </div>
 
@@ -6356,10 +6379,10 @@ body.dark-mode .ia-scoreboard-banner {
           <div class="generator-step-card" style="padding: 15px; margin-bottom: 20px;">
             <p style="text-align: center; margin-bottom: 15px;">Selecione a loteria para a análise:</p>
             <div class="modal-card-grid" id="iaLotteryGrid">            
-                <button class="lottery-card-button" onclick="generateIAPalpites('rj', 'PT Rio (RJ)')"><div class="lottery-card-text"><strong>RJ</strong><small>(RJ)</small></div></button>
-                <button class="lottery-card-button" onclick="generateIAPalpites('lk', 'Look Goiás (LK)')"><div class="lottery-card-text"><strong>LK</strong><small>(LK)</small></div></button>
-                <button class="lottery-card-button" onclick="generateIAPalpites('ln', 'Loteria Nacional (LN)')"><div class="lottery-card-text"><strong>NC</strong><small>(LN)</small></div></button>
-                <button class="lottery-card-button" onclick="generateIAPalpites('fd', 'Federal (FD)')"><div class="lottery-card-text"><strong>FD</strong><small>(FD)</small></div></button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('rj', 'PT Rio (RJ)')"><div class="lottery-card-text"><strong>RJ</strong><small>(Rio de Janeiro)</small></div></button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('lk', 'Look Goiás (LK)')"><div class="lottery-card-text"><strong>LK</strong><small>(Look Goias)</small></div></button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('ln', 'Loteria Nacional (LN)')"><div class="lottery-card-text"><strong>NC</strong><small>(Loteria Nacional)</small></div></button>
+                <button class="lottery-card-button" onclick="generateIAPalpites('fd', 'Federal (FD)')"><div class="lottery-card-text"><strong>FD</strong><small>(Loteira Federal)</small></div></button>
             </div>
           </div>
           <div class="button-group" style="gap: 10px;">
@@ -6667,17 +6690,6 @@ body.dark-mode .ia-scoreboard-banner {
             <span id="auth-status-indicator">Verificando...</span>
             <button id="logout-button" style="display: none;" onclick="handleLogout()">Sair</button>
         </div>
-        <div class="footer-info-item">
-    <button id="header-update-btn" onclick="handleUpdateClick()" title="Sincronizar Banco de Dados" 
-            style="background: none; border: none; cursor: pointer; padding: 5px; display: inline-flex; align-items: center; margin-left: 5px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #007bff;">
-            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-            <path d="M3 3v5h5"></path>
-            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-            <path d="M16 16h5v5"></path>
-        </svg>
-    </button>
-</div>
 </footer>
 
 <div id="atrasadosRealTimeModal" class="modal modal-top" role="dialog" aria-modal="true" aria-labelledby="atrasadosRealTimeModalTitle">
@@ -7665,8 +7677,8 @@ body.dark-mode .ia-scoreboard-banner {
         </div>
 
         <div class="button-group" style="margin-top: 20px; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 20px;">
-            <button type="button" onclick="clearMCDForm()" class="import-btn">🗑️ Limpar Formulário</button>
-            <button type="button" onclick="closeRandomGeneratorModal()" class="load-button">❌ Cancelar</button>
+            <button type="button" onclick="clearMCDForm()" class="import-btn">🗑️ Limpar</button>
+            <button type="button" onclick="closeRandomGeneratorModal()" class="load-button">❌ Fechar</button>
         </div>
     </div>
 </div>
@@ -7800,12 +7812,12 @@ body.dark-mode .ia-scoreboard-banner {
 </div>
 
  <div id="customInputModal" class="modal modal-top" role="dialog" aria-modal="true" aria-labelledby="customInputModalTitle">
-    <div class="modal-content" style="max-width: 350px;">
+    <div class="modal-content" style="max-width: 650px;">
         <h3 id="customInputModalTitle" class="modal-title">🔐 Acesso Restrito</h3>
         <p id="customInputModalMessage" style="margin-bottom: 15px; text-align: center; color: #666; font-size: 0.9rem;"></p>
         
-           <input type="password" id="customInputField" class="password-display" readonly placeholder="••••••">    
-        <div id="secureKeypad" class="keypad-grid"></div>
+           <input type="password" id="customInputField" class="password-display" readonly placeholder="••••••"><br>   
+        <br><div id="secureKeypad" class="keypad-grid"></div>
 
         <div class="button-group" style="margin-top: 20px;">
             <button id="customInputCancel" class="import-btn">Cancelar</button>
@@ -9248,6 +9260,16 @@ function closePalpitesIAModal() {
     document.getElementById('palpitesIAModal').classList.remove('active');
 }
 
+
+function showAnalysisHubModal() {
+    const modal = document.getElementById('analysisHubModal');
+    if (modal) {
+        modal.classList.add('active');
+    } else {
+        console.error("Modal 'analysisHubModal' não encontrado no HTML!");
+    }
+}
+
 async function generateIAPalpites(loteria, loteriaNome) {
     if (!loteria || !loteriaNome) return;
     const nextDrawName = getNextDrawName(loteria);
@@ -9255,25 +9277,32 @@ async function generateIAPalpites(loteria, loteriaNome) {
 
     showLoadingIndicator(`Análise Estratégica: ${drawDisplay}...`);
 
-    const [dataIA, puxada] = await Promise.all([
+    // Busca dados da IA e do site Bicho Certo SIMULTANEAMENTE
+    const [dataIA, puxada, htmlAtrasados] = await Promise.all([
         getIaSummaryDocument(loteria),
-        getPuxadaDoDiaIA(loteria)
+        getPuxadaDoDiaIA(loteria),
+        fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text()).catch(() => '')
     ]);
 
-    const analiseHorario = dataIA[nextDrawName] || dataIA['geral'];
-    const analiseCompleta = { ...analiseHorario, puxada, prefixosPorBicho: dataIA.prefixosPorBicho };
+    const analiseHorario = dataIA ? (dataIA[nextDrawName] || dataIA['geral']) : {};
+    const analiseCompleta = { ...analiseHorario, puxada, prefixosPorBicho: dataIA ? dataIA.prefixosPorBicho : {} };
+
+    // Extrai os atrasados do site Bicho Certo
+    const atrasadosReais = typeof extrairDadosDoHTML === 'function' && htmlAtrasados 
+        ? extrairDadosDoHTML(htmlAtrasados) 
+        : [];
 
     const agora = new Date();
     const dataSimples = agora.toLocaleDateString('pt-BR');
     const horaAgora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const seed = `${dataSimples}-${loteria}-${nextDrawName}`;
     
-    const { palpites, rankingTop5, rankingTop10 } = getPalpitesMisturadosIA(analiseCompleta, seed);
+    // Envia os atrasados reais para a I.A. misturar
+    const { palpites, rankingTop5, rankingTop10 } = getPalpitesMisturadosIA(analiseCompleta, seed, atrasadosReais);
 
     const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
     if (!resultsOutput) return;
 
-    // --- CONSTRUÇÃO DA MENSAGEM ESTILIZADA (WHATSAPP) ---
     const divisor = "───────────────────";
     
     let shareText = `🔮 *I.A. PREMIUM - ${loteriaNome.toUpperCase()}* 🔮\n`;
@@ -9284,12 +9313,11 @@ async function generateIAPalpites(loteria, loteriaNome) {
     
     shareText += `📊 *TERMÔMETRO DETALHADO:*\n`;
     rankingTop5.forEach((b, i) => {
-        let statusEmoji = b.forca >= 80 ? '🔥' : (b.forca >= 50 ? '⚡' : '❄️');
-        shareText += `${i + 1}º ${b.emoji} *${b.animal}* ➔ ${statusEmoji} *${b.forca}%*\n`;
+        shareText += `*${i + 1}º* ${b.emoji} *${b.animal}* ➔ _${b.motivos[0]}_\n`;
     });
 
     shareText += `\n${divisor}\n`;
-    shareText += `🐾 *TOP 10 GRUPOS PROVÁVEIS:*\n`;
+    shareText += `🐾 *TOP 10 (Atrasados + I.A):*\n`;
     for (let i = 0; i < 5; i++) {
         shareText += `${i + 1}º ${rankingTop10[i].emoji} ${rankingTop10[i].animal.padEnd(8, ' ')} | ${i + 6}º ${rankingTop10[i + 5].emoji} ${rankingTop10[i + 5].animal}\n`;
     }
@@ -9317,7 +9345,6 @@ async function generateIAPalpites(loteria, loteriaNome) {
 
     window.iaPalpiteShareText = shareText;
 
-    // --- EXIBIÇÃO NO APLICATIVO ---
     resultsOutput.innerHTML = `
         <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
             <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; margin-bottom: 5px;">Palpite Fixo Gerado</div>
@@ -9333,59 +9360,6 @@ async function generateIAPalpites(loteria, loteriaNome) {
     document.getElementById('iaPalpiteForm').style.display = 'none';
     document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
     document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
-}
-
-function showAnalysisHubModal() {
-    const modal = document.getElementById('analysisHubModal');
-    if (modal) {
-        modal.classList.add('active');
-    } else {
-        console.error("Modal 'analysisHubModal' não encontrado no HTML!");
-    }
-}
-
-
-async function gerarPalpitesTerminaisIA() {
-    const loteria = document.getElementById('surpresinhaLotterySelect').value;
-    const qtdJogos = parseInt(document.getElementById('qtdSurpresinha').value) || 1;
-    showLoadingIndicator(`Analisando terminais de ${loteria.toUpperCase()}...`);
-
-    try {
-        const dezenasAnalisadas = await analisarDezenasQuentesIA(tabelaDeGrupos, loteria);
-        const terminaisCounts = {};
-        
-        // Conta quais finais aparecem mais na análise da I.A.
-        dezenasAnalisadas.forEach(d => {
-            let final = d.slice(-1);
-            terminaisCounts[final] = (terminaisCounts[final] || 0) + 1;
-        });
-
-        // Ordena os finais (0-9) dos mais frequentes para os menos
-        const topTerminais = Object.keys(terminaisCounts).sort((a, b) => terminaisCounts[b] - terminaisCounts[a]);
-
-        let novosJogos = [];
-        for (let j = 0; j < qtdJogos; j++) {
-            let jogo = [];
-            // Pega 4 dezenas para cada um dos 5 melhores terminais
-            topTerminais.slice(0, 5).forEach(term => {
-                let poolTerm = [];
-                for(let i=0; i<10; i++) poolTerm.push(i + term); // ex: final 3 -> 03, 13, 23...
-                shuffleArray(poolTerm);
-                jogo.push(...poolTerm.slice(0, 4));
-            });
-            novosJogos.push(jogo.sort((a, b) => a - b).join(' '));
-        }
-
-        const textoFinal = novosJogos.join('\n');
-        document.getElementById('input').value = document.getElementById('input').value.trim() ? document.getElementById('input').value + '\n' + textoFinal : textoFinal;
-        closeSurpresinhaModal();
-        showMilharesCentenasDezenas();
-        showToast("Jogos por terminais gerados!", "success");
-    } catch (e) {
-        showToast("Erro na análise de terminais.", "error");
-    } finally {
-        hideLoadingIndicator();
-    }
 }
 
 // --- FUNÇÃO PARA COMPARTILHAR A ANÁLISE COMPLETA (MÉTODO DO RECIBO) ---
@@ -10451,7 +10425,6 @@ function populateShareTimeSlots(loteria, nomeLoteriaDisplay) {
 
     // Adiciona o botão de voltar (sem alterações)
     const backButton = document.createElement('button');
-    backButton.innerHTML = '‹ Voltar para Loterias';
     backButton.className = 'back-button';
     backButton.onclick = showShareResultsModal;
     modalBody.appendChild(backButton);
@@ -10740,68 +10713,6 @@ async function getCiclosIA(loteria, drawName = 'geral') {
     return summary && summary['geral'] ? (summary['geral'].ciclos || {}) : {};
 }
 
-function getPalpitesMisturadosIA(analise, seedString = null) {
-    // Gerador de números fixo baseado na semente (data/horário)
-    let randomFunc = Math.random;
-    if (seedString) {
-        let seed = 0;
-        for (let i = 0; i < seedString.length; i++) {
-            seed = ((seed << 5) - seed) + seedString.charCodeAt(i);
-            seed |= 0;
-        }
-        seed = Math.abs(seed);
-        randomFunc = function() {
-            var t = seed += 0x6D2B79F5;
-            t = Math.imul(t ^ t >>> 15, t | 1);
-            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-            return ((t ^ t >>> 14) >>> 0) / 4294967296;
-        };
-    }
-    const getSeededInt = (max) => Math.floor(randomFunc() * max);
-
-    // Motor de cálculo de força
-    let bichosScore = tabelaDeGrupos.map(b => {
-        let aval = calcularPontuacaoBicho(b.grupo, analise);
-        return { ...b, forca: aval.forca, motivos: aval.motivos, dezenasBase: b.dezenas };
-    }).sort((a, b) => {
-        if (b.forca === a.forca) return parseInt(a.grupo) - parseInt(b.grupo);
-        return b.forca - a.forca;
-    });
-
-    const rankingTop5 = bichosScore.slice(0, 5);
-    const rankingTop10 = bichosScore.slice(0, 10);
-    const palpites = { milhar: [], centena: [], duques: [], ternos: [] };
-
-    // Milhares e Centenas (2 por bicho do Top 5 = 10 totais)
-    rankingTop5.forEach(b => {
-        const prefixos = analise.prefixosPorBicho?.[b.grupo] || [];
-        const p1 = prefixos[0] || String(getSeededInt(100)).padStart(2, '0');
-        const p2 = prefixos[1] || String(getSeededInt(100)).padStart(2, '0');
-        
-        palpites.milhar.push({ palpite: p1 + b.dezenasBase[0], tipo: b.animal });
-        palpites.milhar.push({ palpite: p2 + b.dezenasBase[1], tipo: b.animal });
-        palpites.centena.push({ palpite: p1.slice(-1) + b.dezenasBase[0], tipo: b.animal });
-        palpites.centena.push({ palpite: p2.slice(-1) + b.dezenasBase[1], tipo: b.animal });
-    });
-
-    // Cruzamentos de Dezenas (Duques e Ternos fixos)
-    const [t1, t2, t3, t4, t5] = rankingTop5;
-    const d = (b) => b.dezenasBase[0]; // Pega a dezena "Ouro" do bicho
-
-    palpites.duques = [
-        { desc: `${t2.animal}+${t3.animal}`, combinacoes: [`${d(t2)}-${d(t3)}`] },
-        { desc: `${t3.animal}+${t4.animal}`, combinacoes: [`${d(t3)}-${d(t4)}`] },
-        { desc: `${t1.animal}+${t5.animal}`, combinacoes: [`${d(t1)}-${d(t5)}`] }
-    ];
-
-    palpites.ternos = [
-        { desc: `${t2.animal}+${t3.animal}+${t4.animal}`, combinacoes: [`${d(t2)}-${d(t3)}-${d(t4)}`] },
-        { desc: `${t1.animal}+${t2.animal}+${t3.animal}`, combinacoes: [`${d(t1)}-${d(t2)}-${d(t3)}`] },
-        { desc: `${t3.animal}+${t4.animal}+${t5.animal}`, combinacoes: [`${d(t3)}-${d(t4)}-${d(t5)}`] }
-    ];
-
-    return { palpites, rankingTop5, rankingTop10 };
-}
 
 const puxadas = {
     '01': ['02', '08', '11', '17'], // Avestruz puxa Águia, Camelo, Cavalo, Macaco
@@ -14219,32 +14130,19 @@ if (mcdSearchInput && clearMcdSearchBtn) {
 }
 
 async function loadLastGenMode() {
-    // Tenta buscar o último modo salvo; se não houver, usa 'bichos' como padrão
-    const savedGenMode = await window.getData(STORAGE_KEYS.LAST_GEN_MODE);
-    const defaultMode = 'bichos';
-    const modeToLoad = savedGenMode || defaultMode; 
-
-    if (modeToLoad === 'ia_bichos') {
-        const selectedIaLottery = document.querySelector('input[name="iaLotteryOption"]:checked')?.value || 'rj';
-        if (selectedIaLottery) {
-            fetchAndCacheIaPrefixes(selectedIaLottery);
-        }
-    }
+    // FORÇA o modo 'bichos' (GP Bichos) como padrão absoluto ao abrir
+    const modeToLoad = 'bichos'; 
 
     const radioToCheck = document.querySelector(`input[name="generationMode"][value="${modeToLoad}"]`);
     
     if (radioToCheck) {
         radioToCheck.checked = true;
         toggleBichosSelector(modeToLoad); 
-        updateGeneratorOptions(); // <--- CORREÇÃO: Força a exibir o painel da I.A. se necessário
-    } else {
-        const defaultRadio = document.querySelector(`input[name="generationMode"][value="${defaultMode}"]`);
-        if (defaultRadio) {
-            defaultRadio.checked = true;
-        }
-        toggleBichosSelector(defaultMode);
-        updateGeneratorOptions(); // <--- CORREÇÃO
+        updateGeneratorOptions(); 
     }
+    
+    // Sobrescreve a memória para garantir que não puxe "Aleatórios" depois
+    await window.saveData(STORAGE_KEYS.LAST_GEN_MODE, modeToLoad);
 }
 
 // --- FUNÇÃO DE RESET PARA LIMPAR O FIREBASE ---
@@ -14726,6 +14624,9 @@ if(mcdOfferCheckbox) mcdOfferCheckbox.checked = offerCentenasAfterMilhar;
     document.querySelector('input[name="generationMode"][value="bichos"]').checked = true;
     document.querySelector('input[name="generationType"][value="milhar"]').checked = true;
     document.querySelector('input[name="generationMethod"][value="padrao"]').checked = true;
+
+    // SALVA NA MEMÓRIA que voltou pro GP Bichos
+    window.saveData(STORAGE_KEYS.LAST_GEN_MODE, 'bichos');
     
     // 2. Limpa a memória RAM
     cercarBichoPools = {}; 
@@ -16705,20 +16606,17 @@ function parseNumbers(inputText) {
  * corresponda ao valor que está realmente salvo.
  */
 async function ensureCorrectGenModeVisualState() {
-    const savedGenMode = await window.getData(STORAGE_KEYS.LAST_GEN_MODE);
-    const modeToEnsure = savedGenMode || 'bichos'; // Usa 'bichos' se nada estiver salvo
-
-    console.log(`>>> Garantindo estado visual do Modo de Geração: Deve ser '${modeToEnsure}'`);
+    // FORÇA o modo 'bichos' ao fechar a janela
+    const modeToEnsure = 'bichos'; 
 
     const radioToCheck = document.querySelector(`input[name="generationMode"][value="${modeToEnsure}"]`);
 
     if (radioToCheck && !radioToCheck.checked) {
-        console.warn(`>>> Estado visual INCORRETO! Re-marcando '${modeToEnsure}'.`);
         radioToCheck.checked = true; 
     } 
     
     toggleBichosSelector(modeToEnsure);
-    updateGeneratorOptions(); // <--- CORREÇÃO: Garante que os painéis (como as Loterias) acompanhem o botão!
+    updateGeneratorOptions(); 
 }
 
     async function importDataFromTxt(event) {
@@ -17183,7 +17081,8 @@ async function ensureCorrectGenModeVisualState() {
         bannerTexto = `🎯 <b>Direto no alvo!</b> O grupo do(a) <b>${r1.bichoNome}</b> veio no 1º prêmio da ${nomeLoteria} das ${r1.nomeSorteio}.`;
     } 
     else {
-        bannerTexto = `📊 <b>Análise Finalizada:</b> Processamos ${totalSorteios} extrações da ${nomeLoteria} no dia ${dataFiltro}.`;
+        const textoDia = dataFiltro ? ` no dia ${dataFiltro}` : "";
+        bannerTexto = `📊 <b>Análise Finalizada:</b> Processamos ${totalSorteios} extrações da ${nomeLoteria}${textoDia}.`;
     }
 
     // --- 3. LIMPEZA E ATUALIZAÇÃO DO BANNER ---
@@ -19992,57 +19891,87 @@ function closeAtrasadosRealTimeModal() {
         }
     });
 }
-
-// --- EXTRATOR COMPATÍVEL COM O NOVO SITE (bichocerto.com) ---
-function extrairDadosDoHTML(htmlString) {
-    const dadosExtraidos = [];
-    try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlString, 'text/html');
-        // O novo site organiza os dados em linhas de tabela padrão
-        const linhas = doc.querySelectorAll('tr'); 
-
-        linhas.forEach(linha => {
-            const texto = linha.innerText.replace(/\s+/g, ' ').trim();
-            // Regex ajustada para capturar: Posição, Emoji, Nome e o Tempo de Atraso
-            const regex = /(\d+)º\s*(\p{Emoji})\s*(?:[\d]+\s*-\s*)?([A-Za-zÀ-ÿ]+)\s*((?:atrasado|saiu).*)/ui;
-            const match = texto.match(regex);
-
-            if (match) {
-                let statusLimpo = match[4].trim();
-                
-                // Formata o status para ficar amigável no WhatsApp
-                if(statusLimpo.toLowerCase().includes('atrasado')) {
-                    const dias = statusLimpo.replace(/\D/g, '');
-                    statusLimpo = `${dias} dias`;
-                } else {
-                    const textoBaixo = statusLimpo.toLowerCase();
-                    if (textoBaixo.includes('ontem')) statusLimpo = '(saiu ontem)';
-                    else if (textoBaixo.includes('hoje')) statusLimpo = '(saiu hj)';
-                    else statusLimpo = `(${statusLimpo.replace(/\(|\)/g, '')})`;
-                }
-
-                const item = {
-                    posicao: parseInt(match[1], 10),
-                    emoji: match[2],
-                    nome: match[3],
-                    status: statusLimpo
-                };
-                
-                // Evita nomes repetidos no relatório
-                if (!dadosExtraidos.some(d => d.nome === item.nome)) {
-                    dadosExtraidos.push(item);
-                }
-            }
-        });
-        
-        // Garante a ordem do 1º ao 25º
-        dadosExtraidos.sort((a, b) => a.posicao - b.posicao);
-
-    } catch (error) { 
-        console.error("Erro na extração de atrasados:", error); 
+function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []) {
+    let randomFunc = Math.random;
+    if (seedString) {
+        let seed = 0;
+        for (let i = 0; i < seedString.length; i++) {
+            seed = ((seed << 5) - seed) + seedString.charCodeAt(i);
+            seed |= 0;
+        }
+        seed = Math.abs(seed);
+        randomFunc = function() {
+            var t = seed += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
     }
-    return dadosExtraidos;
+    const getSeededInt = (max) => Math.floor(randomFunc() * max);
+    const limpaTexto = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() : "";
+
+    const topAtrasados = [];
+    
+    if (atrasadosReais && atrasadosReais.length > 0) {
+        for (const a of atrasadosReais) {
+            if (topAtrasados.length >= 5) break; 
+            const bData = tabelaDeGrupos.find(tg => limpaTexto(tg.animal) === limpaTexto(a.nome));
+            if (bData) {
+                topAtrasados.push({
+                    ...bData,
+                    forca: 99 - topAtrasados.length, 
+                    motivos: [`⏰ Atrasado há ${a.dias} dias, , no milhar`],
+                    dezenasBase: bData.dezenas
+                });
+            }
+        }
+    }
+
+    // FALLBACK DE SEGURANÇA: Se a internet cair
+    if (topAtrasados.length < 5) {
+        const atrasadosInternos = analise.bichosAtrasados1Premio || [];
+        for (const bInt of atrasadosInternos) {
+            if (topAtrasados.length >= 5) break;
+            if (topAtrasados.some(t => t.grupo === bInt.grupo)) continue;
+            const bData = tabelaDeGrupos.find(tg => tg.grupo === bInt.grupo);
+            if (bData) {
+                topAtrasados.push({
+                    ...bData,
+                    forca: 99 - topAtrasados.length, 
+                    motivos: [`⏰ Atrasado há ${bInt.dias || 0} dias, , no milhar`],
+                    dezenasBase: bData.dezenas
+                });
+            }
+        }
+    }
+
+    let todosJuntos = [...topAtrasados, ...tabelaDeGrupos.filter(b => !topAtrasados.some(t => t.grupo === b.grupo)).map(b => {
+        let aval = calcularPontuacaoBicho(b.grupo, analise);
+        return { ...b, forca: aval.forca, motivos: aval.motivos.filter(m => !m.includes('Atrasado')), dezenasBase: b.dezenas };
+    }).sort((a,b) => b.forca - a.forca)];
+
+    let rankingTop5 = todosJuntos.slice(0, 5);
+    let rankingTop10 = todosJuntos.slice(0, 10);
+    const palpites = { milhar: [], centena: [], duques: [], ternos: [] };
+
+    rankingTop10.forEach((b) => {
+        const p = analise.prefixosPorBicho?.[b.grupo]?.[0] || String(getSeededInt(100)).padStart(2, '0');
+        const dez = b.dezenasBase[getSeededInt(4)];
+        palpites.milhar.push({ palpite: p + dez, tipo: b.animal });
+        palpites.centena.push({ palpite: p.slice(-1) + dez, tipo: b.animal });
+    });
+
+    const lideres = [rankingTop5[0], rankingTop5[1], rankingTop5[2]];
+    lideres.forEach((lider) => {
+        if(!lider) return;
+        const parceiros = analise.afinidades?.[lider.grupo] || [rankingTop5[3].grupo, rankingTop5[4].grupo];
+        const p1 = todosJuntos.find(x => x.grupo === parceiros[0]) || rankingTop5[3];
+        const p2 = todosJuntos.find(x => x.grupo === parceiros[1]) || rankingTop5[4];
+        palpites.duques.push({ titulo: `${lider.animal}+${p1.animal}`, combinacoes: [`${lider.dezenasBase[0]}-${p1.dezenasBase[0]}`] });
+        palpites.ternos.push({ titulo: `${lider.animal}+${p1.animal}+${p2.animal}`, combinacoes: [`${lider.dezenasBase[0]}-${p1.dezenasBase[0]}-${p2.dezenasBase[0]}`] });
+    });
+
+    return { palpites, rankingTop5, rankingTop10 };
 }
 
 // Variável global para guardar o texto da mensagem formatada
@@ -20052,8 +19981,41 @@ function closeAtrasadosResultModal() {
     document.getElementById('atrasadosResultModal').classList.remove('active');
 }
 
-// --- FUNÇÃO ATUALIZADA PARA ABRIR O POPUP ANTES ---
-// --- FUNÇÃO GERADORA DE LINK PARA WHATSAPP COM VISUAL PREMIUM ---
+function extrairDadosDoHTML(htmlString) {
+    const dadosExtraidos = [];
+    try {
+        if (!htmlString || htmlString.trim() === '') return [];
+
+        // Converte o HTML em texto puro, sem acentos e minúsculo
+        let textoPuro = htmlString.replace(/<[^>]*>?/gm, ' ');
+        textoPuro = textoPuro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        textoPuro = textoPuro.replace(/\s+/g, ' '); 
+
+        // Caça cada bicho e seus dias de atraso no texto do site
+        tabelaDeGrupos.forEach(bicho => {
+            const nomeAnimal = bicho.animal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            const regexBusca = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*dias?`, 'i');
+            const match = textoPuro.match(regexBusca);
+
+            if (match) {
+                const diasDeAtraso = parseInt(match[1], 10);
+                dadosExtraidos.push({
+                    nome: bicho.animal,
+                    emoji: bicho.emoji,
+                    dias: diasDeAtraso,
+                    status: `${diasDeAtraso} dias`
+                });
+            }
+        });
+
+        // Ordena do maior atraso para o menor
+        dadosExtraidos.sort((a, b) => b.dias - a.dias);
+        dadosExtraidos.forEach((item, index) => { item.posicao = index + 1; });
+
+    } catch (error) { console.error("Erro na extração:", error); }
+    return dadosExtraidos;
+}
+
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     const textoOriginal = botao.innerHTML; 
     botao.disabled = true;
@@ -20574,9 +20536,8 @@ async function unlockMenuConfig() {
     document.getElementById('adminMenuConfigPanel').style.display = 'block';
     showToast("Modo de edição liberado.", "success");
     
-    // ---> ADICIONE ESTA LINHA AQUI <---
     loadAdminUserList(); 
-    // ----------------------------------
+    
     
 } else {
         showToast("Senha incorreta!", "error");
