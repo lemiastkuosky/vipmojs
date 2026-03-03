@@ -20068,9 +20068,12 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
         const htmlTabela = await response.text();
-        const dados = extrairDadosDoHTML(htmlTabela);
+        const dadosCompletos = extrairDadosDoHTML(htmlTabela);
+        
+        // CORREÇÃO 1: Acessar a lista correta dentro do objeto retornado
+        const dados = dadosCompletos.bichos;
 
-        if (dados.length === 0) {
+        if (!dados || dados.length === 0) {
             showToast("Dados não disponíveis no momento.", "error");
             return;
         }
@@ -20084,24 +20087,27 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         const dataF = agora.toLocaleDateString('pt-BR');
         const horaF = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-        // --- INÍCIO DA MONTAGEM DA MENSAGEM DO WHATSAPP ---
         let zapText = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n`;
         zapText += `*GRUPO APP OFICIAL*\n`;
         zapText += `━━━━━━━━━━━━━━━\n\n`;
 
-        dados.forEach(bicho => {
+        // CORREÇÃO 2: Iterar corretamente calculando a posição pelo index do loop
+        dados.forEach((bicho, index) => {
+            const posicao = index + 1; // Cria a posição baseada na ordem (1º, 2º, etc)
+            const statusTexto = `Atrasado há ${bicho.dias} dias`; // Cria o status baseado nos dias
+
             // Visual para o Popup do Site
-            const rowColor = bicho.posicao <= 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent';
+            const rowColor = posicao <= 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent';
             listHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: ${rowColor}; border-radius: 6px; margin-bottom: 2px;">
-                    <span style="font-weight: bold; width: 30px;">${bicho.posicao}º</span>
+                    <span style="font-weight: bold; width: 30px;">${posicao}º</span>
                     <span style="font-size: 1.2rem; width: 35px;">${bicho.emoji}</span>
                     <span style="flex-grow: 1; text-align: left; font-weight: 500;">${bicho.nome.toUpperCase()}</span>
-                    <span style="color: #666; font-size: 0.85rem;">${bicho.status}</span>
+                    <span style="color: #666; font-size: 0.85rem;">${statusTexto}</span>
                 </div>`;
             
             // Visual para o Texto do WhatsApp
-            zapText += `*${bicho.posicao}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${bicho.status}_\n`;
+            zapText += `*${posicao}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${statusTexto}_\n`;
         });
 
         zapText += `\n━━━━━━━━━━━━━━━━━━━━\n`;
