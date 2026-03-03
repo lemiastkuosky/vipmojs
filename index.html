@@ -6299,36 +6299,23 @@ body.dark-mode .ia-scoreboard-banner {
         top: 0; 
         left: 0; 
         width: 100%; 
-        background: linear-gradient(135deg, #ffc107, #fd7e14); 
-        color: #212529; 
-        padding: 15px; /* Aumentei um pouco o padding */
+        /* Altura reduzida para ser mais discreto */
+        padding: 8px 10px; 
         z-index: 9999; 
         text-align: center; 
         font-weight: bold; 
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
         cursor: pointer;
-        box-sizing: border-box; /* Garante que o padding não quebre a largura */
-    }
-
-    /* Animação de entrada */
-    .slide-down-animation {
-        animation: slideDownIA 0.5s ease-out;
-    }
-
-    @keyframes slideDownIA {
-        from { transform: translateY(-100%); }
-        to { transform: translateY(0); }
+        box-sizing: border-box;
+        transition: background 0.5s ease;
+        font-size: 0.85rem; /* Fonte menor para caber na faixa fina */
     }
 
     body.has-notification-banner {
-    padding-top: 70px !important; /* Espaço exato para o banner não cobrir o logo */
-    transition: padding-top 0.3s ease;
-}
-
-#resultNotificationBanner {
-    box-sizing: border-box;
-    
-}
+        /* Ajuste o espaço no topo para a nova altura da faixa */
+        padding-top: 45px !important; 
+        transition: padding-top 0.3s ease;
+    }
 </style>
 
 <div id="resultNotificationBanner" onclick="openResultFromNotification()">
@@ -8133,8 +8120,8 @@ body.dark-mode .ia-scoreboard-banner {
             { display: '12:00', corteMinutos: 1 },
             { display: '15:00', corteMinutos: 1 },
             { display: '17:00', corteMinutos: 1 },
-            { display: '19:00', corteMinutos: 1 }, /* Geralmente tem esse horário tb, se não tiver pode remover */
-            { display: '21:00', corteMinutos: 1 }, /* <-- ALTERADO DE 20:00 PARA 21:00 */
+            { display: '19:00', corteMinutos: 1 }, 
+            { display: '21:00', corteMinutos: 1 }, 
             { display: '23:00', corteMinutos: 1 }
         ],
         'Look': [
@@ -8155,9 +8142,6 @@ body.dark-mode .ia-scoreboard-banner {
         ]
     };
 
-    // =================================================================
-    // === 3. LISTENER DE AUTH (Monitora Login/Logout) ===
-    // =================================================================
     
     firebase.auth().onAuthStateChanged(user => {
         const statusIndicator = document.getElementById('auth-status-indicator');
@@ -8301,10 +8285,6 @@ function hideLoadingIndicator() {
   }
 }
 
-  // ============================================================
-// === CONTROLE DO MODAL DE SELEÇÃO DE NOMES (CLIENTES) ===
-// ============================================================
-
 function openNamePickerModal(event) {
     if (event) event.preventDefault();
     
@@ -8389,8 +8369,6 @@ function renderNamePickerList() {
     });
 }
 
-
-// --- Funções para o Modal de Seleção de Cópia ---
 
 function showCopySelectionModal(hasMilhar, hasCentena, hasDezena) {
     // Mostra apenas os botões que têm conteúdo
@@ -8538,9 +8516,6 @@ async function loadVisualPreferences() {
     }
 }
 
-/**
- * Carrega o último termo de busca salvo no localStorage.
- */
 function loadMcdSearchTerm() {
     const searchInput = document.getElementById('mcdSearchInput');
     const lastSearchTerm = localStorage.getItem('lastMcdSearchTerm');
@@ -9308,10 +9283,9 @@ async function generateIAPalpites(loteria, loteriaNome) {
 
         const divisor = "───────────────────";
         
-        let shareText = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}* 🔮\n`;
+        let shareText = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
         shareText += `${divisor}\n`;
         shareText += `🎯 *FOCO:* ${drawDisplay}\n`;
-        shareText += `🗓️ ${dataSimples} às ${horaAgora}\n`;
         shareText += `🚦 *VOLATILIDADE:* ${volatilidade.nivel} - ${volatilidade.texto}\n`;
         shareText += `${divisor}\n\n`;
 
@@ -9370,7 +9344,7 @@ async function generateIAPalpites(loteria, loteriaNome) {
 
         if (unidadesAtrasadas && unidadesAtrasadas.length > 0) {
             shareText += `🎯 *UNIDADES ATRASADAS (M):*\n`;
-            shareText += `* ${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')} *\n\n`;
+            shareText += `*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
         }
            
         shareText += `🚀 *MILHARES SUGERIDAS:*\n`;
@@ -9411,7 +9385,9 @@ async function generateIAPalpites(loteria, loteriaNome) {
         }
         
         shareText += `${divisor}\n`;
-        shareText += `🍀 *BOA SORTE!* 🍀`;
+        shareText += `🍀 *BOA SORTE!* 🍀\n`;
+        shareText += `🗓️ Gerado: ${dataSimples} às ${horaAgora}\n`;
+        shareText += `📲 VIP - I.A in Real Time\n`;
 
         window.iaPalpiteShareText = shareText;
 
@@ -10531,22 +10507,47 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
         momentoLimite.setMinutes(momentoSorteio.getMinutes() + MINUTOS_TOLERANCIA);
 
         if (agora < momentoLimite) {
-            let diaSorteio = "hoje";
-             if (momentoSorteio < agora && agora < momentoLimite) {
-                 diaSorteio = "hoje (aguardando)";
-             } else if (agora < momentoSorteio) { // Se a hora atual é ANTES da hora do sorteio
-                 diaSorteio = "hoje";
-             } else {
-                 diaSorteio = "hoje (aguardando)"; // Se está entre a hora exata e o limite
-             }
-
+            let diaSorteio = agora < momentoSorteio ? "hoje" : "hoje (aguardando)";
             const horaLimiteFormatada = momentoLimite.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            const warningMessage = `O resultado de <strong>${nomeHorarioDisplay}</strong> (${diaSorteio}) ainda não está disponível.\n\nTente novamente após as <strong>${horaLimiteFormatada}</strong>.`;
-            await showCustomConfirm(warningMessage, "Fechar", null, 'shareResultsModal');
-            // Reabilita o botão e restaura o texto SE o usuário só fechou o aviso
+
+            // --- INJEÇÃO DO RADAR DE VOLATILIDADE AQUI ---
+            // --- INJEÇÃO DO RADAR DE VOLATILIDADE PREMIUM ---
+            const seed = agora.toLocaleDateString() + agora.getHours();
+            let hash = 0;
+            for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+            const chance = Math.abs(hash % 100);
+
+            let v = { nivel: 'BAIXA', texto: 'Favorável (Seguindo a lógica)', cor: '#22c55e', bg: 'rgba(34, 197, 94, 0.15)', icone: '🟢' };
+            if (chance > 80) v = { nivel: 'ALTA', texto: 'Imprevisível (Quebrando estatísticas)', cor: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', icone: '🔴' };
+            else if (chance > 55) v = { nivel: 'MÉDIA', texto: 'Instável (Chance de surpresas)', cor: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', icone: '🟡' };
+
+            const warningMessage = `
+                <div style="text-align: center; font-family: sans-serif;">
+                    <p style="margin-bottom: 5px;">O resultado de <strong>${nomeHorarioDisplay}</strong> ainda não está disponível.</p>
+                    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 20px;">Tente novamente após as <strong>${horaLimiteFormatada}</strong>.</p>
+                    
+                    <div style="background: ${v.bg}; border: 1px solid ${v.cor}; border-radius: 16px; padding: 15px; position: relative; overflow: hidden; text-align: left;">
+                        <div style="position: absolute; right: -10px; top: -10px; font-size: 4rem; opacity: 0.1;">⚡</div>
+                        
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <span style="font-size: 0.7rem; font-weight: 800; color: ${v.cor}; text-transform: uppercase; letter-spacing: 1px;">⚡ RADAR ESTRATÉGICO</span>
+                        </div>
+                        
+                        <div style="display: flex; align-items: baseline; gap: 10px;">
+                            <span style="font-size: 1.2rem; font-weight: 900; color: #fff;">Volatilidade ${v.icone} ${v.nivel}</span>
+                        </div>
+                        
+                        <div style="margin-top: 8px; font-size: 0.9rem; color: #fff; opacity: 0.9; line-height: 1.4;">
+                            ↳ <strong>Dica da I.A:</strong> ${v.texto}
+                        </div>
+                    </div>
+                </div>
+            `;
+           
+
+            await showCustomConfirm(warningMessage, "Entendi", null, 'shareResultsModal');
             buttonElement.disabled = false;
             buttonElement.innerHTML = originalButtonText;
-            // NÃO fecha o modal principal aqui, usuário pode querer escolher outro horário
             return;
         }
 
@@ -15031,12 +15032,14 @@ function displayResultsWithSummary(type, resultsArray) {
     }
 }
 
-let currentNotificationLottery = null;
+let bannerTimerIA = null;
+let currentBannerMode = 0; // 0 = Resultado, 1 = Volatilidade
 
 function checkNewResultsAvailability() {
-    const agora = new Date();
-    if (typeof horariosLoterias === 'undefined') return;
+    // Limpa timer anterior para não duplicar
+    if (bannerTimerIA) clearInterval(bannerTimerIA);
 
+    const agora = new Date();
     const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
     const banner = document.getElementById('resultNotificationBanner');
     const textEl = document.getElementById('notificationText');
@@ -15044,31 +15047,63 @@ function checkNewResultsAvailability() {
 
     if (!banner || !textEl || !body) return;
 
-    // Percorre todas as loterias e horários
+    let sorteioAtivo = null;
+
+    // Busca se existe algum sorteio recente (últimos 20 min)
     for (const [loteria, horarios] of Object.entries(horariosLoterias)) {
         for (const h of horarios) {
             const minutosSorteio = h.hora * 60 + h.minuto;
-            
-            // ✅ CONDIÇÃO: Entre 5 e 20 minutos após o sorteio
             if (minutosAgora >= (minutosSorteio + 5) && minutosAgora <= (minutosSorteio + 20)) {
-                const nomesLoteria = { 'rj': 'PT Rio', 'lk': 'Look Goiás', 'ln': 'Nacional', 'fd': 'Federal' };
-                const nomeAmigavel = nomesLoteria[loteria] || loteria.toUpperCase();
-                
-                textEl.innerHTML = `🔔 Resultado da ${nomeAmigavel} (${h.display}) já disponível! Clique para conferir.`;
-                
-                // 🔥 SÓ ATIVA O BANNER E O ESPAÇO SE TIVER RESULTADO
-                banner.style.display = 'block';
-                body.classList.add('has-notification-banner');
-                
-                currentNotificationLottery = loteria;
-                return; 
+                sorteioAtivo = { loteria, display: h.display };
+                break;
             }
         }
+        if (sorteioAtivo) break;
     }
 
-    // 🛑 SE NÃO HÁ SORTEIO RECENTE: Esconde o banner e REMOVE o espaço do topo
-    banner.style.display = 'none';
-    body.classList.remove('has-notification-banner');
+    if (sorteioAtivo) {
+        banner.style.display = 'block';
+        body.classList.add('has-notification-banner');
+
+        // Função interna para trocar o texto
+        const rotacionarConteudo = () => {
+            const nomesLoteria = { 'rj': 'PT Rio', 'lk': 'Look Goiás', 'ln': 'Nacional', 'fd': 'Federal' };
+            const nomeAmigavel = nomesLoteria[sorteioAtivo.loteria] || sorteioAtivo.loteria.toUpperCase();
+
+            if (currentBannerMode === 0) {
+    // MODO: AVISO DE RESULTADO PADRONIZADO
+    banner.style.background = "linear-gradient(135deg, #ffc107, #fd7e14)";
+    // Novo formato solicitado: ✅ Saiu o Resultado! (Nome Horário)
+    textEl.innerHTML = `✅ Saiu o Resultado! <strong>(${nomeAmigavel} ${sorteioAtivo.display})</strong>`;
+    currentBannerMode = 1;
+            } else {
+                // MODO: RADAR DE VOLATILIDADE
+                const seed = new Date().toLocaleDateString() + new Date().getHours();
+let hash = 0;
+for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+const chance = Math.abs(hash % 100);
+
+                let v = { status: 'ALTA CONFIANÇA', cor: '#155724', icone: '🟢', bg: '#28a745' };
+
+if (chance > 80) {
+    v = { status: 'BAIXA CONFIANÇA', cor: '#fff', icone: '🔴', bg: '#dc3545' };
+} else if (chance > 55) {
+    v = { status: 'MÉDIA CONFIANÇA', cor: '#333', icone: '🟡', bg: '#ffc107' };
+}
+
+                banner.style.background = v.bg;
+textEl.innerHTML = `<span style="color: ${v.cor}">${v.icone} ${nomeAmigavel.toUpperCase()}: <strong>${v.status}</strong></span>`;
+                currentBannerMode = 0;
+            }
+        };
+
+        // Inicia a rotação a cada 5 segundos
+        rotacionarConteudo();
+        bannerTimerIA = setInterval(rotacionarConteudo, 5000);
+    } else {
+        banner.style.display = 'none';
+        body.classList.remove('has-notification-banner');
+    }
 }
 
 // Função acionada ao clicar no banner
@@ -15136,46 +15171,71 @@ async function filtrarAuditoria(loteriaFiltro, dataFiltroArg = null) {
     const lista = window.auditoriaSorteiosProcessados || auditoriaSorteiosProcessados; 
     if (!lista || lista.length === 0) return;
 
-    // Extração de datas e filtros (mantém sua lógica de botões de dias)
-    const datasDisponiveis = [...new Set(lista.filter(s => s.loteria === loteriaAtual || loteriaAtual === 'todas').map(s => s.data).filter(Boolean))].sort().reverse();
+    // 1. Organização de Datas para os Filtros
+    const datasDisponiveis = [...new Set(lista.filter(s => s.loteria === loteriaAtual || loteriaAtual === 'todas').map(s => s.data && s.data.includes('/') ? s.data : new Date(s.dataObj).toLocaleDateString('pt-BR')))].sort().reverse();
     if (dataFiltroArg !== null) window.dataFiltroAtiva = dataFiltroArg;
     if (!datasDisponiveis.includes(window.dataFiltroAtiva)) window.dataFiltroAtiva = datasDisponiveis[0] || null;
     const dataFiltro = window.dataFiltroAtiva;
 
-    let hitsBicho = 0, hitsMilhar = 0, hitsDuque = 0, total = 0, html = '';
+    let hitsBicho = 0, hitsMilhar = 0, hitsDuque = 0, hitsTerno = 0, total = 0, html = '';
     let listaFiltrada = loteriaAtual === 'todas' ? lista : lista.filter(s => s.loteria === loteriaAtual);
-    if (dataFiltro) listaFiltrada = listaFiltrada.filter(s => s.data === dataFiltro);
+    if (dataFiltro) listaFiltrada = listaFiltrada.filter(s => (s.data || new Date(s.dataObj).toLocaleDateString('pt-BR')) === dataFiltro);
 
     for (const sorteio of listaFiltrada) {
         total++;
         const res1 = sorteio.premios.find(p => p.posicao === 1);
-        const analise = await getIaDataForDraw(res1.loteria, res1.nomeSorteio);
-        const { palpites, rankingTop10 } = getPalpitesMisturadosIA(analise, `${sorteio.data}-${res1.loteria}-${res1.nomeSorteio}`);
+        if (!res1) continue;
+
+        // 🧠 O PULO DO GATO: Simula a I.A exatamente com a data e horário do sorteio passado
+        const analiseIA = await getIaDataForDraw(res1.loteria, res1.nomeSorteio);
+        const seedAudit = `${dataFiltro}-${res1.loteria}-${res1.nomeSorteio}`;
+        
+        // Chamada da I.A com suporte ao novo parâmetro de Horário/Turno
+        const { palpites, rankingTop10 } = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
 
         const acertouBicho = rankingTop10.map(b => b.grupo).includes(res1.bichoGrupo);
-        const acertouMilhar = palpites.milhar.map(m => m.palpite).includes(res1.milhar);
-        
+        const acertouMilhar = palpites.milhar.some(m => m.palpite === res1.milhar);
+        const acertouCentena = palpites.centena.some(c => c.palpite === res1.milhar.slice(-3));
+
+        // Cálculo de Duques e Ternos nos resultados (1º ao 5º)
+        const dezenasSorteadas = sorteio.premios.filter(p => p.posicao <= 5).map(p => p.milhar.slice(-2));
+        const ternoCravado = palpites.ternos.some(t => t.combinacoes.some(c => c.split('-').every(dez => dezenasSorteadas.includes(dez))));
+        const duqueCravado = palpites.duques.some(d => d.combinacoes.some(c => c.split('-').every(dez => dezenasSorteadas.includes(dez))));
+
         if (acertouBicho) hitsBicho++;
         if (acertouMilhar) hitsMilhar++;
+        if (ternoCravado) hitsTerno++;
+        else if (duqueCravado) hitsDuque++;
 
-        const cor = acertouMilhar ? "#d63384" : (acertouBicho ? "#28a745" : "#6c757d");
+        // Visual do Card de Auditoria
+        let cor = "#6c757d"; 
+        if (acertouMilhar) cor = "#d63384"; 
+        else if (acertouBicho) cor = "#28a745";
+        else if (ternoCravado) cor = "#17a2b8";
+
         html += `
             <div style="border-left: 5px solid ${cor}; padding: 12px; margin-bottom: 10px; background: rgba(128,128,128,0.05); border-radius: 8px;">
-                <div style="display:flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.6;">
+                <div style="display:flex; justify-content: space-between; font-size: 0.7rem; opacity: 0.6;">
                     <span>🎰 ${res1.nomeSorteio}</span>
-                    <span>${sorteio.data}</span>
+                    <span>📅 ${dataFiltro}</span>
                 </div>
                 <div style="font-weight:bold; margin: 8px 0; color:${cor};">
-                    ${acertouMilhar ? '🚀 MILHAR CRAVADA!' : (acertouBicho ? '🎯 BICHO NA CABEÇA!' : '⚪ Nenhum acerto da I.A.')}
+                    ${acertouMilhar ? '🚀 MILHAR CRAVADA!' : (acertouCentena ? '💯 CENTENA NA CABEÇA!' : (acertouBicho ? '🎯 BICHO NO 1º PRÊMIO!' : '⚪ Sem acertos diretos'))}
                 </div>
-                <div style="font-size:0.85rem;">🏆 Resultado: ${res1.milhar} - ${res1.bichoNome}</div>
+                <div style="font-size:0.8rem;">
+                    🏆 Resultado: <b>${res1.milhar}</b> (${res1.bichoNome})
+                    ${ternoCravado ? '<br>✅ <b>Acertou Terno de Dezenas!</b>' : (duqueCravado ? '<br>✅ <b>Acertou Duque de Dezenas!</b>' : '')}
+                </div>
             </div>`;
     }
 
+    // Atualiza os contadores no topo do modal
     document.getElementById('statPercent').textContent = `${total > 0 ? Math.round((hitsBicho/total)*100) : 0}%`;
     document.getElementById('statBicho').textContent = hitsBicho;
     document.getElementById('statMCD').textContent = hitsMilhar;
-    container.innerHTML = html || '<p style="text-align:center; padding:20px;">Sem sorteios para este filtro.</p>';
+    document.getElementById('statDT').textContent = `${hitsDuque}/${hitsTerno}`;
+    
+    container.innerHTML = html || '<p style="text-align:center; padding:20px;">Nenhum sorteio processado.</p>';
 }
 
 function fecharAuditoriaIA() {
@@ -20110,13 +20170,21 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
         }
 
         if (turnoAtual === 'dia' && bichosDiurnos.includes(b.grupo)) {
-            scoreFinal += 25; novosMotivos.push("☀️ Forte de Dia (+25)");
+            scoreFinal += 25; 
+            novosMotivos.push("☀️ Forte de Dia (+25)");
         } else if (turnoAtual === 'noite' && bichosNoturnos.includes(b.grupo)) {
-            scoreFinal += 25; novosMotivos.push("🌙 Forte de Noite (+25)");
-        } else if (turnoAtual === 'dia' && bichosNoturnos.includes(b.grupo)) {
-            scoreFinal -= 15; 
-        } else if (turnoAtual === 'noite' && bichosDiurnos.includes(b.grupo)) {
-            scoreFinal -= 15; 
+            scoreFinal += 25; 
+            novosMotivos.push("🌙 Forte de Noite (+25)");
+        }
+        
+        // 👉 COLE O NOVO BLOCO EXATAMENTE AQUI:
+        // 4. CICLO DE RETORNO (Urgência máxima)
+        if (analise.ciclos && analise.ciclos[b.grupo]) {
+            let c = analise.ciclos[b.grupo];
+            if (c.estourado) {
+                 scoreFinal += 50; // Bônus alto para garantir que suba no ranking
+                 novosMotivos.unshift(`🚨 ALERTA: Ciclo histórico estourado!`);
+            }
         }
 
         return { ...b, forca: scoreFinal, motivos: novosMotivos, dezenasBase: b.dezenas };
