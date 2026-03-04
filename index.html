@@ -6021,139 +6021,6 @@ body.dark-mode .offline-ia-warning {
     color: #ff6b6b;
 }
 
-/* --- PADRÃO DE BOTÕES VIPMOJS --- */
-.vip-grid-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Sempre 2 colunas alinhadas */
-    gap: 10px;
-    width: 100%;
-    margin-top: 10px;
-}
-
-.vip-card-button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 5px;
-    background-color: #1a1a1a;
-    border: 2px solid #333;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    aspect-ratio: 1 / 0.65; /* TRAVA O TAMANHO: Todos ficam iguais */
-    text-align: center;
-}
-
-/* Esconde o checkbox real */
-.vip-card-button input { display: none; }
-
-/* Ícone e Texto */
-.vip-card-button .icon { font-size: 1.4rem; margin-bottom: 4px; }
-.vip-card-button .label-text { 
-    font-size: 0.72rem; 
-    font-weight: 700; 
-    color: #666; 
-    text-transform: uppercase;
-    width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* --- ESTADO ATIVO (QUANDO O BOTÃO ACENDE) --- */
-.vip-card-button:has(input:checked) {
-    background-color: rgba(0, 123, 255, 0.1);
-    border-color: #007bff;
-    box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
-}
-.vip-card-button:has(input:checked) .label-text { color: #fff; }
-.vip-card-button:active { transform: scale(0.95); }
-
-/* --- CARD PADRÃO VIPMOJS (ESTILO AGUIA) --- */
-.vip-standard-card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 8px;
-    background-color: #222; /* Fundo escuro do card */
-    border-radius: 15px;
-    border: 1px solid #333;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    aspect-ratio: 1 / 1.2; /* Trava o formato vertical padrão */
-    overflow: hidden;
-}
-
-/* A Barra Lateral do Card */
-.vip-standard-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 15%;
-    bottom: 15%;
-    width: 5px;
-    background-color: #444; /* Cor da barra quando inativo */
-    border-radius: 0 4px 4px 0;
-    transition: background-color 0.3s;
-}
-
-/* Topo: ID e Emoji */
-.card-header-top {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    width: 100%;
-    font-weight: 800;
-    font-size: 1.1rem;
-    color: #fff;
-}
-
-/* Meio: Nome/Label */
-.card-label-name {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #aaa;
-    text-transform: capitalize;
-    margin: 2px 0;
-}
-
-/* Base: Indicadores e Porcentagem */
-.card-footer-stats {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-}
-
-.card-icons-row {
-    display: flex;
-    gap: 4px;
-    font-size: 1rem;
-}
-
-.card-percentage {
-    font-size: 1rem;
-    font-weight: 800;
-    color: #fd7e14; /* Cor laranja da % na imagem */
-}
-
-/* --- ESTADO ATIVO (QUANDO SELECIONADO) --- */
-.vip-standard-card:has(input:checked) {
-    border-color: #007bff;
-    background-color: rgba(0, 123, 255, 0.1);
-}
-
-.vip-standard-card:has(input:checked)::before {
-    background-color: #007bff; /* Barra lateral acende em azul */
-}
-
-.vip-standard-card:active { transform: scale(0.95); }
-.vip-standard-card input { display: none; }
-
 </style>
 </head>
 
@@ -6840,7 +6707,7 @@ body.dark-mode .offline-ia-warning {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V10.73</strong>
+            <strong>V10.93</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -17830,33 +17697,28 @@ function confirmCustomValueSelection() {
 }
     
 function populateBichosSelector() {
+    if (bichosPopulated) return;
     const container = document.getElementById('bichosSelectorContainer');
     if (!container) return;
 
-    container.innerHTML = '';
     tabelaDeGrupos.forEach(bicho => {
         const label = document.createElement('label');
-        label.className = 'vip-standard-card';
 
         label.innerHTML = `
             <input type="checkbox" value="${bicho.grupo}" name="selectedBichos">
-            <div class="card-header-top">
-                <span>${bicho.grupo}</span> - <span>${bicho.emoji}</span>
-            </div>
-            <div class="card-label-name">${bicho.animal}</div>
-            <div class="card-footer-stats">
-                <div class="card-icons-row">
-                    <span class="ia-icon-arrow" data-group="${bicho.grupo}"></span>
-                    <span class="ia-icon-fire" data-group="${bicho.grupo}"></span>
-                </div>
-                <div class="card-percentage ia-suggestion-count" data-group="${bicho.grupo}">0%</div>
-            </div>
-            <span class="bicho-cycle-badge" id="cycle-badge-${bicho.grupo}" style="display:none;">400</span>
-        `;
+    <span class="bicho-grid-item">
+        <span class="bicho-number">${bicho.grupo} - ${bicho.emoji}</span>
+        <span class="bicho-name-grid">${bicho.animal}</span>
+        
+        <span class="ia-suggestion-count" data-group="${bicho.grupo}" style="font-size: 0.85rem; margin-top: 4px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 4px;"></span>
+
+        <span class="bicho-cycle-badge" id="cycle-badge-${bicho.grupo}">400</span>
+    </span>`;
 
         container.appendChild(label);
     });
     bichosPopulated = true;
+    updateBichoCycleBadges();
 }
 
 function toggleBichosSelector(mode) {
@@ -18450,32 +18312,30 @@ async function loadAdminUserList() {
             const statusClass = user.ativo ? 'status-aprovado' : 'status-pendente';
 
             html += `
-            <div class="admin-user-card" id="card-${uid}" style="border: 1px solid ${isAdmin ? '#ffc107' : '#333'}; padding: 15px; border-radius: 12px; background: #1e1e1e; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleUserPermsSection('${uid}')">
+            <div class="admin-user-card" id="card-${uid}">
+                <div style="display: flex; justify-content: space-between; align-items: center;" onclick="toggleUserPermsSection('${uid}')">
                     <div style="flex-grow: 1;">
-                        <span style="font-weight: 800; font-size: 0.9rem; color: ${isAdmin ? '#ffc107' : '#e2e8f0'}; display: block;">
+                        <span style="font-weight: bold; font-size: 0.95rem; color: ${isAdmin ? '#ffc107' : '#fff'};">
                             ${isAdmin ? '⭐ ' : ''}${user.email}
                         </span>
-                        <div class="admin-user-status ${statusClass}" style="display:inline-block; margin-top: 5px; font-size: 0.6rem;">
+                        <div class="admin-user-status ${statusClass}" style="display:inline-block; margin-left:10px; font-size: 0.65rem;">
                             ${user.ativo ? 'ATIVO' : 'BLOQUEADO'}
                         </div>
                     </div>
-                    <button type="button" onclick="deleteUserAdmin(event, '${uid}', '${user.email}')" class="btn-delete-mini" style="background:none; border:none; font-size:1.3rem; padding: 5px;">🗑️</button>
+                    <button type="button" onclick="deleteUserAdmin(event, '${uid}', '${user.email}')" class="btn-delete-mini" style="background:none; border:none; font-size:1.3rem;">🗑️</button>
                 </div>
 
-                <div id="perms-${uid}" style="display:none; margin-top:15px; border-top: 1px solid #333; padding-top:15px;">
-                    <p style="font-size: 0.7rem; font-weight: bold; color: #007bff; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px;">
-                        Liberar Acessos Individuais:
-                    </p>
+                <div id="perms-${uid}" class="user-perms-panel" style="display:none; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
+                    <p style="font-size: 0.75rem; font-weight: bold; color: #007bff; margin-bottom: 10px;">DEFINIR ACESSOS DO USUÁRIO:</p>
                     
                     ${renderPermToggles(uid, user.permissions || {})}
 
                     <div style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button onclick="toggleUserAccess('${uid}', ${user.ativo}, '${user.email}')" class="load-button" style="flex: 1; font-size: 0.8rem; background-color: #333; padding: 10px;">
+                        <button onclick="toggleUserAccess('${uid}', ${user.ativo}, '${user.email}')" class="load-button" style="flex: 1; font-size: 0.8rem; background-color: #333;">
                             ${user.ativo ? '🚫 Bloquear' : '✅ Ativar'}
                         </button>
-                        <button onclick="saveUserPermissions('${uid}', '${user.email}')" class="save-button" style="flex: 1.5; font-weight: bold; padding: 12px; font-size: 0.85rem;">
-                            💾 SALVAR ALTERAÇÕES
+                        <button onclick="saveUserPermissions('${uid}', '${user.email}')" class="save-button" style="flex: 1; font-weight: bold;">
+                            💾 Salvar e Sair
                         </button>
                     </div>
                 </div>
@@ -18486,44 +18346,21 @@ async function loadAdminUserList() {
 }
 
 function renderPermToggles(uid, userPerms) {
-    const categories = [
-        { 
-            titulo: "📢 Banners", 
-            btns: [
-                {id:'resultNotificationBanner', label:'Aviso Sorteio', emoji:'🔔'}, 
-                {id:'iaScoreboardBanner', label:'Placar I.A', emoji:'🤖'}
-            ] 
-        },
-        { 
-            titulo: "🎲 Menu Superior", 
-            btns: [
-                {id:'btnMenuMCD', label:'MCD', emoji:'🎲'}, 
-                {id:'btnMenuFechamento', label:'Duque/Terno', emoji:'🔢'}, 
-                {id:'btnMenuBolao', label:'Bolão', emoji:'📋'}, 
-                {id:'btnMenuAnalises', label:'Hub I.A', emoji:'🔮'}, 
-                {id:'btnMenuSettings', label:'Config', emoji:'⚙️'}
-            ] 
-        },
-        { 
-            titulo: "🛠️ Ações e Hub", 
-            btns: [
-                {id:'btnMainSave', label:'Salvar Lista', emoji:'💾'}, 
-                {id:'btnMainCheckWinner', label:'Conferir', emoji:'🏆'}, 
-                {id:'btnSubPalpitesIA', label:'Palpites I.A', emoji:'🧠'},
-                {id:'btnSubAtrasados', label:'Atrasados', emoji:'⏱️'}
-            ] 
-        }
+    const groups = [
+        { titulo: "Avisos", btns: [{id:'resultNotificationBanner', label:'Resultados', emoji:'🔔'}, {id:'iaScoreboardBanner', label:'Placar I.A', emoji:'🤖'}] },
+        { titulo: "Menus", btns: [{id:'btnMenuMCD', label:'MCD', emoji:'🎲'}, {id:'btnMenuFechamento', label:'Duque/Terno', emoji:'🔢'}, {id:'btnMenuBolao', label:'Bolão', emoji:'📋'}, {id:'btnMenuAnalises', label:'Hub I.A', emoji:'🔮'}, {id:'btnMenuSettings', label:'Config', emoji:'⚙️'}] },
+        { titulo: "Ações", btns: [{id:'btnMainSave', label:'Salvar', emoji:'💾'}, {id:'btnMainCheckWinner', label:'Conferir', emoji:'🏆'}, {id:'btnMainCount', label:'Contar', emoji:'#️⃣'}] }
     ];
 
-    return categories.map(cat => `
+    return groups.map(g => `
         <div style="margin-bottom: 15px;">
-            <strong style="font-size: 0.6rem; color: #555; text-transform: uppercase; display: block; margin-bottom: 8px;">${cat.titulo}</strong>
-            <div class="vip-grid-container" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                ${cat.btns.map(b => `
-                    <label class="perm-button-label" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 5px; background-color: #121212; border: 2px solid #333; border-radius: 10px; cursor: pointer; aspect-ratio: 1 / 0.65;">
-                        <input type="checkbox" class="perm-check-${uid}" data-btnid="${b.id}" ${userPerms[b.id] !== false ? 'checked' : ''} style="display: none;">
-                        <div style="font-size: 1.2rem;">${b.emoji}</div>
-                        <div class="text" style="font-size: 0.65rem; font-weight: bold; margin-top: 4px; text-align: center; color: #666; text-transform: uppercase;">${b.label}</div>
+            <small style="color: #555; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 8px; margin-left: 5px;">${g.titulo}</small>
+            <div class="user-perms-grid">
+                ${g.btns.map(b => `
+                    <label class="perm-button-label">
+                        <input type="checkbox" class="perm-check-${uid}" data-btnid="${b.id}" ${userPerms[b.id] !== false ? 'checked' : ''}>
+                        <div style="font-size: 1.4rem;">${b.emoji}</div>
+                        <div class="text">${b.label}</div>
                     </label>
                 `).join('')}
             </div>
