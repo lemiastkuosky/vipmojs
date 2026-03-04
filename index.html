@@ -11636,21 +11636,7 @@ async function handleLogin() {
             // ==========================================================
             // --- INÍCIO DA SESSÃO ÚNICA ---
             // ==========================================================
-            // 1. Cria um ID único para este aparelho/navegador
-            const localSessionId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-            localStorage.setItem('minhaSessaoId', localSessionId); // Salva a "etiqueta" no aparelho
-
-            // 2. Aponta para o nó exclusivo deste usuário no Realtime Database
-            const sessionRef = rtdb.ref(`sessao_unica/${user.uid}`);
-            
-            // 3. Sobrescreve qualquer sessão que estava lá antes com a deste aparelho
-            await sessionRef.set({
-                sessionId: localSessionId,
-                loggedInAt: firebase.database.ServerValue.TIMESTAMP
-            });
-            
-            // 4. Se a internet cair ou fechar a aba, o Firebase apaga do banco sozinho
-            sessionRef.onDisconnect().remove();
+          
             // ==========================================================
             // --- FIM DA SESSÃO ÚNICA ---
             // ==========================================================
@@ -19391,7 +19377,7 @@ async function handleLogout() {
         
         // Remove a sessão do banco de dados ativamente
         if (user) {
-            await rtdb.ref(`sessao_unica/${user.uid}`).remove();
+            
         }
         
         await firebase.auth().signOut(); // Desloga do Firebase
@@ -19768,37 +19754,8 @@ function toggleEditMode(itemId, itemElement) {
 
 // Função que vigia se outro aparelho fez login na mesma conta
 function monitorarSessaoUnica(user) {
-    // Pega a etiqueta que salvamos neste aparelho durante o login
-    let localSessionId = localStorage.getItem('minhaSessaoId');
-    
-    // Se por acaso recarregou a página e não tem etiqueta, cria uma para assumir o controle
-    if (!localSessionId) {
-        localSessionId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-        localStorage.setItem('minhaSessaoId', localSessionId);
-        rtdb.ref(`sessao_unica/${user.uid}`).set({ sessionId: localSessionId });
-        rtdb.ref(`sessao_unica/${user.uid}`).onDisconnect().remove();
-    }
-
-    const sessionRef = rtdb.ref(`sessao_unica/${user.uid}`);
-    
-    // Fica "escutando" o banco de dados em tempo real
-    sessionRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        
-        // Se existir dados lá, e o ID for DIFERENTE do ID deste aparelho...
-        if (data && data.sessionId && data.sessionId !== localSessionId) {
-            console.warn(">>> DERRUBADO: Conta acessada em outro local!");
-            
-            // Desliga o "vigia" para não dar loop
-            sessionRef.off('value');
-            
-            // Exibe o aviso na cara do usuário
-            alert("🔒 Aviso de Segurança\n\nSua conta acabou de ser acessada em outro aparelho ou navegador.\nVocê será desconectado deste dispositivo automaticamente.");
-            
-            // Força o logout neste aparelho derrubado
-            handleLogout();
-        }
-    });
+    console.log("Monitoramento de sessão única desativado.");
+    return; 
 }
 
 function calculateParityBalance(numStr) {
