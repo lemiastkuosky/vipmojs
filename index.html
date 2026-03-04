@@ -6028,6 +6028,7 @@ body.dark-mode .offline-ia-warning {
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 
 <body>
     
@@ -8126,6 +8127,53 @@ body.dark-mode .offline-ia-warning {
     const firestoreDB = firebase.firestore();
     const rtdb = firebase.database();
 
+    // 👇 INÍCIO DO SISTEMA DE NOTIFICAÇÕES PUSH 👇
+    let messaging;
+    try {
+        messaging = firebase.messaging();
+    } catch(e) {
+        console.warn("Navegador não suporta notificações Push nativas.");
+    }
+
+    // Função que pede permissão e salva o token no banco
+    async function ativarNotificacoes(user) {
+        if (!messaging) return;
+        
+        try {
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                console.log('Permissão de notificação CONCEDIDA!');
+                
+                // Pegando o Token com a sua Chave VAPID
+                const token = await messaging.getToken({ 
+                    vapidKey: 'Rtf8hBFehMuUM__tzh9IaNFWJE6n9hi2FWiS3fv9xdw' 
+                });
+                
+                if (token) {
+                    console.log('Token gerado:', token);
+                    // Salva o token no cadastro deste usuário no banco de dados
+                    await firestoreDB.collection('users').doc(user.uid).set({
+                        fcmToken: token
+                    }, { merge: true });
+                }
+            } else {
+                console.log('O usuário bloqueou as notificações.');
+            }
+        } catch (error) {
+            console.error('Erro ao ativar notificações:', error);
+        }
+    }
+    
+    // Configura o aplicativo para receber notificação enquanto estiver com a tela aberta
+    if (messaging) {
+        messaging.onMessage((payload) => {
+            console.log('Notificação recebida com App aberto: ', payload);
+            showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`, 'success', 6000);
+        });
+    }
+    // 👆 FIM DO SISTEMA DE NOTIFICAÇÕES PUSH 👆
+
     // =================================================================
     // === 2. VARIÁVEIS GLOBAIS (DEFINIDAS NO TOPO) ===
     // =================================================================
@@ -8214,7 +8262,6 @@ body.dark-mode .offline-ia-warning {
         ]
     };
 
-    
     firebase.auth().onAuthStateChanged(user => {
         const statusIndicator = document.getElementById('auth-status-indicator');
         const logoutButton = document.getElementById('logout-button');
@@ -8269,6 +8316,8 @@ body.dark-mode .offline-ia-warning {
          monitorarSessaoUnica(user);
       
         }
+        ativarNotificacoes(user); 
+      
     });
 
 // !!! IMPORTANTE !!! Cole aqui o HASH que você gerou no Passo 1.
@@ -9378,6 +9427,14 @@ async function generateIAPalpites(loteria, loteriaNome) {
     const nextDrawName = getNextDrawName(loteria);
     const drawDisplay = horariosLoterias[loteria]?.find(h => h.nome === nextDrawName)?.display || 'Geral';
 
+    // 👇 A MÁGICA ACONTECE AQUI: Atualiza o banco automaticamente antes de analisar!
+    showLoadingIndicator(`Sincronizando últimos sorteios...`);
+    try {
+        await syncLotteryBeforeIA(loteria);
+    } catch (e) {
+        console.warn("Falha no Auto-Sync:", e);
+    }
+
     showLoadingIndicator(`Análise Estratégica: ${drawDisplay}...`);
 
     try {
@@ -9385,7 +9442,7 @@ async function generateIAPalpites(loteria, loteriaNome) {
             getIaSummaryDocument(loteria),
             getPuxadaDoDiaIA(loteria),
             fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text()).catch(() => ''),
-            getSomaUltimoSorteio(loteria) // <--- NOVA CHAMADA ADICIONADA AQUI
+            getSomaUltimoSorteio(loteria)
         ]);
 
         const analiseHorario = dataIA ? (dataIA[nextDrawName] || dataIA['geral']) : {};
@@ -9908,21 +9965,25 @@ function calcularPontuacaoBicho(bichoGrupo, analise) {
     return { forca: Math.min(99, score), motivos: motivos, isCritico: isCritico };
 }
 
-async function runFullIAAnalysisUpdate() {
+// --- CÉREBRO DA I.A. ATUALIZADO (SUPORTA AUTO-TREINAMENTO SILENCIOSO) ---
+async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) {
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) return;
 
-    const confirmed = await showCustomConfirm('Treinar I.A. com Ciclos de Retorno, Duplas e Horários? (Consumirá leituras)', 'Sim, Compilar', 'Cancelar', 'updateModal');
-    if (!confirmed) return;
-
-    showLoadingIndicator('Treinando Inteligência Artificial Completa (Aguarde)...');
+    // Se for manual (clique no botão), pede confirmação e mostra a tela preta
+    if (!isAutomatic) {
+        const confirmed = await showCustomConfirm('Treinar I.A. com Ciclos de Retorno, Duplas e Horários? (Consumirá leituras)', 'Sim, Compilar', 'Cancelar', 'updateModal');
+        if (!confirmed) return;
+        showLoadingIndicator('Treinando Inteligência Artificial Completa (Aguarde)...');
+    } else {
+        console.log(`[Auto-IA] Re-treinando a I.A. silenciosamente para: ${loteriaAlvo}`);
+    }
     
-    const loterias = ['rj', 'lk', 'ln', 'fd'];
+    // Se o sistema mandou uma loteria específica, treina só ela para ser mais rápido!
+    const loterias = loteriaAlvo ? [loteriaAlvo] : ['rj', 'lk', 'ln', 'fd'];
 
     try {
         for (const loteria of loterias) {
-            console.log(`[Admin IA] Processando: ${loteria.toUpperCase()}`);
-            
             const snapshot = await firestoreDB.collection('resultados')
                 .where('loteria', '==', loteria).orderBy('data', 'desc').limit(5000).get();
 
@@ -9932,7 +9993,7 @@ async function runFullIAAnalysisUpdate() {
                 prefixoCounts: {}, milharLastDate: {}, blacklist: new Set(),
                 dezenaCounts: {}, ultimosVistos1Premio: new Map(), bichoFrequencia: new Map(),
                 ultimasDezenas: new Map(), ultimasCentenas: new Map(), ultimasUnidades: new Map(),
-                draws: {}, bicho1PremioCount: {}, datasSorteios: [] // NOVO: Para medir os dias
+                draws: {}, bicho1PremioCount: {}, datasSorteios: [] 
             });
 
             const containers = { geral: createContainer() };
@@ -9962,20 +10023,17 @@ async function runFullIAAnalysisUpdate() {
                     if (!c.milharLastDate[m] || dS > c.milharLastDate[m]) c.milharLastDate[m] = dS;
                     c.dezenaCounts[dez] = (c.dezenaCounts[dez] || 0) + 1;
                     
-                    // --- MÁGICA DOS CICLOS DE RETORNO ---
                     c.datasSorteios.push(dS.getTime());
                     if (p === 1) {
                         c.bicho1PremioCount[g] = (c.bicho1PremioCount[g] || 0) + 1;
                         if (!c.ultimosVistos1Premio.has(g)) c.ultimosVistos1Premio.set(g, dS);
                     }
-                    // ------------------------------------
 
                     if (dS >= dataFrequente) c.bichoFrequencia.set(g, (c.bichoFrequencia.get(g) || 0) + 1);
                     if (!c.ultimasDezenas.has(dez)) c.ultimasDezenas.set(dez, dS);
                     if (!c.ultimasCentenas.has(cent)) c.ultimasCentenas.set(cent, dS);
                     if (!c.ultimasUnidades.has(uni)) c.ultimasUnidades.set(uni, dS);
                     
-                    // AGRUPAMENTO PARA DUPLAS E TERNOS
                     const drawKey = `${dS.getTime()}_${drawName || 'geral'}`;
                     if (!c.draws[drawKey]) c.draws[drawKey] = new Set();
                     c.draws[drawKey].add(g);
@@ -9986,14 +10044,12 @@ async function runFullIAAnalysisUpdate() {
             const compiledData = {};
 
             for (const [key, c] of Object.entries(containers)) {
-                // ... Fechamento de listas ...
                 const prefixosPorBichoFinal = {};
                 for (const g in c.prefixoCounts) {
                     prefixosPorBichoFinal[g] = Object.keys(c.prefixoCounts[g]).sort((a, b) => c.prefixoCounts[g][b] - c.prefixoCounts[g][a]).slice(0, 20);
                 }
                 const getAtrasos = (map, limit) => Array.from(map.entries()).map(([numero, data]) => ({ numero, data })).sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, limit);
 
-                // --- CALCULA AS AFINIDADES (Duques/Ternos) ---
                 const pairCounts = {};
                 Object.values(c.draws).forEach(bichosInDraw => {
                     const arr = Array.from(bichosInDraw).sort();
@@ -10015,16 +10071,15 @@ async function runFullIAAnalysisUpdate() {
                     afinidades[g] = comps.sort((a, b) => b.count - a.count).slice(0, 3).map(x => x.comp);
                 }
 
-                // --- CALCULA O CICLO DE RETORNO (MÉDIA DE DIAS) ---
                 const ciclos = {};
                 let maxTime = c.datasSorteios.length > 0 ? Math.max(...c.datasSorteios) : new Date().getTime();
                 let minTime = c.datasSorteios.length > 0 ? Math.min(...c.datasSorteios) : new Date().getTime();
-                let totalDias = Math.max(1, (maxTime - minTime) / (1000 * 60 * 60 * 24)); // Pega o total de dias lidos
+                let totalDias = Math.max(1, (maxTime - minTime) / (1000 * 60 * 60 * 24)); 
 
                 for (let i = 1; i <= 25; i++) {
                     const g = String(i).padStart(2, '0');
-                    const count = c.bicho1PremioCount[g] || 0.1; // Se não saiu, joga pro alto
-                    const cicloMedioDias = totalDias / count; // Ex: Se passaram 30 dias e ele saiu 3 vezes = Ciclo médio 10 dias
+                    const count = c.bicho1PremioCount[g] || 0.1; 
+                    const cicloMedioDias = totalDias / count; 
                     
                     const lastSeen = c.ultimosVistos1Premio.get(g) || dataAntiga;
                     const atrasoDias = (maxTime - lastSeen.getTime()) / (1000 * 60 * 60 * 24);
@@ -10032,7 +10087,7 @@ async function runFullIAAnalysisUpdate() {
                     ciclos[g] = { 
                         medio: Number(cicloMedioDias.toFixed(1)), 
                         atual: Number(atrasoDias.toFixed(1)),
-                        estourado: atrasoDias >= cicloMedioDias // Verdadeiro se passou da média!
+                        estourado: atrasoDias >= cicloMedioDias 
                     };
                 }
 
@@ -10047,7 +10102,7 @@ async function runFullIAAnalysisUpdate() {
                     centenasAtrasadas: getAtrasos(c.ultimasCentenas, 5),
                     unidadesAtrasadas: getAtrasos(c.ultimasUnidades, 2),
                     afinidades: afinidades,
-                    ciclos: ciclos // Salvando a matemática dos ciclos
+                    ciclos: ciclos 
                 };
             }
             
@@ -10055,18 +10110,19 @@ async function runFullIAAnalysisUpdate() {
             await firestoreDB.collection('analises_ia').doc(loteria).set(compiledData);
         }
 
-        iaSummaryCache = {}; 
-        showToast('I.A. treinada com Sucesso Total!', 'success');
-        if (typeof closeUpdateModal === 'function') closeUpdateModal();
-
-        // ---> ADICIONE ESTA LINHA AQUI <---
+        iaSummaryCache = {}; // Limpa o cache para obrigar a ler a nova versão
         await calcularPlacarAutomatico();
+
+        if (!isAutomatic) {
+            showToast('I.A. treinada com Sucesso Total!', 'success');
+            if (typeof closeUpdateModal === 'function') closeUpdateModal();
+        }
 
     } catch (e) {
         console.error(e);
-        showToast('Erro ao compilar I.A.', 'error');
+        if (!isAutomatic) showToast('Erro ao compilar I.A.', 'error');
     } finally {
-        hideLoadingIndicator();
+        if (!isAutomatic) hideLoadingIndicator();
     }
 }
 
@@ -20932,6 +20988,91 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     } finally {
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
+    }
+}
+
+// --- FUNÇÃO DEFINITIVA: AUTO-SYNC ANTES DA I.A. (FUSO CORRIGIDO + RODAPÉ) ---
+async function syncLotteryBeforeIA(loteria) {
+    // 1. Pega a data CORRETA do aparelho (Fuso Local/Brasil)
+    const agora = new Date();
+    const anoStr = agora.getFullYear();
+    const mesStr = String(agora.getMonth() + 1).padStart(2, '0');
+    const diaStr = String(agora.getDate()).padStart(2, '0');
+    const dataHojeLocal = `${anoStr}-${mesStr}-${diaStr}`;
+    
+    let htmlLoteria = null;
+    let precisaTreinarIA = false;
+
+    // 2. Descobre que horas a I.A. "estudou" pela última vez
+    let iaLastUpdated = new Date(0); 
+    try {
+        const iaDoc = await firestoreDB.collection('analises_ia').doc(loteria).get();
+        if (iaDoc.exists && iaDoc.data().lastUpdated) {
+            iaLastUpdated = iaDoc.data().lastUpdated.toDate();
+        }
+    } catch (e) { console.warn("Não leu a data da I.A.", e); }
+
+    const horarios = horariosLoterias[loteria] || [];
+
+    for (const horarioInfo of horarios) {
+        const momentoSorteio = new Date();
+        momentoSorteio.setHours(horarioInfo.hora, horarioInfo.minuto, 0, 0);
+        
+        // Tolerância de 10 minutos após o horário oficial para tentar buscar
+        const momentoLimite = new Date(momentoSorteio);
+        momentoLimite.setMinutes(momentoSorteio.getMinutes() + 10); 
+
+        // Só nos importamos com os sorteios que JÁ DEVIAM TER SAÍDO hoje
+        if (agora >= momentoLimite) {
+            const idSorteioTeste = `${loteria}-${anoStr}${mesStr}${diaStr}-${horarioInfo.nome}-1`; 
+
+            try {
+                const docRef = await firestoreDB.collection('resultados').doc(idSorteioTeste).get();
+                
+                // SITUAÇÃO A: O resultado daquele horário AINDA NÃO ESTÁ no banco!
+                if (!docRef.exists) {
+                    if (!htmlLoteria) {
+                        htmlLoteria = await fetchLotteryResults(loteria, dataHojeLocal);
+                    }
+                    
+                    if (htmlLoteria) {
+                        const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
+                        if (dadosExtraidos && dadosExtraidos.length > 0) {
+                            for (const item of dadosExtraidos.slice(0, 5)) {
+                                if (item.milhar && item.milhar.length === 4) {
+                                    await salvarResultadoNoHistoricoIA(loteria, momentoSorteio, horarioInfo.nome, item);
+                                    precisaTreinarIA = true; // Baixou milhar nova!
+                                }
+                            }
+                        }
+                    }
+                } 
+                // SITUAÇÃO B: A milhar ESTÁ no banco, mas a I.A. tá com preguiça (desatualizada)
+                else {
+                    // Se o horário do sorteio for DEPOIS da última vez que a I.A. rodou
+                    if (momentoSorteio > iaLastUpdated) {
+                        precisaTreinarIA = true;
+                    }
+                }
+            } catch (e) {
+                console.error("Erro no Auto-Sync da Loteria:", e);
+            }
+        }
+    }
+
+    // 3. SE PRECISAR, ATUALIZA A I.A. E O RODAPÉ!
+    if (precisaTreinarIA) {
+        showToast(`✅ Atualizando cálculos da I.A. para o último sorteio...`, 'info');
+        
+        await runFullIAAnalysisUpdate(true, loteria); 
+        
+        // 👉 ESSA LINHA FORÇA O HORÁRIO LÁ EMBAIXO A MUDAR IMEDIATAMENTE
+        verificarStatusRoboIA(); 
+        
+        showToast(`🚀 I.A. 100% calibrada com o novo sorteio!`, 'success');
+    } else {
+        // Se já tava tudo certo, apenas garante que o rodapé tá mostrando a hora certa
+        verificarStatusRoboIA(); 
     }
 }
 
