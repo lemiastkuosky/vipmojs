@@ -9510,7 +9510,7 @@ async function generateIAPalpites(loteria, loteriaNome) {
             shareText += formatarEmColunas(duquesFormatados, 3) + `\n\n`; 
         }
 
-        shareText += `🏆 *TERNOS DE DEZENA:*\n`;
+        shareText += `🤝 *TERNOS DE DEZENA:*\n`;
         if (palpites && palpites.ternos) {
             let todosTernos = [];
             palpites.ternos.forEach(t => todosTernos.push(...t.combinacoes)); 
@@ -17309,7 +17309,7 @@ async function ensureCorrectGenModeVisualState() {
         
         if (fezTerno) {
             const infos = ternosCravados.map(t => `${t.titulo} ➔ ${t.aposta.join('-')}`).join('<br>');
-            acertosTextLines.push(`🏆 TERNO DE DEZENAS (Cravado):<br><span style="color:#17a2b8; font-family:monospace; font-size:1.1rem; font-weight:800;">${infos}</span>`);
+            acertosTextLines.push(`🤝 TERNO DE DEZENAS (Cravado):<br><span style="color:#17a2b8; font-family:monospace; font-size:1.1rem; font-weight:800;">${infos}</span>`);
         } else if (fezDuque) {
             const infos = duquesCravados.map(d => `${d.titulo} ➔ ${d.aposta.join('-')}`).join('<br>');
             acertosTextLines.push(`🤝 DUQUE DE DEZENAS (Cravado):<br><span style="color:#fd7e14; font-family:monospace; font-size:1.1rem; font-weight:800;">${infos}</span>`);
@@ -20830,7 +20830,6 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         const htmlTabela = await response.text();
         const dadosCompletos = extrairDadosDoHTML(htmlTabela);
         
-        // CORREÇÃO 1: Acessar a lista correta dentro do objeto retornado
         const dados = dadosCompletos.bichos;
 
         if (!dados || dados.length === 0) {
@@ -20838,10 +20837,34 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
             return;
         }
 
+        // --- PREPARAÇÃO MÁGICA: Garante os 25 bichos na lista ---
+        // Se o bicho não tiver dias de atraso (0 dias), ele vai para a lista de "Saiu Hoje"
+        const dadosCompletosParaTela = [];
+        tabelaDeGrupos.forEach(bichoMatriz => {
+            const bichoEncontrado = dados.find(d => d.grupo === bichoMatriz.grupo);
+            if (bichoEncontrado) {
+                dadosCompletosParaTela.push(bichoEncontrado);
+            } else {
+                dadosCompletosParaTela.push({
+                    nome: bichoMatriz.animal,
+                    grupo: bichoMatriz.grupo,
+                    emoji: bichoMatriz.emoji,
+                    dias: 0 // Se sumiu da lista de atrasados, é porque saiu hoje!
+                });
+            }
+        });
+
+        // Ordena: Maior atraso no topo
+        dadosCompletosParaTela.sort((a, b) => b.dias - a.dias);
+
+        // Separa as categorias
+        const bichosAtrasados = dadosCompletosParaTela.filter(b => b.dias > 0);
+        const bichosSaiuHoje = dadosCompletosParaTela.filter(b => b.dias === 0);
+
         // 1. Prepara o Cabeçalho do Popup (Visual Interno do Site)
         document.getElementById('atrasadosResultHeader').innerHTML = `🎯 ${nomeLoteria.toUpperCase()}<br><small>${new Date().toLocaleDateString('pt-BR')}</small>`;
 
-        // 2. Monta a Lista Visual para o Usuário Ver no Site e o Texto do WhatsApp
+        // 2. Monta a Lista Visual e o Texto do WhatsApp
         let listHTML = '';
         const agora = new Date();
         const dataF = agora.toLocaleDateString('pt-BR');
@@ -20850,17 +20873,18 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         let zapText = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n`;
         zapText += `*GRUPO APP OFICIAL*\n`;
         zapText += `━━━━━━━━━━━━━━━\n\n`;
+        zapText += `⏳ *MAIS ATRASADOS:*\n`;
 
-        // CORREÇÃO 2: Iterar corretamente calculando a posição pelo index do loop
-        dados.forEach((bicho, index) => {
-            const posicao = index + 1; // Cria a posição baseada na ordem (1º, 2º, etc)
-            const statusTexto = `Atrasado há ${bicho.dias} dias`; // Cria o status baseado nos dias
+        // Renderiza os Atrasados
+        bichosAtrasados.forEach((bicho, index) => {
+            const posicao = index + 1; 
+            const statusTexto = `Atrasado há ${bicho.dias} dias`; 
 
             // Visual para o Popup do Site
             const rowColor = posicao <= 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent';
             listHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: ${rowColor}; border-radius: 6px; margin-bottom: 2px;">
-                    <span style="font-weight: bold; width: 30px;">${posicao}º</span>
+                    <span style="font-weight: bold; width: 30px; color: ${posicao <= 5 ? '#dc3545' : 'inherit'};">${posicao}º</span>
                     <span style="font-size: 1.2rem; width: 35px;">${bicho.emoji}</span>
                     <span style="flex-grow: 1; text-align: left; font-weight: 500;">${bicho.nome.toUpperCase()}</span>
                     <span style="color: #666; font-size: 0.85rem;">${statusTexto}</span>
@@ -20870,7 +20894,27 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
             zapText += `*${posicao}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${statusTexto}_\n`;
         });
 
-        zapText += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+        // Renderiza os que Saíram Hoje (0 Dias)
+        if (bichosSaiuHoje.length > 0) {
+            listHTML += `<div style="text-align: center; font-weight: bold; color: #28a745; margin-top: 15px; padding-bottom: 5px; border-bottom: 2px solid #28a745;">🏆 SAÍRAM HOJE</div>`;
+            zapText += `\n━━━━━━━━━━━━━━━\n`;
+            zapText += `🏆 *SAÍRAM HOJE (0 Dias):*\n`;
+
+            bichosSaiuHoje.forEach((bicho) => {
+                const statusTexto = `Saiu Hoje`;
+                listHTML += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: rgba(40, 167, 69, 0.1); border-radius: 6px; margin-bottom: 2px;">
+                    <span style="font-weight: bold; width: 30px; color: #28a745;">-</span>
+                    <span style="font-size: 1.2rem; width: 35px;">${bicho.emoji}</span>
+                    <span style="flex-grow: 1; text-align: left; font-weight: bold; color: #28a745;">${bicho.nome.toUpperCase()}</span>
+                    <span style="color: #28a745; font-size: 0.85rem; font-weight: bold;">✅ ${statusTexto}</span>
+                </div>`;
+                
+                zapText += `✅ ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${statusTexto}_\n`;
+            });
+        }
+
+        zapText += `\n━━━━━━━━━━━━━━━\n`;
         zapText += `🗓️ _Análise gerada em: ${dataF}, ${horaF}_\n\n`;
         zapText += `📲 _VIP - I.A in Real-Time_`;
 
