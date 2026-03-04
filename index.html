@@ -8159,7 +8159,6 @@ const token = await messaging.getToken({
     serviceWorkerRegistration: registration 
 });
             
-            
             if (token) {
                 console.log('Token gerado com sucesso:', token);
                 // Salva no Firestore vinculando ao UID do usuário logado
@@ -15376,69 +15375,87 @@ async function filtrarAuditoria(loteriaFiltro, dataFiltroArg = null) {
     const lista = window.auditoriaSorteiosProcessados || auditoriaSorteiosProcessados; 
     if (!lista || lista.length === 0) return;
 
-    // 1. Organização de Datas para os Filtros
+    // 1. Filtros de Data
     const datasDisponiveis = [...new Set(lista.filter(s => s.loteria === loteriaAtual || loteriaAtual === 'todas').map(s => s.data && s.data.includes('/') ? s.data : new Date(s.dataObj).toLocaleDateString('pt-BR')))].sort().reverse();
     if (dataFiltroArg !== null) window.dataFiltroAtiva = dataFiltroArg;
     if (!datasDisponiveis.includes(window.dataFiltroAtiva)) window.dataFiltroAtiva = datasDisponiveis[0] || null;
     const dataFiltro = window.dataFiltroAtiva;
 
-    let hitsBicho = 0, hitsMilhar = 0, hitsDuque = 0, hitsTerno = 0, total = 0, html = '';
+    let hitsBicho = 0, hitsMCD = 0, hitsMestre = 0, hitsSoma = 0, total = 0, html = '';
     let listaFiltrada = loteriaAtual === 'todas' ? lista : lista.filter(s => s.loteria === loteriaAtual);
     if (dataFiltro) listaFiltrada = listaFiltrada.filter(s => (s.data || new Date(s.dataObj).toLocaleDateString('pt-BR')) === dataFiltro);
 
     for (const sorteio of listaFiltrada) {
         total++;
-        const res1 = sorteio.premios.find(p => p.posicao === 1);
+        const premios = sorteio.premios.sort((a, b) => a.posicao - b.posicao);
+        const res1 = premios.find(p => p.posicao === 1);
         if (!res1) continue;
 
-        // 🧠 O PULO DO GATO: Simula a I.A exatamente com a data e horário do sorteio passado
+        // 🧠 Simulação completa da I.A.
         const analiseIA = await getIaDataForDraw(res1.loteria, res1.nomeSorteio);
         const seedAudit = `${dataFiltro}-${res1.loteria}-${res1.nomeSorteio}`;
+        const { palpites, rankingTop10, jogadaDeMestre } = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
         
-        // Chamada da I.A com suporte ao novo parâmetro de Horário/Turno
-        const { palpites, rankingTop10 } = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
+        // 🧮 Milhar da Soma (Simulação buscando sorteio anterior no banco)
+        const dadosSoma = await getSomaUltimoSorteio(res1.loteria);
 
-        const acertouBicho = rankingTop10.map(b => b.grupo).includes(res1.bichoGrupo);
-        const acertouMilhar = palpites.milhar.some(m => m.palpite === res1.milhar);
-        const acertouCentena = palpites.centena.some(c => c.palpite === res1.milhar.slice(-3));
+        // --- VERIFICAÇÕES DE ACERTOS ---
+        const milharNaCabeca = palpites.milhar.some(m => m.palpite === res1.milhar);
+        const centenaNaCabeca = palpites.centena.some(c => c.palpite === res1.milhar.slice(-3));
+        const bichoNoPrimeiro = rankingTop10.map(b => b.grupo).slice(0,5).includes(res1.bichoGrupo);
+        
+        // Verificação 1-5 (Milhares e Centenas espalhadas)
+        const milhares1ao5 = premios.filter(p => p.posicao <= 5).map(p => p.milhar);
+        const centenas1ao5 = milhares1ao5.map(m => m.slice(-3));
+        const acertoMCD1ao5 = palpites.milhar.some(m => milhares1ao5.includes(m.palpite)) || palpites.centena.some(c => centenas1ao5.includes(c.palpite));
 
-        // Cálculo de Duques e Ternos nos resultados (1º ao 5º)
-        const dezenasSorteadas = sorteio.premios.filter(p => p.posicao <= 5).map(p => p.milhar.slice(-2));
-        const ternoCravado = palpites.ternos.some(t => t.combinacoes.some(c => c.split('-').every(dez => dezenasSorteadas.includes(dez))));
-        const duqueCravado = palpites.duques.some(d => d.combinacoes.some(c => c.split('-').every(dez => dezenasSorteadas.includes(dez))));
+        // Verificação Jogada de Mestre (Invertida 1-5)
+        let mestreCravado = false;
+        if (jogadaDeMestre) {
+            const mestreSorted = jogadaDeMestre.palpite.split('').sort().join('');
+            mestreCravado = milhares1ao5.some(m => m.split('').sort().join('') === mestreSorted);
+        }
 
-        if (acertouBicho) hitsBicho++;
-        if (acertouMilhar) hitsMilhar++;
-        if (ternoCravado) hitsTerno++;
-        else if (duqueCravado) hitsDuque++;
+        // Verificação Milhar da Soma
+        const somaCravada = dadosSoma && milhares1ao5.includes(dadosSoma.milhar);
 
-        // Visual do Card de Auditoria
-        let cor = "#6c757d"; 
-        if (acertouMilhar) cor = "#d63384"; 
-        else if (acertouBicho) cor = "#28a745";
-        else if (ternoCravado) cor = "#17a2b8";
+        // --- CONTADORES ---
+        if (bichoNoPrimeiro) hitsBicho++;
+        if (milharNaCabeca || centenaNaCabeca || acertoMCD1ao5) hitsMCD++;
+        if (mestreCravado) hitsMestre++;
+        if (somaCravada) hitsSoma++;
+
+        // --- VISUAL ---
+        let statusCor = "#6c757d";
+        let badgesHtml = "";
+        
+        if (milharNaCabeca) { statusCor = "#d63384"; badgesHtml += '<span class="badge-ready" style="padding:2px 5px; font-size:0.6rem; margin-right:5px;">🚀 MILHAR CABEÇA</span>'; }
+        if (somaCravada) { statusCor = "#ffc107"; badgesHtml += '<span class="badge-ready" style="padding:2px 5px; font-size:0.6rem; margin-right:5px; background:#ffc107; color:#000;">🧮 SOMA 1-5</span>'; }
+        if (mestreCravado) { statusCor = "#6f42c1"; badgesHtml += '<span class="badge-ready" style="padding:2px 5px; font-size:0.6rem; background:#6f42c1;">👑 MESTRE 1-5</span>'; }
 
         html += `
-            <div style="border-left: 5px solid ${cor}; padding: 12px; margin-bottom: 10px; background: rgba(128,128,128,0.05); border-radius: 8px;">
+            <div style="border-left: 5px solid ${statusCor}; padding: 12px; margin-bottom: 10px; background: rgba(128,128,128,0.05); border-radius: 8px;">
                 <div style="display:flex; justify-content: space-between; font-size: 0.7rem; opacity: 0.6;">
                     <span>🎰 ${res1.nomeSorteio}</span>
-                    <span>📅 ${dataFiltro}</span>
+                    <span>${badgesHtml}</span>
                 </div>
-                <div style="font-weight:bold; margin: 8px 0; color:${cor};">
-                    ${acertouMilhar ? '🚀 MILHAR CRAVADA!' : (acertouCentena ? '💯 CENTENA NA CABEÇA!' : (acertouBicho ? '🎯 BICHO NO 1º PRÊMIO!' : '⚪ Sem acertos diretos'))}
+                <div style="font-size:0.85rem; margin-top:8px;">
+                    <b>Resultado:</b> ${res1.milhar} (${res1.bichoNome})
                 </div>
-                <div style="font-size:0.8rem;">
-                    🏆 Resultado: <b>${res1.milhar}</b> (${res1.bichoNome})
-                    ${ternoCravado ? '<br>✅ <b>Acertou Terno de Dezenas!</b>' : (duqueCravado ? '<br>✅ <b>Acertou Duque de Dezenas!</b>' : '')}
+                <div style="font-size:0.75rem; color:${statusCor}; font-weight:bold; margin-top:5px;">
+                    ${mestreCravado ? '✅ Jogada de Mestre detectada nos prêmios!' : ''}
+                    ${somaCravada ? '<br>✅ Milhar da Soma premiada!' : ''}
+                    ${acertoMCD1ao5 && !milharNaCabeca ? '<br>✅ Sugestão premiada do 1º ao 5º' : ''}
                 </div>
             </div>`;
     }
 
-    // Atualiza os contadores no topo do modal
+    // Atualiza estatísticas do topo
     document.getElementById('statPercent').textContent = `${total > 0 ? Math.round((hitsBicho/total)*100) : 0}%`;
     document.getElementById('statBicho').textContent = hitsBicho;
-    document.getElementById('statMCD').textContent = hitsMilhar;
-    document.getElementById('statDT').textContent = `${hitsDuque}/${hitsTerno}`;
+    document.getElementById('statMCD').textContent = hitsMCD;
+    // Criamos um campo novo para as sugestões premium se desejar
+    document.getElementById('statDT').textContent = `${hitsSoma} Soma / ${hitsMestre} Mestre`;
     
     container.innerHTML = html || '<p style="text-align:center; padding:20px;">Nenhum sorteio processado.</p>';
 }
