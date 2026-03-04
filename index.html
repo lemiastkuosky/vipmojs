@@ -8137,45 +8137,38 @@ body.dark-mode .offline-ia-warning {
 
     // Função que pede permissão e salva o token no banco
     async function ativarNotificacoes(user) {
-    if (!messaging) return;
+    // Se não houver usuário ou o messaging não carregar, ignora
+    if (!user || !user.uid || !messaging) {
+        console.warn("Usuário não identificado ou Messaging indisponível.");
+        return;
+    }
     
     try {
-        // 1. Pede permissão ao usuário
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
             console.log('Permissão de notificação CONCEDIDA!');
             
-            // 👇 A CHAVE PARA O ERRO SUMIR: Aguarda o Service Worker estar pronto e ativo
+            // Aguarda o Service Worker estar pronto
             const registration = await navigator.serviceWorker.ready;
-            console.log('Service Worker está pronto e ativo no escopo:', registration.scope);
             
-            // 2. Tenta pegar o Token garantindo que o SW está ativo
+            // Tenta pegar o Token
             const token = await messaging.getToken({ 
                 vapidKey: 'Rtf8hBFehMuUM__tzh9IaNFWJE6n9hi2FWiS3fv9xdw',
-                serviceWorkerRegistration: registration // Vincula a inscrição ao SW ativo
+                serviceWorkerRegistration: registration 
             });
             
             if (token) {
                 console.log('Token gerado com sucesso:', token);
-                // Salva no Firestore
+                // Salva no Firestore vinculando ao UID do usuário logado
                 await firestoreDB.collection('users').doc(user.uid).set({
                     fcmToken: token,
-                    notificacoesAtivas: true,
-                    ultimoTokenUpdate: firebase.firestore.FieldValue.serverTimestamp()
+                    lastTokenUpdate: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
             }
-        } else {
-            console.warn('Permissão de notificação negada pelo usuário.');
         }
     } catch (error) {
-        // Se der erro de "no active Service Worker", avisamos para tentar de novo
-        if (error.code === 'messaging/failed-service-worker-registration') {
-            console.log('Service Worker ainda instalando... tentando novamente em 3 segundos.');
-            setTimeout(() => ativarNotificacoes(user), 3000);
-        } else {
-            console.error('Erro ao ativar notificações:', error);
-        }
+        console.error('Erro detalhado ao ativar notificações:', error);
     }
 }
     
@@ -8276,75 +8269,79 @@ body.dark-mode .offline-ia-warning {
         ]
     };
 
-    firebase.auth().onAuthStateChanged(user => {
-        const statusIndicator = document.getElementById('auth-status-indicator');
-        const logoutButton = document.getElementById('logout-button');
+    firebase.auth().onAuthStateChanged(async (user) => {
+    const statusIndicator = document.getElementById('auth-status-indicator');
+    const logoutButton = document.getElementById('logout-button');
 
-        if (user) {
-            console.log('Auth State Changed: Logado como', user.email);
-            if(statusIndicator) {
-                statusIndicator.textContent = `Logado: ${user.email}`;
-                statusIndicator.className = 'status-logged-in';
-            }
-            if(logoutButton) logoutButton.style.display = 'inline-block';
-
-            aplicarPermissoesIndividuais(user);
-            
-            // Carrega dados iniciais
-            if(typeof carregarNomesSalvos === 'function') carregarNomesSalvos();
-            if(typeof getMilharCount === 'function') getMilharCount(user);
-
-            // Verifica Firestore para status de aprovação
-            const userDocRef = firestoreDB.collection('users').doc(user.uid);
-            userDocRef.get().then(doc => {
-                if (!doc.exists || doc.data().ativo !== true) {
-                    if(statusIndicator) {
-                        statusIndicator.textContent += ' (Pendente)';
-                        statusIndicator.className = 'status-logged-out';
-                    }
-                }
-            }).catch(e => console.error("Erro auth check:", e));
-
-        } else {
-            console.log('Auth State Changed: Deslogado');
-            if(statusIndicator) {
-                statusIndicator.textContent = 'Deslogado';
-                statusIndicator.className = 'status-logged-out';
-            }
-            if(logoutButton) logoutButton.style.display = 'none';
-            
-            // Limpa dados sensíveis da memória
-            nomesSalvos = [];
-            if(typeof atualizarSelectNomes === 'function') atualizarSelectNomes();
-            localStorage.removeItem('app_authenticated');
-            
-            // Verifica se precisa mostrar modal de login
-            if(typeof checkAuth === 'function') checkAuth();
-            
-            const countSpan = document.getElementById('milharTotalCount');
-            if(countSpan) countSpan.textContent = 'N/A';
-            console.log("Usuário logado e ativo.");
-         getMilharCount(user); // <-- Mantenha isso
-         
-         // ---> ADICIONE ESTA LINHA AQUI <---
-         monitorarSessaoUnica(user);
-      
+    if (user) {
+        // ========================================================
+        // TUDO AQUI DENTRO RODA QUANDO O USUÁRIO ESTÁ LOGADO ✅
+        // ========================================================
+        console.log('Auth State Changed: Logado como', user.email);
+        
+        if(statusIndicator) {
+            statusIndicator.textContent = `Logado: ${user.email}`;
+            statusIndicator.className = 'status-logged-in';
         }
-        ativarNotificacoes(user); 
-      
-    });
+        if(logoutButton) logoutButton.style.display = 'inline-block';
 
-// !!! IMPORTANTE !!! Cole aqui o HASH que você gerou no Passo 1.
-const SENHA_HASH = "289160db0d9f39f9ae1754c4ec9c16f90b50e32e09c5fb5481ae642b3d3d1a36";
+        aplicarPermissoesIndividuais(user);
+        
+        // 1. Monitora sessão única imediatamente
+        try {
+            await monitorarSessaoUnica(user);
+        } catch(e) {
+            console.warn("Erro ao monitorar sessão:", e);
+        }
 
-// Função auxiliar para gerar hash (precisa ser igual à do gerador)
-async function hashPassword(str) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(str);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+        // 2. Carrega dados iniciais
+        if(typeof carregarNomesSalvos === 'function') carregarNomesSalvos();
+        if(typeof getMilharCount === 'function') getMilharCount(user);
+
+        // 3. Ativa as Notificações Push
+        if(typeof ativarNotificacoes === 'function') {
+            ativarNotificacoes(user);
+        }
+
+        // 4. Verifica status de aprovação no Firestore
+        const userDocRef = firestoreDB.collection('users').doc(user.uid);
+        userDocRef.get().then(doc => {
+            if (!doc.exists || doc.data().ativo !== true) {
+                if(statusIndicator) {
+                    statusIndicator.textContent += ' (Pendente)';
+                    statusIndicator.className = 'status-logged-out';
+                }
+                console.log("Atenção: Usuário logado mas ainda pendente de aprovação.");
+            } else {
+                console.log("Usuário logado e aprovado!");
+            }
+        }).catch(e => console.error("Erro auth check:", e));
+
+    } else {
+        // ========================================================
+        // TUDO AQUI DENTRO RODA QUANDO O USUÁRIO ESTÁ DESLOGADO ❌
+        // ========================================================
+        console.log('Auth State Changed: Deslogado');
+        
+        if(statusIndicator) {
+            statusIndicator.textContent = 'Deslogado';
+            statusIndicator.className = 'status-logged-out';
+        }
+        if(logoutButton) logoutButton.style.display = 'none';
+        
+        // Limpa dados sensíveis
+        nomesSalvos = [];
+        if(typeof atualizarSelectNomes === 'function') atualizarSelectNomes();
+        localStorage.removeItem('app_authenticated');
+        
+        const countSpan = document.getElementById('milharTotalCount');
+        if(countSpan) countSpan.textContent = 'N/A';
+
+        // Se estiver deslogado, verifica se precisa mostrar o modal de login
+        if(typeof checkAuth === 'function') checkAuth();
+    }
+});
+
 async function handleFechamentoToggle(checkbox) {
     // Só executa a lógica se o checkbox foi MARCADO
     if (checkbox.checked) {
