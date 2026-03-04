@@ -1,4 +1,39 @@
-const CACHE_NAME = 'vipmojs-cache-v1';
+// =========================================================================
+// 1. IMPORTAÇÃO E CONFIGURAÇÃO DO FIREBASE (Notificações em Segundo Plano)
+// =========================================================================
+importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+    apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
+    authDomain: "meus-recibos-vip.firebaseapp.com",
+    projectId: "meus-recibos-vip",
+    storageBucket: "meus-recibos-vip.firebasestorage.app",
+    messagingSenderId: "254959368683",
+    appId: "1:254959368683:web:80676a26f614040df6c1ae"
+});
+
+const messaging = firebase.messaging();
+
+// Esta função "ouve" as mensagens quando o App está fechado (Celular no bolso)
+messaging.onBackgroundMessage(function(payload) {
+  console.log('[ServiceWorker] Notificação recebida em segundo plano: ', payload);
+
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: '/icon.png', // Opcional: Caminho para a logo do seu app
+    badge: '/icon.png' // Opcional: Ícone pequenininho preto e branco do Android
+  };
+
+  return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+
+// =========================================================================
+// 2. CÓDIGO ORIGINAL DO SEU APP (MODO OFFLINE E CACHE)
+// =========================================================================
+const CACHE_NAME = 'vipmojs-cache-v2'; // Mudado para v2 para forçar a atualização nos clientes!
 
 // Arquivos principais que o app precisa para abrir sem internet
 const APP_SHELL = [
@@ -11,7 +46,7 @@ const APP_SHELL = [
 
 // INSTALAÇÃO: Salva os arquivos essenciais no celular do usuário
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  self.skipWaiting(); // Força o novo ServiceWorker a assumir imediatamente
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[ServiceWorker] Salvando App Shell (Modo Offline)');
@@ -34,13 +69,13 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  self.clients.claim();
+  self.clients.claim(); // Garante que a página atual já use este ServiceWorker
 });
 
 // INTERCEPTAÇÃO: O "Cérebro" do modo offline
 self.addEventListener('fetch', (event) => {
   
-  // 1. Ignora requisições do Firebase (Deixa o banco de dados trabalhar livremente)
+  // 1. Ignora requisições do Firebase (Deixa o banco e as notificações trabalharem livremente)
   if (event.request.url.includes('firestore') || 
       event.request.url.includes('firebase') || 
       event.request.url.includes('googleapis')) {
