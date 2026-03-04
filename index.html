@@ -9321,6 +9321,58 @@ function showAnalysisHubModal() {
     }
 }
 
+// --- FUNÇÃO PARA CALCULAR A MILHAR DA SOMA (1º AO 5º) ---
+async function getSomaUltimoSorteio(loteria) {
+    try {
+        // Busca os últimos 15 resultados (garante que pega o sorteio mais recente completo)
+        const snapshot = await firestoreDB.collection('resultados')
+            .where('loteria', '==', loteria)
+            .orderBy('data', 'desc')
+            .limit(15)
+            .get();
+
+        if (snapshot.empty) return null;
+
+        const resultados = [];
+        snapshot.forEach(doc => resultados.push(doc.data()));
+
+        // Encontra o identificador do resultado mais recente
+        const ultimoSorteioId = resultados[0].nomeSorteio;
+        const ultimaData = resultados[0].data.toDate().toLocaleDateString('pt-BR');
+
+        // Filtra pegando só os prêmios de 1 a 5 desse sorteio exato
+        const premiosDoSorteio = resultados.filter(r => 
+            r.nomeSorteio === ultimoSorteioId && 
+            r.data.toDate().toLocaleDateString('pt-BR') === ultimaData &&
+            r.posicao >= 1 && r.posicao <= 5
+        );
+
+        if (premiosDoSorteio.length === 0) return null;
+
+        // Calcula a soma total
+        let soma = 0;
+        premiosDoSorteio.forEach(p => {
+            soma += parseInt(p.milhar.replace(/\D/g, ''), 10);
+        });
+
+        // Pega apenas os 4 últimos dígitos (Milhar)
+        let milharSoma = String(soma).slice(-4).padStart(4, '0');
+        
+        // Identifica o bicho dessa milhar
+        const bichoData = getBichoDataFromNumber(milharSoma);
+
+        return {
+            somaTotal: soma,
+            milhar: milharSoma,
+            bicho: bichoData,
+            sorteioBase: ultimoSorteioId
+        };
+    } catch (e) {
+        console.error("Erro ao calcular milhar da soma:", e);
+        return null;
+    }
+}
+
 async function generateIAPalpites(loteria, loteriaNome) {
     if (!loteria || !loteriaNome) return;
     const nextDrawName = getNextDrawName(loteria);
@@ -9329,10 +9381,11 @@ async function generateIAPalpites(loteria, loteriaNome) {
     showLoadingIndicator(`Análise Estratégica: ${drawDisplay}...`);
 
     try {
-        const [dataIA, puxada, htmlAtrasados] = await Promise.all([
+        const [dataIA, puxada, htmlAtrasados, dadosSoma] = await Promise.all([
             getIaSummaryDocument(loteria),
             getPuxadaDoDiaIA(loteria),
-            fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text()).catch(() => '')
+            fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text()).catch(() => ''),
+            getSomaUltimoSorteio(loteria) // <--- NOVA CHAMADA ADICIONADA AQUI
         ]);
 
         const analiseHorario = dataIA ? (dataIA[nextDrawName] || dataIA['geral']) : {};
@@ -9372,6 +9425,13 @@ async function generateIAPalpites(loteria, loteriaNome) {
             shareText += `👑 *JOGADA DE MESTRE*\n`;
             shareText += `💸 *${jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n`;
             shareText += `↳ O ${jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
+        }
+
+        // 👇 ADICIONE ESTE BLOCO NOVO AQUI 👇
+        if (dadosSoma && dadosSoma.bicho) {
+            shareText += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n`;
+            shareText += `↳ Base Matemática: ${dadosSoma.sorteioBase} Anterior\n`;
+            shareText += `💸 *${dadosSoma.milhar}* - ${dadosSoma.bicho.emoji} *${dadosSoma.bicho.animal.toUpperCase()}*\n\n`;
         }
         
         shareText += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
@@ -9471,9 +9531,15 @@ async function generateIAPalpites(loteria, loteriaNome) {
                 <div style="font-size: 1.2rem;">${drawDisplay}</div>
             </div>
             <div style="text-align:left; font-family: 'Courier New', monospace; background:rgba(0,0,0,0.05); padding:15px; border-radius:10px; border: 1px solid rgba(0,0,0,0.1); font-size:0.9rem; white-space:pre-wrap; line-height: 1.4;">${shareText.replace(/\*/g, '')}</div>
-            <button onclick="shareIAPalpites()" class="save-button" style="background:#25D366; width:100%; margin-top:20px; padding:15px; font-weight:bold; font-size:1.1rem; border-radius:10px; box-shadow: 0 4px 0 #128c7e;">
-                📲 Enviar para WhatsApp
-            </button>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="copyIAPalpites(this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 15px; font-weight: bold; font-size: 1.1rem; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
+                    📋 Copiar
+                </button>
+                <button onclick="shareIAPalpites()" class="save-button" style="flex: 1; background:#25D366; padding:15px; font-weight:bold; font-size:1.1rem; border-radius:10px; box-shadow: 0 4px 0 #128c7e; border: none; cursor: pointer; color: white;">
+                   📲 Enviar no WhatsApp
+                </button>
+            </div>
         `;
 
         document.getElementById('iaPalpiteForm').style.display = 'none';
@@ -16490,7 +16556,7 @@ function renderIAResultsUI(palpites, rankingTop5, rankingTop10, analise, loteria
                     </div>
                     <div style="display: flex; gap: 8px;">
                         <button onclick="copyToClipboard('${item.combinacoes.join(' ')}', this)" class="load-button" style="flex: 1; padding: 10px; font-size: 0.9rem; border-radius: 6px;">📋 Copiar</button>
-                        <button onclick="shareCercadoFromIA('${tipo}', ${index})" class="save-button" style="flex: 1; background-color: #25D366; padding: 10px; font-size: 0.9rem; border-radius: 6px;">📲 Enviar ZAP</button>
+                        <button onclick="shareCercadoFromIA('${tipo}', ${index})" class="save-button" style="flex: 1; background-color: #25D366; padding: 10px; font-size: 0.9rem; border-radius: 6px;">📲 Compartilhar no WhatsApp</button>
                     </div>
                 </div>
             </li>`;
@@ -16533,13 +16599,27 @@ function renderIAResultsUI(palpites, rankingTop5, rankingTop10, analise, loteria
             <ul class="ia-palpite-list">${criarListaPalpitesHTML(palpites.centena)}</ul>
         </div>
 
-        <button onclick="shareIAPalpites()" class="save-button" style="background-color: #25D366; width: 100%; margin-top: 15px; padding: 15px; font-size: 1.05rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white;">
-            📲 Compartilhar Análise Completa
-        </button>
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button onclick="copyIAPalpites(this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 15px; font-size: 1.05rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
+                📋 Copiar Análise
+            </button>
+            <button onclick="shareIAPalpites()" class="save-button" style="background-color: #25D366; flex: 1; padding: 15px; font-size: 1.05rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white; box-shadow: 0 4px 0 #128c7e;">
+                📲 Compartilhar no WhatsApp
+            </button>
+        </div>
     `;
 
     document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
     document.getElementById('iaPalpiteForm').style.display = 'none';
+}
+
+function copyIAPalpites(btnElement) {
+    if (!window.iaPalpiteShareText) {
+        showToast('Erro: Nenhum texto de palpite para copiar.', 'error');
+        return;
+    }
+    // Usa a mesma função de cópia que já temos, que mostra o "✅" no botão
+    copyToClipboard(window.iaPalpiteShareText, btnElement);
 }
 
 // --- FUNÇÃO PARA COMPARTILHAR O CERCADO ESPECÍFICO ---
@@ -17937,11 +18017,16 @@ async function generateSelectedNumbers() {
         return;
     }
 
-    let summaryParts = ["<strong>Você está prestes a gerar:</strong>\n"];
+    // 👇 MUDANÇA VISUAL (AQUI COMEÇA A NOVA FORMATAÇÃO DO TEXTO DO POP-UP) 👇
+    let summaryParts = ["<span style='font-size: 1.15rem; display: block; margin-bottom: 15px;'><strong>Você está prestes a gerar:</strong></span>"];
+    
     const checkedModeRadio = document.querySelector('input[name="generationMode"]:checked');
     const mode = checkedModeRadio ? checkedModeRadio.value : 'offline';
     let checkedTypesElement = Array.from(document.querySelectorAll('input[name="generationType"]:checked'));
     let typeKeys = checkedTypesElement.map(cb => cb.value.toLowerCase());
+
+    // Pega os tipos escolhidos (ex: "Milhar", "Centena") e os formata
+    const tiposFormatados = typeKeys.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' e ');
 
     if (typeKeys.length === 0) {
         showToast('Selecione pelo menos um tipo de jogo.', 'error');
@@ -17959,14 +18044,24 @@ async function generateSelectedNumbers() {
 
         if (selectedBichos.length === 0) { showToast('Para I.A., selecione os Bichos.', 'error'); return; }
 
-        const bichoNames = selectedBichos.map(b => b.animal).join(', ');
         const selectedRadio = document.querySelector('input[name="iaLotteryOption"]:checked');
         const lotteryCode = selectedRadio ? selectedRadio.value : 'rj';
         const nomeLoteria = selectedRadio ? selectedRadio.parentElement.textContent.trim() : 'Sorteio';
         
-        summaryParts.push(`\n<strong>- Modo:</strong> 🔮 I.A. (${nomeLoteria})`);
-        summaryParts.push(`<strong>- Bichos:</strong> ${bichoNames}`);
-        summaryParts.push(`<strong>- Quantidade:</strong> ${totalQuantity}`);
+        // 👇 AQUI MUDA O CABEÇALHO PARA O NOVO PADRÃO 👇
+        summaryParts.push(`- <strong>Modo:</strong> 🔮 I.A. (${nomeLoteria})`);
+        summaryParts.push(`- <strong>Total a Gerar:</strong> ${totalQuantity}`);
+
+        // Calcula a divisão para imprimir a lista igual ao modo GP Bichos
+        const quantidadePorBicho = Math.floor(totalQuantity / selectedBichos.length);
+        const resto = totalQuantity % selectedBichos.length;
+
+        selectedBichos.forEach((bicho, index) => {
+            const qtd = quantidadePorBicho + (index < resto ? 1 : 0);
+            if (qtd > 0) {
+                summaryParts.push(`&bull; G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: ${qtd}x`);
+            }
+        });
 
         showLoadingIndicator(`Analisando I.A...`);
         
@@ -18061,60 +18156,143 @@ async function generateSelectedNumbers() {
     else if (mode === 'bichos') {
         const selectedBichos = Array.from(document.querySelectorAll('input[name="selectedBichos"]:checked'))
                                    .map(cb => tabelaDeGrupos.find(b => b.grupo === cb.value)).filter(Boolean);
+        
         if (selectedBichos.length === 0) { showToast('Selecione os bichos.', 'error'); return; }
         
         const baseQuantity = Math.floor(totalQuantity / selectedBichos.length);
         const remainder = totalQuantity % selectedBichos.length;
-        summaryParts.push(`\n<strong>- Modo:</strong> Grupo Bichos`);
-        summaryParts.push(`<strong>- Total a Gerar:</strong> ${totalQuantity}`); // Adiciona o total geral
+        const typesStr = typeKeys.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' e ');
+        
+        // 👇 AQUI MUDA O CABEÇALHO PARA FICAR IGUAL À SUA IMAGEM 👇
+        summaryParts.push(`- <strong>Modo:</strong> Grupo Bichos`);
+        summaryParts.push(`- <strong>Total a Gerar:</strong> ${totalQuantity}`);
 
+        // --- MODO CERCAR BICHO 400 (MÃO NA URNA) ---
         if (bichoMilharMethod === 'cercar_completo' && typeKeys.includes('milhar')) {
-            summaryParts.push(`(Modo Cercar 400 - Ciclo)`);
-            selectedBichos.forEach((bicho, index) => {
-                const qtd = baseQuantity + (index < remainder ? 1 : 0);
-                if (qtd === 0) return;
-                if (!cercarBichoPools[bicho.grupo]) {
-                    const newPool = new Set();
-                    bicho.dezenas.forEach(dez => { for(let i=0; i<100; i++) newPool.add(String(i).padStart(2,'0') + dez); });
-                    cercarBichoPools[bicho.grupo] = newPool;
-                }
-                const pool = cercarBichoPools[bicho.grupo];
-                const realQtd = Math.min(qtd, pool.size);
-                summaryParts.push(`• G${bicho.grupo} ${bicho.animal}: ${realQtd}x (Restam: ${pool.size - realQtd})`);
-                let poolArray = Array.from(pool);
-                shuffleArray(poolArray);
-                const selecionadosFiltrados = poolArray.slice(0, realQtd).filter(num => applyAdvancedFilters(num, 'milhar'));
-                finalResults.milhar.push(...selecionadosFiltrados);
-                numbersPendingRemoval.push({ group: bicho.grupo, numbers: selecionadosFiltrados });
-            });
-        }
-        else {
-            // --- BLOCO CORRIGIDO PARA EXIBIR BICHOS E QUANTIDADES NO MODO PADRÃO ---
+            summaryParts.push(`<div style="font-size:0.85rem; color:#ffc107; margin-bottom: 5px;">(Modo Cercar 400)</div>`);
+            
+            for (let i = selectedBichos.length - 1; i > 0; i--) {
+                const j = getSecureRandomInt(i + 1);
+                [selectedBichos[i], selectedBichos[j]] = [selectedBichos[j], selectedBichos[i]];
+            }
+            
             selectedBichos.forEach((bicho, index) => {
                 const qtd = baseQuantity + (index < remainder ? 1 : 0);
                 if (qtd === 0) return;
                 
-                // Adiciona o bicho e a quantidade individual ao resumo da janela
-                summaryParts.push(`• G${bicho.grupo} ${bicho.animal}: ${qtd}x`);
+                const bichoGrupo = bicho.grupo;
+                
+                if (!cercarBichoPools[bichoGrupo] || cercarBichoPools[bichoGrupo].size === 0) {
+                    const newPool = new Set();
+                    bicho.dezenas.forEach(dez => { 
+                        for(let i=0; i<100; i++) { 
+                            newPool.add(String(i).padStart(2,'0') + dez); 
+                        }
+                    });
+                    cercarBichoPools[bichoGrupo] = newPool;
+                }
+                
+                const pool = cercarBichoPools[bichoGrupo];
+                const disponivel = pool.size;
+                const realQtd = Math.min(qtd, disponivel);
+                const sobra = disponivel - realQtd;
+                
+                // 👇 AQUI MUDA A LINHA DO BICHO COM O EMOJI 👇
+                summaryParts.push(`&bull; G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: ${realQtd}x <small>(Restam: ${sobra})</small>`);
+                
+                let poolArray = Array.from(pool);
+                shuffleArray(poolArray);
+                const selecionados = poolArray.slice(0, realQtd);
+                const selecionadosFiltrados = selecionados.filter(num => applyAdvancedFilters(num, 'milhar'));
+                
+                finalResults.milhar.push(...selecionadosFiltrados);
+                numbersPendingRemoval.push({ group: bichoGrupo, numbers: selecionadosFiltrados });
+            });
+        }
+        
+        // --- OUTROS SUB-MODOS (FECHAMENTO E PADRÃO) ---
+        else {
+            if(bichoMilharMethod === 'fechamento_mc') summaryParts.push(`<div style="font-size:0.85rem; color:#ffc107; margin-bottom: 5px;">(Fechamento M-C)</div>`);
+            
+            selectedBichos.forEach((bicho, index) => {
+                const qtd = baseQuantity + (index < remainder ? 1 : 0);
+                if (qtd > 0) {
+                    // 👇 AQUI MUDA A LINHA DO BICHO COM O EMOJI 👇
+                    summaryParts.push(`&bull; G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: ${qtd}x`);
+                }
+            });
 
-                typeKeys.forEach(tk => {
-                    const set = new Set();
-                    let attempts = 0;
-                    while(set.size < qtd && attempts < qtd * 100) {
-                        attempts++;
-                        const d = bicho.dezenas[getSecureRandomInt(bicho.dezenas.length)];
-                        let num = tk === 'milhar' ? String(getSecureRandomInt(100)).padStart(2,'0')+d : (tk === 'centena' ? getSecureRandomInt(10)+d : d);
-                        if (applyAdvancedFilters(num, tk)) set.add(num);
+            selectedBichos.forEach((bicho, index) => {
+                const qtd = baseQuantity + (index < remainder ? 1 : 0);
+                if (qtd === 0) return;
+
+                if (bichoMilharMethod === 'fechamento_mc' && typeKeys.includes('milhar')) {
+                    const hotDigits = new Set();
+                    bicho.dezenas.forEach(d => { hotDigits.add(d[0]); hotDigits.add(d[1]); });
+                    const arrDigits = Array.from(hotDigits);
+                    
+                    const closureCombos = [];
+                    arrDigits.forEach(d1 => {
+                        arrDigits.forEach(d2 => {
+                            bicho.dezenas.forEach(dez => { closureCombos.push(d1 + d2 + dez); });
+                        });
+                    });
+
+                    const uniqueSet = new Set(closureCombos);
+                    if (qtd > uniqueSet.size) {
+                        let attempts = 0;
+                        while (uniqueSet.size < qtd && attempts < (qtd * 50)) {
+                            attempts++;
+                            const prefixo = String(getSecureRandomInt(100)).padStart(2, '0');
+                            const dezena = bicho.dezenas[getSecureRandomInt(bicho.dezenas.length)];
+                            uniqueSet.add(prefixo + dezena);
+                        }
                     }
-                    finalResults[tk].push(...Array.from(set));
-                });
+
+                    let arrTemp = Array.from(uniqueSet);
+                    const selecionados = [];
+                    const qtdParaPegar = Math.min(qtd, arrTemp.length);
+
+                    for (let i = 0; i < qtdParaPegar; i++) {
+                        const randomIndex = getSecureRandomInt(arrTemp.length);
+                        selecionados.push(arrTemp[randomIndex]);
+                        arrTemp[randomIndex] = arrTemp[arrTemp.length - 1];
+                        arrTemp.pop();
+                    }
+                    finalResults.milhar.push(...selecionados);
+                }
+                else {
+                    const dezenasPool = bicho.dezenas;
+                    typeKeys.forEach(typeKey => {
+                        const set = new Set();
+                        let attempts = 0;
+                        const maxAttempts = qtd * 100; 
+
+                        while(set.size < qtd && attempts < maxAttempts) {
+                            attempts++;
+                            let num = '';
+                            const d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+                            if (typeKey === 'milhar') num = String(getSecureRandomInt(100)).padStart(2, '0') + d;
+                            else if (typeKey === 'centena') num = String(getSecureRandomInt(10)) + d;
+                            else if (typeKey === 'dezena') num = d;
+
+                            if (applyAdvancedFilters(num, typeKey)) set.add(num);
+                        }
+                        const resultadoDoBicho = Array.from(set);
+                        shuffleArray(resultadoDoBicho);
+                        finalResults[typeKey].push(...resultadoDoBicho);
+                    });
+                }
             });
         }
         typeKeys.forEach(k => shuffleArray(finalResults[k]));
     }
     
     else {
-        summaryParts.push(`\n<strong>- Modo:</strong> Aleatório (Geral)`);
+        summaryParts.push(`- <strong>Modo:</strong> Aleatório (Geral)`);
+        summaryParts.push(`- <strong>Detalhes (${tiposFormatados}):</strong>`);
+        summaryParts.push(`&bull; ${totalQuantity}x ${tiposFormatados} (Sorteio Livre)`);
+        
         typeKeys.forEach(tk => {
             const lista = [];
             while(lista.length < totalQuantity) {
@@ -18126,8 +18304,12 @@ async function generateSelectedNumbers() {
     }
 
     // --- 4. CONFIRMAÇÃO E SALVAMENTO ---
-    summaryParts.push("\nProsseguir com a geração?");
-    const userConfirmed = await showCustomConfirm(summaryParts.join('\n'), "Sim, Gerar", 'Cancelar', 'randomGeneratorModal');
+    summaryParts.push("<div style='margin-top: 20px; font-size: 1.05rem;'>Prosseguir com a geração?</div>");
+    
+    // Junta tudo dentro de uma div com o texto centralizado para ficar perfeito no Modal!
+    const finalMessageHTML = `<div style="text-align: center; line-height: 1.5;">${summaryParts.join('\n')}</div>`;
+    
+    const userConfirmed = await showCustomConfirm(finalMessageHTML, "Sim, Gerar", 'Cancelar', 'randomGeneratorModal');
     
     if (userConfirmed) {
         // Se o usuário não for admin e a variável temporária existir, grava o novo uso
@@ -18170,6 +18352,10 @@ async function generateSelectedNumbers() {
         const h = await getData('generationHistory') || [];
         h.unshift(historyEntry);
         await saveData('generationHistory', h.slice(0, 50));
+        
+        // 👇 ADICIONE ESTA LINHA AQUI 👇
+        selectAllBichos(false); // Limpa os bichos selecionados após gerar com sucesso!
+
     } else {
         showToast('Geração cancelada.', 'info');
     }
@@ -20478,60 +20664,103 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
 
     const unidadesTop = (analise.unidadesAtrasadas || []).slice(0, 2).map(u => u.numero);
     const centenasTop = (analise.centenasAtrasadas || []).slice(0, 2).map(c => c.numero.charAt(0)); 
-    const melhoresDezenas = {};
 
+    // 👇 AS DUAS LINHAS QUE FALTAVAM ESTÃO AQUI 👇
     let alertaDobradinha = false;
     const dezenasGemeas = ['00', '11', '22', '33', '44', '55', '66', '77', '88', '99'];
 
+    // 1. ESCOLHA DIVERSIFICADA DE DEZENAS PARA O TOP 10
+    const dezenasEscolhidas = []; 
     rankingTop10.forEach((b, index) => {
-        let prefixo = analise.prefixosPorBicho?.[b.grupo]?.[0] || String(getSeededInt(100)).padStart(2, '0');
-        let dezenaEscolhida = b.dezenasBase[getSeededInt(4)]; 
+        let dezena = b.dezenasBase[getSeededInt(4)]; // Pega uma aleatória do bicho
         
+        // Força dobradinha no Top 1 se o alerta disparar
         if (index === 0) {
             const temGemea = b.dezenasBase.find(d => dezenasGemeas.includes(d));
             if (temGemea && getSeededInt(10) > 3) { 
                 alertaDobradinha = true;
-                dezenaEscolhida = temGemea; 
+                dezena = temGemea; 
             }
+        } 
+        // Força unidades atrasadas no Top 2 e 3
+        else if ((index === 1 || index === 2) && unidadesTop.length > 0) {
+            const dezenaUnidade = b.dezenasBase.find(d => d.endsWith(unidadesTop[0]) || d.endsWith(unidadesTop[1]));
+            if (dezenaUnidade) dezena = dezenaUnidade;
         }
-
-        if (!alertaDobradinha || index !== 0) { 
-            if (unidadesTop.length > 0) {
-                const dezenaCruzada = b.dezenasBase.find(d => d.endsWith(unidadesTop[0]) || d.endsWith(unidadesTop[1]));
-                if (dezenaCruzada) dezenaEscolhida = dezenaCruzada; 
-            }
-        }
-
-        if (centenasTop.length > 0) { prefixo = prefixo.charAt(0) + centenasTop[0]; }
-
-        melhoresDezenas[b.grupo] = dezenaEscolhida;
-        palpites.milhar.push({ palpite: prefixo + dezenaEscolhida, tipo: b.animal });
-        palpites.centena.push({ palpite: prefixo.slice(-1) + dezenaEscolhida, tipo: b.animal });
+        dezenasEscolhidas.push(dezena);
     });
 
-    if (rankingTop5.length >= 4) {
-        const t1 = rankingTop5[0], t2 = rankingTop5[1], t3 = rankingTop5[2], t4 = rankingTop5[3];
-        const d1 = melhoresDezenas[t1.grupo] || t1.dezenasBase[0];
-        const d2 = melhoresDezenas[t2.grupo] || t2.dezenasBase[0];
-        const d3 = melhoresDezenas[t3.grupo] || t3.dezenasBase[0];
-        const d4 = melhoresDezenas[t4.grupo] || t4.dezenasBase[0];
-
-        const parceiroFixo = analise.afinidades?.[t1.grupo]?.[0] || t2.grupo;
-        const bichoParceiro = todosJuntos.find(x => x.grupo === parceiroFixo) || t2;
-        const dParceiro = melhoresDezenas[bichoParceiro.grupo] || bichoParceiro.dezenasBase[0];
-        
-        let todosOsDuques = [`${d1}-${dParceiro}`, `${d1}-${d2}`, `${d1}-${d3}`, `${d1}-${d4}`, `${d2}-${d3}`, `${d2}-${d4}`, `${d3}-${d4}`];
-        todosOsDuques = [...new Set(todosOsDuques)];
-
-        palpites.duques.push({ combinacoes: todosOsDuques });
-        palpites.ternos.push({ combinacoes: [`${d1}-${d2}-${d3}`, `${d1}-${d2}-${d4}`, `${d1}-${d3}-${d4}`, `${d2}-${d3}-${d4}`] });
+    // 2. MILHARES (Foco no Top 8)
+    palpites.milhar = [];
+    for(let i = 0; i < 8; i++) {
+        let b = rankingTop10[i];
+        let prefixo = analise.prefixosPorBicho?.[b.grupo]?.[0] || String(getSeededInt(100)).padStart(2, '0');
+        if (centenasTop.length > 0) prefixo = prefixo.charAt(0) + centenasTop[0];
+        palpites.milhar.push({ palpite: prefixo + dezenasEscolhidas[i], tipo: b.animal });
     }
 
-    // 🎯 JOGADA DE MESTRE
+    // 3. CENTENAS DUPLAS (Espalha a chance pegando uma dezena DIFERENTE da Milhar)
+    palpites.centena = [];
+    for(let i = 0; i < 10; i++) {
+        let b = rankingTop10[i];
+        let prefixo = analise.prefixosPorBicho?.[b.grupo]?.[1] || String(getSeededInt(100)).padStart(2, '0'); 
+        let digitoCentena = centenasTop.length > 1 ? centenasTop[getSeededInt(2)] : prefixo.slice(-1);
+        
+        // Pega a próxima dezena do bicho para cobrir mais números
+        let indiceDezenaAlternativa = (b.dezenasBase.indexOf(dezenasEscolhidas[i]) + 1) % 4;
+        let dezenaAlternativa = b.dezenasBase[indiceDezenaAlternativa]; 
+        
+        palpites.centena.push({ palpite: digitoCentena + dezenaAlternativa, tipo: b.animal });
+    }
+
+    // 4. JOGADA DE MESTRE (A primeira milhar gerada)
     const jogadaDeMestre = palpites.milhar[0];
 
-    // 🛡️ FECHO COMBINADO (5 Dezenas do Top 5)
-    const dezenasFechamento = rankingTop5.map(b => melhoresDezenas[b.grupo] || b.dezenasBase[0]);
+    // 5. RESGATE ESTRATÉGICO (Afinidade e Zebra)
+    const parceiroFixo = analise.afinidades?.[rankingTop10[0].grupo]?.[0] || rankingTop10[1].grupo;
+    const bichoParceiro = todosJuntos.find(x => x.grupo === parceiroFixo) || rankingTop10[1];
+    const dezenaParceiro = bichoParceiro.dezenasBase[getSeededInt(4)];
+    const dezenaSombra = bichoSombra.dezenasBase[getSeededInt(4)];
+
+    // 6. FECHO COMBINADO (Distribuído: Top 1, Top 3, Top 6, Afinidade, Sombra)
+    const setFecho = new Set([
+        dezenasEscolhidas[0], 
+        dezenasEscolhidas[2], 
+        dezenasEscolhidas[5], 
+        dezenaParceiro, 
+        dezenaSombra
+    ]);
+    
+    // Completa caso alguma dezena tenha se repetido
+    let idxFecho = 0;
+    while(setFecho.size < 5 && idxFecho < 10) {
+        setFecho.add(dezenasEscolhidas[idxFecho]);
+        idxFecho++;
+    }
+    const dezenasFechamento = Array.from(setFecho).sort();
+
+    // 7. DUQUES ESPALHADOS (Cruza os bichos do ranking inteiro)
+    let duquesMisturados = [
+        `${dezenasEscolhidas[0]}-${dezenaParceiro}`,       // Top 1 + Parceiro Estatístico
+        `${dezenasEscolhidas[1]}-${dezenasEscolhidas[4]}`, // Top 2 + Top 5
+        `${dezenasEscolhidas[2]}-${dezenasEscolhidas[7]}`, // Top 3 + Top 8
+        `${dezenasEscolhidas[3]}-${dezenaSombra}`,         // Top 4 + A Zebra (Sombra)
+        `${dezenasEscolhidas[0]}-${dezenasEscolhidas[5]}`, // Top 1 + Top 6
+        `${dezenaParceiro}-${dezenaSombra}`                // Parceiro + Sombra
+    ];
+    // Ordena os pares internamente (ex: 45-12 vira 12-45)
+    duquesMisturados = duquesMisturados.map(d => d.split('-').sort().join('-'));
+    palpites.duques.push({ combinacoes: [...new Set(duquesMisturados)] });
+
+    // 8. TERNOS ESPALHADOS
+    let ternosMisturados = [
+        `${dezenasEscolhidas[0]}-${dezenasEscolhidas[2]}-${dezenasEscolhidas[4]}`, // Ímpares do Top (1, 3, 5)
+        `${dezenasEscolhidas[1]}-${dezenasEscolhidas[3]}-${dezenasEscolhidas[6]}`, // Pares do Top (2, 4, 7)
+        `${dezenasEscolhidas[0]}-${dezenaParceiro}-${dezenaSombra}`,               // Loucura Calculada (1º + Parceiro + Zebra)
+        `${dezenasEscolhidas[2]}-${dezenasEscolhidas[5]}-${dezenasEscolhidas[8]}`  // Fundo do Ranking (3, 6, 9)
+    ];
+    ternosMisturados = ternosMisturados.map(t => t.split('-').sort().join('-'));
+    palpites.ternos.push({ combinacoes: [...new Set(ternosMisturados)] });
 
     return { palpites, rankingTop5, rankingTop10, cruzStr, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento };
 }
