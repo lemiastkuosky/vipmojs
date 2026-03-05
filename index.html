@@ -6158,6 +6158,16 @@ body.dark-mode .kit-bicho-card.esgotado {
         font-size: 0.65rem; /* Diminui a letra para não quebrar */
         padding: 6px 1px;
     }
+
+    #historicoPalpitesIAModal {
+    z-index: 9999 !important;
+    background-color: rgba(0, 0, 0, 0.85) !important;
+}
+
+#historicoPalpitesIAModal .modal-content {
+    border: 2px solid #6f42c1;
+    box-shadow: 0 0 25px rgba(111, 66, 193, 0.6);
+}
 }
 
 </style>
@@ -8305,13 +8315,32 @@ body.dark-mode .kit-bicho-card.esgotado {
                 <small style="font-weight: normal;">(Análise do nosso banco de dados)</small>
             </div>
         </button>
+
+<button onclick="abrirHistoricoPalpitesIA()" class="view-button" style="background-color: #6f42c1; color: white;">
+    <span style="font-size: 1.5rem; line-height: 1;">📜</span>
+    <div>
+        <strong>Historico Palpites I.A</strong>
+        <small style="font-weight: normal;">(últimos 5 dias)</small>
+    </div>
+</button>
+
         <button id="btnSubAuditoriaIA" onclick="openAuditoriaFromHub()" class="view-button" style="background-color: #17a2b8; color: white;">
             <span style="font-size: 1.5rem; line-height: 1;">🔍</span>
             <div>
                 <strong>Auditoria de Acertos</strong>
-                <small style="font-weight: normal;">(Backtest da Inteligência)</small>
+                <small style="font-weight: normal;">(Conferencia I.A)</small>
             </div>
         </button>
+<div id="historicoPalpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close-modal" onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')">×</span>
+        <h3 class="modal-title">📜 Histórico de Análises</h3>
+        <div id="listaHistoricoPalpites" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+            <p style="text-align: center; color: #666;">Buscando suas análises...</p>
+        </div>
+        <button onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
+    </div>
+</div>
       </div>
 </div>
 
@@ -9878,6 +9907,25 @@ async function generateIAPalpites(loteria, loteriaNome) {
         shareText += `🗓️ Gerado: ${dataSimples} às ${horaAgora}\n`;
         shareText += `📲 VIP - I.A in Real Time\n`;
 
+        // --- LOCAL CORRETO PARA SALVAR NO HISTÓRICO ---
+try {
+    const palpiteHistorico = {
+        loteria: loteria,
+        loteriaNome: loteriaNome,
+        horario: drawDisplay,
+        data: new Date().toLocaleDateString('pt-BR'),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Expira em 5 dias
+        conteudo: shareText, // Agora a variável já existe!
+        ranking: rankingTop5.map(b => ({animal: b.animal, emoji: b.emoji, confianca: b.confianca}))
+    };
+
+    firestoreDB.collection('historico_palpites_ia').add(palpiteHistorico);
+} catch (e) {
+    console.error("Erro ao gravar histórico:", e);
+}
+// ----------------------------------------------
+
         window.iaPalpiteShareText = shareText;
 
         resultsOutput.innerHTML = `
@@ -10341,7 +10389,7 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
 
             const dataBlacklist = new Date(); dataBlacklist.setDate(dataBlacklist.getDate() - 60);
             const dataAtrasada = new Date(); dataAtrasada.setDate(dataAtrasada.getDate() - 180);
-            const dataFrequente = new Date(); dataFrequente.setDate(dataFrequente.getDate() - 7);
+            const dataFrequente = new Date(); dataFrequente.setDate(dataFrequente.getDate() - 21);
 
             snapshot.forEach(doc => {
                 const data = doc.data();
@@ -10364,9 +10412,8 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                     c.datasSorteios.push(dS.getTime());
                     if (p === 1) {
                         c.bicho1PremioCount[g] = (c.bicho1PremioCount[g] || 0) + 1;
-                        if (!c.ultimosVistos1Premio.has(g)) c.ultimosVistos1Premio.set(g, dS);
-                    }
-
+                        if (!c.ultimosVistos1Premio.has(g) || dS > c.ultimosVistos1Premio.get(g)) {c.ultimosVistos1Premio.set(g, dS);
+                        }}
                     if (dS >= dataFrequente) c.bichoFrequencia.set(g, (c.bichoFrequencia.get(g) || 0) + 1);
                     if (!c.ultimasDezenas.has(dez)) c.ultimasDezenas.set(dez, dS);
                     if (!c.ultimasCentenas.has(cent)) c.ultimasCentenas.set(cent, dS);
@@ -10434,8 +10481,8 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                     milharesAtrasadas: Object.keys(c.milharLastDate).filter(m => c.milharLastDate[m] < dataAtrasada).sort((a, b) => c.milharLastDate[a] - c.milharLastDate[b]).slice(0, 50),
                     blacklist: Array.from(c.blacklist),
                     dezenasQuentes: Object.keys(c.dezenaCounts).sort((a, b) => c.dezenaCounts[b] - c.dezenaCounts[a]).slice(0, 50),
-                    bichosAtrasados1Premio: tabelaDeGrupos.map(b => ({ ...b, data: c.ultimosVistos1Premio.get(b.grupo) || dataAntiga })).sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, 5),
-                    bichosFrequentes: Array.from(c.bichoFrequencia.entries()).map(([g, count]) => ({ ...tabelaDeGrupos.find(x => x.grupo === g), count })).sort((a, b) => b.count - a.count).slice(0, 5),
+                    bichosAtrasados1Premio: tabelaDeGrupos.map(b => ({ ...b, data: c.ultimosVistos1Premio.get(b.grupo) || dataAntiga })).sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, 10),
+                    bichosFrequentes: Array.from(c.bichoFrequencia.entries()).map(([g, count]) => ({ ...tabelaDeGrupos.find(x => x.grupo === g), count })).sort((a, b) => b.count - a.count).slice(0, 10),
                     dezenasAtrasadas: getAtrasos(c.ultimasDezenas, 5),
                     centenasAtrasadas: getAtrasos(c.ultimasCentenas, 5),
                     unidadesAtrasadas: getAtrasos(c.ultimasUnidades, 2),
@@ -11304,9 +11351,11 @@ async function getPuxadaDoDiaIA(loteria) {
         if (querySnapshot.empty) return null;
         const ultimoBichoData = querySnapshot.docs[0].data();
         const ultimoGrupo = ultimoBichoData.bichoGrupo;
-        if (!ultimoGrupo || !puxadas[ultimoGrupo]) return null;
-        // Retorna a lista completa de puxadas (Fixo)
-        return puxadas[ultimoGrupo]; 
+        if (!ultimoGrupo) return null;
+        // Usa afinidades dinâmicas do treinamento se disponíveis, senão cai na tabela fixa
+        const summaryDoc = await firestoreDB.collection('analises_ia').doc(loteria).get();
+        const afinDinamicas = summaryDoc.exists ? (summaryDoc.data()?.geral?.afinidades?.[ultimoGrupo] || null) : null;
+        return afinDinamicas || puxadas[ultimoGrupo] || null;
     } catch (error) {
         console.error("Erro ao buscar Puxada do Dia I.A.:", error);
         return null;
@@ -15354,6 +15403,66 @@ updateNetworkStatusIA();
     showMilharesCentenasDezenas(); // Atualiza a conversão em tempo real
 }
 
+async function abrirHistoricoPalpitesIA() {
+    // 1. Primeiro fecha o menu hub para não sobrepor sombras
+    if (typeof closeAnalysisHubModal === 'function') closeAnalysisHubModal();
+
+    const modal = document.getElementById('historicoPalpitesIAModal');
+    const container = document.getElementById('listaHistoricoPalpites');
+    
+    if (!modal) {
+        showToast("Erro: Janela de histórico não encontrada.", "error");
+        return;
+    }
+
+    // 2. FORÇA O MODAL PARA A FRENTE (Garante que não abra por trás)
+    modal.classList.add('active');
+    modal.style.zIndex = "10000"; 
+    modal.style.display = "flex";
+
+    container.innerHTML = '<p style="text-align: center; padding: 20px;">🔍 Buscando análises salvas...</p>';
+
+    try {
+        const snapshot = await firestoreDB.collection('historico_palpites_ia')
+            .orderBy('timestamp', 'desc')
+            .limit(30)
+            .get();
+
+        if (snapshot.empty) {
+            container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhum palpite salvo nos últimos 5 dias.</p>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const topBicho = data.ranking && data.ranking[0] ? data.ranking[0].emoji : '🔮';
+            
+            // Usamos uma variável limpa para o conteúdo para não quebrar o HTML
+            const textoLimpo = data.conteudo.replace(/`/g, "'");
+
+            html += `
+            <div class="saved-item" style="border-left: 4px solid #6f42c1; margin-bottom: 10px; background: rgba(128,128,128,0.05);">
+                <div class="saved-item-header" style="padding: 10px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <div class="saved-item-title" style="font-size: 0.85rem;">
+                        ${topBicho} ${data.loteriaNome} - ${data.horario}<br>
+                        <small style="color: #888;">Data: ${data.data}</small>
+                    </div>
+                    <div class="saved-item-toggle">▼</div>
+                </div>
+                <div class="saved-item-content" style="display: none; padding: 15px; background: rgba(0,0,0,0.03); font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; border-top: 1px solid rgba(0,0,0,0.1);">
+                    ${textoLimpo}
+                    <button onclick="copyToClipboard(\`${textoLimpo}\`, this)" class="load-button" style="width: 100%; margin-top: 10px; padding: 10px; font-size: 0.75rem;">📋 Copiar Novamente</button>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Erro histórico IA:", e);
+        container.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar dados do servidor.</p>';
+    }
+}
+
 function displayResultsWithSummary(type, resultsArray) {
     if (!resultsArray || resultsArray.length === 0) return;
 
@@ -15640,14 +15749,18 @@ let auditoriaSorteiosProcessados = []; // Cache para evitar re-leitura do banco 
 
 async function abrirAuditoriaIA() {
     const modal = document.getElementById('auditoriaIAModal');
+    if (!modal) return;
 
-    // 1. AUTO-REPARO DE TELA: Desenha a estrutura perfeita da janela pelo JS!
+    // 1. ABRE O MODAL IMEDIATAMENTE (Feedback instantâneo)
+    modal.classList.add('active');
+
+    // 2. AUTO-REPARO DE TELA (Seu template original)
     const modalContent = modal.querySelector('.modal-content');
     modalContent.innerHTML = `
         <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
         <h3 class="modal-title" style="margin-bottom: 5px;">📊 Performance da Inteligência</h3>
 
-        <div id="auditoriaLoteriasMenu" style="display: flex; gap: 5px; overflow-x: auto; padding: 30px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+        <div id="auditoriaLoteriasMenu" style="display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
             <button onclick="filtrarAuditoria('todas')" class="receipt-extraction-btn selected" id="filter-todas" style="min-width: 80px;">Geral</button>
             <button onclick="filtrarAuditoria('rj')" class="receipt-extraction-btn" id="filter-rj" style="min-width: 60px;">RJ</button>
             <button onclick="filtrarAuditoria('lk')" class="receipt-extraction-btn" id="filter-lk" style="min-width: 60px;">LK</button>
@@ -15679,11 +15792,15 @@ async function abrirAuditoriaIA() {
         <button onclick="fecharAuditoriaIA()" class="load-button" style="width: 100%; margin-top: 15px; padding: 12px; font-weight: bold;">Fechar Relatório</button>
     `;
 
-    modal.classList.add('active');
-
     try {
-        // Atualiza a I.A antes de auditar
-        await runSilentIAUpdate(1);
+        // 3. ATUALIZAÇÃO COM "ESCUDO" DE TEMPO (Evita o travamento infinito)
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 6000));
+        
+        try {
+            await Promise.race([runSilentIAUpdate(1), timeout]);
+        } catch (e) {
+            console.warn("Aviso: Sincronização demorada. Carregando dados existentes.");
+        }
 
         const snapshot = await firestoreDB.collection('resultados')
             .orderBy('data', 'desc')
@@ -15691,7 +15808,7 @@ async function abrirAuditoriaIA() {
             .get();
 
         if (snapshot.empty) {
-            document.getElementById('auditoriaResultados').innerHTML = '<p style="text-align:center; padding:20px;">Nenhum dado encontrado para auditoria.</p>';
+            document.getElementById('auditoriaResultados').innerHTML = '<p style="text-align:center; padding:20px;">Nenhum dado encontrado.</p>';
             return;
         }
 
@@ -15711,20 +15828,20 @@ async function abrirAuditoriaIA() {
             gruposSorteios[key].premios.push(res);
         });
 
-        auditoriaSorteiosProcessados = Object.values(gruposSorteios);
+        // Salva na global para os filtros funcionarem
+        window.auditoriaSorteiosProcessados = Object.values(gruposSorteios);
         
         window.loteriaFiltroAtiva = 'todas';
-        window.periodoFiltroAtivo = 1; // Força a começar no "Hoje"
+        window.periodoFiltroAtivo = 1; 
 
-        // Chama o filtro para processar e exibir
+        // 4. CHAMA A EXIBIÇÃO FINAL
         filtrarAuditoria('todas', 1); 
 
     } catch (e) {
         console.error("Erro Auditoria:", e);
-        document.getElementById('auditoriaResultados').innerHTML = '<p style="text-align:center; color:red;">Erro ao conectar com a base de dados.</p>';
+        document.getElementById('auditoriaResultados').innerHTML = '<p style="text-align:center; color:red; padding:20px;">Erro ao conectar. Verifique sua conexão.</p>';
     }
 }
-
 
 async function filtrarAuditoria(loteriaFiltro, dataFiltroArg = null) {
     window.loteriaFiltroAtiva = loteriaFiltro || window.loteriaFiltroAtiva || 'todas';
@@ -18078,10 +18195,6 @@ async function ensureCorrectGenModeVisualState() {
         showToast(allowRepetition ? 'Repetição de números permitida.' : 'Números repetidos serão ignorados.', 'info');
         showMilharesCentenasDezenas(); 
     }
-
-function fecharAuditoriaIA() {
-    document.getElementById('auditoriaIAModal').classList.remove('active');
-}
 
    async function showRandomGeneratorModal() {
     if (document.activeElement) document.activeElement.blur();
@@ -21210,7 +21323,7 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
             const vizinhoDepois = top1GrupoInt === 25 ? '01' : String(top1GrupoInt + 1).padStart(2, '0');
 
             if (b.grupo === vizinhoAntes || b.grupo === vizinhoDepois) {
-                scoreFinal += 45; novosMotivos.push("Vizinho do Atrasado (+45)");
+                scoreFinal += 15; novosMotivos.push("Vizinho do Atrasado (+15)");
             }
             if (analise.afinidades && analise.afinidades[top1GrupoStr] && analise.afinidades[top1GrupoStr].includes(b.grupo)) {
                 scoreFinal += 30; novosMotivos.push("Afinidade com 1º Prêmio (+30)");
@@ -21223,12 +21336,20 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
         
         // 👇 A MÁGICA FOI ALTERADA AQUI 👇
         // Antes era: -80 e ia pra Geladeira. Agora é +20 e vira Tendência de Repetição!
-        if (analise.ciclos && analise.ciclos[b.grupo] && analise.ciclos[b.grupo].atual === 0) {
-             scoreFinal += 20; novosMotivos.push("🔄 Tendência de Repetição (+20)");
-        }
+        if (analise.ciclos && analise.ciclos[b.grupo]) {
+
+    const cg = analise.ciclos[b.grupo];
+
+    if (cg.atual < 2) {
+
+        scoreFinal -= 40; novosMotivos.push("❄️ Geladeira: saiu recentemente (-40)");
+
+    }
+
+}
 
         if (checarBichoDaCruz(b.dezenas)) {
-            scoreFinal += 60; novosMotivos.unshift(`🌟 Bicho da Cruz do Dia`);
+            scoreFinal += 25; novosMotivos.unshift(`🌟 Bicho da Cruz do Dia`);
         }
 
         if (turnoAtual === 'dia' && bichosDiurnos.includes(b.grupo)) {
@@ -21268,13 +21389,16 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
     const bichoSombra = todosJuntos[todosJuntos.length - 1];
 
     // 🦓 RADAR DE ZEBRA (Análise de Probabilidade vs. Imprevistos)
-    let volatilidade = { nivel: '🟢 Baixa', texto: 'Favorável (Seguindo a lógica)' };
-    const chanceZebra = getSeededInt(100);
-
-    if (chanceZebra > 80) {
-        volatilidade = { nivel: '🔴 Alta', texto: 'Imprevisível (Quebrando estatísticas)' };
-    } else if (chanceZebra > 55) {
-        volatilidade = { nivel: '🟡 Média', texto: 'Instável (Chance de surpresas)' };
+    const scoresParaDesvio = todosJuntos.map(b => b.forca);
+    const mediaDesvio = scoresParaDesvio.reduce((a, v) => a + v, 0) / (scoresParaDesvio.length || 1);
+    const desvio = Math.sqrt(scoresParaDesvio.map(s => (s - mediaDesvio) ** 2).reduce((a, v) => a + v, 0) / (scoresParaDesvio.length || 1));
+    let volatilidade;
+    if (desvio < 15) {
+        volatilidade = { nivel: '🔴 Alta', texto: 'Imprevisível (Bichos muito empatados)' };
+    } else if (desvio < 30) {
+        volatilidade = { nivel: '🟡 Média', texto: 'Instável (Leve vantagem dos favoritos)' };
+    } else {
+        volatilidade = { nivel: '🟢 Baixa', texto: 'Favorável (Favoritos bem destacados)' };
     }
 
     const unidadesTop = (analise.unidadesAtrasadas || []).slice(0, 2).map(u => u.numero);
@@ -21306,7 +21430,7 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
     palpites.milhar = [];
     for(let i = 0; i < 8; i++) {
         let b = rankingTop10[i];
-        let prefixo = analise.prefixosPorBicho?.[b.grupo]?.[0] || String(getSeededInt(100)).padStart(2, '0');
+        let prefixo = analise.prefixosPorBicho?.[b.grupo]?.[i % 3] || String(getSeededInt(100)).padStart(2, '0');
         if (centenasTop.length > 0) prefixo = prefixo.charAt(0) + centenasTop[0];
         palpites.milhar.push({ palpite: prefixo + dezenasEscolhidas[i], tipo: b.animal });
     }
@@ -22009,7 +22133,8 @@ const DEFAULT_VISIBLE_BUTTONS = {
     'btnSubBoletimGlobal': true, // 📊 Acertos I.A
 };
 
-const ADMIN_MENU_HASH = "MTIxMjEy";
+const ADMIN_MENU_HASH = "a728c7f270c44fc1c61690fed61525fa13ecdaee1e0b37b3d42cf4fb70ea4d82";
+
 
 async function hashPassword(str) {
     const encoder = new TextEncoder();
@@ -22077,7 +22202,7 @@ async function unlockMenuConfig() {
 
     // Converte o número digitado para Texto e codifica em Base64
     // btoa() é uma função nativa que funciona em qualquer navegador/celular
-    const inputEncoded = btoa(String(password));
+    const inputEncoded = await hashPassword(String(password));
 
     if (inputEncoded === ADMIN_MENU_HASH) {
     document.getElementById('btnUnlockMenuConfig').style.display = 'none';
@@ -22543,6 +22668,7 @@ async function prepararOpcoesKit(kitIndex, btnElement) {
     const dataHora = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     const custoCalculado = 'R$ ' + (kitNumbers.length * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    // RECIBO INTERNO (Sem a linha "Possível Prêmio")
     const rawReceiptContent = `
 ==============================
       RECIBO DE APOSTA
@@ -22611,18 +22737,17 @@ ${numerosTextoInterno}
         msg += `Obrigado e Boa sorte! 🍀\n\n`;
         msg += `📲 VIP - I.A in Real-Time`;
 
-        // Salva a mensagem na memória
         window.kitMessages[kitIndex] = msg;
 
-        // DIVIDE O BOTÃO EM DOIS NA TELA
+        // DIVIDE O BOTÃO EM DOIS (Ajustado para não quebrar o layout)
         const actionContainer = document.getElementById(`kit-actions-${kitIndex}`);
         if (actionContainer) {
             actionContainer.innerHTML = `
-                <div style="display: flex; gap: 5px; width: 100%; flex-wrap: wrap;">
-                    <button onclick="finalizarKitAcao(${kitIndex}, 'copy', this)" class="kit-action-btn copy" style="flex: 1 1 45%; background-color: #6c757d;">
+                <div style="display: flex; gap: 4px; width: 100%; margin-top: 5px;">
+                    <button onclick="finalizarKitAcao(${kitIndex}, 'copy', this)" class="kit-action-btn" style="flex: 1; background-color: #6c757d; font-size: 0.65rem; padding: 10px 2px;">
                         📋 Copiar
                     </button>
-                    <button onclick="finalizarKitAcao(${kitIndex}, 'whatsapp', this)" class="kit-action-btn zap" style="flex: 1 1 45%; background-color: #25D366;">
+                    <button onclick="finalizarKitAcao(${kitIndex}, 'whatsapp', this)" class="kit-action-btn" style="flex: 1; background-color: #25D366; font-size: 0.65rem; padding: 10px 2px;">
                         📲 Whats
                     </button>
                 </div>
@@ -22635,10 +22760,8 @@ ${numerosTextoInterno}
         btnElement.innerHTML = originalText;
         btnElement.disabled = false;
     }
-}
 
-// 2. EXECUTA A AÇÃO ESCOLHIDA (COPIAR OU ZAP) E DESLIGA O CARD
-async function finalizarKitAcao(kitIndex, acao, btnElement) {
+    async function finalizarKitAcao(kitIndex, acao, btnElement) {
     const msg = window.kitMessages[kitIndex];
     if (!msg) return;
 
@@ -22653,21 +22776,22 @@ async function finalizarKitAcao(kitIndex, acao, btnElement) {
     // Bloqueia e acinza o card inteiro após usar
     const cardPai = document.getElementById(`cardKit-${kitIndex}`);
     if(cardPai) {
-        cardPai.style.opacity = "0.6";
+        cardPai.style.opacity = "0.5"; // Diminuído um pouco mais para maior destaque
         cardPai.style.filter = "grayscale(1)";
         
         const actionContainer = document.getElementById(`kit-actions-${kitIndex}`);
         if (actionContainer) {
-            actionContainer.innerHTML = `<button disabled class="save-button" style="width: 100%; background-color: #6c757d; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: none; white-space: nowrap;">✅ ENVIADO</button>`;
+            actionContainer.innerHTML = `<button disabled class="save-button" style="width: 100%; background-color: #6c757d; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: none; white-space: nowrap; opacity: 1;">✅ ENVIADO</button>`;
         }
     }
 
-    // Salva na memória que esse já foi despachado
+    // Salva na memória permanente do navegador
     if (!window.copiedKitsStatus) window.copiedKitsStatus = [];
     if (!window.copiedKitsStatus.includes(kitIndex)) {
         window.copiedKitsStatus.push(kitIndex);
         saveData('kitsCopiedData', window.copiedKitsStatus);
     }
+}
 }
 
 </script>
