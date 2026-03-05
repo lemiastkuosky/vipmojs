@@ -8232,12 +8232,12 @@ body.dark-mode .kit-bicho-card.esgotado {
                     <div style="flex: 1;">
                         <label style="font-weight: bold; font-size: 0.8rem;">Extração:</label>
                         <select id="kitsExtracaoSelect" class="save-dialog-input" style="margin:0;" onchange="updateKitsTimes()">
-    <option value="" disabled selected>-- Escolha --</option>
-    <option value="Rio de Janeiro">RJ</option>
-    <option value="Nacional">Nacional</option>
-    <option value="Look">Look</option>
-    <option value="Loteria Federal">Federal</option>
-</select>
+                            <option value="" disabled selected>-- Escolha --</option>
+                            <option value="Rio de Janeiro">RJ</option>
+                            <option value="Nacional">Nacional</option>
+                            <option value="Look">Look</option>
+                            <option value="Loteria Federal">Federal</option>
+                        </select>
                     </div>
                     <div style="flex: 1;">
                         <label style="font-weight: bold; font-size: 0.8rem;">Horário:</label>
@@ -8264,14 +8264,19 @@ body.dark-mode .kit-bicho-card.esgotado {
             </button>
 
             <div id="kitsResultadosContainer" style="margin-top: 20px; display: none; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 15px;">
-    <h4 style="text-align: center; color: #007bff; margin-bottom: 10px;">📦 Pacotes Prontos!</h4>
-    
-    <div id="kitsListOutput" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;"></div>
+                <h4 style="text-align: center; color: #007bff; margin-bottom: 10px;">📦 Pacotes Prontos!</h4>
+                
+                <div id="kitsListOutput" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;"></div>
 
-    <button type="button" onclick="resetKitsVendas()" class="import-btn" style="width: 100%; margin-top: 20px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; padding: 12px; cursor: pointer; opacity: 0.8;">
-        ♻️ Apagar e Zerar Estoque
-    </button>
-</div>
+                <button type="button" onclick="resetKitsVendas()" class="import-btn" style="width: 100%; margin-top: 20px; background-color: #ffc107; color: #333; border: none; border-radius: 8px; font-weight: bold; padding: 12px; cursor: pointer; box-shadow: 0 3px 0 #e0a800; transition: 0.2s;">
+                    ⚠️ Apagar e Zerar Estoque
+                </button>
+            </div>
+            
+            <button type="button" onclick="fecharKitsMCD()" class="load-button" style="width: 100%; margin-top: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; padding: 12px; cursor: pointer; box-shadow: 0 3px 0 #5a6268; transition: 0.2s;">
+                ❌ Fechar Janela
+            </button>
+
         </div>
     </div>
 </div>
@@ -8511,14 +8516,14 @@ const token = await messaging.getToken({
             { display: '23:00', corteMinutos: 1 }
         ],
         'Look': [
-            { display: '07:00', corteMinutos: 1 },
-            { display: '09:00', corteMinutos: 1 },
-            { display: '11:00', corteMinutos: 1 },
-            { display: '14:00', corteMinutos: 1 },
-            { display: '16:00', corteMinutos: 1 },
-            { display: '18:00', corteMinutos: 1 },
-            { display: '21:00', corteMinutos: 1 },
-            { display: '23:00', corteMinutos: 1 }
+            { display: '07:20', corteMinutos: 1 },
+            { display: '09:20', corteMinutos: 1 },
+            { display: '11:20', corteMinutos: 1 },
+            { display: '14:20', corteMinutos: 1 },
+            { display: '16:20', corteMinutos: 1 },
+            { display: '18:20', corteMinutos: 1 },
+            { display: '21:20', corteMinutos: 1 },
+            { display: '23:20', corteMinutos: 1 }
         ],
         'Loteria Federal': [
             { display: '20:00', corteMinutos: 1 }
@@ -22312,28 +22317,80 @@ function shareAuditSummary() {
 // === MÓDULO: KITS DE VENDAS (MCD) ===
 // ========================================================
 
-// Variável para controlar o estoque de milhares dentro do módulo de Kits
 window.kitsStockPools = null;
+window.currentGeneratedKits = [];
 
+function promptForKitBichos(bichosDoKit, numKit, valorAtual) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('customConfirmModal');
+        const messageEl = document.getElementById('customConfirmModalMessage');
+        const okBtn = document.getElementById('customConfirmOk');
+        const cancelBtn = document.getElementById('customConfirmCancel');
+
+        let html = `
+            <p style="font-size: 1.05rem; margin-bottom: 10px; color: #007bff;"><strong>📦 Venda do Kit #${numKit}</strong></p>
+            <p style="font-size: 0.9rem; margin-bottom: 15px;">Desmarque os bichos que o cliente <b>NÃO</b> vai querer (eles voltarão para o estoque):</p>
+            
+            <div id="popupKitBichos" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px;">
+        `;
+
+        bichosDoKit.forEach(b => {
+            html += `
+                <label style="background: #e9ecef; color: #333; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; border: 1px solid #ccc; font-weight: bold; transition: 0.2s;">
+                    <input type="checkbox" value="${b.grupo}" checked style="transform: scale(1.3); margin-right: 8px;"> ${b.emoji} G${b.grupo} - ${b.animal}
+                </label>
+            `;
+        });
+
+        html += `
+            </div>
+            <div style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px;">
+                <label style="font-weight: bold; font-size: 0.85rem; display: block; margin-bottom: 5px;">Valor cobrado neste kit:</label>
+                <input type="text" id="popupKitPrice" class="save-dialog-input" value="${valorAtual}" oninput="formatCurrency(this)" style="margin: 0; text-align: center; color: #28a745; font-weight: bold; font-size: 1.1rem;">
+            </div>
+        `;
+
+        messageEl.innerHTML = html;
+        okBtn.textContent = '✅ Confirmar Venda';
+        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.style.display = 'inline-flex';
+        modal.style.zIndex = '1600'; 
+        modal.classList.add('active');
+
+        const onOk = () => {
+            const checkedValues = Array.from(modal.querySelectorAll('#popupKitBichos input:checked')).map(cb => cb.value);
+            const finalPrice = document.getElementById('popupKitPrice').value;
+            cleanup();
+            resolve({ selectedGrupos: checkedValues, finalPrice: finalPrice });
+        };
+        const onCancel = () => { cleanup(); resolve(null); };
+        const cleanup = () => {
+            modal.classList.remove('active');
+            okBtn.replaceWith(okBtn.cloneNode(true));
+            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+        };
+
+        document.getElementById('customConfirmOk').addEventListener('click', onOk, { once: true });
+        document.getElementById('customConfirmCancel').addEventListener('click', onCancel, { once: true });
+    });
+}
 
 function atualizarVisualEstoqueKits() {
     if (!window.kitsStockPools) return;
 
     tabelaDeGrupos.forEach(bicho => {
         const spanEstoque = document.getElementById(`kits-stock-${bicho.grupo}`);
-        const cardBicho = document.getElementById(`kit-card-${bicho.grupo}`); // Pega o card inteiro
+        const cardBicho = document.getElementById(`kit-card-${bicho.grupo}`); 
 
         if (spanEstoque && cardBicho) {
             const qtdRestante = window.kitsStockPools[bicho.grupo].length;
             spanEstoque.textContent = qtdRestante;
             
-            // Remove o bloqueio por padrão
             cardBicho.classList.remove('esgotado');
             cardBicho.querySelector('input').disabled = false;
 
-            // Aplica a cor dependendo da quantidade
             if (qtdRestante === 0) {
-                cardBicho.classList.add('esgotado'); // Aplica visual vermelho e bloqueia
+                cardBicho.classList.add('esgotado'); 
                 cardBicho.querySelector('input').disabled = true; 
                 spanEstoque.textContent = "ESGOTADO";
             } else if (qtdRestante <= 100) {
@@ -22347,26 +22404,26 @@ function atualizarVisualEstoqueKits() {
     });
 }
 
-window.currentGeneratedKits = [];
-
 async function abrirKitsMCD() {
     const modal = document.getElementById('kitsMcdModal');
     if (!modal) return;
 
-    // 1. TENTA CARREGAR DA MEMÓRIA ANTES DE CRIAR DO ZERO
     if (!window.kitsStockPools) {
         const savedStock = await getData('kitsStockData');
         const savedKits = await getData('kitsGeneratedData');
-        const savedCopied = await getData('kitsCopiedData'); // <-- NOVO: Puxa os copiados
+        const savedCopied = await getData('kitsCopiedData'); 
+        const savedSold = await getData('kitsSoldStatusData'); // <-- AQUI ESTAVA O BUG (Não puxava)
 
         if (savedStock) {
             window.kitsStockPools = savedStock;
             window.currentGeneratedKits = savedKits || [];
-            window.copiedKitsStatus = savedCopied || []; // <-- NOVO: Restaura os copiados
+            window.copiedKitsStatus = savedCopied || []; 
+            window.kitsSoldStatus = savedSold || []; // <-- Restaura as vendas feitas
         } else {
             window.kitsStockPools = {};
             window.currentGeneratedKits = [];
-            window.copiedKitsStatus = []; // 
+            window.copiedKitsStatus = []; 
+            window.kitsSoldStatus = []; 
             window.kitMessages = {};
             tabelaDeGrupos.forEach(bicho => {
                 const poolBicho = [];
@@ -22391,7 +22448,7 @@ async function abrirKitsMCD() {
             label.innerHTML = `
                 <input type="checkbox" value="${bicho.grupo}">
                 <div class="kit-bicho-emoji">${bicho.emoji}</div>
-                <div class="kit-bicho-name">${bicho.animal}</div>
+                <div class="kit-bicho-name">G${bicho.grupo} - ${bicho.animal}</div>
                 <div id="kits-stock-${bicho.grupo}" class="kit-bicho-stock">400</div>
             `;
             container.appendChild(label);
@@ -22400,17 +22457,29 @@ async function abrirKitsMCD() {
 
     atualizarVisualEstoqueKits();
     
+    // --- MAGICA DO HORÁRIO E EXTRAÇÃO ---
+    const selectExtracao = document.getElementById('kitsExtracaoSelect');
+    const selectHorario = document.getElementById('kitsHorarioSelect');
+    
+    const savedExtracao = await getData('kitsExtracaoData');
+    const savedHorario = await getData('kitsHorarioData');
+
+    if (selectExtracao) {
+        if (savedExtracao && window.currentGeneratedKits.length > 0) {
+            selectExtracao.value = savedExtracao;
+            await updateKitsTimes(savedHorario); 
+        } else {
+            selectExtracao.value = ''; 
+            if (selectHorario) selectHorario.innerHTML = ''; 
+        }
+    }
+
     const containerResultados = document.getElementById('kitsResultadosContainer');
     if (window.currentGeneratedKits && window.currentGeneratedKits.length > 0) {
         renderizarListaDeKits();
     } else {
         if (containerResultados) containerResultados.style.display = 'none';
     }
-
-    const selectExtracao = document.getElementById('kitsExtracaoSelect');
-    const selectHorario = document.getElementById('kitsHorarioSelect');
-    if (selectExtracao) selectExtracao.value = ''; 
-    if (selectHorario) selectHorario.innerHTML = ''; 
 
     const chkMostrarMilhares = document.getElementById('chkMostrarMilharesKit');
     if (chkMostrarMilhares) {
@@ -22432,7 +22501,8 @@ function selecionarTodosBichosKits(estado) {
     });
 }
 
-function updateKitsTimes() {
+// MOTOR INTELIGENTE DE HORÁRIOS
+async function updateKitsTimes(savedHorario = null) {
     const extracao = document.getElementById('kitsExtracaoSelect').value;
     const timeSelect = document.getElementById('kitsHorarioSelect');
     timeSelect.innerHTML = '';
@@ -22445,11 +22515,73 @@ function updateKitsTimes() {
         opt.textContent = h.display;
         timeSelect.appendChild(opt);
     });
+
+    const agora = new Date();
+    let proximoSorteioDisponivel = null;
+    
+    let cutoffMinutosGlobal = 5;
+    try {
+        const savedCutoff = await getData('cutoffTimePreference'); 
+        if (savedCutoff !== null && savedCutoff !== undefined) {
+             cutoffMinutosGlobal = parseInt(savedCutoff, 10);
+        }
+    } catch(e) { }
+
+    if (schedule.length > 0) {
+        for (const sorteioInfo of schedule) {
+            const timeMatch = sorteioInfo.display.match(/(\d{2}):(\d{2})/);
+            if (!timeMatch) continue;
+
+            const sorteioHora = parseInt(timeMatch[1], 10);
+            const sorteioMinuto = parseInt(timeMatch[2], 10);
+            const dataSorteioHoje = new Date();
+            dataSorteioHoje.setHours(sorteioHora, sorteioMinuto, 0, 0);
+
+            const dataLimite = new Date(dataSorteioHoje);
+            let cutoffParaEsteSorteio = sorteioInfo.corteMinutos === 0 ? 0 : cutoffMinutosGlobal;
+            if (extracao === 'Look') cutoffParaEsteSorteio = -15; 
+            
+            dataLimite.setMinutes(dataSorteioHoje.getMinutes() - cutoffParaEsteSorteio);
+
+            if (agora < dataLimite) {
+                proximoSorteioDisponivel = sorteioInfo.display;
+                break;
+            }
+        }
+
+        // Se tem sorteio rolando ainda hoje
+        if (proximoSorteioDisponivel) {
+            // Se veio um horário da memória
+            if (savedHorario && typeof savedHorario === 'string') {
+                let savedIndex = schedule.findIndex(h => h.display === savedHorario);
+                let nextIndex = schedule.findIndex(h => h.display === proximoSorteioDisponivel);
+                
+                // Se o salvo ainda NÃO PASSOU, mantém ele
+                if (savedIndex !== -1 && savedIndex >= nextIndex) {
+                    timeSelect.value = savedHorario;
+                } else {
+                    // SE JÁ PASSOU, AVANÇA AUTOMATICAMENTE PRO PRÓXIMO!
+                    timeSelect.value = proximoSorteioDisponivel;
+                    saveData('kitsHorarioData', proximoSorteioDisponivel); // Atualiza memória
+                }
+            } else {
+                timeSelect.value = proximoSorteioDisponivel;
+            }
+        } else {
+            // Se já acabaram os sorteios de hoje, fixa no último pra não bugar
+            timeSelect.value = schedule[schedule.length - 1].display;
+        }
+    }
+    
+    // Atualiza os recibos visuais se eles já estiverem na tela
+    if (window.currentGeneratedKits && window.currentGeneratedKits.length > 0 && typeof renderizarListaDeKits === 'function') {
+        renderizarListaDeKits();
+    }
 }
 
 async function gerarKitsVendas() {
-    // 1. Validações iniciais básicas
     const extracao = document.getElementById('kitsExtracaoSelect').value;
+    const horario = document.getElementById('kitsHorarioSelect').value; 
     if (!extracao) { showToast('Por favor, selecione uma Extração primeiro.', 'error'); return; }
 
     const qtdKits = parseInt(document.getElementById('kitsQtdInput').value, 10);
@@ -22458,20 +22590,15 @@ async function gerarKitsVendas() {
     if (isNaN(qtdKits) || qtdKits < 1) { showToast('Digite a quantidade de kits.', 'error'); return; }
     if (checkboxes.length === 0) { showToast('Selecione os bichos.', 'error'); return; }
 
-    // === TRAVA DE SEGURANÇA COM RESTAURAÇÃO DE ESTOQUE ===
+    // === TRAVA DE SEGURANÇA ===
     if (window.currentGeneratedKits && window.currentGeneratedKits.length > 0) {
         const confirmou = await showCustomConfirm(
             "⚠️ <b>Atenção!</b><br><br>Você já tem pacotes na tela. Criar novos irá apagá-los e <b>restaurar o estoque de todos os bichos para 400</b>.<br><br>Deseja recomeçar?",
-            "Sim, Gerar Novos",
-            "Cancelar",
-            "kitsMcdModal"
+            "Sim, Gerar Novos", "Cancelar", "kitsMcdModal"
         );
         
-        if (!confirmou) {
-            return; // Se cancelar, para aqui e não afeta nada
-        }
+        if (!confirmou) return;
 
-        // Restaura a memória do estoque para 400 antes de sortear os novos
         window.kitsStockPools = {};
         tabelaDeGrupos.forEach(bicho => {
             const poolBicho = [];
@@ -22482,40 +22609,32 @@ async function gerarKitsVendas() {
             });
             window.kitsStockPools[bicho.grupo] = poolBicho;
         });
-        atualizarVisualEstoqueKits(); // Dá um "refresh" na tela para os números voltarem a ficar verdes
+        atualizarVisualEstoqueKits(); 
         window.copiedKitsStatus = []; 
+        window.kitsSoldStatus = []; // Zera as vendas da geração anterior
         window.kitMessages = {};
     }
-    // =========================================================
 
-    // TENTATIVA DIRETA DE GERAÇÃO (MATEMÁTICA PERFEITA E EMBARALHADA)
     try {
         const gruposSelecionados = Array.from(checkboxes).map(cb => cb.value);
 
-        // Verifica se há estoque antes de começar
         let temEstoque = false;
         for (const grupo of gruposSelecionados) {
             if (window.kitsStockPools[grupo] && window.kitsStockPools[grupo].length > 0) {
-                temEstoque = true;
-                break;
+                temEstoque = true; break;
             }
         }
 
         if (!temEstoque) {
-            showToast("Estoque esgotado para os bichos selecionados!", "error");
-            return;
+            showToast("Estoque esgotado para os bichos selecionados!", "error"); return;
         }
 
-        // Inicializa os arrays dos kits vazios
         window.currentGeneratedKits = Array.from({ length: qtdKits }, () => []);
+        window.kitsSoldStatus = Array.from({ length: qtdKits }, () => ({})); // Prepara o terreno pra nova venda
 
-        // DISTRIBUIÇÃO E REMOÇÃO EXATA
         for (const grupo of gruposSelecionados) {
-            if (!window.kitsStockPools[grupo] || window.kitsStockPools[grupo].length === 0) {
-                continue; // Pula se não tiver estoque
-            }
+            if (!window.kitsStockPools[grupo] || window.kitsStockPools[grupo].length === 0) continue; 
 
-            // Pega os números do estoque e embaralha a "urna" inteira do bicho
             let estoqueBicho = [...window.kitsStockPools[grupo]];
             shuffleArray(estoqueBicho);
 
@@ -22527,36 +22646,29 @@ async function gerarKitsVendas() {
 
             for (let k = 0; k < qtdKits; k++) {
                 const qtdParaEsteKit = qtdBasePorKit + (k < resto ? 1 : 0);
-                
                 if (qtdParaEsteKit > 0) {
-                    // Corta exatamente a quantidade de milhares para este kit (Garante 0 erros)
                     const pedaco = estoqueBicho.slice(indexEstoque, indexEstoque + qtdParaEsteKit);
                     window.currentGeneratedKits[k].push(...pedaco);
                     indexEstoque += qtdParaEsteKit;
                 }
             }
-
-            // O que sobrou da urna (se distribuiu tudo, sobra nada) vira o novo estoque exato
             window.kitsStockPools[grupo] = estoqueBicho.slice(indexEstoque);
         }
 
-        // === A MÁGICA DA MISTURA ACONTECE AQUI ===
-        // Em vez de ordenar os números sequencialmente, ele EMBARALHA dentro do pacote final
-        window.currentGeneratedKits.forEach(kit => {
-            shuffleArray(kit); 
-        });
-
-        // Remove kits que ficaram vazios (caso peça mais kits que o limite do estoque)
+        window.currentGeneratedKits.forEach(kit => shuffleArray(kit)); 
         window.currentGeneratedKits = window.currentGeneratedKits.filter(kit => kit.length > 0);
 
         atualizarVisualEstoqueKits();
         renderizarListaDeKits();
         selecionarTodosBichosKits(false); 
 
-        // SALVA O ESTOQUE E OS KITS NA MEMÓRIA DO CELULAR
+        // SALVA TUDO NA MEMÓRIA
+        saveData('kitsExtracaoData', extracao); 
+        saveData('kitsHorarioData', horario);   
         saveData('kitsStockData', window.kitsStockPools);
         saveData('kitsGeneratedData', window.currentGeneratedKits);
         saveData('kitsCopiedData', window.copiedKitsStatus);
+        saveData('kitsSoldStatusData', window.kitsSoldStatus); // Salva o status de vendas zerado
 
     } catch (e) {
         console.error(e);
@@ -22564,60 +22676,171 @@ async function gerarKitsVendas() {
     }
 }
 
+window.resetKitsVendas = async function() {
+    let confirmou = false;
+
+    try {
+        confirmou = await showCustomConfirm(
+            "⚠️ <b>Zerar tudo e restaurar estoque?</b><br><br>Isso removerá os kits gerados e voltará todos os bichos para 400 milhares.", 
+            "Sim, Limpar Tudo", "Cancelar", null
+        );
+    } catch(e) {
+        confirmou = true; 
+    }
+
+    if (!confirmou) return; 
+
+    const container = document.getElementById('kitsResultadosContainer');
+    if (container) container.style.display = 'none';
+
+    const output = document.getElementById('kitsListOutput');
+    if (output) output.innerHTML = ''; 
+
+    document.querySelectorAll('#kitsBichosSelector input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+        cb.dispatchEvent(new Event('change'));
+    });
+
+    window.currentGeneratedKits = [];
+    window.kitsStockPools = null;
+    window.copiedKitsStatus = [];
+    window.kitsSoldStatus = []; // <-- Zera os status
+    window.kitMessages = {};
+    
+    // LIMPA A MEMÓRIA PARA PARAR DE LEMBRAR
+    removeData('kitsStockData');
+    removeData('kitsGeneratedData');
+    removeData('kitsCopiedData');
+    removeData('kitsSoldStatusData'); // <-- Apaga a memória de vendas antigas
+    removeData('kitsExtracaoData'); 
+    removeData('kitsHorarioData');  
+
+    const selectorContainer = document.getElementById('kitsBichosSelector');
+    if (selectorContainer) selectorContainer.innerHTML = '';
+
+    const selectExtracao = document.getElementById('kitsExtracaoSelect');
+    const selectHorario = document.getElementById('kitsHorarioSelect');
+    if (selectExtracao) selectExtracao.value = ''; 
+    if (selectHorario) selectHorario.innerHTML = ''; 
+
+    if (typeof abrirKitsMCD === 'function') abrirKitsMCD();
+    if (typeof atualizarVisualEstoqueKits === 'function') atualizarVisualEstoqueKits();
+
+    showToast("Tela limpa e estoque zerado!", "success");
+}
+
+// 1. DESENHA OS CARDS (Agora o Card Inteiro é Clicável!)
 function renderizarListaDeKits() {
     const container = document.getElementById('kitsResultadosContainer');
     const output = document.getElementById('kitsListOutput');
     output.innerHTML = '';
 
-    if (!window.copiedKitsStatus) window.copiedKitsStatus = [];
+    if (!window.kitsSoldStatus) window.kitsSoldStatus = [];
+
+    const selExtracao = document.getElementById('kitsExtracaoSelect');
+    const extracaoText = selExtracao && selExtracao.selectedIndex > 0 
+        ? selExtracao.options[selExtracao.selectedIndex].text : "S/ Extração";
+        
+    const selHorario = document.getElementById('kitsHorarioSelect');
+    const horarioText = selHorario && selHorario.value ? selHorario.value : "S/ Horário";
 
     window.currentGeneratedKits.forEach((kit, index) => {
         const numKit = index + 1;
-        const qtdNumeros = kit.length;
-        const preview = kit.slice(0, 3).join('-') + '...';
-
-        const bichosDoKit = new Set();
+        const statusKit = window.kitsSoldStatus[index] || {};
+        
+        const bichosInfo = {};
         kit.forEach(num => {
             const bichoData = getBichoDataFromNumber(num);
-            if (bichoData) bichosDoKit.add(`${bichoData.emoji} ${bichoData.animal}`);
+            if (bichoData) {
+                if (!bichosInfo[bichoData.grupo]) {
+                    bichosInfo[bichoData.grupo] = { ...bichoData, count: 0 };
+                }
+                bichosInfo[bichoData.grupo].count++;
+            }
         });
-        const nomesBichosStr = Array.from(bichosDoKit).join(', ');
 
-        const jaFoiCopiado = window.copiedKitsStatus.includes(index);
-        const cardOpacity = jaFoiCopiado ? "0.6" : "1";
-        const cardFilter = jaFoiCopiado ? "grayscale(1)" : "none";
+        let todosVendidos = true;
+        let temVendido = false;
+        let qtdNumerosRestantes = 0;
+        let visualBichosArr = [];
+
+        Object.values(bichosInfo).forEach(b => {
+            const isVendido = statusKit[b.grupo] === true;
+            if (!isVendido) {
+                todosVendidos = false; 
+                qtdNumerosRestantes += b.count;
+                visualBichosArr.push(`
+                    <div style="display: flex; justify-content: space-between; color: #155724; font-weight: bold; margin-bottom: 4px; padding: 4px 6px; background: rgba(40,167,69,0.15); border-radius: 4px; border: 1px dashed rgba(40,167,69,0.3);">
+                        <span>✅ ${b.emoji} G${b.grupo} - ${b.animal}</span>
+                        <span style="font-size:0.8em; opacity:0.9;">${b.count} un</span>
+                    </div>`);
+            } else {
+                temVendido = true;
+                visualBichosArr.push(`
+                    <div style="display: flex; justify-content: space-between; color: #721c24; text-decoration: line-through; opacity: 0.6; margin-bottom: 4px; padding: 4px 6px; background: rgba(220,53,69,0.1); border-radius: 4px; border: 1px dashed rgba(220,53,69,0.2);">
+                        <span>❌ ${b.emoji} G${b.grupo} - ${b.animal}</span>
+                        <span style="font-size:0.8em;">Vendido</span>
+                    </div>`);
+            }
+        });
+
+        const nomesBichosStr = visualBichosArr.join('');
         
-        // === NOVO: ÁREA DE BOTÕES DINÂMICA ===
+        const cardOpacity = todosVendidos ? "0.6" : "1"; 
+        const cardBgColor = todosVendidos ? "#e9ecef" : "#fffdeb"; 
+        const cardBorder = todosVendidos ? "#ccc" : "#d97706";     
+        
+        // A MÁGICA VISUAL: Muda o cursor do mouse para a mãozinha se o card for clicável
+        const cursorStyle = todosVendidos ? "default" : "pointer";
+        
         let actionAreaHtml = '';
-        if (jaFoiCopiado) {
-            actionAreaHtml = `<button disabled class="save-button" style="width: 100%; background-color: #6c757d; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: none; white-space: nowrap;">✅ ENVIADO</button>`;
+        if (todosVendidos) {
+            actionAreaHtml = `
+            <button onclick="event.stopPropagation(); reenviarVendidosKit(${index})" class="save-button" style="width: 100%; background-color: #6c757d; padding: 10px 2px; font-size: 0.85rem; font-weight: bold; border-radius: 6px; box-shadow: 0 3px 0 #495057; transition: 0.2s; color: white; border: none; cursor: pointer;">
+                🔁 Kit Esgotado (Reenviar)
+            </button>`;
         } else {
             actionAreaHtml = `
-            <div id="kit-actions-${index}" style="width: 100%;">
-                <button onclick="prepararOpcoesKit(${index}, this)" class="save-button" style="width: 100%; background-color: #28a745; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: 0 2px 0 #1e7e34; white-space: nowrap; transition: 0.2s;">
-                    📄 Preparar Envio
+            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                <button onclick="event.stopPropagation(); abrirVendaKit(${index})" class="save-button" style="width: 100%; background-color: #28a745; padding: 10px 2px; font-size: 0.85rem; font-weight: bold; border-radius: 6px; box-shadow: 0 3px 0 #1e7e34; transition: 0.2s; color: white; border: none; cursor: pointer;">
+                    🛒 Nova Venda
                 </button>
+                ${temVendido ? `
+                <button onclick="event.stopPropagation(); reenviarVendidosKit(${index})" class="load-button" style="width: 100%; background-color: #6c757d; color: white; padding: 8px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: 0 2px 0 #495057; border: none; cursor: pointer;">
+                    🔁 Reenviar Vendidos
+                </button>` : ''}
             </div>`;
         }
-        // =====================================
+
+        // A MÁGICA DA AÇÃO: O "onclick" direto no corpo do card (desativado se esgotado)
+        const onClickAction = todosVendidos ? "" : `onclick="abrirVendaKit(${index})"`;
 
         const cardHtml = `
-            <div id="cardKit-${index}" style="background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; transition: 0.3s; opacity: ${cardOpacity}; filter: ${cardFilter};">
+            <div id="cardKit-${index}" ${onClickAction} style="cursor: ${cursorStyle}; background: ${cardBgColor}; border: 1px solid ${cardBorder}; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; transition: 0.3s; opacity: ${cardOpacity}; box-shadow: 2px 4px 8px rgba(0,0,0,0.1); color: #333; position: relative;">
                 
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2px;">
-                    <strong style="font-size: 0.85rem;">📦 Kit #${numKit}</strong>
-                    <span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold;">${qtdNumeros} un</span>
+                <div style="position: absolute; top: -4px; left: 0; right: 0; height: 4px; background-image: radial-gradient(circle at 4px 0px, transparent 5px, ${cardBgColor} 6px); background-size: 10px 10px; background-repeat: repeat-x;"></div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed #b89f65; padding-bottom: 8px; margin-bottom: 10px;">
+                    <div style="text-align: left;">
+                        <strong style="font-size: 1.05rem; color: ${todosVendidos ? '#666' : '#b45309'};">🧾 Kit #${numKit}</strong>
+                        
+                        <div style="font-size: 0.7rem; color: #555; margin-top: 4px; font-family: monospace; font-weight: bold; line-height: 1.3;">
+                            🎯 ${extracaoText} <br>⏰ ${horarioText}
+                        </div>
+                    </div>
+                    
+                    <span style="background: ${todosVendidos ? '#6c757d' : '#d97706'}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 0 rgba(0,0,0,0.2);">
+                        ${qtdNumerosRestantes} un
+                    </span>
                 </div>
                 
-                <div style="font-size: 0.65rem; color: #555; margin-bottom: 6px; line-height: 1.3; font-weight: 600;">
+                <div style="font-size: 0.85rem; margin-bottom: 15px; line-height: 1.4; text-align: left;">
                     ${nomesBichosStr}
                 </div>
-
-                <div style="font-family: monospace; font-size: 0.7rem; opacity: 0.6; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 8px;">
-                    ${preview}
+                
+                <div id="kit-actions-${index}">
+                    ${actionAreaHtml}
                 </div>
-
-                ${actionAreaHtml}
             </div>
         `;
         output.innerHTML += cardHtml;
@@ -22628,42 +22851,275 @@ function renderizarListaDeKits() {
     }
 }
 
-window.kitMessages = window.kitMessages || {}; // Guarda os textos gerados
-
-// 1. GERA O TEXTO E DIVIDE OS BOTÕES
-async function prepararOpcoesKit(kitIndex, btnElement) {
-    const originalText = btnElement.innerHTML;
-    btnElement.innerHTML = "⏳ Gerando Link...";
-    btnElement.disabled = true;
-
+async function abrirVendaKit(kitIndex) {
     const numKit = kitIndex + 1;
     const kitNumbers = window.currentGeneratedKits[kitIndex];
-    const valor = document.getElementById('kitsValorInput').value;
-    const extracao = document.getElementById('kitsExtracaoSelect').value;
-    const horario = document.getElementById('kitsHorarioSelect').value;
+    let valorGlobal = document.getElementById('kitsValorInput').value;
+    const statusKit = window.kitsSoldStatus[kitIndex] || {};
 
     const bichoDetails = {};
     kitNumbers.forEach(num => {
         const bichoData = getBichoDataFromNumber(num);
         if (bichoData) {
-            const key = `${bichoData.grupo}-${bichoData.animal}`;
-            if (!bichoDetails[key]) bichoDetails[key] = { grupo: bichoData.grupo, animal: bichoData.animal, emoji: bichoData.emoji, milhares: [] };
-            bichoDetails[key].milhares.push(num);
+            if (!bichoDetails[bichoData.grupo]) bichoDetails[bichoData.grupo] = { ...bichoData, milhares: [] };
+            bichoDetails[bichoData.grupo].milhares.push(num);
         }
     });
 
-    const sortedBichosKeys = Object.keys(bichoDetails).sort((a,b) => parseInt(bichoDetails[a].grupo) - parseInt(bichoDetails[b].grupo));
+    const bichosDisponiveis = Object.values(bichoDetails).filter(b => statusKit[b.grupo] !== true);
+    if (bichosDisponiveis.length === 0) return;
+
+    const result = await promptForKitBichos(bichosDisponiveis, numKit, valorGlobal);
+    if (result === null || result.selectedGrupos.length === 0) return;
+
+    const valorCobrado = result.finalPrice;
+    const extracao = document.getElementById('kitsExtracaoSelect').value || "Não informada";
+    const horario = document.getElementById('kitsHorarioSelect').value || "Não informado";
+
+    let milharesVendidasAgora = [];
+    const sortedSelectedKeys = result.selectedGrupos.sort((a,b) => parseInt(a) - parseInt(b));
     
-    let numerosTextoInterno = sortedBichosKeys.map(key => {
-        const data = bichoDetails[key];
+    let numerosTextoInterno = sortedSelectedKeys.map(grupo => {
+        const data = bichoDetails[grupo];
+        milharesVendidasAgora.push(...data.milhares);
         return `Gr. ${data.grupo} - ${data.emoji} ${data.animal.toUpperCase()}: ${data.milhares.length} Milhares\nMilhares: ${data.milhares.join(', ')}`;
     }).join('\n\n');
 
+    const chkMostrarMilhares = document.getElementById('chkMostrarMilharesKit');
+    const mostrarMilhares = chkMostrarMilhares ? chkMostrarMilhares.checked : true;
+
+    let msg = `Segue suas milhares da sorte!\n\n`;
+    msg += `✅ RECIBO REGISTRADO! ✅\n\n`;
+    msg += `📦 PACOTE: Kit #${numKit}\n💰 VALOR: ${valorCobrado}\n🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
+    msg += `-----------------------------------\n🐾 RESUMO DA COMPRA:\n\n`;
+
+    sortedSelectedKeys.forEach(grupo => {
+        const data = bichoDetails[grupo];
+        msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
+        if (mostrarMilhares) msg += `↳ ${data.milhares.join(' - ')}\n\n`;
+    });
+
+    msg += `-----------------------------------\nBoa sorte! 🍀\n📲 VIP - I.A in Real-Time`;
+
+    window.ultimaVendaKit = {
+        numerosPuros: milharesVendidasAgora.join(' '), 
+        textoWhats: msg
+    };
+
+    if (!window.kitsSoldStatus[kitIndex]) window.kitsSoldStatus[kitIndex] = {};
+    window.kitsSoldStatus[kitIndex].historicoVendas = window.kitsSoldStatus[kitIndex].historicoVendas || [];
+    window.kitsSoldStatus[kitIndex].historicoVendas.push({
+        grupos: result.selectedGrupos,
+        valor: valorCobrado,
+        dataHora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) 
+    });
+
+    result.selectedGrupos.forEach(g => {
+        window.kitsSoldStatus[kitIndex][g] = true;
+    });
+    
+    saveData('kitsSoldStatusData', window.kitsSoldStatus);
+    renderizarListaDeKits(); 
+
+    mostrarSucessoVendaKit(numKit, result.selectedGrupos, bichoDetails);
+}
+
+function promptForReenviarHistorico(historicoVendas, bichoDetails, numKit) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('customConfirmModal');
+        const messageEl = document.getElementById('customConfirmModalMessage');
+        const okBtn = document.getElementById('customConfirmOk');
+        const cancelBtn = document.getElementById('customConfirmCancel');
+
+        let html = `
+            <p style="font-size: 1.1rem; margin-bottom: 10px; color: #6c757d;"><strong>🔁 2ª Via - Kit #${numKit}</strong></p>
+            <p style="font-size: 0.9rem; margin-bottom: 15px;">Qual recibo você deseja gerar a 2ª via?</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; text-align: left;" id="popupReenvioHistorico">
+        `;
+
+        historicoVendas.forEach((venda, index) => {
+            const nomesBichos = venda.grupos.map(g => `${bichoDetails[g].emoji} ${bichoDetails[g].animal}`).join(', ');
+            html += `
+                <label style="background: #f8f9fa; color: #333; padding: 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; border: 1px solid #ccc; transition: 0.2s;">
+                    <input type="radio" name="reenvioTransacao" value="${index}" ${index === 0 ? 'checked' : ''} style="transform: scale(1.3); margin-right: 12px; accent-color: #007bff;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong style="color: #007bff; font-size: 0.9rem;">Venda ${index + 1}</strong>
+                            <span style="font-size: 0.8rem; color: #666;">🕒 ${venda.dataHora || 'Hoje'}</span>
+                        </div>
+                        <div style="font-size: 0.85rem; font-weight: bold; color: #333;">${nomesBichos}</div>
+                        <div style="font-size: 0.8rem; color: #28a745; font-weight: bold; margin-top: 2px;">Valor cobrado: ${venda.valor}</div>
+                    </div>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+
+        messageEl.innerHTML = html;
+        okBtn.textContent = '✅ Gerar 2ª Via';
+        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.style.display = 'inline-flex';
+        modal.style.zIndex = '1600';
+        modal.classList.add('active');
+
+        const onOk = () => {
+            const selectedInput = modal.querySelector('input[name="reenvioTransacao"]:checked');
+            cleanup();
+            resolve(selectedInput ? parseInt(selectedInput.value) : null);
+        };
+        const onCancel = () => { cleanup(); resolve(null); };
+        const cleanup = () => {
+            modal.classList.remove('active');
+            okBtn.replaceWith(okBtn.cloneNode(true));
+            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+        };
+
+        document.getElementById('customConfirmOk').addEventListener('click', onOk, { once: true });
+        document.getElementById('customConfirmCancel').addEventListener('click', onCancel, { once: true });
+    });
+}
+
+async function reenviarVendidosKit(kitIndex) {
+    const numKit = kitIndex + 1;
+    const kitNumbers = window.currentGeneratedKits[kitIndex];
+    const statusKit = window.kitsSoldStatus[kitIndex] || {};
+    const extracao = document.getElementById('kitsExtracaoSelect').value || "Não informada";
+    const horario = document.getElementById('kitsHorarioSelect').value || "Não informado";
+
+    const bichoDetails = {};
+    kitNumbers.forEach(num => {
+        const bichoData = getBichoDataFromNumber(num);
+        if (bichoData) {
+            if (!bichoDetails[bichoData.grupo]) bichoDetails[bichoData.grupo] = { ...bichoData, milhares: [] };
+            bichoDetails[bichoData.grupo].milhares.push(num);
+        }
+    });
+
+    if (!statusKit.historicoVendas || statusKit.historicoVendas.length === 0) {
+        showToast("Nenhum histórico encontrado para este kit. Faça uma nova venda.", "error");
+        return;
+    }
+
+    const indexVendaSelecionada = await promptForReenviarHistorico(statusKit.historicoVendas, bichoDetails, numKit);
+    if (indexVendaSelecionada === null) return;
+
+    const venda = statusKit.historicoVendas[indexVendaSelecionada];
+    const selecionados = venda.grupos;
+    const valorCalculado = venda.valor;
+
+    let milharesJaVendidas = [];
+    const sortedSelectedKeys = selecionados.sort((a,b) => parseInt(a) - parseInt(b));
+    
+    const chkMostrarMilhares = document.getElementById('chkMostrarMilharesKit');
+    const mostrarMilhares = chkMostrarMilhares ? chkMostrarMilhares.checked : true;
+
+    let msg = `Segue suas milhares da sorte (2ª Via)!\n\n`;
+    msg += `📦 PACOTE: Kit #${numKit}\n`;
+    msg += `💰 VALOR: ${valorCalculado}\n`;
+    msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
+    msg += `-----------------------------------\n🐾 RESUMO DA COMPRA:\n\n`;
+
+    sortedSelectedKeys.forEach(grupo => {
+        const data = bichoDetails[grupo];
+        milharesJaVendidas.push(...data.milhares);
+        
+        msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
+        if (mostrarMilhares) msg += `↳ ${data.milhares.join(' - ')}\n\n`;
+    });
+
+    msg += `-----------------------------------\nBoa sorte! 🍀\n📲 VIP - I.A in Real-Time`;
+
+    window.ultimaVendaKit = {
+        numerosPuros: milharesJaVendidas.join(' '),
+        textoWhats: msg
+    };
+
+    mostrarSucessoVendaKit(numKit, selecionados, bichoDetails);
+}
+
+function mostrarSucessoVendaKit(numKit, gruposVendidos, bichoDetails) {
+    const modal = document.getElementById('customConfirmModal');
+    const messageEl = document.getElementById('customConfirmModalMessage');
+    const okBtn = document.getElementById('customConfirmOk');
+    const cancelBtn = document.getElementById('customConfirmCancel');
+
+    const nomesVendidos = gruposVendidos.map(g => `${bichoDetails[g].emoji} ${bichoDetails[g].animal}`).join(', ');
+
+    messageEl.innerHTML = `
+        <div style="text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 5px;">✅</div>
+            <h3 style="color: #28a745; margin-bottom: 10px;">Sucesso!</h3>
+            <p style="font-size: 0.95rem; color: #555; margin-bottom: 25px;">Bichos no pacote: <b>${nomesVendidos}</b></p>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 10px;">
+                <button onclick="copyToClipboard(window.ultimaVendaKit.numerosPuros, this)" style="background: #6c757d; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 0 #5a6268; transition: 0.1s;">
+                    📋 Copiar Só os Números
+                </button>
+                <button onclick="window.open('https://wa.me/?text=' + encodeURIComponent(window.ultimaVendaKit.textoWhats), '_blank')" style="background: #25D366; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 0 #1e7e34; transition: 0.1s;">
+                    📲 Enviar no WhatsApp
+                </button>
+            </div>
+        </div>
+    `;
+
+    okBtn.textContent = '⬅️ Voltar';
+    okBtn.style.backgroundColor = '#dc3545'; 
+    okBtn.style.width = '100%';
+    cancelBtn.style.display = 'none'; 
+    modal.style.zIndex = '1600';
+    modal.classList.add('active');
+
+    okBtn.onclick = () => {
+        modal.classList.remove('active');
+        okBtn.replaceWith(okBtn.cloneNode(true)); 
+        okBtn.style.backgroundColor = ''; 
+    };
+}
+
+// 2. INICIA A VENDA (Salva Histórico, Gera Link no Firebase e Permite Frações)
+async function abrirVendaKit(kitIndex) {
+    const numKit = kitIndex + 1;
+    const kitNumbers = window.currentGeneratedKits[kitIndex];
+    let valorGlobal = document.getElementById('kitsValorInput').value;
+    const statusKit = window.kitsSoldStatus[kitIndex] || {};
+
+    const bichoDetails = {};
+    kitNumbers.forEach(num => {
+        const bichoData = getBichoDataFromNumber(num);
+        if (bichoData) {
+            if (!bichoDetails[bichoData.grupo]) bichoDetails[bichoData.grupo] = { ...bichoData, milhares: [] };
+            bichoDetails[bichoData.grupo].milhares.push(num);
+        }
+    });
+
+    const bichosDisponiveis = Object.values(bichoDetails).filter(b => statusKit[b.grupo] !== true);
+    if (bichosDisponiveis.length === 0) return;
+
+    const result = await promptForKitBichos(bichosDisponiveis, numKit, valorGlobal);
+    if (result === null || result.selectedGrupos.length === 0) return;
+
+    const valorCobrado = result.finalPrice;
+    const extracao = document.getElementById('kitsExtracaoSelect').value || "Não informada";
+    const horario = document.getElementById('kitsHorarioSelect').value || "Não informado";
+
+    let milharesVendidasAgora = [];
+    const sortedSelectedKeys = result.selectedGrupos.sort((a,b) => parseInt(a) - parseInt(b));
+    
+    let numerosTextoInterno = sortedSelectedKeys.map(grupo => {
+        const data = bichoDetails[grupo];
+        milharesVendidasAgora.push(...data.milhares);
+        return `Gr. ${data.grupo} - ${data.emoji} ${data.animal.toUpperCase()}: ${data.milhares.length} Milhares\nMilhares: ${data.milhares.join(', ')}`;
+    }).join('\n\n');
+
+    const chkMostrarMilhares = document.getElementById('chkMostrarMilharesKit');
+    const mostrarMilhares = chkMostrarMilhares ? chkMostrarMilhares.checked : true;
+
+    // --- GERA O RECIBO OFICIAL NO BANCO DE DADOS (FIREBASE) ---
     const code = generateReceiptCode();
     const dataHora = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    const custoCalculado = 'R$ ' + (kitNumbers.length * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const custoCalculado = 'R$ ' + (milharesVendidasAgora.length * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    // RECIBO INTERNO (Sem a linha "Possível Prêmio")
     const rawReceiptContent = `
 ==============================
       RECIBO DE APOSTA
@@ -22673,9 +23129,9 @@ Pacote.........: Kit #${numKit}
 Código.........: ${code}
 Data/Hora......: ${dataHora}
 Extração.......: ${extracao} - ${horario}
-Valor Pago.....: ${valor}
+Valor Pago.....: ${valorCobrado}
 Valor Calculado: ${custoCalculado}
-Qtd. Números...: ${kitNumbers.length}
+Qtd. Números...: ${milharesVendidasAgora.length}
 
 ------------------------------
        RESUMO DETALHADO       
@@ -22686,107 +23142,297 @@ ${numerosTextoInterno}
 ==============================
     `.trim();
 
+    let linkOficial = "";
     try {
+        showToast("Gerando recibo online...", "info");
         const docRef = await firestoreDB.collection('receipts').add({
             content: rawReceiptContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: false,
             expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000)
         });
+        linkOficial = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
+    } catch (e) {
+        console.error("Erro ao salvar recibo online:", e);
+    }
 
-        const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
+    // --- MONTA A MENSAGEM DO WHATSAPP (FORMATO PREMIUM) ---
+    const horaStr = new Date().getHours();
+    let saudacao = "Bom dia";
+    if (horaStr >= 12 && horaStr < 18) saudacao = "Boa tarde";
+    else if (horaStr >= 18 || horaStr < 5) saudacao = "Boa noite";
 
-        const horaStr = new Date().getHours();
-        let saudacao = "Bom dia";
-        if (horaStr >= 12 && horaStr < 18) saudacao = "Boa tarde";
-        else if (horaStr >= 18 || horaStr < 5) saudacao = "Boa noite";
+    let msg = `${saudacao}, Segue suas milhares da sorte!\n\n`;
+    msg += `✅ SEU RECIBO FOI REGISTRADO COM SUCESSO! ✅\n\n`;
+    msg += `━━━━━━━━━━━━━━━\n\n`;
+    msg += `📦 PACOTE: Kit #${numKit}\n`;
+    msg += `🔑 ID: ${code}\n`;
+    msg += `💰 VALOR: ${valorCobrado}\n`;
+    msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
+    msg += `-----------------------------------\n\n`;
+    msg += `🐾 RESUMO POR BICHO:\n\n`;
 
-        const chkMostrarMilhares = document.getElementById('chkMostrarMilharesKit');
-        const mostrarMilhares = chkMostrarMilhares ? chkMostrarMilhares.checked : true;
+    sortedSelectedKeys.forEach(grupo => {
+        const data = bichoDetails[grupo];
+        msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
+        if (mostrarMilhares) {
+            msg += `↳ ${data.milhares.join(' - ')}\n\n`;
+        } else {
+            msg += `\n`; // Apenas pula a linha se estiver oculto
+        }
+    });
 
-        let msg = `${saudacao}, Segue suas milhares da sorte!\n\n`;
-        msg += `✅ SEU RECIBO FOI REGISTRADO COM SUCESSO! ✅\n\n`;
-        msg += `━━━━━━━━━━━━━━━\n\n`;
-        msg += `📦 PACOTE: Kit #${numKit}\n`;
-        msg += `🔑 ID: ${code}\n`;
-        msg += `💰 VALOR: ${valor}\n`;
-        msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
+    if (linkOficial) {
         msg += `-----------------------------------\n\n`;
-        msg += `🐾 RESUMO POR BICHO (Base 400 un):\n\n`;
-
-        sortedBichosKeys.forEach(key => {
-            const data = bichoDetails[key];
-            if (mostrarMilhares) {
-                msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
-                msg += `↳ ${data.milhares.join(' - ')}\n\n`;
-            } else {
-                msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
-            }
-        });
-
-        if (!mostrarMilhares) msg += `\n`;
-        msg += `-----------------------------------\n\n`;
-        msg += `🔗 PARA VER O RECIBO OFICIAL CLIQUE NO LINK ABAIXO:\n${link}\n\n`;
+        msg += `🔗 PARA VER O RECIBO OFICIAL CLIQUE NO LINK ABAIXO:\n${linkOficial}\n\n`;
         msg += `━━━━━━━━━━━━━━━\n`;
         msg += `⚠️ O link acima expira após o sorteio.\n\n`;
-        msg += `Obrigado e Boa sorte! 🍀\n\n`;
-        msg += `📲 VIP - I.A in Real-Time`;
-
-        window.kitMessages[kitIndex] = msg;
-
-        // DIVIDE O BOTÃO EM DOIS (Ajustado para não quebrar o layout)
-        const actionContainer = document.getElementById(`kit-actions-${kitIndex}`);
-        if (actionContainer) {
-            actionContainer.innerHTML = `
-                <div style="display: flex; gap: 4px; width: 100%; margin-top: 5px;">
-                    <button onclick="finalizarKitAcao(${kitIndex}, 'copy', this)" class="kit-action-btn" style="flex: 1; background-color: #6c757d; font-size: 0.65rem; padding: 10px 2px;">
-                        📋 Copiar
-                    </button>
-                    <button onclick="finalizarKitAcao(${kitIndex}, 'whatsapp', this)" class="kit-action-btn" style="flex: 1; background-color: #25D366; font-size: 0.65rem; padding: 10px 2px;">
-                        📲 Whats
-                    </button>
-                </div>
-            `;
-        }
-
-    } catch (e) {
-        console.error(e);
-        showToast("Erro ao conectar com o servidor.", "error");
-        btnElement.innerHTML = originalText;
-        btnElement.disabled = false;
+    } else {
+        msg += `-----------------------------------\n\n`;
     }
+
+    msg += `Obrigado e Boa sorte! 🍀\n\n`;
+    msg += `📲 VIP - I.A in Real-Time`;
+
+    window.ultimaVendaKit = {
+        numerosPuros: milharesVendidasAgora.join(' '), 
+        textoWhats: msg
+    };
+
+    // --- SALVA NA MEMÓRIA COM O LINK E O CÓDIGO ---
+    if (!window.kitsSoldStatus[kitIndex]) window.kitsSoldStatus[kitIndex] = {};
+    window.kitsSoldStatus[kitIndex].historicoVendas = window.kitsSoldStatus[kitIndex].historicoVendas || [];
+    window.kitsSoldStatus[kitIndex].historicoVendas.push({
+        grupos: result.selectedGrupos,
+        valor: valorCobrado,
+        codigo: code, // Salva o código
+        link: linkOficial, // Salva o link
+        dataHora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) 
+    });
+
+    result.selectedGrupos.forEach(g => {
+        window.kitsSoldStatus[kitIndex][g] = true;
+    });
+    
+    saveData('kitsSoldStatusData', window.kitsSoldStatus);
+    renderizarListaDeKits(); 
+
+    mostrarSucessoVendaKit(numKit, result.selectedGrupos, bichoDetails);
 }
 
-    async function finalizarKitAcao(kitIndex, acao, btnElement) {
-    const msg = window.kitMessages[kitIndex];
-    if (!msg) return;
+// 4. FUNÇÃO DE REENVIO (Mantém o mesmo link original!)
+async function reenviarVendidosKit(kitIndex) {
+    const numKit = kitIndex + 1;
+    const kitNumbers = window.currentGeneratedKits[kitIndex];
+    const statusKit = window.kitsSoldStatus[kitIndex] || {};
+    const extracao = document.getElementById('kitsExtracaoSelect').value || "Não informada";
+    const horario = document.getElementById('kitsHorarioSelect').value || "Não informado";
 
+    const bichoDetails = {};
+    kitNumbers.forEach(num => {
+        const bichoData = getBichoDataFromNumber(num);
+        if (bichoData) {
+            if (!bichoDetails[bichoData.grupo]) bichoDetails[bichoData.grupo] = { ...bichoData, milhares: [] };
+            bichoDetails[bichoData.grupo].milhares.push(num);
+        }
+    });
+
+    if (!statusKit.historicoVendas || statusKit.historicoVendas.length === 0) {
+        showToast("Nenhum histórico encontrado para este kit. Faça uma nova venda.", "error");
+        return;
+    }
+
+    const indexVendaSelecionada = await promptForReenviarHistorico(statusKit.historicoVendas, bichoDetails, numKit);
+    if (indexVendaSelecionada === null) return;
+
+    const venda = statusKit.historicoVendas[indexVendaSelecionada];
+    const selecionados = venda.grupos;
+    const valorCalculado = venda.valor;
+    const code = venda.codigo || "S/C"; // Puxa do histórico
+    const linkOficial = venda.link || ""; // Puxa do histórico
+
+    let milharesJaVendidas = [];
+    const sortedSelectedKeys = selecionados.sort((a,b) => parseInt(a) - parseInt(b));
+    
+    const chkMostrarMilhares = document.getElementById('chkMostrarMilharesKit');
+    const mostrarMilhares = chkMostrarMilhares ? chkMostrarMilhares.checked : true;
+
+    let msg = `Segue suas milhares da sorte (2ª Via)!\n\n`;
+    msg += `✅ RECIBO RECUPERADO COM SUCESSO! ✅\n\n`;
+    msg += `━━━━━━━━━━━━━━━\n\n`;
+    msg += `📦 PACOTE: Kit #${numKit}\n`;
+    msg += `🔑 ID: ${code}\n`;
+    msg += `💰 VALOR: ${valorCalculado}\n`;
+    msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
+    msg += `-----------------------------------\n\n`;
+    msg += `🐾 RESUMO POR BICHO:\n\n`;
+
+    sortedSelectedKeys.forEach(grupo => {
+        const data = bichoDetails[grupo];
+        milharesJaVendidas.push(...data.milhares);
+        
+        msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
+        if (mostrarMilhares) {
+            msg += `↳ ${data.milhares.join(' - ')}\n\n`;
+        } else {
+            msg += `\n`;
+        }
+    });
+
+    if (linkOficial) {
+        msg += `-----------------------------------\n\n`;
+        msg += `🔗 PARA VER O RECIBO OFICIAL CLIQUE NO LINK ABAIXO:\n${linkOficial}\n\n`;
+        msg += `━━━━━━━━━━━━━━━\n`;
+        msg += `⚠️ O link acima expira após o sorteio.\n\n`;
+    } else {
+        msg += `-----------------------------------\n\n`;
+    }
+
+    msg += `Obrigado e Boa sorte! 🍀\n\n`;
+    msg += `📲 VIP - I.A in Real-Time`;
+
+    window.ultimaVendaKit = {
+        numerosPuros: milharesJaVendidas.join(' '),
+        textoWhats: msg
+    };
+
+    mostrarSucessoVendaKit(numKit, selecionados, bichoDetails);
+}
+
+// 1. JANELA DE HISTÓRICO DE VENDAS
+function promptForReenviarHistorico(historicoVendas, bichoDetails, numKit) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('customConfirmModal');
+        const messageEl = document.getElementById('customConfirmModalMessage');
+        const okBtn = document.getElementById('customConfirmOk');
+        const cancelBtn = document.getElementById('customConfirmCancel');
+
+        let html = `
+            <p style="font-size: 1.1rem; margin-bottom: 10px; color: #6c757d;"><strong>🔁 2ª Via - Kit #${numKit}</strong></p>
+            <p style="font-size: 0.9rem; margin-bottom: 15px;">Qual recibo você deseja gerar a 2ª via?</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; text-align: left;" id="popupReenvioHistorico">
+        `;
+
+        historicoVendas.forEach((venda, index) => {
+            const nomesBichos = venda.grupos.map(g => `${bichoDetails[g].emoji} ${bichoDetails[g].animal}`).join(', ');
+            html += `
+                <label style="background: #f8f9fa; color: #333; padding: 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; border: 1px solid #ccc; transition: 0.2s;">
+                    <input type="radio" name="reenvioTransacao" value="${index}" ${index === 0 ? 'checked' : ''} style="transform: scale(1.3); margin-right: 12px; accent-color: #007bff;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong style="color: #007bff; font-size: 0.9rem;">Venda ${index + 1}</strong>
+                            <span style="font-size: 0.8rem; color: #666;">🕒 ${venda.dataHora || 'Hoje'}</span>
+                        </div>
+                        <div style="font-size: 0.85rem; font-weight: bold; color: #333;">${nomesBichos}</div>
+                        <div style="font-size: 0.8rem; color: #28a745; font-weight: bold; margin-top: 2px;">Valor cobrado: ${venda.valor}</div>
+                    </div>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+
+        messageEl.innerHTML = html;
+        okBtn.textContent = '✅ Gerar 2ª Via';
+        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.style.display = 'inline-flex';
+        modal.style.zIndex = '1600';
+        modal.classList.add('active');
+
+        const onOk = () => {
+            const selectedInput = modal.querySelector('input[name="reenvioTransacao"]:checked');
+            cleanup();
+            resolve(selectedInput ? parseInt(selectedInput.value) : null);
+        };
+        const onCancel = () => { cleanup(); resolve(null); };
+        const cleanup = () => {
+            modal.classList.remove('active');
+            okBtn.replaceWith(okBtn.cloneNode(true));
+            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+        };
+
+        document.getElementById('customConfirmOk').addEventListener('click', onOk, { once: true });
+        document.getElementById('customConfirmCancel').addEventListener('click', onCancel, { once: true });
+    });
+}
+
+// 2. FINALIZAÇÃO DA AÇÃO (Copiar ou Whats)
+async function finalizarKitAcao(kitIndex, acao, btnElement) {
     if (acao === 'copy') {
-        await copyToClipboard(msg, btnElement);
+        const numerosPuros = window.kitNumbersOnly[kitIndex];
+        if (!numerosPuros) return;
+        await copyToClipboard(numerosPuros, btnElement);
+        showToast("Somente os números foram copiados!", "success");
+        
     } else if (acao === 'whatsapp') {
+        const msg = window.kitMessages[kitIndex];
+        if (!msg) return;
         const encodedMessage = encodeURIComponent(msg);
         window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
         showToast("Abrindo WhatsApp...", "success");
     }
 
-    // Bloqueia e acinza o card inteiro após usar
-    const cardPai = document.getElementById(`cardKit-${kitIndex}`);
-    if(cardPai) {
-        cardPai.style.opacity = "0.5"; // Diminuído um pouco mais para maior destaque
-        cardPai.style.filter = "grayscale(1)";
+    // MARCA O QUE FOI VENDIDO E ATUALIZA O CARD VISUAL
+    if (window.pendingKitSale && window.pendingKitSale.kitIndex === kitIndex) {
+        window.kitsSoldStatus = window.kitsSoldStatus || [];
+        if (!window.kitsSoldStatus[kitIndex]) window.kitsSoldStatus[kitIndex] = {};
         
-        const actionContainer = document.getElementById(`kit-actions-${kitIndex}`);
-        if (actionContainer) {
-            actionContainer.innerHTML = `<button disabled class="save-button" style="width: 100%; background-color: #6c757d; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: none; white-space: nowrap; opacity: 1;">✅ ENVIADO</button>`;
-        }
+        // Marca como "true" (vendido) apenas os bichos escolhidos
+        window.pendingKitSale.gruposVendidosAgora.forEach(grupo => {
+            window.kitsSoldStatus[kitIndex][grupo] = true;
+        });
+
+        saveData('kitsSoldStatusData', window.kitsSoldStatus);
+        
+        // Redesenha a tela toda para mostrar os animais riscados (<del>)
+        setTimeout(() => {
+            if (typeof renderizarListaDeKits === 'function') renderizarListaDeKits();
+        }, 500); 
     }
 
-    // Salva na memória permanente do navegador
-    if (!window.copiedKitsStatus.includes(kitIndex)) {
-        window.copiedKitsStatus.push(kitIndex);
-        saveData('kitsCopiedData', window.copiedKitsStatus);
-    }
-} 
+    
+}
+// TELA DE SUCESSO COM OS BOTÕES DE COPIAR E WHATSAPP
+function mostrarSucessoVendaKit(numKit, gruposVendidos, bichoDetails) {
+    const modal = document.getElementById('customConfirmModal');
+    const messageEl = document.getElementById('customConfirmModalMessage');
+    const okBtn = document.getElementById('customConfirmOk');
+    const cancelBtn = document.getElementById('customConfirmCancel');
+
+    const nomesVendidos = gruposVendidos.map(g => `${bichoDetails[g].emoji} ${bichoDetails[g].animal}`).join(', ');
+
+    messageEl.innerHTML = `
+        <div style="text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 5px;">✅</div>
+            <h3 style="color: #28a745; margin-bottom: 10px;">Sucesso!</h3>
+            <p style="font-size: 0.95rem; color: #555; margin-bottom: 25px;">Bichos no pacote: <b>${nomesVendidos}</b></p>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 10px;">
+                <button onclick="copyToClipboard(window.ultimaVendaKit.numerosPuros, this)" style="background: #6c757d; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 0 #5a6268; transition: 0.1s;">
+                    📋 Copiar Só os Números
+                </button>
+                <button onclick="window.open('https://wa.me/?text=' + encodeURIComponent(window.ultimaVendaKit.textoWhats), '_blank')" style="background: #25D366; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 0 #1e7e34; transition: 0.1s;">
+                    📲 Enviar no WhatsApp
+                </button>
+            </div>
+        </div>
+    `;
+
+    okBtn.textContent = '⬅️ Voltar aos Kits';
+    okBtn.style.backgroundColor = '#dc3545'; // Botão vermelho pra voltar
+    okBtn.style.width = '100%';
+    cancelBtn.style.display = 'none'; 
+    modal.style.zIndex = '1600';
+    modal.classList.add('active');
+
+    // Ao clicar em "Voltar", fecha a janela e restaura o botão
+    okBtn.onclick = () => {
+        modal.classList.remove('active');
+        okBtn.replaceWith(okBtn.cloneNode(true)); // Limpa os eventos de clique antigos
+        okBtn.style.backgroundColor = ''; // Restaura a cor azul original
+    };
+}
+
 
 </script> 
 
