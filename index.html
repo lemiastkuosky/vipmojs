@@ -624,7 +624,12 @@ body.dark-mode #nomeContainerInModal select {
     display: flex;
     align-items: center;
     justify-content: center;
-  }
+    display: flex !important;
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
 
   /* Pop-ups de segundo nível (filtros, consultas, etc.) */
   .modal.modal-advanced {
@@ -3260,8 +3265,9 @@ body.dark-mode #sortResultsBtn:active {
     background-color: #555; /* Um cinza um pouco mais escuro ao clicar */
 }
 
-.modal-top { z-index: 1350 !important; }
+.modal-top { z-index: 1600 !important; }
 .modal-super-top { z-index: 1450 !important; }
+#auditoriaIAModal { z-index: 1600 !important; }
 .modal:not(.modal-top):not(.modal-advanced) {
     /* Aplica um z-index base menor para modais sem classificação específica,
        exceto o randomGenerator que já tem seu z-index definido */
@@ -5793,24 +5799,17 @@ body.dark-mode .logo-mojs {
     justify-content: center;
 }
 
-/* 1. Transição Suave do Fundo Escuro dos Modais */
 .modal {
-    /* Força o modal a existir na tela para poder animar, mas invisível */
-    display: flex !important; 
-    align-items: center;         /* <-- MANTÉM NO CENTRO VERTICAL SEMPRE */
-    justify-content: center;     /* <-- MANTÉM NO CENTRO HORIZONTAL SEMPRE */
+    display: none;
+    align-items: center;
+    justify-content: center;
     visibility: hidden;
     opacity: 0;
-    pointer-events: none; /* Impede que o usuário clique em botões invisíveis */
+    pointer-events: none;
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-/* Quando o JS adiciona a classe 'active', ele aparece suavemente */
-.modal.active {
-    visibility: visible;
-    opacity: 1;
-    pointer-events: auto; /* Libera o clique */
-}
+
 
 /* 2. Efeito "Mola" (Slide-up) nas Janelas (Modal Content) */
 .modal-content {
@@ -6152,22 +6151,15 @@ body.dark-mode .kit-bicho-card.esgotado {
     box-shadow: none;
 }
 
-/* Ajuste específico para celulares muito estreitos */
-@media (max-width: 400px) {
-    .kit-action-btn {
-        font-size: 0.65rem; /* Diminui a letra para não quebrar */
-        padding: 6px 1px;
-    }
-
-    #historicoPalpitesIAModal {
-    z-index: 9999 !important;
+#historicoPalpitesIAModal {
     background-color: rgba(0, 0, 0, 0.85) !important;
+    z-index: 10000 !important;
 }
 
 #historicoPalpitesIAModal .modal-content {
     border: 2px solid #6f42c1;
-    box-shadow: 0 0 25px rgba(111, 66, 193, 0.6);
-}
+    box-shadow: 0 0 30px rgba(111, 66, 193, 0.5);
+    max-height: 85vh;
 }
 
 </style>
@@ -7255,6 +7247,14 @@ body.dark-mode .kit-bicho-card.esgotado {
         </div>
     </label>
 
+    <label class="config-label-btn">
+        <input type="checkbox" id="settingShowBichoName" onchange="toggleMainScreenElement('wrapperBichoName', this.checked)">
+        <div>
+            <strong>Exibir Nome do Bicho</strong>
+            <small>Mostra o nome do animal ao lado das dezenas geradas.</small>
+        </div>
+    </label>
+
 </div>
 
 
@@ -7478,6 +7478,22 @@ body.dark-mode .kit-bicho-card.esgotado {
         <input type="checkbox" id="checkBannerIA" onchange="toggleSystemBanner('iaScoreboardBanner', this.checked)">
         <span class="slider"></span>
     </label>
+
+    <div class="admin-config-row">
+    <span class="admin-config-label">⚙️ Configurações</span>
+    <label class="ios-switch">
+        <input type="checkbox" id="checkBtnSettings" onchange="toggleMenuButton('btnMenuSettings', this.checked)">
+        <span class="slider"></span>
+    </label>
+</div>
+
+<div class="admin-config-row">
+    <span class="admin-config-label">📈 Boletim Global</span>
+    <label class="ios-switch">
+        <input type="checkbox" id="checkBtnSubBoletimGlobal" onchange="toggleMenuButton('btnSubBoletimGlobal', this.checked)">
+        <span class="slider"></span>
+    </label>
+</div>
 </div>
 
     </div>
@@ -7493,7 +7509,7 @@ body.dark-mode .kit-bicho-card.esgotado {
         <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 25px 0 10px 5px; text-transform: uppercase; border-top: 1px solid rgba(128,128,128,0.3); padding-top: 20px;">
             📊 Relatórios e Backtest
         </div>
-        <button onclick="abrirAuditoriaIA()" class="view-button" style="width: 100%; margin-bottom: 20px; padding: 12px; font-size: 1rem;">
+        <button onclick="openAuditoriaFromHub()" class="view-button" style="width: 100%; margin-bottom: 20px; padding: 12px; font-size: 1rem;">
             🔍 Abrir Auditoria de Acertos (I.A.)
         </button>
 
@@ -8266,11 +8282,11 @@ body.dark-mode .kit-bicho-card.esgotado {
     </div>
 </div>
 
-<div id="analysisHubModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="analysisHubModalTitle">
+<div id="analysisHubModal" class="modal modal-advanced" role="dialog" aria-modal="true" aria-labelledby="analysisHubModalTitle">
     <div class="modal-content" style="max-width: 450px;">
       <span class="close-modal" onclick="closeAnalysisHubModal()" aria-label="Fechar">×</span>
       <h3 id="analysisHubModalTitle" class="modal-title">🔮 Análises e Consultas</h3>
-      <p style="text-align: center; margin-top: -10px; margin-bottom: 25px; color: #6c757d;">
+      <p style="text-align: center; margin-top: 12px; margin-bottom: 25px; color: #6c757d;">
           Escolha o tipo de análise que deseja executar.
       </p>
 
@@ -8331,9 +8347,11 @@ body.dark-mode .kit-bicho-card.esgotado {
                 <small style="font-weight: normal;">(Conferencia I.A)</small>
             </div>
         </button>
+      </div>
+</div>
 <div id="historicoPalpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 500px;">
-        <span class="close-modal" onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')">×</span>
+        <span class="close-modal" tabindex="0" onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')">×</span>
         <h3 class="modal-title">📜 Histórico de Análises</h3>
         <div id="listaHistoricoPalpites" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
             <p style="text-align: center; color: #666;">Buscando suas análises...</p>
@@ -8341,9 +8359,6 @@ body.dark-mode .kit-bicho-card.esgotado {
         <button onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
     </div>
 </div>
-      </div>
-</div>
-
 <script>
 
     // =================================================================
@@ -9525,8 +9540,6 @@ function openPalpitesIAFromHub() {
     }, 300);
 }
 
-
-
 // =========================================================
 // === FUNÇÕES DA SURPRESINHA (20 DEZENAS) ===
 // =========================================================
@@ -10082,34 +10095,24 @@ if (iaLotterySelect) {
 }
 
 async function fetchLotteryResults(loteria, dataISO = null) {
-    // 1. Cria a URL base
     let urlProxy = `/api/proxy?loteria=${loteria}&tipo=resultados`;
-    
-    // 2. Adiciona a data à URL (se ela foi fornecida)
-    if (dataISO) {
-        urlProxy += `&data=${dataISO}`;
-    }
+    if (dataISO) urlProxy += `&data=${dataISO}`;
 
-    console.log("Buscando resultados via proxy:", urlProxy); // O log agora mostrará a data
+    // Cria um controlador para cancelar a busca se demorar demais
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos de limite
+
     try {
-        const response = await fetch(urlProxy);
-        if (!response.ok) {
-            let errorBody = 'Erro desconhecido do proxy.';
-            try {
-                errorBody = await response.text();
-            } catch (e) { /* Ignora erro ao ler body */ }
-            throw new Error(`Erro no proxy: ${response.status} ${response.statusText}. Detalhes: ${errorBody}`);
-        }
-        const htmlText = await response.text();
-        console.log("HTML recebido do proxy OK (primeiros 500 chars):", htmlText.substring(0, 500));
-        if (htmlText.trim().toLowerCase().startsWith("erro:") || htmlText.trim().length < 100) {
-             console.warn("Proxy retornou uma resposta curta ou de erro:", htmlText);
-        }
-        return htmlText;
+        const response = await fetch(urlProxy, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) throw new Error(`Erro: ${response.status}`);
+        return await response.text();
     } catch (error) {
-        console.error("Erro CRÍTICO ao buscar resultados via proxy:", error);
-        showToast(`Falha ao buscar dados da loteria ${loteria}. ${error.message}`, 'error', 5000);
-        throw error;
+        clearTimeout(timeoutId);
+        console.warn("Falha na busca de resultados (Proxy offline ou bloqueado):", error.message);
+        // Retorna null em vez de travar o processo
+        return null; 
     }
 }
 
@@ -15404,7 +15407,7 @@ updateNetworkStatusIA();
 }
 
 async function abrirHistoricoPalpitesIA() {
-    // 1. Primeiro fecha o menu hub para não sobrepor sombras
+    // 1. Fecha o menu de análises para limpar a visão e evitar conflitos de z-index
     if (typeof closeAnalysisHubModal === 'function') closeAnalysisHubModal();
 
     const modal = document.getElementById('historicoPalpitesIAModal');
@@ -15415,12 +15418,29 @@ async function abrirHistoricoPalpitesIA() {
         return;
     }
 
-    // 2. FORÇA O MODAL PARA A FRENTE (Garante que não abra por trás)
+    // 2. Limpa o container e mostra carregamento imediato
+    container.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <div class="spinner-border" style="color:#6f42c1;"></div>
+            <p style="margin-top:15px; font-weight:bold; color:#6f42c1;">Buscando suas análises...</p>
+        </div>
+    `;
+
+    // 3. Configura exibição e força para a camada mais alta
     modal.classList.add('active');
-    modal.style.zIndex = "10000"; 
+    modal.style.zIndex = "10000";
     modal.style.display = "flex";
 
-    container.innerHTML = '<p style="text-align: center; padding: 20px;">🔍 Buscando análises salvas...</p>';
+    // === NOVO: DEFINE O FOCO NO BOTÃO DE FECHAR PARA ACESSIBILIDADE ===
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) {
+        // Garante que o elemento seja focável caso seja um span sem tabindex
+        if (!closeBtn.hasAttribute('tabindex')) {
+            closeBtn.setAttribute('tabindex', '0');
+        }
+        // Pequeno atraso para aguardar o fim da animação de abertura do modal
+        setTimeout(() => closeBtn.focus(), 300);
+    }
 
     try {
         const snapshot = await firestoreDB.collection('historico_palpites_ia')
@@ -15429,7 +15449,7 @@ async function abrirHistoricoPalpitesIA() {
             .get();
 
         if (snapshot.empty) {
-            container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhum palpite salvo nos últimos 5 dias.</p>';
+            container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhuma análise salva nos últimos 5 dias.</p>';
             return;
         }
 
@@ -15438,28 +15458,31 @@ async function abrirHistoricoPalpitesIA() {
             const data = doc.data();
             const topBicho = data.ranking && data.ranking[0] ? data.ranking[0].emoji : '🔮';
             
-            // Usamos uma variável limpa para o conteúdo para não quebrar o HTML
+            // Limpa caracteres que podem quebrar o HTML interno
             const textoLimpo = data.conteudo.replace(/`/g, "'");
 
             html += `
-            <div class="saved-item" style="border-left: 4px solid #6f42c1; margin-bottom: 10px; background: rgba(128,128,128,0.05);">
-                <div class="saved-item-header" style="padding: 10px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                    <div class="saved-item-title" style="font-size: 0.85rem;">
+            <div class="saved-item" style="border-left: 4px solid #6f42c1; margin-bottom: 12px; background: rgba(128,128,128,0.05); border-radius: 8px;">
+                <div class="saved-item-header" style="padding: 12px; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <div class="saved-item-title" style="font-size: 0.9rem; font-weight: bold;">
                         ${topBicho} ${data.loteriaNome} - ${data.horario}<br>
-                        <small style="color: #888;">Data: ${data.data}</small>
+                        <small style="color: #888; font-weight: normal;">Gerado em: ${data.data}</small>
                     </div>
                     <div class="saved-item-toggle">▼</div>
                 </div>
                 <div class="saved-item-content" style="display: none; padding: 15px; background: rgba(0,0,0,0.03); font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; border-top: 1px solid rgba(0,0,0,0.1);">
                     ${textoLimpo}
-                    <button onclick="copyToClipboard(\`${textoLimpo}\`, this)" class="load-button" style="width: 100%; margin-top: 10px; padding: 10px; font-size: 0.75rem;">📋 Copiar Novamente</button>
+                    <button onclick="copyToClipboard(\`${textoLimpo}\`, this)" class="load-button" style="width: 100%; margin-top: 10px; padding: 12px; font-weight: bold; border-radius: 8px;">
+                        📋 Copiar Novamente
+                    </button>
                 </div>
             </div>`;
         });
         container.innerHTML = html;
+
     } catch (e) {
-        console.error("Erro histórico IA:", e);
-        container.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Erro ao carregar dados do servidor.</p>';
+        console.error("Erro ao carregar histórico:", e);
+        container.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Erro ao conectar com o servidor.</p>';
     }
 }
 
@@ -15751,16 +15774,16 @@ async function abrirAuditoriaIA() {
     const modal = document.getElementById('auditoriaIAModal');
     if (!modal) return;
 
-    // 1. ABRE O MODAL IMEDIATAMENTE (Feedback instantâneo)
+    // 1. ABRE O MODAL PRIMEIRO (Evita a sensação de travado)
     modal.classList.add('active');
 
-    // 2. AUTO-REPARO DE TELA (Seu template original)
+    // 2. REPARA O HTML (O teu modelo de Auto-Reparo)
     const modalContent = modal.querySelector('.modal-content');
     modalContent.innerHTML = `
         <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
         <h3 class="modal-title" style="margin-bottom: 5px;">📊 Performance da Inteligência</h3>
 
-        <div id="auditoriaLoteriasMenu" style="display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+        <div id="auditoriaLoteriasMenu" style="display: flex; gap: 5px; overflow-x: auto; padding: 30px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
             <button onclick="filtrarAuditoria('todas')" class="receipt-extraction-btn selected" id="filter-todas" style="min-width: 80px;">Geral</button>
             <button onclick="filtrarAuditoria('rj')" class="receipt-extraction-btn" id="filter-rj" style="min-width: 60px;">RJ</button>
             <button onclick="filtrarAuditoria('lk')" class="receipt-extraction-btn" id="filter-lk" style="min-width: 60px;">LK</button>
@@ -15784,8 +15807,7 @@ async function abrirAuditoriaIA() {
         <div id="auditoriaResultados" style="flex: 1; overflow-y: auto; padding-right: 5px;">
             <div style="text-align: center; padding: 40px;">
                 <div class="spinner-border" style="color:#007bff;"></div>
-                <p style="margin-top:15px; font-weight:bold; color:#007bff;">Sincronizando últimos sorteios...</p>
-                <p style="font-size: 0.8rem; color:#666;">Isso garante que a auditoria use dados recentes.</p>
+                <p style="margin-top:15px; font-weight:bold; color:#007bff;">Sincronizando dados...</p>
             </div>
         </div>
 
@@ -15793,53 +15815,33 @@ async function abrirAuditoriaIA() {
     `;
 
     try {
-        // 3. ATUALIZAÇÃO COM "ESCUDO" DE TEMPO (Evita o travamento infinito)
-        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 6000));
-        
+        // 3. CARREGAMENTO COM TIMEOUT (Se o Firebase demorar, ele pula)
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000));
         try {
             await Promise.race([runSilentIAUpdate(1), timeout]);
-        } catch (e) {
-            console.warn("Aviso: Sincronização demorada. Carregando dados existentes.");
-        }
+        } catch (e) { console.warn("Sincronização ignorada por demora."); }
 
-        const snapshot = await firestoreDB.collection('resultados')
-            .orderBy('data', 'desc')
-            .limit(500) 
-            .get();
-
-        if (snapshot.empty) {
-            document.getElementById('auditoriaResultados').innerHTML = '<p style="text-align:center; padding:20px;">Nenhum dado encontrado.</p>';
-            return;
-        }
-
-        const resultadosBrutos = [];
-        snapshot.forEach(doc => {
-            let d = doc.data();
-            d.dataObj = d.data.toDate();
-            resultadosBrutos.push(d);
-        });
+        const snapshot = await firestoreDB.collection('resultados').orderBy('data', 'desc').limit(300).get();
 
         const gruposSorteios = {};
-        resultadosBrutos.forEach(res => {
-            const key = `${res.loteria}-${res.dataObj.getTime()}-${res.nomeSorteio}`;
+        snapshot.forEach(doc => {
+            let res = doc.data();
+            const key = `${res.loteria}-${res.data.toDate().getTime()}-${res.nomeSorteio}`;
             if (!gruposSorteios[key]) {
-                gruposSorteios[key] = { loteria: res.loteria, nomeSorteio: res.nomeSorteio, data: res.dataObj, premios: [] };
+                gruposSorteios[key] = { loteria: res.loteria, nomeSorteio: res.nomeSorteio, dataObj: res.data.toDate(), premios: [] };
             }
             gruposSorteios[key].premios.push(res);
         });
 
-        // Salva na global para os filtros funcionarem
         window.auditoriaSorteiosProcessados = Object.values(gruposSorteios);
-        
         window.loteriaFiltroAtiva = 'todas';
-        window.periodoFiltroAtivo = 1; 
+        window.periodoFiltroAtivo = 1;
 
-        // 4. CHAMA A EXIBIÇÃO FINAL
-        filtrarAuditoria('todas', 1); 
+        filtrarAuditoria('todas', 1);
 
     } catch (e) {
-        console.error("Erro Auditoria:", e);
-        document.getElementById('auditoriaResultados').innerHTML = '<p style="text-align:center; color:red; padding:20px;">Erro ao conectar. Verifique sua conexão.</p>';
+        console.error(e);
+        document.getElementById('auditoriaResultados').innerHTML = '<p style="text-align:center; color:red; padding:20px;">Erro ao carregar dados.</p>';
     }
 }
 
@@ -22133,8 +22135,7 @@ const DEFAULT_VISIBLE_BUTTONS = {
     'btnSubBoletimGlobal': true, // 📊 Acertos I.A
 };
 
-const ADMIN_MENU_HASH = "a728c7f270c44fc1c61690fed61525fa13ecdaee1e0b37b3d42cf4fb70ea4d82";
-
+const ADMIN_MENU_HASH = "MTIxMjEy";
 
 async function hashPassword(str) {
     const encoder = new TextEncoder();
@@ -22202,7 +22203,7 @@ async function unlockMenuConfig() {
 
     // Converte o número digitado para Texto e codifica em Base64
     // btoa() é uma função nativa que funciona em qualquer navegador/celular
-    const inputEncoded = await hashPassword(String(password));
+    const inputEncoded = btoa(String(password));
 
     if (inputEncoded === ADMIN_MENU_HASH) {
     document.getElementById('btnUnlockMenuConfig').style.display = 'none';
@@ -22760,6 +22761,7 @@ ${numerosTextoInterno}
         btnElement.innerHTML = originalText;
         btnElement.disabled = false;
     }
+}
 
     async function finalizarKitAcao(kitIndex, acao, btnElement) {
     const msg = window.kitMessages[kitIndex];
@@ -22786,15 +22788,70 @@ ${numerosTextoInterno}
     }
 
     // Salva na memória permanente do navegador
-    if (!window.copiedKitsStatus) window.copiedKitsStatus = [];
     if (!window.copiedKitsStatus.includes(kitIndex)) {
         window.copiedKitsStatus.push(kitIndex);
         saveData('kitsCopiedData', window.copiedKitsStatus);
     }
-}
-}
+} 
 
-</script>
+</script> 
+
+<div id="analysisHubModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 450px;">
+        <span class="close-modal" onclick="closeAnalysisHubModal()">×</span>
+        <h3 class="modal-title">🔮 Análises e Consultas</h3>
+        <p style="text-align: center; color: #6c757d; margin-bottom: 20px;">
+            Escolha o tipo de análise que deseja executar.
+        </p>
+
+        <div class="data-management-buttons">
+            <button id="btnSubBoletimGlobal" onclick="shareGlobalDailyBriefing()" class="save-button" style="background-color: #fd7e14;">
+                <span style="font-size: 1.5rem;">📈</span>
+                <div><strong>Boletim Global I.A.</strong></div>
+            </button>
+
+            <button id="btnSubAtrasados" onclick="openAtrasadosFromHub()" class="import-btn">
+                <span style="font-size: 1.5rem;">⏱️</span>
+                <div><strong>Bichos Atrasados</strong></div>
+            </button>
+
+            <button id="btnSubPalpitesIA" onclick="openPalpitesIAFromHub()" class="analysis-button">
+                <span style="font-size: 1.5rem;">🧠</span>
+                <div><strong>Palpites da I.A.</strong></div>
+            </button>
+
+            <button onclick="abrirHistoricoPalpitesIA()" class="view-button" style="background-color: #6f42c1; color: white;">
+                <span style="font-size: 1.5rem;">📜</span>
+                <div><strong>Historico Palpites I.A</strong></div>
+            </button>
+
+            <button id="btnSubAuditoriaIA" onclick="openAuditoriaFromHub()" class="view-button" style="background-color: #17a2b8;">
+                <span style="font-size: 1.5rem;">🔍</span>
+                <div><strong>Auditoria de Acertos</strong></div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="historicoPalpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close-modal" tabindex="0" onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')">×</span>
+        <h3 class="modal-title">📜 Histórico de Análises</h3>
+        <div id="listaHistoricoPalpites" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+            <p style="text-align: center; color: #666;">Buscando suas análises...</p>
+        </div>
+        <button onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
+    </div>
+</div>
+
+<div id="auditoriaIAModal" class="modal modal-top" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
+        <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
+        <h3 class="modal-title">📊 Performance da Inteligência</h3>
+        <div id="auditoriaResultados" style="flex: 1; overflow-y: auto;"></div>
+        <button onclick="fecharAuditoriaIA()" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
+    </div>
+</div>
 
 <div id="customValueInputModal" class="modal modal-top" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 350px;">
@@ -22859,8 +22916,6 @@ ${numerosTextoInterno}
 
         <button onclick="fecharAuditoriaIA()" class="load-button" style="width: 100%; margin-top: 15px; padding: 12px; font-weight: bold;">Fechar Relatório</button>
     </div>
-</div>
-</div>
-</div>
+</script>
 </body>
 </html>
