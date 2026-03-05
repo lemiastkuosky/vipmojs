@@ -6021,6 +6021,115 @@ body.dark-mode .offline-ia-warning {
     color: #ff6b6b;
 }
 
+/* Garante que o pop-up de confirmação sempre fique na frente de tudo */
+#customConfirmModal {
+    z-index: 9999 !important;
+}
+
+/* ========================================================
+   MODERNIZAÇÃO DOS CARDS DE BICHOS (KITS MCD)
+   ======================================================== */
+
+/* O Container da Grade */
+#kitsBichosSelector {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)) !important; 
+    gap: 10px !important;
+    padding: 12px !important;
+    border: 1px solid rgba(128,128,128,0.2);
+    border-radius: 12px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.02);
+}
+body.dark-mode #kitsBichosSelector { background: rgba(0,0,0,0.2); }
+
+/* O Cartão do Bicho (Botão) */
+.kit-bicho-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 5px 10px 5px;
+    background-color: #ffffff;
+    border: 2px solid transparent; 
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    user-select: none;
+}
+body.dark-mode .kit-bicho-card {
+    background-color: #2a2a2a;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Esconde a caixinha feia padrão */
+.kit-bicho-card input[type="checkbox"] {
+    display: none;
+}
+
+/* Efeito Quando Selecionado */
+.kit-bicho-card:has(input:checked) {
+    background-color: rgba(0, 123, 255, 0.08);
+    border-color: #007bff;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 10px rgba(0, 123, 255, 0.2);
+}
+body.dark-mode .kit-bicho-card:has(input:checked) {
+    background-color: rgba(77, 163, 255, 0.15);
+    border-color: #4da3ff;
+}
+
+/* Ícone de "V" (Check) que aparece ao selecionar */
+.kit-bicho-card::after {
+    content: '✓';
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    font-size: 1rem;
+    color: #007bff;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-weight: 900;
+}
+body.dark-mode .kit-bicho-card::after { color: #4da3ff; }
+.kit-bicho-card:has(input:checked)::after { opacity: 1; }
+
+/* Elementos Internos do Card */
+.kit-bicho-emoji { font-size: 2rem; line-height: 1; margin-bottom: 6px; }
+.kit-bicho-name { font-size: 0.75rem; font-weight: 800; color: #333; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+body.dark-mode .kit-bicho-name { color: #f0f0f0; }
+
+/* Badge (Pílula) de Estoque */
+.kit-bicho-stock {
+    font-size: 0.75rem;
+    font-weight: 900;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background-color: rgba(40, 167, 69, 0.15); 
+    color: #28a745; 
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Card Esgotado (Estoque Zero) */
+.kit-bicho-card.esgotado {
+    opacity: 0.6;
+    background-color: rgba(220, 53, 69, 0.05) !important;
+    border-color: rgba(220, 53, 69, 0.3) !important;
+    pointer-events: none; /* Impede que o usuário clique */
+    filter: grayscale(0.6); /* Deixa a imagem do bicho meio cinza */
+}
+body.dark-mode .kit-bicho-card.esgotado {
+    background-color: rgba(220, 53, 69, 0.15) !important;
+    border-color: rgba(220, 53, 69, 0.5) !important;
+}
+.kit-bicho-card.esgotado .kit-bicho-stock {
+    background-color: rgba(220, 53, 69, 0.2) !important;
+    color: #dc3545 !important;
+}
+
 </style>
 </head>
 
@@ -8073,11 +8182,12 @@ body.dark-mode .offline-ia-warning {
                     <div style="flex: 1;">
                         <label style="font-weight: bold; font-size: 0.8rem;">Extração:</label>
                         <select id="kitsExtracaoSelect" class="save-dialog-input" style="margin:0;" onchange="updateKitsTimes()">
-                            <option value="Rio de Janeiro">RJ</option>
-                            <option value="Nacional">Nacional</option>
-                            <option value="Look">Look</option>
-                            <option value="Loteria Federal">Federal</option>
-                        </select>
+    <option value="" disabled selected>-- Escolha --</option>
+    <option value="Rio de Janeiro">RJ</option>
+    <option value="Nacional">Nacional</option>
+    <option value="Look">Look</option>
+    <option value="Loteria Federal">Federal</option>
+</select>
                     </div>
                     <div style="flex: 1;">
                         <label style="font-weight: bold; font-size: 0.8rem;">Horário:</label>
@@ -8085,7 +8195,7 @@ body.dark-mode .offline-ia-warning {
                     </div>
                 </div>
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.2);">
-                    <input type="checkbox" id="chkMostrarMilharesKit" checked style="transform: scale(1.2);">
+                    <input type="checkbox" id="chkMostrarMilharesKit" checked style="transform: scale(1.2);" onchange="saveData('chkMostrarMilharesKitState', this.checked)">
                     <strong>Mostrar milhares no WhatsApp</strong>
                 </label>
             </div>
@@ -8099,16 +8209,12 @@ body.dark-mode .offline-ia-warning {
                 <div id="kitsBichosSelector" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; max-height: 180px; overflow-y: auto; padding: 10px; border: 1px solid rgba(128,128,128,0.2); border-radius: 8px;"></div>
             </div>
 
-            <button onclick="gerarKitsVendas()" class="save-button" style="width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; background-color: #e83e8c; border: none; margin-bottom: 15px;">
-                🚀 EMPACOTAR KITS
+            <button onclick="gerarKitsVendas()" class="save-button" style="width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; background-color: #007bff; border: none; margin-bottom: 15px; box-shadow: 0 4px 0 #0056b3; transition: all 0.2s;">
+                🚀 GERAR KITS
             </button>
 
             <div id="kitsResultadosContainer" style="margin-top: 20px; display: none; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 15px;">
-    <h4 style="text-align: center; color: #e83e8c; margin-bottom: 10px;">📦 Pacotes Prontos!</h4>
-    
-    <button type="button" onclick="resetKitsVendas()" class="import-btn" style="width: 100%; margin-bottom: 15px; background-color: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; padding: 12px; cursor: pointer;">
-        🗑️ Limpar Tudo e Recomeçar
-    </button>
+    <h4 style="text-align: center; color: #007bff; margin-bottom: 10px;">📦 Pacotes Prontos!</h4>
     
     <div id="kitsListOutput" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;"></div>
 
@@ -9263,57 +9369,69 @@ function clearNameSelection() {
     convertToEmojisRealTime();
 }
 
-// --- FUNÇÃO ÚNICA E DEFINITIVA DE RESET DE KITS ---
-async function resetKitsVendas() {
+// --- FUNÇÃO DE RESET FORÇADA (À PROVA DE FALHAS) ---
+window.resetKitsVendas = async function() {
+    let confirmou = false;
+
+    // 1. Tenta abrir a pergunta. Se o sistema engasgar, ele força a limpeza.
     try {
-        console.log("Acionando reset total de kits e estoque...");
-        
-        // 1. Pergunta para segurança antes de apagar
-        const confirmou = await showCustomConfirm(
+        confirmou = await showCustomConfirm(
             "⚠️ <b>Zerar tudo e restaurar estoque?</b><br><br>Isso removerá os kits gerados e voltará todos os bichos para 400 milhares.", 
             "Sim, Limpar Tudo", 
             "Cancelar",
-            "kitsMcdModal"
+            null
         );
-
-        if (!confirmou) return; // Se o usuário cancelar, para aqui
-
-        // 2. MÁGICA: Limpa as variáveis globais de memória na hora
-        window.currentGeneratedKits = [];
-        window.kitsStockPools = null; 
-
-        // 3. APAGA OS CARDS FISICAMENTE DA TELA PRIMEIRO
-        const outputGrid = document.getElementById('kitsListOutput');
-        if (outputGrid) {
-            outputGrid.innerHTML = ''; // Destrói o HTML dos cards
-        }
-        
-        // 4. ESCONDE A CAIXA "PACOTES PRONTOS"
-        const containerResultados = document.getElementById('kitsResultadosContainer');
-        if (containerResultados) {
-            containerResultados.style.display = 'none'; 
-        }
-
-        // 5. Desmarca todos os bichos que o usuário clicou (tira o fundo azul)
-        selecionarTodosBichosKits(false);
-
-        // 6. Recria a lógica base de 400
-        if (typeof abrirKitsMCD === 'function') {
-            abrirKitsMCD(); 
-        }
-
-        // 7. A SOLUÇÃO: Força o navegador a pintar os números de volta para "400"
-        if (typeof atualizarVisualEstoqueKits === 'function') {
-            atualizarVisualEstoqueKits();
-        }
-
-        showToast("Estoque restaurado e tela limpa!", "success");
-
-    } catch (error) {
-        console.error("Erro ao resetar os kits:", error);
-        showToast("Erro ao tentar limpar a tela.", "error");
+    } catch(e) {
+        console.error("Erro no popup de confirmação:", e);
+        confirmou = true; // Se o popup bugar, força a limpeza mesmo assim para não travar a tela
     }
+
+    if (!confirmou) return; // Se o usuário cancelar, a função para aqui
+
+    // 2. AÇÃO BRUTA NA TELA: Esconde a caixa e apaga os cards
+    const container = document.getElementById('kitsResultadosContainer');
+    if (container) {
+        container.style.display = 'none'; // Esconde a caixa de resultados
+    }
+
+    const output = document.getElementById('kitsListOutput');
+    if (output) {
+        output.innerHTML = ''; // Apaga os cards de dentro do HTML
+    }
+
+    // 3. LIMPEZA VISUAL DOS BICHOS: Tira a cor azul dos botões
+    document.querySelectorAll('#kitsBichosSelector input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+        // Força a mudança visual de volta pro fundo transparente
+        cb.dispatchEvent(new Event('change'));
+    });
+
+    // 4. MEMÓRIA: Limpa os pacotes e zera os estoques base
+    window.currentGeneratedKits = [];
+    window.kitsStockPools = null;
+    window.copiedKitsStatus = [];
+    removeData('kitsStockData');
+    removeData('kitsGeneratedData');
+    removeData('kitsCopiedData');
+
+    // 5. FORÇA O REDESENHO: apaga o container de bichos para que abrirKitsMCD
+    //    recrie os cards com "400" do zero (sem isso, o if do innerHTML !== '' impede o redesenho)
+    const selectorContainer = document.getElementById('kitsBichosSelector');
+    if (selectorContainer) {
+        selectorContainer.innerHTML = '';
+    }
+
+    // 6. RENOVAÇÃO: Roda as funções que devolvem tudo para "400"
+    if (typeof abrirKitsMCD === 'function') {
+        abrirKitsMCD();
+    }
+    if (typeof atualizarVisualEstoqueKits === 'function') {
+        atualizarVisualEstoqueKits();
+    }
+
+    showToast("Tela 100% limpa e estoque zerado!", "success");
 }
+
 
 async function deleteNameFromPicker(nome) {
     const confirmed = await showCustomConfirm(`Excluir permanentemente o cliente "${nome}"?`, 'Sim, Excluir', 'Cancelar', 'namePickerModal');
@@ -22042,29 +22160,36 @@ function shareAuditSummary() {
 // === MÓDULO: KITS DE VENDAS (MCD) ===
 // ========================================================
 
-// Variável global para armazenar os kits gerados temporariamente
-
 // Variável para controlar o estoque de milhares dentro do módulo de Kits
 window.kitsStockPools = null;
 
-// Função para atualizar os números vermelhos/verdes na tela de seleção
+
 function atualizarVisualEstoqueKits() {
     if (!window.kitsStockPools) return;
 
     tabelaDeGrupos.forEach(bicho => {
         const spanEstoque = document.getElementById(`kits-stock-${bicho.grupo}`);
-        if (spanEstoque) {
+        const cardBicho = document.getElementById(`kit-card-${bicho.grupo}`); // Pega o card inteiro
+
+        if (spanEstoque && cardBicho) {
             const qtdRestante = window.kitsStockPools[bicho.grupo].length;
             spanEstoque.textContent = qtdRestante;
             
-            // Muda a cor baseado na quantidade
+            // Remove o bloqueio por padrão
+            cardBicho.classList.remove('esgotado');
+            cardBicho.querySelector('input').disabled = false;
+
+            // Aplica a cor dependendo da quantidade
             if (qtdRestante === 0) {
-                spanEstoque.style.color = "#6c757d"; // Cinza se acabou
-                spanEstoque.textContent = "0 ♻️";
+                cardBicho.classList.add('esgotado'); // Aplica visual vermelho e bloqueia
+                cardBicho.querySelector('input').disabled = true; 
+                spanEstoque.textContent = "ESGOTADO";
             } else if (qtdRestante <= 100) {
-                spanEstoque.style.color = "#dc3545"; // Vermelho se estiver acabando
+                spanEstoque.style.backgroundColor = "rgba(220, 53, 69, 0.15)"; 
+                spanEstoque.style.color = "#dc3545"; 
             } else {
-                spanEstoque.style.color = "#28a745"; // Verde se tiver bastante
+                spanEstoque.style.backgroundColor = "rgba(40, 167, 69, 0.15)"; 
+                spanEstoque.style.color = "#28a745"; 
             }
         }
     });
@@ -22072,51 +22197,74 @@ function atualizarVisualEstoqueKits() {
 
 window.currentGeneratedKits = [];
 
-
-function abrirKitsMCD() {
+async function abrirKitsMCD() {
     const modal = document.getElementById('kitsMcdModal');
     if (!modal) return;
 
-    const container = document.getElementById('kitsBichosSelector');
-    
-    // Inicializa o estoque de 400 milhares por bicho se ainda não existir
+    // 1. TENTA CARREGAR DA MEMÓRIA ANTES DE CRIAR DO ZERO
     if (!window.kitsStockPools) {
-        window.kitsStockPools = {};
-        tabelaDeGrupos.forEach(bicho => {
-            const poolBicho = [];
-            bicho.dezenas.forEach(dez => {
-                for (let i = 0; i < 100; i++) {
-                    poolBicho.push(String(i).padStart(2, '0') + dez);
-                }
+        const savedStock = await getData('kitsStockData');
+        const savedKits = await getData('kitsGeneratedData');
+        const savedCopied = await getData('kitsCopiedData'); // <-- NOVO: Puxa os copiados
+
+        if (savedStock) {
+            window.kitsStockPools = savedStock;
+            window.currentGeneratedKits = savedKits || [];
+            window.copiedKitsStatus = savedCopied || []; // <-- NOVO: Restaura os copiados
+        } else {
+            window.kitsStockPools = {};
+            window.currentGeneratedKits = [];
+            window.copiedKitsStatus = []; // <-- NOVO
+            tabelaDeGrupos.forEach(bicho => {
+                const poolBicho = [];
+                bicho.dezenas.forEach(dez => {
+                    for (let i = 0; i < 100; i++) {
+                        poolBicho.push(String(i).padStart(2, '0') + dez);
+                    }
+                });
+                window.kitsStockPools[bicho.grupo] = poolBicho;
             });
-            window.kitsStockPools[bicho.grupo] = poolBicho;
-        });
+        }
     }
 
-    // Desenha os botões de bicho apenas na primeira vez
-    if (container && container.innerHTML.trim() === '') {
-        container.style.display = "grid";
-        container.style.gridTemplateColumns = "repeat(auto-fill, minmax(100px, 1fr))";
-        container.style.gap = "8px";
+    const container = document.getElementById('kitsBichosSelector');
 
+    if (container && container.innerHTML.trim() === '') {
         tabelaDeGrupos.forEach(bicho => {
             const label = document.createElement('label');
-            label.style.cssText = "display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 5px; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; text-align: center; position: relative; background: transparent;";
+            label.className = 'kit-bicho-card';
+            label.id = `kit-card-${bicho.grupo}`; 
             
             label.innerHTML = `
-                <input type="checkbox" value="${bicho.grupo}" style="position: absolute; top: 5px; left: 5px; transform: scale(1.1); margin:0;">
-                <div style="font-size: 1.2rem; margin-top: 5px;">${bicho.emoji}</div>
-                <div style="font-size: 0.8rem; font-weight: bold; color: inherit;">${bicho.animal}</div>
-                <div id="kits-stock-${bicho.grupo}" style="font-size: 0.75rem; font-weight: 800;">400</div>
+                <input type="checkbox" value="${bicho.grupo}">
+                <div class="kit-bicho-emoji">${bicho.emoji}</div>
+                <div class="kit-bicho-name">${bicho.animal}</div>
+                <div id="kits-stock-${bicho.grupo}" class="kit-bicho-stock">400</div>
             `;
-            
-            label.querySelector('input').addEventListener('change', function() {
-                label.style.backgroundColor = this.checked ? 'rgba(0, 123, 255, 0.1)' : 'transparent';
-                label.style.borderColor = this.checked ? '#007bff' : '#ccc';
-            });
             container.appendChild(label);
         });
     }
+
+    atualizarVisualEstoqueKits();
+    
+    const containerResultados = document.getElementById('kitsResultadosContainer');
+    if (window.currentGeneratedKits && window.currentGeneratedKits.length > 0) {
+        renderizarListaDeKits();
+    } else {
+        if (containerResultados) containerResultados.style.display = 'none';
+    }
+
+    const selectExtracao = document.getElementById('kitsExtracaoSelect');
+    const selectHorario = document.getElementById('kitsHorarioSelect');
+    if (selectExtracao) selectExtracao.value = ''; 
+    if (selectHorario) selectHorario.innerHTML = ''; 
+
+    const chkMostrarMilhares = document.getElementById('chkMostrarMilharesKit');
+    if (chkMostrarMilhares) {
+        const savedChkState = await getData('chkMostrarMilharesKitState');
+        if (savedChkState !== null) chkMostrarMilhares.checked = savedChkState;
+    }
+
     modal.classList.add('active');
 }
 
@@ -22146,76 +22294,120 @@ function updateKitsTimes() {
     });
 }
 
-function gerarKitsVendas() {
+async function gerarKitsVendas() {
+    // 1. Validações iniciais básicas
+    const extracao = document.getElementById('kitsExtracaoSelect').value;
+    if (!extracao) { showToast('Por favor, selecione uma Extração primeiro.', 'error'); return; }
+
     const qtdKits = parseInt(document.getElementById('kitsQtdInput').value, 10);
     const checkboxes = document.querySelectorAll('#kitsBichosSelector input[type="checkbox"]:checked');
     
     if (isNaN(qtdKits) || qtdKits < 1) { showToast('Digite a quantidade de kits.', 'error'); return; }
     if (checkboxes.length === 0) { showToast('Selecione os bichos.', 'error'); return; }
 
-    showLoadingIndicator("Empacotando milhares do estoque...");
+    // === TRAVA DE SEGURANÇA COM RESTAURAÇÃO DE ESTOQUE ===
+    if (window.currentGeneratedKits && window.currentGeneratedKits.length > 0) {
+        const confirmou = await showCustomConfirm(
+            "⚠️ <b>Atenção!</b><br><br>Você já tem pacotes na tela. Criar novos irá apagá-los e <b>restaurar o estoque de todos os bichos para 400</b>.<br><br>Deseja recomeçar?",
+            "Sim, Gerar Novos",
+            "Cancelar",
+            "kitsMcdModal"
+        );
+        
+        if (!confirmou) {
+            return; // Se cancelar, para aqui e não afeta nada
+        }
 
-    setTimeout(() => {
-        try {
-            let todasMilharesPool = [];
-            
-            // Coleta os números disponíveis APENAS dos estoques dos bichos selecionados
-            checkboxes.forEach(cb => {
-                const grupo = cb.value;
-                if (window.kitsStockPools[grupo]) {
-                    todasMilharesPool.push(...window.kitsStockPools[grupo]);
+        // Restaura a memória do estoque para 400 antes de sortear os novos
+        window.kitsStockPools = {};
+        tabelaDeGrupos.forEach(bicho => {
+            const poolBicho = [];
+            bicho.dezenas.forEach(dez => {
+                for (let i = 0; i < 100; i++) {
+                    poolBicho.push(String(i).padStart(2, '0') + dez);
                 }
             });
+            window.kitsStockPools[bicho.grupo] = poolBicho;
+        });
+        atualizarVisualEstoqueKits(); // Dá um "refresh" na tela para os números voltarem a ficar verdes
+        window.copiedKitsStatus = []; 
+    }
+    // =========================================================
 
-            if (todasMilharesPool.length === 0) {
-                showToast("Estoque esgotado para os bichos selecionados!", "error");
-                hideLoadingIndicator();
-                return;
+    // TENTATIVA DIRETA DE GERAÇÃO (MATEMÁTICA PERFEITA E EMBARALHADA)
+    try {
+        const gruposSelecionados = Array.from(checkboxes).map(cb => cb.value);
+
+        // Verifica se há estoque antes de começar
+        let temEstoque = false;
+        for (const grupo of gruposSelecionados) {
+            if (window.kitsStockPools[grupo] && window.kitsStockPools[grupo].length > 0) {
+                temEstoque = true;
+                break;
+            }
+        }
+
+        if (!temEstoque) {
+            showToast("Estoque esgotado para os bichos selecionados!", "error");
+            return;
+        }
+
+        // Inicializa os arrays dos kits vazios
+        window.currentGeneratedKits = Array.from({ length: qtdKits }, () => []);
+
+        // DISTRIBUIÇÃO E REMOÇÃO EXATA
+        for (const grupo of gruposSelecionados) {
+            if (!window.kitsStockPools[grupo] || window.kitsStockPools[grupo].length === 0) {
+                continue; // Pula se não tiver estoque
             }
 
-            shuffleArray(todasMilharesPool);
+            // Pega os números do estoque e embaralha a "urna" inteira do bicho
+            let estoqueBicho = [...window.kitsStockPools[grupo]];
+            shuffleArray(estoqueBicho);
 
-            const totalParaDistribuir = todasMilharesPool.length;
-            const tamanhoBase = Math.floor(totalParaDistribuir / qtdKits);
-            const resto = totalParaDistribuir % qtdKits;
+            const totalDoBicho = estoqueBicho.length;
+            const qtdBasePorKit = Math.floor(totalDoBicho / qtdKits);
+            const resto = totalDoBicho % qtdKits;
 
-            window.currentGeneratedKits = [];
-            let indexAtual = 0;
+            let indexEstoque = 0;
 
-            // ... (código anterior da função se mantém)
-            for (let i = 0; i < qtdKits; i++) {
-                let tamanhoDesteKit = tamanhoBase + (i < resto ? 1 : 0);
-                if (tamanhoDesteKit > 0) {
-                    let kitNumbers = todasMilharesPool.slice(indexAtual, indexAtual + tamanhoDesteKit);
-                    window.currentGeneratedKits.push(kitNumbers.sort()); 
-                    
-                    // REMOVE DO ESTOQUE REAL
-                    kitNumbers.forEach(num => {
-                        const dezena = num.slice(-2);
-                        const bicho = tabelaDeGrupos.find(b => b.dezenas.includes(dezena));
-                        if (bicho) {
-                            const arrEstoque = window.kitsStockPools[bicho.grupo];
-                            const idx = arrEstoque.indexOf(num);
-                            if (idx > -1) arrEstoque.splice(idx, 1);
-                        }
-                    });
-                    indexAtual += tamanhoDesteKit;
+            for (let k = 0; k < qtdKits; k++) {
+                const qtdParaEsteKit = qtdBasePorKit + (k < resto ? 1 : 0);
+                
+                if (qtdParaEsteKit > 0) {
+                    // Corta exatamente a quantidade de milhares para este kit (Garante 0 erros)
+                    const pedaco = estoqueBicho.slice(indexEstoque, indexEstoque + qtdParaEsteKit);
+                    window.currentGeneratedKits[k].push(...pedaco);
+                    indexEstoque += qtdParaEsteKit;
                 }
             }
 
-            atualizarVisualEstoqueKits();
-            renderizarListaDeKits();
-            
-            // CORREÇÃO AQUI: O nome correto da função para desmarcar
-            selecionarTodosBichosKits(false); 
-
-        } catch (e) {
-            console.error(e);
-            showToast("Erro ao processar estoque.", "error");
-        } finally {
-            hideLoadingIndicator();
+            // O que sobrou da urna (se distribuiu tudo, sobra nada) vira o novo estoque exato
+            window.kitsStockPools[grupo] = estoqueBicho.slice(indexEstoque);
         }
-    }, 500); 
+
+        // === A MÁGICA DA MISTURA ACONTECE AQUI ===
+        // Em vez de ordenar os números sequencialmente, ele EMBARALHA dentro do pacote final
+        window.currentGeneratedKits.forEach(kit => {
+            shuffleArray(kit); 
+        });
+
+        // Remove kits que ficaram vazios (caso peça mais kits que o limite do estoque)
+        window.currentGeneratedKits = window.currentGeneratedKits.filter(kit => kit.length > 0);
+
+        atualizarVisualEstoqueKits();
+        renderizarListaDeKits();
+        selecionarTodosBichosKits(false); 
+
+        // SALVA O ESTOQUE E OS KITS NA MEMÓRIA DO CELULAR
+        saveData('kitsStockData', window.kitsStockPools);
+        saveData('kitsGeneratedData', window.currentGeneratedKits);
+        saveData('kitsCopiedData', window.copiedKitsStatus);
+
+    } catch (e) {
+        console.error(e);
+        showToast("Erro ao processar estoque.", "error");
+    }
 }
 
 function renderizarListaDeKits() {
@@ -22223,41 +22415,67 @@ function renderizarListaDeKits() {
     const output = document.getElementById('kitsListOutput');
     output.innerHTML = '';
 
+    // Garante que a variável exista
+    if (!window.copiedKitsStatus) window.copiedKitsStatus = [];
+
     window.currentGeneratedKits.forEach((kit, index) => {
         const numKit = index + 1;
         const qtdNumeros = kit.length;
-        // Amostra bem curta para economizar espaço vertical
         const preview = kit.slice(0, 3).join('-') + '...';
 
+        const bichosDoKit = new Set();
+        kit.forEach(num => {
+            const bichoData = getBichoDataFromNumber(num);
+            if (bichoData) bichosDoKit.add(`${bichoData.emoji} ${bichoData.animal}`);
+        });
+        const nomesBichosStr = Array.from(bichosDoKit).join(', ');
+
+        // === NOVO: VERIFICA SE JÁ FOI COPIADO E MUDA O VISUAL ANTES DE DESENHAR ===
+        const jaFoiCopiado = window.copiedKitsStatus.includes(index);
+        const cardOpacity = jaFoiCopiado ? "0.5" : "1";
+        const cardFilter = jaFoiCopiado ? "grayscale(1)" : "none";
+        const btnText = jaFoiCopiado ? "✅ COPIADO" : "📄 Gerar e Copiar";
+        const btnBg = jaFoiCopiado ? "#6c757d" : "#28a745";
+        const btnShadow = jaFoiCopiado ? "none" : "0 2px 0 #1e7e34";
+        const btnDisabled = jaFoiCopiado ? "disabled" : "";
+        // ==========================================================================
+
         const cardHtml = `
-            <div id="cardKit-${index}" style="background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; transition: 0.3s;">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 5px;">
+            <div id="cardKit-${index}" style="background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; transition: 0.3s; opacity: ${cardOpacity}; filter: ${cardFilter};">
+                
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2px;">
                     <strong style="font-size: 0.85rem;">📦 Kit #${numKit}</strong>
-                    <span style="background: #e83e8c; color: white; padding: 1px 5px; border-radius: 4px; font-size: 0.65rem; font-weight: bold;">${qtdNumeros} Un</span>
+                    <span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold;">${qtdNumeros} un</span>
                 </div>
                 
+                <div style="font-size: 0.65rem; color: #555; margin-bottom: 6px; line-height: 1.3; font-weight: 600;">
+                    ${nomesBichosStr}
+                </div>
+
                 <div style="font-family: monospace; font-size: 0.7rem; opacity: 0.6; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 4px; text-align: center; margin-bottom: 8px;">
                     ${preview}
                 </div>
 
-                <button onclick="gerarCopiaReciboKit(${index}, this)" class="save-button" style="width: 100%; background-color: #28a745; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: 0 2px 0 #1e7e34; white-space: nowrap;">
-                    📄 Gerar e Copiar
+                <button onclick="gerarCopiaReciboKit(${index}, this)" class="save-button" ${btnDisabled} style="width: 100%; background-color: ${btnBg}; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: ${btnShadow}; white-space: nowrap;">
+                    ${btnText}
                 </button>
             </div>
         `;
         output.innerHTML += cardHtml;
     });
 
-    container.style.display = 'block';
-    showToast(`Estoque de ${window.currentGeneratedKits.length} kits pronto!`, 'success');
+    if (window.currentGeneratedKits && window.currentGeneratedKits.length > 0) {
+        container.style.display = 'block';
+    }
 }
 
 // A FUNÇÃO QUE CRIA O RECIBO NA NUVEM E MONTA O TEXTO PERFEITO
 async function gerarCopiaReciboKit(kitIndex, btnElement) {
     const originalText = btnElement.innerHTML;
-    btnElement.innerHTML = "⏳ Criando Link do Firebase...";
+    btnElement.innerHTML = "⏳ Criando Link...";
     btnElement.disabled = true;
 
+    const numKit = kitIndex + 1; // <--- NOVO: Descobre o número do Kit (1, 2, 3...)
     const kitNumbers = window.currentGeneratedKits[kitIndex];
     const valor = document.getElementById('kitsValorInput').value;
     const extracao = document.getElementById('kitsExtracaoSelect').value;
@@ -22295,6 +22513,7 @@ async function gerarCopiaReciboKit(kitIndex, btnElement) {
       RECIBO DE APOSTA
 ==============================
 
+Pacote.........: Kit #${numKit}
 Código.........: ${code}
 Data/Hora......: ${dataHora}
 Extração.......: ${extracao} - ${horario}
@@ -22323,8 +22542,7 @@ ${numerosTextoInterno}
 
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
 
-        // 4. PREPARA A MENSAGEM DO WHATSAPP
-        // 4. PREPARA A MENSAGEM DO WHATSAPP (COM MÉTRICA DE 400 UN)
+        // 4. PREPARA A MENSAGEM DO WHATSAPP (COM O NÚMERO DO KIT)
         const horaStr = new Date().getHours();
         let saudacao = "Bom dia";
         if (horaStr >= 12 && horaStr < 18) saudacao = "Boa tarde";
@@ -22336,23 +22554,29 @@ ${numerosTextoInterno}
         let msg = `${saudacao}, Segue suas milhares da sorte!\n\n`;
         msg += `✅ SEU RECIBO FOI REGISTRADO COM SUCESSO! ✅\n\n`;
         msg += `━━━━━━━━━━━━━━━\n\n`;
+        msg += `📦 PACOTE: Kit #${numKit}\n`; // <--- ADICIONADO AQUI
         msg += `🔑 ID: ${code}\n`;
         msg += `💰 VALOR: ${valor}\n`;
         msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
         msg += `-----------------------------------\n\n`;
-        msg += `🐾 RESUMO POR BICHO (Base 400 un):\n\n`;
+        msg += `🐾 RESUMO POR BICHO:\n\n`;
 
         sortedBichosKeys.forEach(key => {
             const data = bichoDetails[key];
-            // Exibe a quantidade presente no kit em relação ao total de 400 do bicho
-            msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ ${data.milhares.length} de 400 milhares\n`;
             
             if (mostrarMilhares) {
+                msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
                 msg += `↳ ${data.milhares.join(' - ')}\n\n`;
             } else {
-                msg += `\n`; 
+                // Fica tudo junto na mesma linha, sem pular espaço extra
+                msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
             }
         });
+        
+        // Garante um espaço apenas no final da lista inteira
+        if (!mostrarMilhares) {
+            msg += `\n`;
+        }
 
         msg += `-----------------------------------\n\n`;
         msg += `🔗 PARA VER O RECIBO OFICIAL CLIQUE NO LINK ABAIXO:\n${link}\n\n`;
@@ -22378,14 +22602,23 @@ ${numerosTextoInterno}
             cardPai.style.filter = "grayscale(1)"; // Deixa o bicho e o card cinzas
         }
 
+        // === NOVO: SALVA A INFORMAÇÃO NA MEMÓRIA DO CELULAR ===
+        if (!window.copiedKitsStatus) window.copiedKitsStatus = [];
+        if (!window.copiedKitsStatus.includes(kitIndex)) {
+            window.copiedKitsStatus.push(kitIndex);
+            saveData('kitsCopiedData', window.copiedKitsStatus);
+        }
+        // ======================================================
+
     } catch (e) {
+// ...
         console.error(e);
         showToast("Erro ao conectar com o servidor.", "error");
         btnElement.innerHTML = originalText;
         btnElement.disabled = false;
     }
-
 }
+
 </script>
 
 <div id="customValueInputModal" class="modal modal-top" role="dialog" aria-modal="true">
