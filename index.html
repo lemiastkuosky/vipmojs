@@ -6129,6 +6129,36 @@ body.dark-mode .kit-bicho-card.esgotado {
     background-color: rgba(220, 53, 69, 0.2) !important;
     color: #dc3545 !important;
 }
+/* Estilo base para os botões de ação do Kit */
+.kit-action-btn {
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    font-size: 0.75rem;
+    padding: 8px 2px;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    transition: transform 0.1s;
+    min-width: 60px;
+}
+
+.kit-action-btn:active {
+    transform: translateY(2px);
+    box-shadow: none;
+}
+
+/* Ajuste específico para celulares muito estreitos */
+@media (max-width: 400px) {
+    .kit-action-btn {
+        font-size: 0.65rem; /* Diminui a letra para não quebrar */
+        padding: 6px 1px;
+    }
+}
 
 </style>
 </head>
@@ -9410,9 +9440,11 @@ window.resetKitsVendas = async function() {
     window.currentGeneratedKits = [];
     window.kitsStockPools = null;
     window.copiedKitsStatus = [];
+    window.kitMessages = {};
     removeData('kitsStockData');
     removeData('kitsGeneratedData');
     removeData('kitsCopiedData');
+    
 
     // 5. FORÇA O REDESENHO: apaga o container de bichos para que abrirKitsMCD
     //    recrie os cards com "400" do zero (sem isso, o if do innerHTML !== '' impede o redesenho)
@@ -22214,7 +22246,8 @@ async function abrirKitsMCD() {
         } else {
             window.kitsStockPools = {};
             window.currentGeneratedKits = [];
-            window.copiedKitsStatus = []; // <-- NOVO
+            window.copiedKitsStatus = []; // 
+            window.kitMessages = {};
             tabelaDeGrupos.forEach(bicho => {
                 const poolBicho = [];
                 bicho.dezenas.forEach(dez => {
@@ -22331,6 +22364,7 @@ async function gerarKitsVendas() {
         });
         atualizarVisualEstoqueKits(); // Dá um "refresh" na tela para os números voltarem a ficar verdes
         window.copiedKitsStatus = []; 
+        window.kitMessages = {};
     }
     // =========================================================
 
@@ -22415,7 +22449,6 @@ function renderizarListaDeKits() {
     const output = document.getElementById('kitsListOutput');
     output.innerHTML = '';
 
-    // Garante que a variável exista
     if (!window.copiedKitsStatus) window.copiedKitsStatus = [];
 
     window.currentGeneratedKits.forEach((kit, index) => {
@@ -22430,15 +22463,23 @@ function renderizarListaDeKits() {
         });
         const nomesBichosStr = Array.from(bichosDoKit).join(', ');
 
-        // === NOVO: VERIFICA SE JÁ FOI COPIADO E MUDA O VISUAL ANTES DE DESENHAR ===
         const jaFoiCopiado = window.copiedKitsStatus.includes(index);
-        const cardOpacity = jaFoiCopiado ? "0.5" : "1";
+        const cardOpacity = jaFoiCopiado ? "0.6" : "1";
         const cardFilter = jaFoiCopiado ? "grayscale(1)" : "none";
-        const btnText = jaFoiCopiado ? "✅ COPIADO" : "📄 Gerar e Copiar";
-        const btnBg = jaFoiCopiado ? "#6c757d" : "#28a745";
-        const btnShadow = jaFoiCopiado ? "none" : "0 2px 0 #1e7e34";
-        const btnDisabled = jaFoiCopiado ? "disabled" : "";
-        // ==========================================================================
+        
+        // === NOVO: ÁREA DE BOTÕES DINÂMICA ===
+        let actionAreaHtml = '';
+        if (jaFoiCopiado) {
+            actionAreaHtml = `<button disabled class="save-button" style="width: 100%; background-color: #6c757d; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: none; white-space: nowrap;">✅ ENVIADO</button>`;
+        } else {
+            actionAreaHtml = `
+            <div id="kit-actions-${index}" style="width: 100%;">
+                <button onclick="prepararOpcoesKit(${index}, this)" class="save-button" style="width: 100%; background-color: #28a745; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: 0 2px 0 #1e7e34; white-space: nowrap; transition: 0.2s;">
+                    📄 Preparar Envio
+                </button>
+            </div>`;
+        }
+        // =====================================
 
         const cardHtml = `
             <div id="cardKit-${index}" style="background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; transition: 0.3s; opacity: ${cardOpacity}; filter: ${cardFilter};">
@@ -22456,9 +22497,7 @@ function renderizarListaDeKits() {
                     ${preview}
                 </div>
 
-                <button onclick="gerarCopiaReciboKit(${index}, this)" class="save-button" ${btnDisabled} style="width: 100%; background-color: ${btnBg}; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: ${btnShadow}; white-space: nowrap;">
-                    ${btnText}
-                </button>
+                ${actionAreaHtml}
             </div>
         `;
         output.innerHTML += cardHtml;
@@ -22469,19 +22508,20 @@ function renderizarListaDeKits() {
     }
 }
 
-// A FUNÇÃO QUE CRIA O RECIBO NA NUVEM E MONTA O TEXTO PERFEITO
-async function gerarCopiaReciboKit(kitIndex, btnElement) {
+window.kitMessages = window.kitMessages || {}; // Guarda os textos gerados
+
+// 1. GERA O TEXTO E DIVIDE OS BOTÕES
+async function prepararOpcoesKit(kitIndex, btnElement) {
     const originalText = btnElement.innerHTML;
-    btnElement.innerHTML = "⏳ Criando Link...";
+    btnElement.innerHTML = "⏳ Gerando Link...";
     btnElement.disabled = true;
 
-    const numKit = kitIndex + 1; // <--- NOVO: Descobre o número do Kit (1, 2, 3...)
+    const numKit = kitIndex + 1;
     const kitNumbers = window.currentGeneratedKits[kitIndex];
     const valor = document.getElementById('kitsValorInput').value;
     const extracao = document.getElementById('kitsExtracaoSelect').value;
     const horario = document.getElementById('kitsHorarioSelect').value;
 
-    // 1. Organiza os bichos do kit para o resumo
     const bichoDetails = {};
     kitNumbers.forEach(num => {
         const bichoData = getBichoDataFromNumber(num);
@@ -22494,18 +22534,13 @@ async function gerarCopiaReciboKit(kitIndex, btnElement) {
 
     const sortedBichosKeys = Object.keys(bichoDetails).sort((a,b) => parseInt(bichoDetails[a].grupo) - parseInt(bichoDetails[b].grupo));
     
-    // Texto do comprovante físico interno
     let numerosTextoInterno = sortedBichosKeys.map(key => {
         const data = bichoDetails[key];
         return `Gr. ${data.grupo} - ${data.emoji} ${data.animal.toUpperCase()}: ${data.milhares.length} Milhares\nMilhares: ${data.milhares.join(', ')}`;
     }).join('\n\n');
 
-    // 2. Gera dados de recibo
     const code = generateReceiptCode();
     const dataHora = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    const valorNumerico = parseFloat(valor.replace(/\D/g, '')) / 100 || 0;
-    const possivelPremio = valorNumerico * 50;
-    const premioFormatado = 'R$ ' + possivelPremio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const custoCalculado = 'R$ ' + (kitNumbers.length * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const rawReceiptContent = `
@@ -22518,7 +22553,6 @@ Código.........: ${code}
 Data/Hora......: ${dataHora}
 Extração.......: ${extracao} - ${horario}
 Valor Pago.....: ${valor}
-Possível Prêmio: ${premioFormatado}
 Valor Calculado: ${custoCalculado}
 Qtd. Números...: ${kitNumbers.length}
 
@@ -22532,17 +22566,15 @@ ${numerosTextoInterno}
     `.trim();
 
     try {
-        // 3. Salva no banco de dados na Nuvem
         const docRef = await firestoreDB.collection('receipts').add({
             content: rawReceiptContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: false,
-            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000) // Expira em 4 horas
+            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000)
         });
 
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
 
-        // 4. PREPARA A MENSAGEM DO WHATSAPP (COM O NÚMERO DO KIT)
         const horaStr = new Date().getHours();
         let saudacao = "Bom dia";
         if (horaStr >= 12 && horaStr < 18) saudacao = "Boa tarde";
@@ -22554,30 +22586,24 @@ ${numerosTextoInterno}
         let msg = `${saudacao}, Segue suas milhares da sorte!\n\n`;
         msg += `✅ SEU RECIBO FOI REGISTRADO COM SUCESSO! ✅\n\n`;
         msg += `━━━━━━━━━━━━━━━\n\n`;
-        msg += `📦 PACOTE: Kit #${numKit}\n`; // <--- ADICIONADO AQUI
+        msg += `📦 PACOTE: Kit #${numKit}\n`;
         msg += `🔑 ID: ${code}\n`;
         msg += `💰 VALOR: ${valor}\n`;
         msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
         msg += `-----------------------------------\n\n`;
-        msg += `🐾 RESUMO POR BICHO:\n\n`;
+        msg += `🐾 RESUMO POR BICHO (Base 400 un):\n\n`;
 
         sortedBichosKeys.forEach(key => {
             const data = bichoDetails[key];
-            
             if (mostrarMilhares) {
                 msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
                 msg += `↳ ${data.milhares.join(' - ')}\n\n`;
             } else {
-                // Fica tudo junto na mesma linha, sem pular espaço extra
                 msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
             }
         });
-        
-        // Garante um espaço apenas no final da lista inteira
-        if (!mostrarMilhares) {
-            msg += `\n`;
-        }
 
+        if (!mostrarMilhares) msg += `\n`;
         msg += `-----------------------------------\n\n`;
         msg += `🔗 PARA VER O RECIBO OFICIAL CLIQUE NO LINK ABAIXO:\n${link}\n\n`;
         msg += `━━━━━━━━━━━━━━━\n`;
@@ -22585,37 +22611,62 @@ ${numerosTextoInterno}
         msg += `Obrigado e Boa sorte! 🍀\n\n`;
         msg += `📲 VIP - I.A in Real-Time`;
 
-        // 5. Copia a mensagem para a área de transferência!
-        await copyToClipboard(msg, btnElement);
-        
-        // Estilo de "Vendido/Enviado" para o card compacto
-        btnElement.innerHTML = "✅ COPIADO";
-        btnElement.style.backgroundColor = "#6c757d"; 
-        btnElement.style.boxShadow = "none";          
-        btnElement.style.fontSize = "0.7rem";
-        btnElement.disabled = true;                   
+        // Salva a mensagem na memória
+        window.kitMessages[kitIndex] = msg;
 
-        // Pega o card pai e deixa ele "apagado"
-        const cardPai = document.getElementById(`cardKit-${kitIndex}`);
-        if(cardPai) {
-            cardPai.style.opacity = "0.5";
-            cardPai.style.filter = "grayscale(1)"; // Deixa o bicho e o card cinzas
+        // DIVIDE O BOTÃO EM DOIS NA TELA
+        const actionContainer = document.getElementById(`kit-actions-${kitIndex}`);
+        if (actionContainer) {
+            actionContainer.innerHTML = `
+                <div style="display: flex; gap: 5px; width: 100%; flex-wrap: wrap;">
+                    <button onclick="finalizarKitAcao(${kitIndex}, 'copy', this)" class="kit-action-btn copy" style="flex: 1 1 45%; background-color: #6c757d;">
+                        📋 Copiar
+                    </button>
+                    <button onclick="finalizarKitAcao(${kitIndex}, 'whatsapp', this)" class="kit-action-btn zap" style="flex: 1 1 45%; background-color: #25D366;">
+                        📲 Whats
+                    </button>
+                </div>
+            `;
         }
-
-        // === NOVO: SALVA A INFORMAÇÃO NA MEMÓRIA DO CELULAR ===
-        if (!window.copiedKitsStatus) window.copiedKitsStatus = [];
-        if (!window.copiedKitsStatus.includes(kitIndex)) {
-            window.copiedKitsStatus.push(kitIndex);
-            saveData('kitsCopiedData', window.copiedKitsStatus);
-        }
-        // ======================================================
 
     } catch (e) {
-// ...
         console.error(e);
         showToast("Erro ao conectar com o servidor.", "error");
         btnElement.innerHTML = originalText;
         btnElement.disabled = false;
+    }
+}
+
+// 2. EXECUTA A AÇÃO ESCOLHIDA (COPIAR OU ZAP) E DESLIGA O CARD
+async function finalizarKitAcao(kitIndex, acao, btnElement) {
+    const msg = window.kitMessages[kitIndex];
+    if (!msg) return;
+
+    if (acao === 'copy') {
+        await copyToClipboard(msg, btnElement);
+    } else if (acao === 'whatsapp') {
+        const encodedMessage = encodeURIComponent(msg);
+        window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+        showToast("Abrindo WhatsApp...", "success");
+    }
+
+    // Bloqueia e acinza o card inteiro após usar
+    const cardPai = document.getElementById(`cardKit-${kitIndex}`);
+    if(cardPai) {
+        cardPai.style.opacity = "0.6";
+        cardPai.style.filter = "grayscale(1)";
+        
+        const actionContainer = document.getElementById(`kit-actions-${kitIndex}`);
+        if (actionContainer) {
+            actionContainer.innerHTML = `<button disabled class="save-button" style="width: 100%; background-color: #6c757d; padding: 6px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: none; white-space: nowrap;">✅ ENVIADO</button>`;
+        }
+    }
+
+    // Salva na memória que esse já foi despachado
+    if (!window.copiedKitsStatus) window.copiedKitsStatus = [];
+    if (!window.copiedKitsStatus.includes(kitIndex)) {
+        window.copiedKitsStatus.push(kitIndex);
+        saveData('kitsCopiedData', window.copiedKitsStatus);
     }
 }
 
