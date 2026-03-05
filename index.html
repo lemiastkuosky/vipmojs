@@ -17265,7 +17265,7 @@ async function ensureCorrectGenModeVisualState() {
     }
 
    async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
-    // 1. Define a loteria ativa e o período ativo
+    // 1. Define loteria e período ativos
     window.loteriaFiltroAtiva = loteriaFiltro || window.loteriaFiltroAtiva || 'todas';
     if (periodoArg !== null) window.periodoFiltroAtivo = periodoArg;
     
@@ -17273,65 +17273,67 @@ async function ensureCorrectGenModeVisualState() {
     const periodoAtual = window.periodoFiltroAtivo || 1; // Padrão: 1 dia (Hoje)
 
     const container = document.getElementById('auditoriaResultados');
+    const containerMenu = document.getElementById('auditoriaPeriodoMenu');
+    const containerZap = document.getElementById('auditoriaBotaoZap');
+    
     const lista = window.auditoriaSorteiosProcessados || auditoriaSorteiosProcessados; 
     if (!lista || lista.length === 0) return;
 
-    // Atualiza visual dos botões de filtro no topo
+    // Atualiza visual dos botões de loteria
     document.querySelectorAll('.receipt-extraction-btn').forEach(btn => btn.classList.remove('selected'));
     const btnAtivo = document.getElementById(`filter-${loteriaAtual}`);
     if (btnAtivo) btnAtivo.classList.add('selected');
 
-    // Lista principal da loteria, ordenada cronologicamente (usada como base de cálculo)
     let listaDaLoteria = loteriaAtual === 'todas' ? lista : lista.filter(s => s.loteria === loteriaAtual);
 
-    // === NOVO FILTRO INTELIGENTE DE DIAS (PERÍODO) ===
-    const agora = new Date();
-    agora.setHours(0, 0, 0, 0); // Zera o relógio para focar no "dia"
-    const limiteData = new Date(agora);
-    
-    if (periodoAtual !== 999) {
-        // Se escolheu 1 (Hoje), recua 0 dias. Se escolheu 2, recua 1 dia (ontem), etc.
-        limiteData.setDate(limiteData.getDate() - (periodoAtual - 1));
-    }
-
-    let listaFiltrada = listaDaLoteria.filter(s => {
-        if (periodoAtual === 999) return true; // Mostra tudo
-        
-        let sDate = new Date(0);
-        if (s.dataObj) {
-            sDate = new Date(s.dataObj);
-        } else if (s.data && typeof s.data === 'string' && s.data.includes('/')) {
-            const parts = s.data.split('/');
-            sDate = new Date(parts[2], parts[1]-1, parts[0]);
-        }
-        sDate.setHours(0, 0, 0, 0);
-        
-        return sDate >= limiteData; // Pega tudo que for igual ou mais recente que o limite
+    // === NOVO SISTEMA DE DIAS À PROVA DE FALHAS ===
+    // Extrai e ordena todas as datas únicas que existem no banco (do mais recente para o mais antigo)
+    const datasDisponiveis = [...new Set(
+        listaDaLoteria.map(s => {
+            if (s.data && typeof s.data === 'string' && s.data.includes('/')) return s.data;
+            if (s.dataObj) {
+                if (typeof s.dataObj.toLocaleDateString === 'function') return s.dataObj.toLocaleDateString('pt-BR');
+                const d = new Date(s.dataObj);
+                if (!isNaN(d)) return d.toLocaleDateString('pt-BR');
+            }
+            return null;
+        }).filter(d => d !== null && d.includes('/'))
+    )].sort((a,b) => {
+        const partesA = a.split('/');
+        const partesB = b.split('/');
+        return new Date(partesB[2], partesB[1]-1, partesB[0]) - new Date(partesA[2], partesA[1]-1, partesA[0]);
     });
 
-    // === CONTADORES SEPARADOS ===
-    let hitsUnidadeCabeca = 0;
-    let hitsDezenaCabeca = 0;
-    let hitsMilharCabeca = 0;
-    let hitsMilhar1ao5 = 0;
-    let hitsCentenaCabeca = 0;
-    let hitsCentena1ao5 = 0;
-    let hitsBichoCabeca = 0;
-    let hitsDuque = 0;
-    let hitsTerno = 0;
-    let hitsJogadaDeMestre = 0;
-    let hitsMilharSoma = 0;
-    let hitsBichoEsquecido = 0;
+    // Pega exatamente a quantidade de dias que o usuário pediu (Ex: 1 pega a 1ª data. 2 pega as duas primeiras)
+    let datasPermitidas = [];
+    if (periodoAtual === 999) {
+        datasPermitidas = datasDisponiveis;
+    } else {
+        datasPermitidas = datasDisponiveis.slice(0, periodoAtual);
+    }
+
+    // Filtra os sorteios deixando apenas os que pertencem às datas permitidas
+    let listaFiltrada = listaDaLoteria.filter(s => {
+        let dStr = null;
+        if (s.data && typeof s.data === 'string' && s.data.includes('/')) dStr = s.data;
+        else if (s.dataObj) {
+            if (typeof s.dataObj.toLocaleDateString === 'function') dStr = s.dataObj.toLocaleDateString('pt-BR');
+            else dStr = new Date(s.dataObj).toLocaleDateString('pt-BR');
+        }
+        return datasPermitidas.includes(dStr);
+    });
+
+    // === CONTADORES ===
+    let hitsUnidadeCabeca = 0, hitsDezenaCabeca = 0, hitsMilharCabeca = 0, hitsMilhar1ao5 = 0;
+    let hitsCentenaCabeca = 0, hitsCentena1ao5 = 0, hitsBichoCabeca = 0, hitsDuque = 0;
+    let hitsTerno = 0, hitsJogadaDeMestre = 0, hitsMilharSoma = 0, hitsBichoEsquecido = 0;
     
     let totalSorteios = 0;
     let html = '';
 
-    // Função rápida para calcular a soma do sorteio sem travar o banco
     const calcularSomaMemoria = (premios) => {
         let soma = 0;
-        premios.forEach(p => {
-            if (p.posicao >= 1 && p.posicao <= 5) soma += parseInt(p.milhar.replace(/\D/g, ''), 10);
-        });
+        premios.forEach(p => { if (p.posicao >= 1 && p.posicao <= 5) soma += parseInt(p.milhar.replace(/\D/g, ''), 10); });
         return String(soma).slice(-4).padStart(4, '0');
     };
 
@@ -17347,8 +17349,6 @@ async function ensureCorrectGenModeVisualState() {
         else if (res1.dataObj && typeof res1.dataObj.toLocaleDateString === 'function') dataFormatada = res1.dataObj.toLocaleDateString('pt-BR');
 
         const analiseIA = await getIaDataForDraw(res1.loteria, 'geral');
-        
-        // Simulação da I.A. usando a data exata do sorteio analisado
         const seedAudit = `${dataFormatada}-${res1.loteria}-${res1.nomeSorteio}`;
         const simulacao = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
         
@@ -17356,20 +17356,16 @@ async function ensureCorrectGenModeVisualState() {
         const centenasSugeridas = simulacao.palpites.centena.map(c => c.palpite);
         
         let rankingIA = tabelaDeGrupos.map(b => ({ ...b, forca: calcularPontuacaoBicho(b.grupo, analiseIA || {}).forca, dezenasBase: b.dezenas })).sort((a, b) => b.forca - a.forca);
-        
         const top10IA = rankingIA.slice(0, 10);
         const top10Grupos = top10IA.map(b => b.grupo);
-        
         const indexAcertoBicho = top10Grupos.indexOf(res1.bichoGrupo);
         const cravouBichoCabeca = indexAcertoBicho !== -1;
 
-        // Efeito de círculo verde para o acerto do Top 10
         const top10Emojis = top10IA.map((b, index) => {
             const isMatch = (index === indexAcertoBicho);
             const spanStyle = isMatch 
                 ? `display: inline-block; white-space: nowrap; margin-right: 8px; background-color: rgba(40, 167, 69, 0.2); border: 2px solid #28a745; border-radius: 20px; padding: 2px 8px; box-shadow: 0 0 6px rgba(40, 167, 69, 0.5); transform: scale(1.05);`
                 : `white-space: nowrap; margin-right: 8px; opacity: 0.8;`;
-                
             return `<span style="${spanStyle}"><strong style="font-size: 0.85rem; color: #6c757d;">${index + 1}º</strong> ${b.emoji}</span>`;
         }).join('');
 
@@ -17381,7 +17377,6 @@ async function ensureCorrectGenModeVisualState() {
         const centenas1ao5 = milhares1ao5.map(m => m.slice(-3));
         const dezenas1ao5 = milhares1ao5.map(m => m.slice(-2));
 
-        // Pega a soma do sorteio ANTERIOR usando a lista GERAL cronológica
         let milharDaSomaCalculada = null;
         const indexNaGeral = listaDaLoteria.indexOf(sorteio);
         if (indexNaGeral + 1 < listaDaLoteria.length) {
@@ -17390,8 +17385,6 @@ async function ensureCorrectGenModeVisualState() {
 
         // ============================================
         // === VERIFICAÇÕES DE ACERTO =================
-        // ============================================
-        
         const milharNaCabeca = milharesSugeridas.includes(res1.milhar);
         const centenaNaCabeca = centenasSugeridas.includes(res1.milhar.slice(-3));
         const dezenaNaCabeca = dezenasSugeridas.includes(res1.milhar.slice(-2));
@@ -17411,7 +17404,6 @@ async function ensureCorrectGenModeVisualState() {
         const [top1, top2, top3, top4] = rankingIA;
         const d1 = top1.dezenasBase[0]; const d2 = top2.dezenasBase[0];
         const d3 = top3.dezenasBase[0]; const d4 = top4.dezenasBase[0];
-        
         const sugestoesDuque = [{ aposta: [d1, d2] }, { aposta: [d1, d3] }, { aposta: [d2, d4] }];
         const sugestoesTerno = [{ aposta: [d1, d2, d3] }, { aposta: [d2, d3, d4] }];
 
@@ -17439,28 +17431,19 @@ async function ensureCorrectGenModeVisualState() {
         if (cravouBichoCabeca) badgesHtml += `<span style="background:#28a745; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🎯 GRUPO (${indexAcertoBicho + 1}º)</span>`;
         if (milharNaCabeca) badgesHtml += '<span style="background:#d63384; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🚀 MILHAR (CAB)</span>';
         else if (milharNo1ao5) badgesHtml += '<span style="background:#d63384; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🚀 MILHAR (1-5)</span>';
-        
         if (centenaNaCabeca) badgesHtml += '<span style="background:#0dcaf0; color:#000; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px; font-weight:bold;">💯 CENTENA (CAB)</span>';
         else if (centenaNo1ao5) badgesHtml += '<span style="background:#0dcaf0; color:#000; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px; font-weight:bold;">💯 CENTENA (1-5)</span>';
-
         if (dezenaNaCabeca) badgesHtml += '<span style="background:#198754; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🎲 DEZ (CAB)</span>';
         if (unidadeNaCabeca) badgesHtml += '<span style="background:#198754; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🔹 UNI (CAB)</span>';
-
         if (mestreCravado) badgesHtml += '<span style="background:#6f42c1; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">👑 MESTRE</span>';
         if (somaCravada) badgesHtml += '<span style="background:#ffc107; color:#000; font-weight:bold; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🧮 SOMA</span>';
         if (bichoEsquecidoNaCabeca) badgesHtml += '<span style="background:#333; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">👻 ZEBRA (CAB)</span>';
         if (fezTerno) badgesHtml += '<span style="background:#17a2b8; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🏆 TERNO</span>';
         else if (fezDuque) badgesHtml += '<span style="background:#fd7e14; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🤝 DUQUE</span>';
 
-        // TEXTOS DETALHADOS DOS ACERTOS 
         let acertosTextLines = [];
-        if (cravouBichoCabeca) {
-            const bSugerido = top10IA[indexAcertoBicho];
-            acertosTextLines.push(`🎯 GRUPO NA CABEÇA: ✅ <br><span style="font-size: 0.8rem; font-weight: normal; opacity: 0.85;">(Foi a <b>${indexAcertoBicho + 1}ª</b> sugestão da I.A: ${bSugerido.emoji} ${bSugerido.animal})</span>`);
-        }
-        if (bichoEsquecidoNaCabeca) {
-            acertosTextLines.push(`👻 ZEBRA NA CABEÇA: ✅ <br><span style="font-size: 0.8rem; font-weight: normal; opacity: 0.85;">(Bicho Esquecido: ${simulacao.bichoSombra.emoji} ${simulacao.bichoSombra.animal})</span>`);
-        }
+        if (cravouBichoCabeca) acertosTextLines.push(`🎯 GRUPO NA CABEÇA: ✅ <br><span style="font-size: 0.8rem; font-weight: normal; opacity: 0.85;">(Foi a <b>${indexAcertoBicho + 1}ª</b> sugestão da I.A: ${top10IA[indexAcertoBicho].emoji} ${top10IA[indexAcertoBicho].animal})</span>`);
+        if (bichoEsquecidoNaCabeca) acertosTextLines.push(`👻 ZEBRA NA CABEÇA: ✅ <br><span style="font-size: 0.8rem; font-weight: normal; opacity: 0.85;">(Bicho Esquecido: ${simulacao.bichoSombra.emoji} ${simulacao.bichoSombra.animal})</span>`);
         if (milharNaCabeca) acertosTextLines.push('🚀 MILHAR EXATA (CABEÇA): ✅');
         if (centenaNaCabeca && !milharNaCabeca) acertosTextLines.push('💯 CENTENA EXATA (CABEÇA): ✅');
         if (milharNo1ao5 && !milharNaCabeca) acertosTextLines.push('🚀 MILHAR (1º ao 5º): ✅');
@@ -17469,12 +17452,8 @@ async function ensureCorrectGenModeVisualState() {
         if (unidadeNaCabeca) acertosTextLines.push('🔹 UNIDADE ATRASADA (CABEÇA): ✅');
         if (mestreCravado) acertosTextLines.push('👑 JOGADA DE MESTRE (Invertida): ✅');
         if (somaCravada) acertosTextLines.push('🧮 MILHAR DA SOMA (1º ao 5º): ✅');
-        
-        if (fezTerno) {
-            acertosTextLines.push(`🤝 TERNO DE DEZENAS (Cravado): ✅`);
-        } else if (fezDuque) {
-            acertosTextLines.push(`🤝 DUQUE DE DEZENAS (Cravado): ✅`);
-        }
+        if (fezTerno) acertosTextLines.push(`🤝 TERNO DE DEZENAS (Cravado): ✅`);
+        else if (fezDuque) acertosTextLines.push(`🤝 DUQUE DE DEZENAS (Cravado): ✅`);
 
         let msgCardPrincipal = teveAcerto ? acertosTextLines.join('<br>') : '⚪ Nenhum acerto da I.A. neste sorteio';
 
@@ -17484,15 +17463,12 @@ async function ensureCorrectGenModeVisualState() {
                 const posSugerida = top10Grupos.indexOf(p.bichoGrupo) + 1;
                 mark = `<span style="color:#28a745;">✅ (${posSugerida}º Palpite)</span>`;
             }
-            
             const fw = p.posicao === 1 ? 'bold' : 'normal';
             const op = p.posicao === 1 ? '1' : '0.8';
             const sz = p.posicao === 1 ? '0.9rem' : '0.8rem';
             
-            return `
-            <div style="display: flex; justify-content: space-between; font-size: ${sz}; font-weight: ${fw}; opacity: ${op}; border-bottom: 1px dashed rgba(128,128,128,0.2); padding-bottom: 4px; margin-bottom: 4px;">
-                <span>${p.posicao}º Prêmio</span>
-                <span><strong>${p.milhar}</strong> <span style="font-size:0.9em;">(${p.bichoNome})</span> ${mark}</span>
+            return `<div style="display: flex; justify-content: space-between; font-size: ${sz}; font-weight: ${fw}; opacity: ${op}; border-bottom: 1px dashed rgba(128,128,128,0.2); padding-bottom: 4px; margin-bottom: 4px;">
+                <span>${p.posicao}º Prêmio</span><span><strong>${p.milhar}</strong> <span style="font-size:0.9em;">(${p.bichoNome})</span> ${mark}</span>
             </div>`;
         }).join('');
 
@@ -17513,25 +17489,19 @@ async function ensureCorrectGenModeVisualState() {
                     <span>🎰 ${res1.nomeLoteria || res1.loteria.toUpperCase()} (${res1.nomeSorteio})</span>
                     <span>${dataFormatada}</span>
                 </div>
-                
                 <div style="background: rgba(128,128,128,0.1); border: 1px solid rgba(128,128,128,0.1); border-radius: 6px; padding: 8px; margin-bottom: 10px;">
                     ${listaResultadosHtml}
                 </div>
-
                 <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;">
                     ${badgesHtml || '<span style="font-size: 0.75rem; color: #888;">Sem acertos diretos da I.A. neste sorteio.</span>'}
                 </div>
-                
-                <div style="font-size: 0.85rem; font-weight: bold; opacity: 0.95; line-height: 1.4;">
-                    ${msgCardPrincipal}
-                </div>
-
+                <div style="font-size: 0.85rem; font-weight: bold; opacity: 0.95; line-height: 1.4;">${msgCardPrincipal}</div>
                 ${caixaProvaHtml}
             </div>`;
     }
 
     // ==========================================
-    // MENU DE BOTÕES DE PERÍODO 
+    // MENU DE BOTÕES DE PERÍODO (NO TOPO)
     // ==========================================
     const periodos = [
         { val: 1, label: 'Hoje' },
@@ -17542,8 +17512,8 @@ async function ensureCorrectGenModeVisualState() {
         { val: 999, label: 'Tudo' }
     ];
 
-    let htmlMenuData = `
-        <div style="margin-bottom: 15px;">
+    if (containerMenu) {
+        containerMenu.innerHTML = `
             <div style="font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; color: #555; text-transform: uppercase;">⏳ Desempenho por Período:</div>
             <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; -ms-overflow-style: none;">
                 ${periodos.map(p => `
@@ -17554,18 +17524,17 @@ async function ensureCorrectGenModeVisualState() {
                     </button>
                 `).join('')}
             </div>
-        </div>
-    `;
+        `;
+    }
 
     // ==========================================
-    // ATUALIZAÇÃO DOS RESULTADOS GERAIS E WHATSAPP
+    // ATUALIZAÇÃO DO PAINEL DE DASHBOARD E WHATSAPP
     // ==========================================
     const statPercentEl = document.getElementById('statPercent');
     const statTotalTextEl = document.getElementById('statTotalText');
-
+    const rightPanelContainer = document.getElementById('statRightPanel');
     const labelTempo = periodos.find(p => p.val === periodoAtual).label;
     
-    // Salva globalmente os dados para a função shareAuditSummary que enviará o relatório.
     window.currentAuditStats = {
         loteria: loteriaAtual === 'todas' ? 'Todas as Loterias' : loteriaAtual.toUpperCase(),
         periodo: labelTempo,
@@ -17578,57 +17547,54 @@ async function ensureCorrectGenModeVisualState() {
         hitsJogadaDeMestre, hitsMilharSoma, hitsBichoEsquecido
     };
 
-    if (statPercentEl && statTotalTextEl) {
+    if (statPercentEl && statTotalTextEl && rightPanelContainer) {
         const acertosTotais = hitsBichoCabeca + hitsUnidadeCabeca + hitsDezenaCabeca + hitsMilharCabeca + hitsMilhar1ao5 + hitsCentenaCabeca + hitsCentena1ao5 + hitsDuque + hitsTerno + hitsJogadaDeMestre + hitsMilharSoma + hitsBichoEsquecido;
         const porcentagem = totalSorteios > 0 ? Math.min(100, Math.round((acertosTotais / totalSorteios) * 100)) : 0;
         
         statPercentEl.textContent = `${porcentagem}%`;
         window.currentAuditStats.porcentagem = porcentagem;
-        
-        const labelTempoLower = labelTempo.toLowerCase();
-        statTotalTextEl.innerHTML = `Análise de <b>${totalSorteios}</b> extrações (Filtro: ${labelTempoLower}).`;
+        statTotalTextEl.innerHTML = `Análise de <b>${totalSorteios}</b> extrações (Filtro: ${labelTempo.toLowerCase()}).`;
 
-        const rightPanelContainer = statPercentEl.parentElement.nextElementSibling;
-        
-        if (rightPanelContainer) {
-            rightPanelContainer.style.textAlign = 'left';
-            rightPanelContainer.style.paddingLeft = '10px';
-            rightPanelContainer.style.borderLeft = '1px solid rgba(0,123,255,0.2)';
-            
-            rightPanelContainer.innerHTML = `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.72rem; line-height: 1.3;">
-                    <div>
-                        <div style="margin-bottom: 2px;">Grupo (Cab): <strong style="color:#28a745;">${hitsBichoCabeca}</strong></div>
-                        <div style="margin-bottom: 2px;">Uni (Cab): <strong style="color:#198754;">${hitsUnidadeCabeca}</strong></div>
-                        <div style="margin-bottom: 2px;">Dez (Cab): <strong style="color:#198754;">${hitsDezenaCabeca}</strong></div>
-                        <div style="margin-bottom: 2px;">C. Cabeça: <strong style="color:#0dcaf0;">${hitsCentenaCabeca}</strong></div>
-                        <div style="margin-bottom: 2px;">C. 1 ao 5: <strong style="color:#0dcaf0;">${hitsCentena1ao5}</strong></div>
-                        <div style="margin-bottom: 2px;">M. Cabeça: <strong style="color:#d63384;">${hitsMilharCabeca}</strong></div>
-                    </div>
-
-                    <div>
-                        <div style="margin-bottom: 2px;">M. 1 ao 5: <strong style="color:#d63384;">${hitsMilhar1ao5}</strong></div>
-                        <div style="margin-bottom: 2px;">Duque: <strong style="color:#fd7e14;">${hitsDuque}</strong></div>
-                        <div style="margin-bottom: 2px;">Terno: <strong style="color:#17a2b8;">${hitsTerno}</strong></div>
-                        <div style="margin-bottom: 2px;">Mestre: <strong style="color:#6f42c1;">${hitsJogadaDeMestre}</strong></div>
-                        <div style="margin-bottom: 2px;">M. Soma: <strong style="color:#ffc107;">${hitsMilharSoma}</strong></div>
-                        <div style="margin-bottom: 2px;">Zebra/Esq: <strong style="color:#666;">${hitsBichoEsquecido}</strong></div>
-                    </div>
+        rightPanelContainer.style.textAlign = 'left';
+        rightPanelContainer.style.paddingLeft = '10px';
+        rightPanelContainer.style.borderLeft = '1px solid rgba(0,123,255,0.2)';
+        rightPanelContainer.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.72rem; line-height: 1.3;">
+                <div>
+                    <div style="margin-bottom: 2px;">Grupo (Cab): <strong style="color:#28a745;">${hitsBichoCabeca}</strong></div>
+                    <div style="margin-bottom: 2px;">Uni (Cab): <strong style="color:#198754;">${hitsUnidadeCabeca}</strong></div>
+                    <div style="margin-bottom: 2px;">Dez (Cab): <strong style="color:#198754;">${hitsDezenaCabeca}</strong></div>
+                    <div style="margin-bottom: 2px;">C. Cabeça: <strong style="color:#0dcaf0;">${hitsCentenaCabeca}</strong></div>
+                    <div style="margin-bottom: 2px;">C. 1 ao 5: <strong style="color:#0dcaf0;">${hitsCentena1ao5}</strong></div>
+                    <div style="margin-bottom: 2px;">M. Cabeça: <strong style="color:#d63384;">${hitsMilharCabeca}</strong></div>
                 </div>
-            `;
-        }
-    }
-
-    let htmlBotaoWhatsApp = '';
-    if (totalSorteios > 0) {
-        htmlBotaoWhatsApp = `
-            <button onclick="shareAuditSummary()" class="save-button" style="width: 100%; margin-bottom: 15px; padding: 12px; background-color: #25D366; font-size: 1rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white;">
-                📲 Enviar Resumo no WhatsApp
-            </button>
+                <div>
+                    <div style="margin-bottom: 2px;">M. 1 ao 5: <strong style="color:#d63384;">${hitsMilhar1ao5}</strong></div>
+                    <div style="margin-bottom: 2px;">Duque: <strong style="color:#fd7e14;">${hitsDuque}</strong></div>
+                    <div style="margin-bottom: 2px;">Terno: <strong style="color:#17a2b8;">${hitsTerno}</strong></div>
+                    <div style="margin-bottom: 2px;">Mestre: <strong style="color:#6f42c1;">${hitsJogadaDeMestre}</strong></div>
+                    <div style="margin-bottom: 2px;">M. Soma: <strong style="color:#ffc107;">${hitsMilharSoma}</strong></div>
+                    <div style="margin-bottom: 2px;">Zebra/Esq: <strong style="color:#666;">${hitsBichoEsquecido}</strong></div>
+                </div>
+            </div>
         `;
     }
 
-    container.innerHTML = htmlMenuData + htmlBotaoWhatsApp + (html || '<p style="text-align:center; padding:20px; color:#555;">Nenhum sorteio processado para este período.</p>');
+    if (containerZap) {
+        if (totalSorteios > 0) {
+            containerZap.innerHTML = `
+                <button onclick="shareAuditSummary()" class="save-button" style="width: 100%; margin-bottom: 15px; padding: 12px; background-color: #25D366; font-size: 1rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white;">
+                    📲 Enviar Resumo no WhatsApp
+                </button>
+            `;
+        } else {
+            containerZap.innerHTML = '';
+        }
+    }
+
+    if (container) {
+        container.innerHTML = html || '<p style="text-align:center; padding:20px; color:#555;">Nenhum sorteio processado para este período.</p>';
+    }
 }
 
 function fecharAuditoriaIA() {
@@ -21782,7 +21748,7 @@ function shareAuditSummary() {
         <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
         <h3 class="modal-title" style="margin-bottom: 5px;">📊 Performance da Inteligência</h3>
         
-        <div style="display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; margin-bottom: 10px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+        <div style="display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
             <button onclick="filtrarAuditoria('todas')" class="receipt-extraction-btn selected" id="filter-todas" style="min-width: 80px;">Geral</button>
             <button onclick="filtrarAuditoria('rj')" class="receipt-extraction-btn" id="filter-rj" style="min-width: 60px;">RJ</button>
             <button onclick="filtrarAuditoria('lk')" class="receipt-extraction-btn" id="filter-lk" style="min-width: 60px;">LK</button>
@@ -21790,18 +21756,19 @@ function shareAuditSummary() {
             <button onclick="filtrarAuditoria('fd')" class="receipt-extraction-btn" id="filter-fd" style="min-width: 60px;">FD</button>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(0,123,255,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,123,255,0.2);">
+        <div id="auditoriaPeriodoMenu" style="margin-bottom: 10px;"></div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; background: rgba(0,123,255,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,123,255,0.2);">
             <div style="text-align: left;">
                 <div style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.7; font-weight: bold;">Assertividade</div>
                 <div id="statPercent" style="font-size: 2.2rem; font-weight: 900; color: #007bff; line-height: 1;">0%</div>
                 <div style="font-size: 0.75rem; margin-top: 5px;" id="statTotalText">Analisando...</div>
             </div>
-            <div style="text-align: right; font-size: 0.85rem; line-height: 1.5; font-weight: 500;">
-                <div>🎯 Grupo no 1º: <strong id="statBicho" style="color:#28a745;">0</strong></div>
-                <div>🔢 Milhar/Centena: <strong id="statMCD" style="color:#6f42c1;">0</strong></div>
-                <div>🤝 Duque/Terno: <strong id="statDT" style="color:#fd7e14;">0</strong></div>
-            </div>
+            <div style="text-align: right; font-size: 0.85rem; line-height: 1.5; font-weight: 500;" id="statRightPanel">
+                </div>
         </div>
+
+        <div id="auditoriaBotaoZap"></div>
 
         <div id="auditoriaResultados" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
 
