@@ -8281,83 +8281,7 @@ body.dark-mode .kit-bicho-card.esgotado {
     </div>
 </div>
 
-<div id="analysisHubModal" class="modal modal-advanced" role="dialog" aria-modal="true" aria-labelledby="analysisHubModalTitle">
-    <div class="modal-content" style="max-width: 450px;">
-      <span class="close-modal" onclick="closeAnalysisHubModal()" aria-label="Fechar">×</span>
-      <h3 id="analysisHubModalTitle" class="modal-title">🔮 Análises e Consultas</h3>
-      <p style="text-align: center; margin-top: 12px; margin-bottom: 25px; color: #6c757d;">
-          Escolha o tipo de análise que deseja executar.
-      </p>
 
-      <div class="data-management-buttons">
-
-        <button id="btnSubBoletimGlobal" onclick="shareGlobalDailyBriefing()" class="save-button" style="background-color: #fd7e14; color: white;">
-            <span style="font-size: 1.5rem; line-height: 1;">📈</span>
-            <div>
-                <strong>Boletim Global I.A.</strong>
-                <small style="font-weight: normal;">(Resumo do dia I.A)</small>
-            </div>
-        </button>
-
-        <button id="btnSubAtrasados" onclick="openAtrasadosFromHub()" class="import-btn">
-            <span style="font-size: 1.5rem; line-height: 1;">⏱️</span>
-            <div>
-                <strong>Bichos Atrasados</strong>
-                <small style="font-weight: normal;">(Analise ao vivo)</small>
-            </div>
-        </button>
-
-        <button id="btnSubMcdSearch" onclick="openMcdSearchFromHub()" class="view-button" style="background-color: #0d6efd; color: white;">
-            <span style="font-size: 1.5rem; line-height: 1;">🔎</span>
-            <div>
-                <strong>Consultar MCD</strong>
-                <small style="font-weight: normal;">(Histórico da Milhar)</small>
-            </div>
-        </button>
-
-        <button id="btnSubResultadosLive" onclick="openResultadosLiveFromHub()" class="view-button" style="background-color: #28a745;">
-            <span style="font-size: 1.5rem; line-height: 1;">📲</span>
-            <div>
-                <strong>Resultados Live</strong>
-                <small style="font-weight: normal;">(Resultado da extração)</small>
-            </div>
-        </button>
-
-        <button id="btnSubPalpitesIA" onclick="openPalpitesIAFromHub()" class="analysis-button" style="background-color: #6f42c1; color: white;">
-            <span style="font-size: 1.5rem; line-height: 1;">🧠</span>
-            <div>
-                <strong>Palpites da I.A.</strong>
-                <small style="font-weight: normal;">(Análise do nosso banco de dados)</small>
-            </div>
-        </button>
-
-<button onclick="abrirHistoricoPalpitesIA()" class="view-button" style="background-color: #6f42c1; color: white;">
-    <span style="font-size: 1.5rem; line-height: 1;">📜</span>
-    <div>
-        <strong>Historico Palpites I.A</strong>
-        <small style="font-weight: normal;">(últimos 5 dias)</small>
-    </div>
-</button>
-
-        <button id="btnSubAuditoriaIA" onclick="openAuditoriaFromHub()" class="view-button" style="background-color: #17a2b8; color: white;">
-            <span style="font-size: 1.5rem; line-height: 1;">🔍</span>
-            <div>
-                <strong>Auditoria de Acertos</strong>
-                <small style="font-weight: normal;">(Conferencia I.A)</small>
-            </div>
-        </button>
-      </div>
-</div>
-<div id="historicoPalpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width: 500px;">
-        <span class="close-modal" tabindex="0" onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')">×</span>
-        <h3 class="modal-title">📜 Histórico de Análises</h3>
-        <div id="listaHistoricoPalpites" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
-            <p style="text-align: center; color: #666;">Buscando suas análises...</p>
-        </div>
-        <button onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
-    </div>
-</div>
 <script>
 
     // =================================================================
@@ -8399,7 +8323,7 @@ body.dark-mode .kit-bicho-card.esgotado {
     }
 
     // Função que pede permissão e salva o token no banco
-    async function ativarNotificacoes(user) {
+async function ativarNotificacoes(user) {
     // Se não houver usuário ou o messaging não carregar, ignora
     if (!user || !user.uid || !messaging) {
         console.warn("Usuário não identificado ou Messaging indisponível.");
@@ -8407,28 +8331,47 @@ body.dark-mode .kit-bicho-card.esgotado {
     }
     
     try {
-        const permission = await Notification.requestPermission();
-        
-        if (permission === 'granted') {
-            console.log('Permissão de notificação CONCEDIDA!');
-            
-            // Aguarda o Service Worker estar pronto
+        // 1. SE ELE JÁ DEU PERMISSÃO ANTES: Atualiza o token silenciosamente (Sem popup)
+        if (Notification.permission === 'granted') {
             const registration = await navigator.serviceWorker.ready;
-            
-            // Tenta pegar o Token
-            // Substitua a parte do getToken por esta:
-const token = await messaging.getToken({ 
-    vapidKey: 'BNE-rqZVMZg0AvZWBxKEglIN6eZZTKuCjePxrRMvkn3EWfLyNxZJ1YkVIc8vTV_qhA6jlEjxuW-FPBGdE2Rg9uw',
-    serviceWorkerRegistration: registration 
-});
+            const token = await messaging.getToken({ 
+                vapidKey: 'BNE-rqZVMZg0AvZWBxKEglIN6eZZTKuCjePxrRMvkn3EWfLyNxZJ1YkVIc8vTV_qhA6jlEjxuW-FPBGdE2Rg9uw',
+                serviceWorkerRegistration: registration 
+            });
             
             if (token) {
-                console.log('Token gerado com sucesso:', token);
-                // Salva no Firestore vinculando ao UID do usuário logado
                 await firestoreDB.collection('users').doc(user.uid).set({
                     fcmToken: token,
                     lastTokenUpdate: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
+            }
+        } 
+        // 2. SE ELE AINDA NÃO RESPONDEU: Pede a permissão, MAS SÓ UMA VEZ!
+        else if (Notification.permission !== 'denied') {
+            const jaPediu = localStorage.getItem('notificacaoSolicitada');
+            
+            // Se não tem a trava na memória, mostra o popup
+            if (!jaPediu) {
+                const permission = await Notification.requestPermission();
+                
+                // MÁGICA: Salva no navegador que já perguntamos hoje!
+                localStorage.setItem('notificacaoSolicitada', 'true');
+                
+                if (permission === 'granted') {
+                    console.log('Permissão de notificação CONCEDIDA!');
+                    const registration = await navigator.serviceWorker.ready;
+                    const token = await messaging.getToken({ 
+                        vapidKey: 'BNE-rqZVMZg0AvZWBxKEglIN6eZZTKuCjePxrRMvkn3EWfLyNxZJ1YkVIc8vTV_qhA6jlEjxuW-FPBGdE2Rg9uw',
+                        serviceWorkerRegistration: registration 
+                    });
+                    
+                    if (token) {
+                        await firestoreDB.collection('users').doc(user.uid).set({
+                            fcmToken: token,
+                            lastTokenUpdate: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                    }
+                }
             }
         }
     } catch (error) {
@@ -9761,20 +9704,21 @@ async function getSomaUltimoSorteio(loteria) {
     }
 }
 
-async function generateIAPalpites(loteria, loteriaNome) {
+// --- FUNÇÃO ATUALIZADA: SUPORTA MODO SILENCIOSO E BLOQUEIA DUPLICATAS ---
+async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
     if (!loteria || !loteriaNome) return;
     const nextDrawName = getNextDrawName(loteria);
     const drawDisplay = horariosLoterias[loteria]?.find(h => h.nome === nextDrawName)?.display || 'Geral';
 
-    // 👇 A MÁGICA ACONTECE AQUI: Atualiza o banco automaticamente antes de analisar!
-    showLoadingIndicator(`Sincronizando últimos sorteios...`);
-    try {
-        await syncLotteryBeforeIA(loteria);
-    } catch (e) {
-        console.warn("Falha no Auto-Sync:", e);
+    if (!isSilent) {
+        showLoadingIndicator(`Sincronizando últimos sorteios...`);
+        try {
+            await syncLotteryBeforeIA(loteria);
+        } catch (e) {
+            console.warn("Falha no Auto-Sync:", e);
+        }
+        showLoadingIndicator(`Análise Estratégica: ${drawDisplay}...`);
     }
-
-    showLoadingIndicator(`Análise Estratégica: ${drawDisplay}...`);
 
     try {
         const [dataIA, puxada, htmlAtrasados, dadosSoma] = await Promise.all([
@@ -9798,11 +9742,7 @@ async function generateIAPalpites(loteria, loteriaNome) {
         
         const unidadesAtrasadas = (analiseCompleta.unidadesAtrasadas || []).slice(0, 2);
 
-        // EXTRAINDO TODAS AS VARIÁVEIS DO "MODO DEUS"
         const { palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento } = getPalpitesMisturadosIA(analiseCompleta, seed, dadosReais.bichos || [], nextDrawName);
-
-        const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
-        if (!resultsOutput) return;
 
         const divisor = "───────────────────";
         
@@ -9823,7 +9763,6 @@ async function generateIAPalpites(loteria, loteriaNome) {
             shareText += `↳ O ${jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
         }
 
-        // 👇 ADICIONE ESTE BLOCO NOVO AQUI 👇
         if (dadosSoma && dadosSoma.bicho) {
             shareText += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n`;
             shareText += `↳ Base Matemática: ${dadosSoma.sorteioBase} Anterior\n`;
@@ -9858,7 +9797,6 @@ async function generateIAPalpites(loteria, loteriaNome) {
         }
         shareText += `${divisor}\n\n`;
 
-        // O BICHO DA SOMBRA FICA DESTAQUE DEPOIS DO TOP 10
         if (bichoSombra) {
             shareText += `👻 *BICHO ESQUECIDO:*\n`;
             shareText += `O ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
@@ -9891,7 +9829,6 @@ async function generateIAPalpites(loteria, loteriaNome) {
         
         shareText += `${divisor}\n\n`;
 
-        // NOVO: FECHO COMBINADO (DEZENAS)
         if (dezenasFechamento && dezenasFechamento.length === 5) {
             shareText += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\n`;
             shareText += `Jogue as 5 dezenas combinadas:\n`;
@@ -9919,53 +9856,82 @@ async function generateIAPalpites(loteria, loteriaNome) {
         shareText += `🗓️ Gerado: ${dataSimples} às ${horaAgora}\n`;
         shareText += `📲 VIP - I.A in Real Time\n`;
 
-        // --- LOCAL CORRETO PARA SALVAR NO HISTÓRICO ---
-try {
-    const palpiteHistorico = {
-        loteria: loteria,
-        loteriaNome: loteriaNome,
-        horario: drawDisplay,
-        data: new Date().toLocaleDateString('pt-BR'),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Expira em 5 dias
-        conteudo: shareText, // Agora a variável já existe!
-        ranking: rankingTop5.map(b => ({animal: b.animal, emoji: b.emoji, confianca: b.confianca}))
-    };
+        // ==============================================================
+        // 🔒 CORREÇÃO DA DUPLICAÇÃO: CRIA UM ID ÚNICO PARA O DOCUMENTO
+        // ==============================================================
+        try {
+            const dataID = dataSimples.replace(/\//g, ''); // Ex: 05032026
+            const horarioLimpo = drawDisplay.replace(/[\s:]/g, '_'); // Ex: RIO_14_20
+            const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`; // ID Final
 
-    firestoreDB.collection('historico_palpites_ia').add(palpiteHistorico);
-} catch (e) {
-    console.error("Erro ao gravar histórico:", e);
-}
-// ----------------------------------------------
+            const palpiteHistorico = {
+                loteria: loteria,
+                loteriaNome: loteriaNome,
+                horario: drawDisplay,
+                data: dataSimples,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 
+                conteudo: shareText, 
+                ranking: rankingTop5.map(b => ({animal: b.animal, emoji: b.emoji, confianca: b.confianca}))
+            };
+
+            // O comando SET substitui se já existir, evitando a clonagem!
+            await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).set(palpiteHistorico);
+        } catch (e) {
+            console.error("Erro ao gravar histórico:", e);
+        }
+
+        // ==============================================================
+        // 🤫 MODO SILENCIOSO: Se for auto-update, para por aqui sem abrir telas
+        // ==============================================================
+        if (isSilent) return;
 
         window.iaPalpiteShareText = shareText;
 
-        resultsOutput.innerHTML = `
-            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; margin-bottom: 5px;">Palpite Fixo Gerado</div>
-                <div style="font-size: 1.2rem;">${drawDisplay}</div>
-            </div>
-            <div style="text-align:left; font-family: 'Courier New', monospace; background:rgba(0,0,0,0.05); padding:15px; border-radius:10px; border: 1px solid rgba(0,0,0,0.1); font-size:0.9rem; white-space:pre-wrap; line-height: 1.4;">${shareText.replace(/\*/g, '')}</div>
-            
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button onclick="copyIAPalpites(this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 15px; font-weight: bold; font-size: 1.1rem; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
-                    📋 Copiar
-                </button>
-                <button onclick="shareIAPalpites()" class="save-button" style="flex: 1; background:#25D366; padding:15px; font-weight:bold; font-size:1.1rem; border-radius:10px; box-shadow: 0 4px 0 #128c7e; border: none; cursor: pointer; color: white;">
-                   📲 Enviar no WhatsApp
-                </button>
-            </div>
-        `;
-
-        document.getElementById('iaPalpiteForm').style.display = 'none';
-        document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
-        document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+        const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
+        if (resultsOutput) {
+            resultsOutput.innerHTML = `
+                <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                    <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; margin-bottom: 5px;">Palpite Fixo Gerado</div>
+                    <div style="font-size: 1.2rem;">${drawDisplay}</div>
+                </div>
+                <div style="text-align:left; font-family: 'Courier New', monospace; background:rgba(0,0,0,0.05); padding:15px; border-radius:10px; border: 1px solid rgba(0,0,0,0.1); font-size:0.9rem; white-space:pre-wrap; line-height: 1.4;">${shareText.replace(/\*/g, '')}</div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button onclick="copyIAPalpites(this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 15px; font-weight: bold; font-size: 1.1rem; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
+                        📋 Copiar
+                    </button>
+                    <button onclick="shareIAPalpites()" class="save-button" style="flex: 1; background:#25D366; padding:15px; font-weight:bold; font-size:1.1rem; border-radius:10px; box-shadow: 0 4px 0 #128c7e; border: none; cursor: pointer; color: white;">
+                       📲 Enviar no WhatsApp
+                    </button>
+                </div>
+            `;
+            document.getElementById('iaPalpiteForm').style.display = 'none';
+            document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
+            document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+        }
 
     } catch (error) {
         console.error("Erro ao gerar palpites IA:", error);
-        showToast("Erro ao processar análise inteligente.", "error");
+        if (!isSilent) showToast("Erro ao processar análise inteligente.", "error");
     } finally {
-        hideLoadingIndicator();
+        if (!isSilent) hideLoadingIndicator();
+    }
+}
+
+// --- NOVA FUNÇÃO: GERA O HISTÓRICO DE TODAS AS LOTERIAS EM SEGUNDO PLANO ---
+async function autoGerarHistoricoIA() {
+    const loterias = [
+        { id: 'rj', nome: 'PT Rio (RJ)' },
+        { id: 'lk', nome: 'Look Goiás (LK)' },
+        { id: 'ln', nome: 'Loteria Nacional (LN)' },
+        { id: 'fd', nome: 'Federal (FD)' }
+    ];
+    console.log("[Auto-IA] Gerando histórico silencioso para todas as loterias...");
+    
+    for (const lot of loterias) {
+        // Chama a função com o terceiro parâmetro 'true' (Modo Silencioso ativado)
+        await generateIAPalpites(lot.id, lot.nome, true); 
     }
 }
 
@@ -10499,6 +10465,9 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
 
         iaSummaryCache = {}; // Limpa o cache para obrigar a ler a nova versão
         await calcularPlacarAutomatico();
+
+        // 👉 CHAMA O ROBOZINHO DE HISTÓRICO AQUI 👈
+        await autoGerarHistoricoIA();
 
         if (!isAutomatic) {
             showToast('I.A. treinada com Sucesso Total!', 'success');
@@ -15405,6 +15374,42 @@ updateNetworkStatusIA();
     showMilharesCentenasDezenas(); // Atualiza a conversão em tempo real
 }
 
+// --- FUNÇÃO PARA TROCAR AS ABAS NO MENU DE ANÁLISES ---
+function switchHubTab(tabName) {
+    const tabGeral = document.getElementById('hubTabGeral');
+    const tabIA = document.getElementById('hubTabIA');
+    const btnGeral = document.getElementById('btn-tab-hub-geral');
+    const btnIA = document.getElementById('btn-tab-hub-ia');
+
+    if (!tabGeral || !tabIA) return;
+
+    if (tabName === 'geral') {
+        tabGeral.style.display = 'flex';
+        tabIA.style.display = 'none';
+        btnGeral.className = 'view-button';     // Fica azul/ativo
+        btnIA.className = 'load-button';        // Fica cinza
+    } else {
+        tabGeral.style.display = 'none';
+        tabIA.style.display = 'flex';
+        btnGeral.className = 'load-button';     // Fica cinza
+        btnIA.className = 'analysis-button';    // Fica da cor temática
+    }
+}
+
+// --- ATUALIZAÇÃO DA FUNÇÃO QUE ABRE O MENU ---
+// (Substitua a sua 'showAnalysisHubModal' existente por esta)
+function showAnalysisHubModal() {
+    const modal = document.getElementById('analysisHubModal');
+    if (modal) {
+        // Ao abrir a janela, garante que sempre inicie na aba 'Ferramentas'
+        if (typeof switchHubTab === 'function') switchHubTab('geral');
+        
+        modal.classList.add('active');
+    } else {
+        console.error("Modal 'analysisHubModal' não encontrado no HTML!");
+    }
+}
+
 async function abrirHistoricoPalpitesIA() {
     // 1. Fecha o menu de análises para limpar a visão e evitar conflitos de z-index
     if (typeof closeAnalysisHubModal === 'function') closeAnalysisHubModal();
@@ -15782,7 +15787,7 @@ async function abrirAuditoriaIA() {
         <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
         <h3 class="modal-title" style="margin-bottom: 5px;">📊 Performance da Inteligência</h3>
 
-        <div id="auditoriaLoteriasMenu" style="display: flex; gap: 5px; overflow-x: auto; padding: 30px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+        <div id="auditoriaLoteriasMenu" style="display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
             <button onclick="filtrarAuditoria('todas')" class="receipt-extraction-btn selected" id="filter-todas" style="min-width: 80px;">Geral</button>
             <button onclick="filtrarAuditoria('rj')" class="receipt-extraction-btn" id="filter-rj" style="min-width: 60px;">RJ</button>
             <button onclick="filtrarAuditoria('lk')" class="receipt-extraction-btn" id="filter-lk" style="min-width: 60px;">LK</button>
@@ -15801,8 +15806,6 @@ async function abrirAuditoriaIA() {
             <div style="text-align: right; font-size: 0.85rem; line-height: 1.5; font-weight: 500;" id="statRightPanel"></div>
         </div>
 
-        <div id="auditoriaBotaoZap"></div>
-
         <div id="auditoriaResultados" style="flex: 1; overflow-y: auto; padding-right: 5px;">
             <div style="text-align: center; padding: 40px;">
                 <div class="spinner-border" style="color:#007bff;"></div>
@@ -15810,7 +15813,9 @@ async function abrirAuditoriaIA() {
             </div>
         </div>
 
-        <button onclick="fecharAuditoriaIA()" class="load-button" style="width: 100%; margin-top: 15px; padding: 12px; font-weight: bold;">Fechar Relatório</button>
+        <div id="auditoriaBotaoZap" style="margin-top: 15px;"></div>
+
+        <button onclick="fecharAuditoriaIA()" class="load-button" style="width: 100%; margin-top: 10px; padding: 12px; font-weight: bold;">Fechar Relatório</button>
     `;
 
     try {
@@ -16327,7 +16332,7 @@ async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
     if (containerZap) {
         if (totalSorteios > 0) {
             containerZap.innerHTML = `
-                <button onclick="shareAuditSummary()" class="save-button" style="width: 100%; margin-bottom: 15px; padding: 12px; background-color: #25D366; font-size: 1rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white;">
+                <button onclick="shareAuditSummary()" class="save-button" style="width: 100%; padding: 12px; background-color: #25D366; font-size: 1rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white;">
                     📲 Enviar Resumo no WhatsApp
                 </button>
             `;
@@ -22127,7 +22132,7 @@ const DEFAULT_VISIBLE_BUTTONS = {
 
     // --- Sub-Menu Análises ---
     'btnSubAtrasados': true,        // ⏱️ Bichos Atrasados
-    'btnSubMcdSearch': false,       // 🔎 Consultar MCD
+    'btnSubMcdSearch': true,       // 🔎 Consultar MCD
     'btnSubResultadosLive': false,  // 📲 Resultados Live
     'btnSubPalpitesIA': false,      // 🧠 Palpites da I.A.
     'btnSubAuditoriaIA': true,       // 🧠 Acertos I.A
@@ -22329,7 +22334,7 @@ function promptForKitBichos(bichosDoKit, numKit, valorAtual) {
 
         let html = `
             <p style="font-size: 1.05rem; margin-bottom: 10px; color: #007bff;"><strong>📦 Venda do Kit #${numKit}</strong></p>
-            <p style="font-size: 0.9rem; margin-bottom: 15px;">Desmarque os bichos que o cliente <b>NÃO</b> vai querer (eles voltarão para o estoque):</p>
+            <p style="font-size: 0.9rem; margin-bottom: 15px;">Selecione os bichos que o cliente <b>VAI LEVAR</b> nesta venda:</p>
             
             <div id="popupKitBichos" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px;">
         `;
@@ -22337,7 +22342,7 @@ function promptForKitBichos(bichosDoKit, numKit, valorAtual) {
         bichosDoKit.forEach(b => {
             html += `
                 <label style="background: #e9ecef; color: #333; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; border: 1px solid #ccc; font-weight: bold; transition: 0.2s;">
-                    <input type="checkbox" value="${b.grupo}" checked style="transform: scale(1.3); margin-right: 8px;"> ${b.emoji} G${b.grupo} - ${b.animal}
+                    <input type="checkbox" value="${b.grupo}" style="transform: scale(1.3); margin-right: 8px;"> ${b.emoji} G${b.grupo} - ${b.animal}
                 </label>
             `;
         });
@@ -22345,7 +22350,7 @@ function promptForKitBichos(bichosDoKit, numKit, valorAtual) {
         html += `
             </div>
             <div style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px;">
-                <label style="font-weight: bold; font-size: 0.85rem; display: block; margin-bottom: 5px;">Valor cobrado neste kit:</label>
+                <label style="font-weight: bold; font-size: 0.85rem; display: block; margin-bottom: 5px;">Valor cobrado nesta venda:</label>
                 <input type="text" id="popupKitPrice" class="save-dialog-input" value="${valorAtual}" oninput="formatCurrency(this)" style="margin: 0; text-align: center; color: #28a745; font-weight: bold; font-size: 1.1rem;">
             </div>
         `;
@@ -23356,119 +23361,52 @@ function promptForReenviarHistorico(historicoVendas, bichoDetails, numKit) {
     });
 }
 
-// 2. FINALIZAÇÃO DA AÇÃO (Copiar ou Whats)
-async function finalizarKitAcao(kitIndex, acao, btnElement) {
-    if (acao === 'copy') {
-        const numerosPuros = window.kitNumbersOnly[kitIndex];
-        if (!numerosPuros) return;
-        await copyToClipboard(numerosPuros, btnElement);
-        showToast("Somente os números foram copiados!", "success");
-        
-    } else if (acao === 'whatsapp') {
-        const msg = window.kitMessages[kitIndex];
-        if (!msg) return;
-        const encodedMessage = encodeURIComponent(msg);
-        window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-        showToast("Abrindo WhatsApp...", "success");
-    }
-
-    // MARCA O QUE FOI VENDIDO E ATUALIZA O CARD VISUAL
-    if (window.pendingKitSale && window.pendingKitSale.kitIndex === kitIndex) {
-        window.kitsSoldStatus = window.kitsSoldStatus || [];
-        if (!window.kitsSoldStatus[kitIndex]) window.kitsSoldStatus[kitIndex] = {};
-        
-        // Marca como "true" (vendido) apenas os bichos escolhidos
-        window.pendingKitSale.gruposVendidosAgora.forEach(grupo => {
-            window.kitsSoldStatus[kitIndex][grupo] = true;
-        });
-
-        saveData('kitsSoldStatusData', window.kitsSoldStatus);
-        
-        // Redesenha a tela toda para mostrar os animais riscados (<del>)
-        setTimeout(() => {
-            if (typeof renderizarListaDeKits === 'function') renderizarListaDeKits();
-        }, 500); 
-    }
-
-    
-}
-// TELA DE SUCESSO COM OS BOTÕES DE COPIAR E WHATSAPP
-function mostrarSucessoVendaKit(numKit, gruposVendidos, bichoDetails) {
-    const modal = document.getElementById('customConfirmModal');
-    const messageEl = document.getElementById('customConfirmModalMessage');
-    const okBtn = document.getElementById('customConfirmOk');
-    const cancelBtn = document.getElementById('customConfirmCancel');
-
-    const nomesVendidos = gruposVendidos.map(g => `${bichoDetails[g].emoji} ${bichoDetails[g].animal}`).join(', ');
-
-    messageEl.innerHTML = `
-        <div style="text-align: center;">
-            <div style="font-size: 3rem; margin-bottom: 5px;">✅</div>
-            <h3 style="color: #28a745; margin-bottom: 10px;">Sucesso!</h3>
-            <p style="font-size: 0.95rem; color: #555; margin-bottom: 25px;">Bichos no pacote: <b>${nomesVendidos}</b></p>
-            
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 10px;">
-                <button onclick="copyToClipboard(window.ultimaVendaKit.numerosPuros, this)" style="background: #6c757d; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 0 #5a6268; transition: 0.1s;">
-                    📋 Copiar Só os Números
-                </button>
-                <button onclick="window.open('https://wa.me/?text=' + encodeURIComponent(window.ultimaVendaKit.textoWhats), '_blank')" style="background: #25D366; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 0 #1e7e34; transition: 0.1s;">
-                    📲 Enviar no WhatsApp
-                </button>
-            </div>
-        </div>
-    `;
-
-    okBtn.textContent = '⬅️ Voltar aos Kits';
-    okBtn.style.backgroundColor = '#dc3545'; // Botão vermelho pra voltar
-    okBtn.style.width = '100%';
-    cancelBtn.style.display = 'none'; 
-    modal.style.zIndex = '1600';
-    modal.classList.add('active');
-
-    // Ao clicar em "Voltar", fecha a janela e restaura o botão
-    okBtn.onclick = () => {
-        modal.classList.remove('active');
-        okBtn.replaceWith(okBtn.cloneNode(true)); // Limpa os eventos de clique antigos
-        okBtn.style.backgroundColor = ''; // Restaura a cor azul original
-    };
-}
-
-
 </script> 
 
 <div id="analysisHubModal" class="modal modal-advanced" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 450px;">
         <span class="close-modal" onclick="closeAnalysisHubModal()">×</span>
-        <h3 class="modal-title">🔮 Análises e Consultas</h3>
-        <p style="text-align: center; color: #6c757d; margin-bottom: 20px;">
-            Escolha o tipo de análise que deseja executar.
-        </p>
+        <h3 class="modal-title" style="margin-bottom: 15px;">🔮 Análises e Consultas</h3>
+        <p style="text-align: center; color: #888; margin-top: -10px; margin-bottom: 20px;">Escolha o tipo de análise que deseja executar.</p>
 
-        <div class="data-management-buttons">
-            <button id="btnSubBoletimGlobal" onclick="shareGlobalDailyBriefing()" class="save-button" style="background-color: #fd7e14;">
-                <span style="font-size: 1.5rem;">📈</span>
-                <div><strong>Boletim Global I.A.</strong></div>
+        <div class="button-group" style="margin-bottom: 20px;">
+            <button id="btn-tab-hub-geral" class="view-button" onclick="switchHubTab('geral')">📊 Ferramentas</button>
+            <button id="btn-tab-hub-ia" class="load-button" onclick="switchHubTab('ia')">🤖 Central I.A.</button>
+        </div>
+
+        <div id="hubTabGeral" style="display: flex; flex-direction: column; gap: 12px;">
+            
+            <button id="btnSubAtrasados" onclick="openAtrasadosFromHub()" style="background-color: #c82333; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
+                ⏱️ Bichos Atrasados <span style="font-weight: normal; font-size: 0.85rem;">(Analise ao vivo)</span>
             </button>
 
-            <button id="btnSubAtrasados" onclick="openAtrasadosFromHub()" class="import-btn">
-                <span style="font-size: 1.5rem;">⏱️</span>
-                <div><strong>Bichos Atrasados</strong></div>
+            <button id="btnSubMcdSearch" onclick="openMcdSearchFromHub()" style="background-color: #0d6efd; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
+                🔎 Consultar MCD <span style="font-weight: normal; font-size: 0.85rem;">(Procurar milhar)</span>
             </button>
 
-            <button id="btnSubPalpitesIA" onclick="openPalpitesIAFromHub()" class="analysis-button">
-                <span style="font-size: 1.5rem;">🧠</span>
-                <div><strong>Palpites da I.A.</strong></div>
+            <button id="btnSubResultadosLive" onclick="openResultadosLiveFromHub()" style="background-color: #28a745; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
+                📲 Resultados Live <span style="font-weight: normal; font-size: 0.85rem;">(Ver extrações)</span>
+            </button>
+        </div>
+
+        <div id="hubTabIA" style="display: none; flex-direction: column; gap: 12px;">
+            
+            <button id="btnSubBoletimGlobal" onclick="shareGlobalDailyBriefing()" style="background-color: #fd7e14; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
+                📈 Boletim Global I.A. <span style="font-weight: normal; font-size: 0.85rem;">(Resumo do dia I.A)</span>
             </button>
 
-            <button onclick="abrirHistoricoPalpitesIA()" class="view-button" style="background-color: #6f42c1; color: white;">
-                <span style="font-size: 1.5rem;">📜</span>
-                <div><strong>Historico Palpites I.A</strong></div>
+            <button id="btnSubPalpitesIA" onclick="openPalpitesIAFromHub()" style="background-color: #00bcd4; color: #212529; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
+                🧠 Palpites da I.A. <span style="font-weight: normal; font-size: 0.85rem;">(Previsões baseadas em dados)</span>
             </button>
 
-            <button id="btnSubAuditoriaIA" onclick="openAuditoriaFromHub()" class="view-button" style="background-color: #17a2b8;">
-                <span style="font-size: 1.5rem;">🔍</span>
-                <div><strong>Auditoria de Acertos</strong></div>
+            <button onclick="abrirHistoricoPalpitesIA()" style="background-color: #6f42c1; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
+                📜 Historico Palpites I.A <span style="font-weight: normal; font-size: 0.85rem;">(últimos 5 dias)</span>
             </button>
+
+            <button id="btnSubAuditoriaIA" onclick="openAuditoriaFromHub()" style="background-color: #17a2b8; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
+                🔍 Auditoria de Acertos <span style="font-weight: normal; font-size: 0.85rem;">(Conferencia I.A)</span>
+            </button>
+            
         </div>
     </div>
 </div>
@@ -23487,9 +23425,33 @@ function mostrarSucessoVendaKit(numKit, gruposVendidos, bichoDetails) {
 <div id="auditoriaIAModal" class="modal modal-top" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
         <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
-        <h3 class="modal-title">📊 Performance da Inteligência</h3>
-        <div id="auditoriaResultados" style="flex: 1; overflow-y: auto;"></div>
-        <button onclick="fecharAuditoriaIA()" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
+        <h3 class="modal-title" style="margin-bottom: 5px;">📊 Performance da Inteligência</h3>
+        
+        <div style="display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+            <button onclick="filtrarAuditoria('todas')" class="receipt-extraction-btn selected" id="filter-todas" style="min-width: 80px;">Geral</button>
+            <button onclick="filtrarAuditoria('rj')" class="receipt-extraction-btn" id="filter-rj" style="min-width: 60px;">RJ</button>
+            <button onclick="filtrarAuditoria('lk')" class="receipt-extraction-btn" id="filter-lk" style="min-width: 60px;">LK</button>
+            <button onclick="filtrarAuditoria('ln')" class="receipt-extraction-btn" id="filter-ln" style="min-width: 60px;">NC</button>
+            <button onclick="filtrarAuditoria('fd')" class="receipt-extraction-btn" id="filter-fd" style="min-width: 60px;">FD</button>
+        </div>
+
+        <div id="auditoriaPeriodoMenu" style="margin-bottom: 10px;"></div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(0,123,255,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,123,255,0.2);">
+            <div style="text-align: left;">
+                <div style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.7; font-weight: bold;">Assertividade</div>
+                <div id="statPercent" style="font-size: 2.2rem; font-weight: 900; color: #007bff; line-height: 1;">0%</div>
+                <div style="font-size: 0.75rem; margin-top: 5px;" id="statTotalText">Analisando...</div>
+            </div>
+            <div style="text-align: right; font-size: 0.85rem; line-height: 1.5; font-weight: 500;" id="statRightPanel">
+            </div>
+        </div>
+
+        <div id="auditoriaBotaoZap"></div>
+
+        <div id="auditoriaResultados" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
+
+        <button onclick="fecharAuditoriaIA()" class="load-button" style="width: 100%; margin-top: 15px; padding: 12px; font-weight: bold;">Fechar Relatório</button>
     </div>
 </div>
 
@@ -23525,37 +23487,6 @@ function mostrarSucessoVendaKit(numKit, gruposVendidos, bichoDetails) {
         </div>
     </div>
 </div>
-<div id="auditoriaIAModal" class="modal modal-top" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
-        <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
-        <h3 class="modal-title" style="margin-bottom: 5px;">📊 Performance da Inteligência</h3>
-        
-        <div style="display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
-            <button onclick="filtrarAuditoria('todas')" class="receipt-extraction-btn selected" id="filter-todas" style="min-width: 80px;">Geral</button>
-            <button onclick="filtrarAuditoria('rj')" class="receipt-extraction-btn" id="filter-rj" style="min-width: 60px;">RJ</button>
-            <button onclick="filtrarAuditoria('lk')" class="receipt-extraction-btn" id="filter-lk" style="min-width: 60px;">LK</button>
-            <button onclick="filtrarAuditoria('ln')" class="receipt-extraction-btn" id="filter-ln" style="min-width: 60px;">NC</button>
-            <button onclick="filtrarAuditoria('fd')" class="receipt-extraction-btn" id="filter-fd" style="min-width: 60px;">FD</button>
-        </div>
 
-        <div id="auditoriaPeriodoMenu" style="margin-bottom: 10px;"></div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(0,123,255,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,123,255,0.2);">
-            <div style="text-align: left;">
-                <div style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.7; font-weight: bold;">Assertividade</div>
-                <div id="statPercent" style="font-size: 2.2rem; font-weight: 900; color: #007bff; line-height: 1;">0%</div>
-                <div style="font-size: 0.75rem; margin-top: 5px;" id="statTotalText">Analisando...</div>
-            </div>
-            <div style="text-align: right; font-size: 0.85rem; line-height: 1.5; font-weight: 500;" id="statRightPanel">
-                </div>
-        </div>
-
-        <div id="auditoriaBotaoZap"></div>
-
-        <div id="auditoriaResultados" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
-
-        <button onclick="fecharAuditoriaIA()" class="load-button" style="width: 100%; margin-top: 15px; padding: 12px; font-weight: bold;">Fechar Relatório</button>
-    </div>
-</script>
 </body>
 </html>
