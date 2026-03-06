@@ -6146,6 +6146,7 @@ body.dark-mode .kit-bicho-card.esgotado {
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <body>
     
@@ -9784,19 +9785,31 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
         });
 
         // Salva no Firebase (apenas 1ª extração)
+        // Salva no Firebase TODAS as extrações geradas (Próxima, 2ª e 3ª)
         try {
             const dataID = dataSimples.replace(/\//g, '');
-            const horarioLimpo = drawDisplay.replace(/[\s:]/g, '_');
-            const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`;
-            const { rankingTop5 } = analisesPorExtracao[0];
-            await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).set({
-                loteria, loteriaNome, horario: drawDisplay, data: dataSimples,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-                conteudo: shareTexts[0],
-                ranking: rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
+            
+            const promessasSalvamento = analisesPorExtracao.map((analise, index) => {
+                const horarioAtual = analise.extracao.display;
+                const horarioLimpo = horarioAtual.replace(/[\s:]/g, '_');
+                const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`;
+                
+                return firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).set({
+                    loteria: loteria, 
+                    loteriaNome: loteriaNome, 
+                    horario: horarioAtual, 
+                    data: dataSimples,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Expira em 5 dias
+                    conteudo: shareTexts[index],
+                    ranking: analise.rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
+                });
             });
-        } catch (e) { console.error("Erro ao gravar histórico:", e); }
+
+            // Executa todos os salvamentos ao mesmo tempo sem travar a tela
+            await Promise.all(promessasSalvamento);
+            
+        } catch (e) { console.error("Erro ao gravar histórico múltiplo:", e); }
 
         if (isSilent) return;
 
@@ -10863,7 +10876,11 @@ function showShareResultsModal() {
     const modal = document.getElementById('shareResultsModal');
     const modalBody = document.getElementById('shareResultsModalBody');
 
-    // Restaura o conteúdo inicial (seleção de loteria com os novos cards SEM ÍCONES)
+    // Restaura o botão "Voltar" fixo do rodapé para voltar ao Menu de Análises
+    const fixedBackButton = document.querySelector('#shareResultsModal .button-group button[onclick="backToAnalysisHubFromShare()"]');
+    if (fixedBackButton) fixedBackButton.style.display = 'block';
+
+    // Restaura o conteúdo inicial (seleção de loteria com os novos cards)
     modalBody.innerHTML = `
         <p style="text-align: center;">Escolha a loteria para consultar:</p>
         <div class="modal-card-grid">            
@@ -10889,7 +10906,6 @@ function showShareResultsModal() {
             </button>
         </div>`;
 
-    // CORREÇÃO: Só tenta alterar o botão se ele realmente existir na tela
     const cancelButton = document.getElementById('shareCancelButton');
     if (cancelButton) {
         cancelButton.style.display = 'block'; 
@@ -10972,55 +10988,40 @@ function populateShareTimeSlots(loteria, nomeLoteriaDisplay) {
         return;
     }
 
-    const agora = new Date(); // Pega a hora atual UMA VEZ
+    const agora = new Date();
 
     horarios.forEach(horario => {
         const btnHorario = document.createElement('button');
         btnHorario.type = 'button';
         btnHorario.className = 'time-button';
 
-        // Calcula o momento exato do sorteio (sem buffer aqui)
         const momentoSorteioExato = new Date();
         momentoSorteioExato.setHours(horario.hora, horario.minuto, 0, 0);
         const targetTimeMillis = momentoSorteioExato.getTime();
 
-        // Calcula o momento com buffer para decidir se está "Disponível"
         const momentoSorteioComBuffer = new Date(momentoSorteioExato);
-        momentoSorteioComBuffer.setMinutes(momentoSorteioExato.getMinutes() + 5); // Adiciona 5 minutos
+        momentoSorteioComBuffer.setMinutes(momentoSorteioExato.getMinutes() + 5);
 
         let statusBadgeHTML = '';
-        // Cria um ID único para o span que mostrará o tempo
         const countdownElementId = `countdown-${loteria}-${horario.nome.replace(/[\s:]/g, '-')}`;
 
         if (agora >= momentoSorteioComBuffer) {
-            // Se já passou o tempo (com buffer), mostra "Disponível"
             statusBadgeHTML = '<span class="badge available">Disponível</span>';
         } else {
-            // Se ainda não passou, prepara o span para o contador
             statusBadgeHTML = `<span id="${countdownElementId}"><span class="badge waiting">--:--:--</span></span>`;
-
-            // Inicia o intervalo e guarda seu ID
             const intervalId = setInterval(() => {
-                // Passa o ID do próprio intervalo para a função de update
                 updateCountdown(targetTimeMillis, countdownElementId, intervalId);
             }, 1000);
-
-            // Guarda os dados do timer para poder limpá-lo depois
             activeCountdownTimers.push({ elementId: countdownElementId, intervalId: intervalId });
-
-            // Chama updateCountdown uma vez imediatamente para mostrar o tempo inicial
-            // (Fazemos isso após adicionar ao activeCountdownTimers)
-             setTimeout(() => updateCountdown(targetTimeMillis, countdownElementId, intervalId), 50); // Pequeno delay
+            setTimeout(() => updateCountdown(targetTimeMillis, countdownElementId, intervalId), 50);
         }
 
-        // Monta o botão
         btnHorario.innerHTML = `<span>${horario.display}</span> ${statusBadgeHTML}`;
         btnHorario.dataset.loteria = loteria;
         btnHorario.dataset.nomeSorteio = horario.nome;
         btnHorario.dataset.nomeDisplay = horario.display;
         btnHorario.dataset.nomeLoteriaDisplay = nomeLoteriaDisplay;
 
-        // Adiciona a ação de clique
         btnHorario.onclick = function() {
             generateShareResultsLink(
                 this.dataset.loteria,
@@ -11033,11 +11034,20 @@ function populateShareTimeSlots(loteria, nomeLoteriaDisplay) {
         buttonGroup.appendChild(btnHorario);
     });
 
-    // Adiciona o botão de voltar (sem alterações)
+    // --- CORREÇÃO AQUI: Adiciona o botão VOLTAR PARA LOTERIAS visível ---
     const backButton = document.createElement('button');
-    backButton.className = 'back-button';
-    backButton.onclick = showShareResultsModal;
+    backButton.className = 'load-button'; // Usa a cor cinza do sistema
+    backButton.style.width = '100%';
+    backButton.style.marginTop = '20px';
+    backButton.style.padding = '12px';
+    backButton.style.fontWeight = 'bold';
+    backButton.innerHTML = '⬅️ Voltar para Loterias';
+    backButton.onclick = showShareResultsModal; // Chama a tela anterior
     modalBody.appendChild(backButton);
+
+    // --- ESCONDE O BOTÃO VOLTAR DO RODAPÉ (Para não enviar pro Menu Principal) ---
+    const fixedBackButton = document.querySelector('#shareResultsModal .button-group button[onclick="backToAnalysisHubFromShare()"]');
+    if (fixedBackButton) fixedBackButton.style.display = 'none';
 
     const cancelButton = document.getElementById('shareCancelButton');
     if (cancelButton) {
@@ -15485,25 +15495,27 @@ async function abrirHistoricoPalpitesIA() {
             const topBicho = data.ranking && data.ranking[0] ? data.ranking[0].emoji : '🔮';
             const textoLimpo = data.conteudo.replace(/`/g, "'");
 
+            // --- HTML ATUALIZADO: Card totalmente clicável e texto alinhado ---
             html += `
-            <div class="saved-item" style="border-left: 4px solid #6f42c1; margin-bottom: 12px; background: rgba(128,128,128,0.05); border-radius: 8px;">
+            <div class="saved-item" style="border-left: 4px solid #6f42c1; margin-bottom: 12px; background: rgba(128,128,128,0.05); border-radius: 8px; cursor: pointer; transition: 0.2s;" 
+                 onclick="const content = this.querySelector('.saved-item-content'); const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; this.querySelector('.saved-item-toggle').innerHTML = isHidden ? '▲' : '▼';">
                 
-                <div class="saved-item-header" style="padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                    <div class="saved-item-title" style="font-size: 0.9rem; font-weight: bold; line-height: 1.4;">
+                <div class="saved-item-header" style="padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="saved-item-title" style="font-size: 0.95rem; font-weight: bold; line-height: 1.4; text-align: left;">
                         ${topBicho} ${data.loteriaNome} - ${data.horario}<br>
                         <small style="color: #888; font-weight: normal;">Gerado em: ${data.data}</small>
                     </div>
-                    <div class="saved-item-toggle" style="font-size: 1.2rem;">▼</div>
+                    <div class="saved-item-toggle" style="font-size: 1.2rem; color: #6f42c1;">▼</div>
                 </div>
 
-                <div class="saved-item-content" style="display: none; padding: 15px; background: rgba(0,0,0,0.03); font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; border-top: 1px solid rgba(0,0,0,0.1);">
+                <div class="saved-item-content" style="display: none; padding: 15px; background: rgba(0,0,0,0.03); font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; border-top: 1px solid rgba(0,0,0,0.1); text-align: left; line-height: 1.5; color: inherit;">
                     ${textoLimpo}
                     
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button onclick="copyToClipboard(\`${textoLimpo}\`, this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
+                        <button onclick="event.stopPropagation(); copyToClipboard(\`${textoLimpo}\`, this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
                             📋 Copiar
                         </button>
-                        <button onclick="window.open('https://wa.me/?text=' + encodeURIComponent(\`${textoLimpo}\`), '_blank')" style="flex: 1; background-color: #25D366; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #128c7e;">
+                        <button onclick="event.stopPropagation(); window.open('https://wa.me/?text=' + encodeURIComponent(\`${textoLimpo}\`), '_blank')" style="flex: 1; background-color: #25D366; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #128c7e;">
                             📲 Zap
                         </button>
                     </div>
@@ -21780,6 +21792,111 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     }
 }
 
+// ========================================================================
+// === MOTOR DE AUTO-PREENCHIMENTO (GERAÇÃO RETROATIVA DA I.A) ===
+// ========================================================================
+async function autoGerarHistoricoIA() {
+    console.log("[Auto-IA] Sincronizando palpites perdidos do dia...");
+    const loterias = { 'rj': 'PT Rio', 'lk': 'Look Goiás', 'ln': 'Nacional', 'fd': 'Federal' };
+    const agora = new Date();
+    const dataSimples = agora.toLocaleDateString('pt-BR');
+    const dataID = dataSimples.replace(/\//g, '');
+    const divisor = "───────────────────";
+
+    const formatarEmColunas = (lista, itensPorLinha) => {
+        let linhas = [];
+        for (let i = 0; i < lista.length; i += itensPorLinha) {
+            linhas.push(lista.slice(i, i + itensPorLinha).join('  •  '));
+        }
+        return linhas.join('\n');
+    };
+
+    for (const [loteria, loteriaNome] of Object.entries(loterias)) {
+        const horarios = horariosLoterias[loteria] || [];
+        if(horarios.length === 0) continue;
+
+        const analiseCompleta = await getIaSummaryDocument(loteria);
+        if(!analiseCompleta) continue;
+
+        const puxada = await getPuxadaDoDiaIA(loteria);
+        if(analiseCompleta.geral) analiseCompleta.geral.puxada = puxada;
+
+        // Passa por todos os horários cadastrados da loteria no dia
+        for (const h of horarios) {
+            const horarioLimpo = h.display.replace(/[\s:]/g, '_');
+            const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`;
+
+            try {
+                // 1. Verifica no banco se o palpite já foi salvo. Se sim, pula!
+                const doc = await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).get();
+                if(doc.exists) continue;
+
+                // 2. Se não existir, a I.A retroage e gera o palpite com a mesma semente daquele horário
+                const analiseParaUsar = analiseCompleta[h.nome] || analiseCompleta.geral || analiseCompleta;
+                const seed = `${dataSimples}-${loteria}-${h.nome}`;
+
+                const { palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento } =
+                    getPalpitesMisturadosIA(analiseParaUsar, seed, [], h.nome);
+
+                const unidadesAtrasadas = (analiseParaUsar.unidadesAtrasadas || []).slice(0, 2);
+                
+                // Monta o texto exato do palpite
+                let t = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
+                t += `${divisor}\n🎯 *FOCO:* ${h.display}\n`;
+                t += `🚦 *VOLATILIDADE:* ${volatilidade.nivel} - ${volatilidade.texto}\n${divisor}\n\n`;
+                if (alertaDobradinha) t += `🚨 *ALERTA I.A:* Padrão de *DOBRADINHA* com alta probabilidade neste sorteio!\n${divisor}\n\n`;
+                if (jogadaDeMestre) t += `👑 *JOGADA DE MESTRE*\n💸 *${jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n↳ O ${jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
+                t += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
+                if (rankingTop5 && rankingTop5.length > 0) {
+                    const medalhas = ['🥇', '🥈', '🥉', '🏅', '🏅'];
+                    rankingTop5.forEach((b, i) => {
+                        t += `${medalhas[i] || '🏅'} *${i + 1}º LUGAR* - ${b.emoji} *${b.animal.toUpperCase()}* [🎯 ${b.confianca}]\n`;
+                        if (b.motivos && b.motivos.length > 0) b.motivos.forEach(m => { t += `  ↳ ${m}\n`; });
+                        else t += `  ↳ 🔥 Alta Convergência de Dados\n`;
+                        t += `\n`;
+                    });
+                }
+                t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
+                if (rankingTop10 && rankingTop10.length >= 10) {
+                    for (let i = 0; i < 5; i++) {
+                        t += `*${String(i+1).padStart(2,'0')}º* ${(rankingTop10[i].emoji+' '+rankingTop10[i].animal).padEnd(12,' ')} ┃  *${String(i+6).padStart(2,'0')}º* ${rankingTop10[i+5].emoji} ${rankingTop10[i+5].animal}\n`;
+                    }
+                }
+                t += `${divisor}\n\n`;
+                if (bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
+                if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
+                t += `🚀 *MILHARES SUGERIDAS:*\n`;
+                if (palpites && palpites.milhar) {const linhasMilhar = palpites.milhar.slice(0, 8).map(function(m) {return m.invertida ? "🔹 " + m.palpite + " ↔ " + m.invertida : "🔹 " + m.palpite;});t += formatarEmColunas(linhasMilhar, 1) + "\n\n";}
+                t += `💯 *CENTENAS QUENTES:*\n`;
+                if (palpites && palpites.centena) t += formatarEmColunas(palpites.centena.slice(0,10).map(c => c.palpite), 5) + `\n\n`;
+                t += `${divisor}\n\n`;
+                if (dezenasFechamento && dezenasFechamento.length === 5) t += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\nJogue as 5 dezenas combinadas:\n🎯 *${dezenasFechamento.join(' - ')}*\n\n`;
+                t += `🤝 *DUQUES DE DEZENA:*\n`;
+                if (palpites && palpites.duques) { let d = []; palpites.duques.forEach(x => d.push(...x.combinacoes)); t += formatarEmColunas(d.map(c => `💠 ${c}`), 3) + `\n\n`; }
+                t += `🤝 *TERNOS DE DEZENA:*\n`;
+                if (palpites && palpites.ternos) { let r = []; palpites.ternos.forEach(x => r.push(...x.combinacoes)); t += formatarEmColunas(r.map(c => `🏆 ${c}`), 2) + `\n\n`; }
+                t += `${divisor}\n🍀 *BOA SORTE!* 🍀\n🗓️ Gerado (Auto): ${dataSimples}\n📲 VIP - I.A in Real Time\n`;
+
+                // 3. Salva silenciosamente no Firebase
+                await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).set({
+                    loteria: loteria,
+                    loteriaNome: loteriaNome,
+                    horario: h.display,
+                    data: dataSimples,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Apaga sozinho depois de 5 dias
+                    conteudo: t,
+                    ranking: rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
+                });
+
+            } catch(e) {
+                console.error("Erro ao auto-gerar: ", e);
+            }
+        }
+    }
+    console.log("[Auto-IA] Todos os palpites do dia estão salvos no Histórico!");
+}
+
 // --- FUNÇÃO DEFINITIVA: AUTO-SYNC ANTES DA I.A. ---
 async function syncLotteryBeforeIA(loteria) {
     const agora = new Date();
@@ -23023,6 +23140,152 @@ async function abrirVendaKit(kitIndex) {
     mostrarSucessoVendaKit(numKit, result.selectedGrupos, bichoDetails);
 }
 
+// ========================================================================
+// === GERADOR DE RELATÓRIO PDF DA INTELIGÊNCIA ARTIFICIAL (DEFINITIVO) ===
+// ========================================================================
+async function gerarRelatorioPDF() {
+    showLoadingIndicator("Renderizando PDF Premium... Aguarde.");
+
+    try {
+        // 1. Busca os últimos 30 palpites salvos no banco
+        const snapshot = await firestoreDB.collection('historico_palpites_ia')
+            .orderBy('timestamp', 'desc')
+            .limit(30)
+            .get();
+
+        if (snapshot.empty) {
+            showToast("Não há dados suficientes para gerar o PDF.", "error");
+            hideLoadingIndicator();
+            return;
+        }
+
+        // 2. Cria a "Folha Virtual" com Alta Resolução (1024px de largura)
+        const tempDiv = document.createElement('div');
+        tempDiv.style.fontFamily = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+        tempDiv.style.color = '#1e293b'; // Texto cinza escuro elegante
+        tempDiv.style.background = '#f8fafc'; // Fundo levemente acinzentado (papel premium)
+        tempDiv.style.width = '1024px'; // Força qualidade de monitor
+        tempDiv.style.padding = '40px'; // Respiro das bordas
+        tempDiv.style.boxSizing = 'border-box';
+
+        // Cabeçalho de Relatório Oficial
+        let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #6f42c1; padding-bottom: 20px; margin-bottom: 30px;">
+                <div>
+                    <h1 style="color: #6f42c1; margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.5px;">VIP EMOJS</h1>
+                    <h3 style="margin: 5px 0 0 0; color: #475569; font-size: 16px; font-weight: 600;">RELATÓRIO ANALÍTICO DE I.A.</h3>
+                </div>
+                <div style="text-align: right; font-size: 13px; color: #64748b; font-weight: 500;">
+                    <div>Emitido em:</div>
+                    <div style="font-size: 16px; color: #0f172a; font-weight: bold;">${new Date().toLocaleString('pt-BR')}</div>
+                </div>
+            </div>
+        `;
+
+        let ultimaDataVistoriada = '';
+
+        // --- FUNÇÃO INTERNA PARA EMBELEZAR O TEXTO ---
+        const processarTextoPDF = (textoCru) => {
+            return textoCru
+                .replace(/\*(.*?)\*/g, '<strong style="color: #0f172a; font-weight: 800;">$1</strong>') // Negrito mais forte
+                .replace(/_/g, '')
+                .replace(/`/g, '')
+                .replace(/───────────────────/g, '<hr style="border: 0; border-bottom: 2px dashed #cbd5e1; margin: 15px 0;">')
+                .replace(/━━━━━━━━━━━━━━━/g, '<hr style="border: 0; border-bottom: 3px solid #e2e8f0; margin: 15px 0;">')
+                // Divide cada parágrafo em um bloco isolado (evita cortes no meio da frase)
+                .split('\n\n')
+                .map(p => `<div style="margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; line-height: 1.5;">${p.replace(/\n/g, '<br>')}</div>`)
+                .join('');
+        };
+
+        // 3. Monta o conteúdo
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            
+            // Etiqueta de Data (Estilo Badge)
+            if (data.data !== ultimaDataVistoriada) {
+                html += `
+                    <div style="display: flex; justify-content: center; margin: 40px 0 25px 0;">
+                        <div style="background: #1e293b; color: #fbbf24; padding: 10px 30px; border-radius: 50px; font-weight: 800; font-size: 18px; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            🗓️ DATA DOS SORTEIOS: ${data.data}
+                        </div>
+                    </div>`;
+                ultimaDataVistoriada = data.data;
+            }
+
+            // O SEGREDO: Cortamos o texto cirurgicamente no título das milhares
+            let textoCompleto = data.conteudo;
+            let palavrasChaveCorte = ['🚀 *MILHARES SUGERIDAS:*', '🎯 *UNIDADES ATRASADAS', '👻 *BICHO ESQUECIDO:*', '💯 *CENTENAS QUENTES:*'];
+            
+            let indiceDeCorte = -1;
+            for (let kw of palavrasChaveCorte) {
+                indiceDeCorte = textoCompleto.indexOf(kw);
+                if (indiceDeCorte !== -1) break;
+            }
+            
+            // Se por algum acaso não achar a palavra exata, corta na metade exata
+            if (indiceDeCorte === -1) indiceDeCorte = Math.floor(textoCompleto.length / 2);
+
+            let colunaEsquerdaCrua = textoCompleto.substring(0, indiceDeCorte);
+            let colunaDireitaCrua = textoCompleto.substring(indiceDeCorte);
+
+            let htmlEsquerda = processarTextoPDF(colunaEsquerdaCrua);
+            let htmlDireita = processarTextoPDF(colunaDireitaCrua);
+
+            const topBicho = data.ranking && data.ranking[0] ? data.ranking[0].emoji : '🔮';
+
+            // Monta o Card Perfeito
+            html += `
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; border-top: 8px solid #6f42c1; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); page-break-inside: avoid; break-inside: avoid;">
+                    
+                    <div style="text-align: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px;">
+                        <span style="font-size: 28px; line-height: 1;">${topBicho}</span>
+                        <h2 style="margin: 5px 0 0 0; color: #1e293b; font-size: 22px; font-weight: 800;">
+                            <span style="color: #6f42c1;">${data.loteriaNome}</span> - ${data.horario}
+                        </h2>
+                    </div>
+                    
+                    <div style="display: flex; gap: 40px; font-size: 15px;">
+                        <div style="flex: 1; min-width: 0;">
+                            ${htmlEsquerda}
+                        </div>
+                        
+                        <div style="flex: 1; min-width: 0; padding-left: 40px; border-left: 2px dashed #e2e8f0;">
+                            ${htmlDireita}
+                        </div>
+                    </div>
+                    
+                </div>
+            `;
+        });
+
+        tempDiv.innerHTML = html;
+
+        // 4. Configurações Profissionais do Motor PDF
+        const opt = {
+            margin:       [10, 10, 15, 10], 
+            filename:     `Relatorio_Estrategico_VIP_${new Date().getTime()}.pdf`,
+            image:        { type: 'jpeg', quality: 1 },
+            // windowWidth: 1024 é a trava de ouro. Obriga o celular a renderizar o PDF como se fosse tela de PC.
+            html2canvas:  { scale: 2, useCORS: true, windowWidth: 1024, letterRendering: true }, 
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            // Evita totalmente cortes indesejados
+            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } 
+        };
+
+        // 5. Baixa o PDF
+        await html2pdf().set(opt).from(tempDiv).save();
+
+        showToast("✅ PDF gerado com sucesso!", "success");
+
+    } catch (error) {
+        console.error("Erro ao gerar PDF:", error);
+        showToast("Erro ao gerar o documento PDF. Verifique sua conexão.", "error");
+    } finally {
+        hideLoadingIndicator();
+    }
+}
+
 function promptForReenviarHistorico(historicoVendas, bichoDetails, numKit) {
     return new Promise(resolve => {
         const modal = document.getElementById('customConfirmModal');
@@ -23509,10 +23772,16 @@ function promptForReenviarHistorico(historicoVendas, bichoDetails, numKit) {
     <div class="modal-content" style="max-width: 500px;">
         <span class="close-modal" tabindex="0" onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')">×</span>
         <h3 class="modal-title">📜 Histórico de Análises</h3>
+        
         <div id="listaHistoricoPalpites" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
             <p style="text-align: center; color: #666;">Buscando suas análises...</p>
         </div>
-        <button onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
+
+        <button onclick="gerarRelatorioPDF()" class="save-button" style="width: 100%; margin-top: 15px; background-color: #dc3545; border: none; box-shadow: 0 4px 0 #a71d2a; padding: 12px; font-size: 1rem; font-weight: bold;">
+            📄 Baixar Relatório em PDF
+        </button>
+
+        <button onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')" class="load-button" style="width: 100%; margin-top: 10px;">Fechar</button>
     </div>
 </div>
 
