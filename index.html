@@ -6826,7 +6826,7 @@ body.dark-mode .kit-bicho-card.esgotado {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V12.93</strong>
+            <strong>V13.93</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -9728,7 +9728,13 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
         // Gera análise independente para cada uma das 3 extrações
         const analisesPorExtracao = proximasExtracoes.map((extracao) => {
             const analiseHorario = dataIA ? (dataIA[extracao.nome] || dataIA['geral']) : {};
-            const analiseCompleta = { ...analiseHorario, puxada, prefixosPorBicho: dataIA ? dataIA.prefixosPorBicho : {} };
+            const analiseCompleta = {
+    ...analiseHorario,
+    puxada,
+    prefixosPorBicho: analiseHorario && analiseHorario.prefixosPorBicho
+        ? analiseHorario.prefixosPorBicho
+        : (dataIA && dataIA['geral'] ? dataIA['geral'].prefixosPorBicho || {} : {})
+};
             const seed = `${dataSimples}-${loteria}-${extracao.nome}`;
             const unidadesAtrasadas = (analiseCompleta.unidadesAtrasadas || []).slice(0, 2);
             const { palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento } =
@@ -10186,89 +10192,91 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
 function calcularPontuacaoBicho(bichoGrupo, analise) {
     let score = 25;
     let motivos = [];
-    let fontesBonusCount = 0; // Para detectar confluência
+    let fontesBonusCount = 0;
 
     const listaAtrasados = analise.atrasados || analise.bichosAtrasados || [];
     const listaFrequentes = analise.frequentes || analise.bichosFrequentes || [];
 
-    // 1. LÓGICA DE ATRASO (Até 40 pts)
+    // 1. ATRASO (Até 40 pts)
     const idxAtrasado = listaAtrasados.findIndex(b => b.grupo === bichoGrupo);
     let pontuacaoAtraso = 0;
     if (idxAtrasado !== -1) {
         pontuacaoAtraso = 40 - (idxAtrasado * 5);
         score += pontuacaoAtraso;
-        motivos.push(`⏰ Ranking Atraso (+${pontuacaoAtraso})`);
+        motivos.push('⏰ Ranking Atraso (+' + pontuacaoAtraso + ')');
         fontesBonusCount++;
     }
 
-    // 2. LÓGICA DE CALOR (FREQUENTES)
+    // 2. CALOR (FREQUENTES)
     const idxFreq = listaFrequentes.findIndex(b => b.grupo === bichoGrupo);
     if (idxFreq !== -1) {
         let ptsFreq = 20 - (idxFreq * 4);
         if (pontuacaoAtraso > 20) ptsFreq = Math.round(ptsFreq * 0.5);
         score += ptsFreq;
-        motivos.push(`🔥 Tendência Quente (+${ptsFreq})`);
+        motivos.push('🔥 Tendência Quente (+' + ptsFreq + ')');
         fontesBonusCount++;
     }
 
-    // 3. FILTRO DE RESFRIAMENTO
+    // 3. RESFRIAMENTO / CICLO
     if (analise.ciclos && analise.ciclos[bichoGrupo]) {
-        let c = analise.ciclos[bichoGrupo];
+        const c = analise.ciclos[bichoGrupo];
         if (c.atual < 1) {
             score -= 45;
-            motivos.push(`❄️ Resfriando: Saiu muito recente (-45)`);
+            motivos.push('❄️ Resfriando: Saiu muito recente (-45)');
         } else if (c.estourado) {
             score += 35;
-            motivos.push(`🚨 Ciclo Estourado (+35)`);
+            motivos.push('🚨 Ciclo Estourado (+35)');
             fontesBonusCount++;
         }
     }
 
-    // 4. PUXADA E AFINIDADE
+    // 4. PUXADA
     if (analise.puxada && analise.puxada.includes(bichoGrupo)) {
         score += 20;
-        motivos.push(`🔗 Puxada de Resultado (+20)`);
+        motivos.push('🔗 Puxada de Resultado (+20)');
         fontesBonusCount++;
     }
 
-    // 5. ★ NOVO: PADRÃO DO DIA DA SEMANA
-    const diaSemanaHoje = new Date().getDay(); // 0=Dom...6=Sab
-    const nomesDia = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    if (analise.bicho1PremioPorDia && analise.bicho1PremioPorDia[diaSemanaHoje]) {
-        const countsDia = analise.bicho1PremioPorDia[diaSemanaHoje];
-        const totalDia = Object.values(countsDia).reduce((a, v) => a + v, 0) || 1;
+    // 5. PADRÃO DO DIA DA SEMANA
+    // CORRIGIDO: usa String() para bater com chave salva no Firebase
+    const diaSemanaHoje = new Date().getDay();
+    const chavesDia = ['Domingos', 'Segundas', 'Terças', 'Quartas', 'Quintas', 'Sextas', 'Sábados'];
+    const diaStr = String(diaSemanaHoje);
+    if (analise.bicho1PremioPorDia && analise.bicho1PremioPorDia[diaStr]) {
+        const countsDia = analise.bicho1PremioPorDia[diaStr];
+        const totalDia = Object.values(countsDia).reduce(function(a, v) { return a + v; }, 0) || 1;
         const countBicho = countsDia[bichoGrupo] || 0;
-        const freqEsperada = totalDia / 25; // distribuição uniforme entre 25 bichos
+        const freqEsperada = totalDia / 25;
         if (countBicho >= freqEsperada * 1.5) {
             const bonus = Math.min(30, Math.round((countBicho / freqEsperada - 1) * 15));
             score += bonus;
-            motivos.push(`📅 Forte nas ${nomesDia[diaSemanaHoje]}feiras (+${bonus})`);
+            motivos.push('📅 Forte nas ' + chavesDia[diaSemanaHoje] + ' (+' + bonus + ')');
             fontesBonusCount++;
         } else if (countBicho < freqEsperada * 0.4) {
             score -= 10;
-            motivos.push(`📅 Fraco nas ${nomesDia[diaSemanaHoje]}feiras (-10)`);
+            motivos.push('📅 Fraco nas ' + chavesDia[diaSemanaHoje] + ' (-10)');
         }
     }
 
-    // 6. ★ NOVO: BÔNUS DE CONFLUÊNCIA (múltiplos sinais juntos)
+    // 6. TENDÊNCIA RECENTE (7 dias) — ANTES da confluência para contar o sinal
+    if (analise.tendenciaRecente && analise.tendenciaRecente[bichoGrupo]) {
+        const aparicoes7d = analise.tendenciaRecente[bichoGrupo];
+        if (aparicoes7d >= 3) {
+            score += 25;
+            motivos.push('🔥 Muito quente: ' + aparicoes7d + 'x em 7 dias (+25)');
+            fontesBonusCount++;
+        } else if (aparicoes7d === 2) {
+            score += 12;
+            motivos.push('♨️ Aquecendo: 2x em 7 dias (+12)');
+        }
+    }
+
+    // 7. CONFLUÊNCIA — calculada POR ÚLTIMO para capturar todos os sinais acima
     if (fontesBonusCount >= 3) {
         const bonusConf = fontesBonusCount * 8;
         score += bonusConf;
-        motivos.unshift(`⚡ CONFLUÊNCIA ${fontesBonusCount} sinais (+${bonusConf})`);
+        motivos.unshift('⚡ CONFLUÊNCIA ' + fontesBonusCount + ' sinais (+' + bonusConf + ')');
     }
-
-    // ★ TENDÊNCIA DOS ÚLTIMOS 7 DIAS (sinal de calor recente no 1º prêmio)
-if (analise.tendenciaRecente && analise.tendenciaRecente[bichoGrupo]) {
-    var aparicoes7d = analise.tendenciaRecente[bichoGrupo];
-    if (aparicoes7d >= 3) {
-        score += 25;
-        motivos.push("🔥 Muito quente: " + aparicoes7d + "x em 7 dias (+25)");
-        fontesBonusCount++;
-    } else if (aparicoes7d === 2) {
-        score += 12;
-        motivos.push("♨️ Aquecendo: 2x em 7 dias (+12)");
-    }
-}
 
     return { forca: Math.max(1, Math.min(120, score)), motivos: motivos };
 }
@@ -10402,8 +10410,12 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 }
 
                 const ciclos = {};
-                const maxTime = c.datasSorteios.length > 0 ? Math.max(...c.datasSorteios) : new Date().getTime();
-                const minTime = c.datasSorteios.length > 0 ? Math.min(...c.datasSorteios) : new Date().getTime();
+                const maxTime = c.datasSorteios.length > 0
+    ? c.datasSorteios.reduce(function(a, b) { return a > b ? a : b; })
+    : new Date().getTime();
+const minTime = c.datasSorteios.length > 0
+    ? c.datasSorteios.reduce(function(a, b) { return a < b ? a : b; })
+    : new Date().getTime();
                 const totalDias = Math.max(1, (maxTime - minTime) / (1000 * 60 * 60 * 24));
 
                 for (let i = 1; i <= 25; i++) {
@@ -11309,18 +11321,28 @@ async function getPuxadaDoDiaIA(loteria) {
     try {
         const querySnapshot = await firestoreDB.collection('resultados')
             .where('loteria', '==', loteria)
-            .where('posicao', '==', 1) 
+            .where('posicao', '==', 1)
             .orderBy('data', 'desc')
-            .limit(1)
+            .limit(3)
             .get();
         if (querySnapshot.empty) return null;
-        const ultimoBichoData = querySnapshot.docs[0].data();
-        const ultimoGrupo = ultimoBichoData.bichoGrupo;
-        if (!ultimoGrupo) return null;
-        // Usa afinidades dinâmicas do treinamento se disponíveis, senão cai na tabela fixa
+
         const summaryDoc = await firestoreDB.collection('analises_ia').doc(loteria).get();
-        const afinDinamicas = summaryDoc.exists ? (summaryDoc.data()?.geral?.afinidades?.[ultimoGrupo] || null) : null;
-        return afinDinamicas || puxadas[ultimoGrupo] || null;
+        const afinidades = summaryDoc.exists ? (summaryDoc.data()?.geral?.afinidades || {}) : {};
+
+        // Conta quais bichos são "puxados" pelos últimos 3 resultados
+        const votos = {};
+        querySnapshot.docs.forEach(doc => {
+            const grupo = doc.data().bichoGrupo;
+            if (!grupo) return;
+            const puxados = afinidades[grupo] || puxadas[grupo] || [];
+            puxados.forEach(p => { votos[p] = (votos[p] || 0) + 1; });
+        });
+
+        if (Object.keys(votos).length === 0) return null;
+
+        // Retorna os bichos mais votados (consenso dos últimos 3 sorteios)
+        return Object.keys(votos).sort((a, b) => votos[b] - votos[a]).slice(0, 4);
     } catch (error) {
         console.error("Erro ao buscar Puxada do Dia I.A.:", error);
         return null;
@@ -21337,63 +21359,85 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
             const vizinhoDepois = top1GrupoInt === 25 ? '01' : String(top1GrupoInt + 1).padStart(2, '0');
 
             if (b.grupo === vizinhoAntes || b.grupo === vizinhoDepois) {
-                scoreFinal += 15; novosMotivos.push("Vizinho do Atrasado (+15)");
+                scoreFinal += 15;
+                novosMotivos.push('Vizinho do Atrasado (+15)');
             }
-            if (analise.afinidades && analise.afinidades[top1GrupoStr] && analise.afinidades[top1GrupoStr].includes(b.grupo)) {
-                scoreFinal += 30; novosMotivos.push("Afinidade com 1º Prêmio (+30)");
-            }
+
+            // MELHORIA: verifica afinidade com os top 3 atrasados (pesos decrescentes)
+            const pesosAfinidade = [30, 18, 10];
+            topAtrasados.slice(0, 3).forEach(function(atrasado, ai) {
+                if (analise.afinidades && analise.afinidades[atrasado.grupo] && analise.afinidades[atrasado.grupo].includes(b.grupo)) {
+                    scoreFinal += pesosAfinidade[ai];
+                    novosMotivos.push('🔗 Afinidade com ' + (ai + 1) + 'º Atrasado (+' + pesosAfinidade[ai] + ')');
+                }
+            });
         }
 
         if (analise.puxada && analise.puxada.includes(b.grupo)) {
-             scoreFinal += 35; if (!novosMotivos.some(m => m.includes('Puxada'))) novosMotivos.push("Puxada Forte (+35)");
+            scoreFinal += 35;
+            if (!novosMotivos.some(m => m.includes('Puxada'))) novosMotivos.push('Puxada Forte (+35)');
         }
-        
-        // 👇 A MÁGICA FOI ALTERADA AQUI 👇
-        // Antes era: -80 e ia pra Geladeira. Agora é +20 e vira Tendência de Repetição!
+
+        // CORRIGIDO: Geladeira só penaliza se saiu entre 1 e 2 dias
+        // (atual < 1 já é coberto por calcularPontuacaoBicho com -45)
         if (analise.ciclos && analise.ciclos[b.grupo]) {
-
-    const cg = analise.ciclos[b.grupo];
-
-    if (cg.atual < 2) {
-
-        scoreFinal -= 40; novosMotivos.push("❄️ Geladeira: saiu recentemente (-40)");
-
-    }
-
-}
+            const cg = analise.ciclos[b.grupo];
+            if (cg.atual >= 1 && cg.atual < 2) {
+                scoreFinal -= 20;
+                novosMotivos.push('❄️ Resfriando: saiu ontem (-20)');
+            }
+        }
 
         if (checarBichoDaCruz(b.dezenas)) {
-            scoreFinal += 25; novosMotivos.unshift(`🌟 Bicho da Cruz do Dia`);
+            scoreFinal += 25;
+            novosMotivos.unshift('🌟 Bicho da Cruz do Dia');
         }
 
         if (turnoAtual === 'dia' && bichosDiurnos.includes(b.grupo)) {
-            scoreFinal += 25; 
-            novosMotivos.push("☀️ Forte de Dia (+25)");
+            scoreFinal += 25;
+            novosMotivos.push('☀️ Forte de Dia (+25)');
         } else if (turnoAtual === 'noite' && bichosNoturnos.includes(b.grupo)) {
-            scoreFinal += 25; 
-            novosMotivos.push("🌙 Forte de Noite (+25)");
+            scoreFinal += 25;
+            novosMotivos.push('🌙 Forte de Noite (+25)');
         }
-        
-        // 4. CICLO DE RETORNO (Urgência máxima)
-        if (analise.ciclos && analise.ciclos[b.grupo]) {
-            let c = analise.ciclos[b.grupo];
-            if (c.estourado) {
-                 scoreFinal += 50; 
-                 novosMotivos.unshift(`🚨 ALERTA: Ciclo histórico estourado!`);
+
+        // CORRIGIDO: ciclo estourado não soma pontos aqui (já somado em calcularPontuacaoBicho +35)
+        // Adiciona apenas o aviso visual se ainda não estiver nos motivos
+        if (analise.ciclos && analise.ciclos[b.grupo] && analise.ciclos[b.grupo].estourado) {
+            if (!novosMotivos.some(m => m.includes('Ciclo') || m.includes('estourado'))) {
+                novosMotivos.unshift('🚨 ALERTA: Ciclo histórico estourado!');
             }
         }
 
         return { ...b, forca: scoreFinal, motivos: novosMotivos, dezenasBase: b.dezenas };
     });
 
-    restantes.sort((a,b) => b.forca - a.forca);
-    let todosJuntos = [...topAtrasados, ...restantes];
+    restantes.sort((a, b) => b.forca - a.forca);
+
+// Aplica score real também nos topAtrasados antes de juntar
+topAtrasados.forEach(function(b) {
+    var aval = calcularPontuacaoBicho(b.grupo, analise);
+    // Mantém o bônus de atraso mas soma os outros sinais (dia, tendência, ciclo...)
+    b.forca = Math.max(b.forca, aval.forca);
+    aval.motivos.forEach(function(m) {
+        if (!b.motivos.some(function(e) { return e === m; })) b.motivos.push(m);
+    });
+});
+
+// Re-ordena o conjunto completo pelo score real
+let todosJuntos = [...topAtrasados, ...restantes];
+todosJuntos.sort(function(a, b) { return b.forca - a.forca; });
 
     // 📈 MEDIDOR DE CONFIANÇA (%)
-    var melhorScore = todosJuntos[0] ? todosJuntos[0].forca : 1;
-todosJuntos.forEach(function(b, index) {
-    var confReal = Math.round((b.forca / Math.max(melhorScore, 1)) * 94);
-    b.confianca = Math.min(94, Math.max(40, confReal)) + '%';
+    // Usa o maior score real do conjunto (após re-ordenação)
+var melhorScore = todosJuntos.reduce(function(max, b) { return b.forca > max ? b.forca : max; }, 1);
+var piorScore = todosJuntos.reduce(function(min, b) { return b.forca < min ? b.forca : min; }, melhorScore);
+var rangeScore = Math.max(melhorScore - piorScore, 1);
+
+todosJuntos.forEach(function(b) {
+    // Distribui a confiança entre 45% e 94% com base na posição relativa real
+    var confReal = Math.round(45 + ((b.forca - piorScore) / rangeScore) * 49);
+    b.confianca = Math.min(94, Math.max(45, confReal)) + '%';
 });
 
     let rankingTop5 = todosJuntos.slice(0, 5);
@@ -21448,7 +21492,7 @@ rankingTop10.forEach(function(b, index) {
         }
     } else if ((index === 1 || index === 2) && unidadesTop.length > 0) {
         var dezenaUnidade = b.dezenasBase.find(function(d) {
-            return d.endsWith(unidadesTop[0]) || d.endsWith(unidadesTop[1]);
+            return d.endsWith(unidadesTop[0]) || (unidadesTop[1] !== undefined && d.endsWith(unidadesTop[1]));
         });
         dezena = dezenaUnidade || melhorDezena1Premio || dezenasQuentesDoBicho[0] || b.dezenasBase[getSeededInt(4)];
     } else {
@@ -21460,34 +21504,61 @@ rankingTop10.forEach(function(b, index) {
 });
 
 // 2. MILHARES — sempre usa o MELHOR prefixo (índice 0) + invertida
+// 2. MILHARES — filtra blacklist e deduplica
+var blacklistSet = new Set(analise.blacklist || []);
 palpites.milhar = [];
+var milharesJaAdicionadas = new Set();
+
 for (var i = 0; i < 8; i++) {
     var b = rankingTop10[i];
-    // CORRIGIDO: sempre pega o prefixo de maior frequência [0], não [i%3]
-    var prefixo = (analise.prefixosPorBicho && analise.prefixosPorBicho[b.grupo] && analise.prefixosPorBicho[b.grupo][0])
-        || String(getSeededInt(100)).padStart(2, '0');
-    if (centenasTop.length > 0) prefixo = prefixo.charAt(0) + centenasTop[0];
-    var milharDireta = prefixo + dezenasEscolhidas[i];
-    var milharInvertida = milharDireta.split('').reverse().join('');
+    var prefixosDisponiveis = (analise.prefixosPorBicho && analise.prefixosPorBicho[b.grupo])
+        ? analise.prefixosPorBicho[b.grupo]
+        : [String(getSeededInt(100)).padStart(2, '0')];
+
+    var milharDireta = null;
+    var milharInvertida = null;
+
+    // Tenta cada prefixo histórico até achar uma milhar não-blacklistada
+    for (var pi = 0; pi < Math.min(prefixosDisponiveis.length, 5); pi++) {
+        var prefixoTeste = prefixosDisponiveis[pi];
+        if (centenasTop.length > 0) prefixoTeste = prefixoTeste.charAt(0) + centenasTop[0];
+        var candidata = prefixoTeste + dezenasEscolhidas[i];
+        var candidataInv = candidata.split('').reverse().join('');
+        if (!blacklistSet.has(candidata) && !milharesJaAdicionadas.has(candidata)) {
+            milharDireta = candidata;
+            milharInvertida = candidataInv !== candidata ? candidataInv : null;
+            break;
+        }
+    }
+
+    // Fallback: usa mesmo assim se todos os prefixos estão na blacklist
+    if (!milharDireta) {
+        var prefixoFallback = prefixosDisponiveis[0] || String(getSeededInt(100)).padStart(2, '0');
+        if (centenasTop.length > 0) prefixoFallback = prefixoFallback.charAt(0) + centenasTop[0];
+        milharDireta = prefixoFallback + dezenasEscolhidas[i];
+        milharInvertida = milharDireta.split('').reverse().join('');
+        if (milharInvertida === milharDireta) milharInvertida = null;
+    }
+
+    milharesJaAdicionadas.add(milharDireta);
     palpites.milhar.push({
         palpite: milharDireta,
         tipo: b.animal,
-        invertida: milharInvertida !== milharDireta ? milharInvertida : null
+        invertida: milharInvertida
     });
 }
 
-    // 3. CENTENAS DUPLAS
-    palpites.centena = [];
-    for(let i = 0; i < 10; i++) {
-        let b = rankingTop10[i];
-        let prefixo = analise.prefixosPorBicho?.[b.grupo]?.[1] || String(getSeededInt(100)).padStart(2, '0'); 
-        let digitoCentena = centenasTop.length > 1 ? centenasTop[getSeededInt(2)] : prefixo.slice(-1);
-        
-        let indiceDezenaAlternativa = (b.dezenasBase.indexOf(dezenasEscolhidas[i]) + 1) % 4;
-        let dezenaAlternativa = b.dezenasBase[indiceDezenaAlternativa]; 
-        
-        palpites.centena.push({ palpite: digitoCentena + dezenaAlternativa, tipo: b.animal });
-    }
+// 3. CENTENAS DUPLAS
+palpites.centena = [];
+for (var i = 0; i < 10; i++) {
+    var bc = rankingTop10[i];
+    var prefixoCent = (analise.prefixosPorBicho && analise.prefixosPorBicho[bc.grupo] && analise.prefixosPorBicho[bc.grupo][1])
+        || String(getSeededInt(100)).padStart(2, '0');
+    var digitoCentena = centenasTop.length > 1 ? centenasTop[getSeededInt(2)] : prefixoCent.slice(-1);
+    var indiceDezenaAlternativa = (bc.dezenasBase.indexOf(dezenasEscolhidas[i]) + 1) % 4;
+    var dezenaAlternativa = bc.dezenasBase[indiceDezenaAlternativa];
+    palpites.centena.push({ palpite: digitoCentena + dezenaAlternativa, tipo: bc.animal });
+}
 
     // 4. JOGADA DE MESTRE (A primeira milhar gerada)
     const jogadaDeMestre = palpites.milhar[0];
