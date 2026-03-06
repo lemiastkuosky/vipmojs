@@ -9690,17 +9690,15 @@ async function getSomaUltimoSorteio(loteria) {
 // --- FUNÇÃO ATUALIZADA: SUPORTA MODO SILENCIOSO E BLOQUEIA DUPLICATAS ---
 async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
     if (!loteria || !loteriaNome) return;
-    const nextDrawName = getNextDrawName(loteria);
-    const drawDisplay = horariosLoterias[loteria]?.find(h => h.nome === nextDrawName)?.display || 'Geral';
+
+    const proximasExtracoes = getNextNDrawNames(loteria, 3);
+    const nextDrawName = proximasExtracoes[0].nome;
+    const drawDisplay = proximasExtracoes[0].display;
 
     if (!isSilent) {
         showLoadingIndicator(`Sincronizando últimos sorteios...`);
-        try {
-            await syncLotteryBeforeIA(loteria);
-        } catch (e) {
-            console.warn("Falha no Auto-Sync:", e);
-        }
-        showLoadingIndicator(`Análise Estratégica: ${drawDisplay}...`);
+        try { await syncLotteryBeforeIA(loteria); } catch (e) { console.warn("Falha no Auto-Sync:", e); }
+        showLoadingIndicator(`Analisando ${proximasExtracoes.length} extrações...`);
     }
 
     try {
@@ -9711,79 +9709,13 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
             getSomaUltimoSorteio(loteria)
         ]);
 
-        const analiseHorario = dataIA ? (dataIA[nextDrawName] || dataIA['geral']) : {};
-        const analiseCompleta = { ...analiseHorario, puxada, prefixosPorBicho: dataIA ? dataIA.prefixosPorBicho : {} };
-
-        const dadosReais = typeof extrairDadosDoHTML === 'function' && htmlAtrasados 
-            ? extrairDadosDoHTML(htmlAtrasados) 
-            : { bichos: [], unidades: [] };
+        const dadosReais = typeof extrairDadosDoHTML === 'function' && htmlAtrasados
+            ? extrairDadosDoHTML(htmlAtrasados) : { bichos: [], unidades: [] };
 
         const agora = new Date();
         const dataSimples = agora.toLocaleDateString('pt-BR');
         const horaAgora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const seed = `${dataSimples}-${loteria}-${nextDrawName}`;
-        
-        const unidadesAtrasadas = (analiseCompleta.unidadesAtrasadas || []).slice(0, 2);
-
-        const { palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento } = getPalpitesMisturadosIA(analiseCompleta, seed, dadosReais.bichos || [], nextDrawName);
-
         const divisor = "───────────────────";
-        
-        let shareText = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
-        shareText += `${divisor}\n`;
-        shareText += `🎯 *FOCO:* ${drawDisplay}\n`;
-        shareText += `🚦 *VOLATILIDADE:* ${volatilidade.nivel} - ${volatilidade.texto}\n`;
-        shareText += `${divisor}\n\n`;
-
-        if (alertaDobradinha) {
-            shareText += `🚨 *ALERTA I.A:* Padrão de *DOBRADINHA* com alta probabilidade neste sorteio!\n`;
-            shareText += `${divisor}\n\n`;
-        }
-
-        if (jogadaDeMestre) {
-            shareText += `👑 *JOGADA DE MESTRE*\n`;
-            shareText += `💸 *${jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n`;
-            shareText += `↳ O ${jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
-        }
-
-        if (dadosSoma && dadosSoma.bicho) {
-            shareText += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n`;
-            shareText += `↳ Base Matemática: ${dadosSoma.sorteioBase} Anterior\n`;
-            shareText += `💸 *${dadosSoma.milhar}* - ${dadosSoma.bicho.emoji} *${dadosSoma.bicho.animal.toUpperCase()}*\n\n`;
-        }
-        
-        shareText += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
-        if (rankingTop5 && rankingTop5.length > 0) {
-            const medalhas = ['🥇', '🥈', '🥉', '🏅', '🏅'];
-            rankingTop5.forEach((b, i) => {
-                const icone = medalhas[i] || '🏅';
-                shareText += `${icone} *${i + 1}º LUGAR* - ${b.emoji} *${b.animal.toUpperCase()}* [🎯 ${b.confianca}]\n`;
-                if (b.motivos && b.motivos.length > 0) {
-                    b.motivos.forEach(motivo => { shareText += `  ↳ ${motivo}\n`; });
-                } else {
-                    shareText += `  ↳ 🔥 Alta Convergência de Dados\n`;
-                }
-                shareText += `\n`; 
-            });
-        }
-
-        shareText += `${divisor}\n`;
-        shareText += `🐾 *TOP 10 (Ranking Geral):*\n`;
-        if (rankingTop10 && rankingTop10.length >= 10) {
-            for (let i = 0; i < 5; i++) {
-                let pos1 = String(i + 1).padStart(2, '0');
-                let pos2 = String(i + 6).padStart(2, '0');
-                let bicho1 = `${rankingTop10[i].emoji} ${rankingTop10[i].animal}`;
-                let bicho2 = `${rankingTop10[i + 5].emoji} ${rankingTop10[i + 5].animal}`;
-                shareText += `*${pos1}º* ${bicho1.padEnd(12, ' ')} ┃  *${pos2}º* ${bicho2}\n`;
-            }
-        }
-        shareText += `${divisor}\n\n`;
-
-        if (bichoSombra) {
-            shareText += `👻 *BICHO ESQUECIDO:*\n`;
-            shareText += `O ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
-        }
 
         const formatarEmColunas = (lista, itensPorLinha) => {
             let linhas = [];
@@ -9793,105 +9725,119 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
             return linhas.join('\n');
         };
 
-        if (unidadesAtrasadas && unidadesAtrasadas.length > 0) {
-            shareText += `🎯 *UNIDADES ATRASADAS (M):*\n`;
-            shareText += `*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
-        }
-           
-        shareText += `🚀 *MILHARES SUGERIDAS:*\n`;
-        if (palpites && palpites.milhar) {
-            const milharesFormatadas = palpites.milhar.slice(0, 8).map(m => `🔹 ${m.palpite}`);
-            shareText += formatarEmColunas(milharesFormatadas, 2) + `\n\n`; 
-        }
+        // Gera análise independente para cada uma das 3 extrações
+        const analisesPorExtracao = proximasExtracoes.map((extracao) => {
+            const analiseHorario = dataIA ? (dataIA[extracao.nome] || dataIA['geral']) : {};
+            const analiseCompleta = { ...analiseHorario, puxada, prefixosPorBicho: dataIA ? dataIA.prefixosPorBicho : {} };
+            const seed = `${dataSimples}-${loteria}-${extracao.nome}`;
+            const unidadesAtrasadas = (analiseCompleta.unidadesAtrasadas || []).slice(0, 2);
+            const { palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento } =
+                getPalpitesMisturadosIA(analiseCompleta, seed, dadosReais.bichos || [], extracao.nome);
+            return { extracao, palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento, unidadesAtrasadas };
+        });
 
-        shareText += `💯 *CENTENAS QUENTES:*\n`;
-        if (palpites && palpites.centena) {
-            const centenasFormatadas = palpites.centena.slice(0, 10).map(c => c.palpite);
-            shareText += formatarEmColunas(centenasFormatadas, 5) + `\n\n`; 
-        }
-        
-        shareText += `${divisor}\n\n`;
+        // Monta texto de compartilhamento para cada extração
+        const shareTexts = analisesPorExtracao.map(({ extracao, palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento, unidadesAtrasadas }) => {
+            let t = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
+            t += `${divisor}\n🎯 *FOCO:* ${extracao.display}\n`;
+            t += `🚦 *VOLATILIDADE:* ${volatilidade.nivel} - ${volatilidade.texto}\n${divisor}\n\n`;
+            if (alertaDobradinha) t += `🚨 *ALERTA I.A:* Padrão de *DOBRADINHA* com alta probabilidade neste sorteio!\n${divisor}\n\n`;
+            if (jogadaDeMestre) t += `👑 *JOGADA DE MESTRE*\n💸 *${jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n↳ O ${jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
+            if (dadosSoma && dadosSoma.bicho) t += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n↳ Base Matemática: ${dadosSoma.sorteioBase} Anterior\n💸 *${dadosSoma.milhar}* - ${dadosSoma.bicho.emoji} *${dadosSoma.bicho.animal.toUpperCase()}*\n\n`;
+            t += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
+            if (rankingTop5 && rankingTop5.length > 0) {
+                const medalhas = ['🥇', '🥈', '🥉', '🏅', '🏅'];
+                rankingTop5.forEach((b, i) => {
+                    t += `${medalhas[i] || '🏅'} *${i + 1}º LUGAR* - ${b.emoji} *${b.animal.toUpperCase()}* [🎯 ${b.confianca}]\n`;
+                    if (b.motivos && b.motivos.length > 0) b.motivos.forEach(m => { t += `  ↳ ${m}\n`; });
+                    else t += `  ↳ 🔥 Alta Convergência de Dados\n`;
+                    t += `\n`;
+                });
+            }
+            t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
+            if (rankingTop10 && rankingTop10.length >= 10) {
+                for (let i = 0; i < 5; i++) {
+                    t += `*${String(i+1).padStart(2,'0')}º* ${(rankingTop10[i].emoji+' '+rankingTop10[i].animal).padEnd(12,' ')} ┃  *${String(i+6).padStart(2,'0')}º* ${rankingTop10[i+5].emoji} ${rankingTop10[i+5].animal}\n`;
+                }
+            }
+            t += `${divisor}\n\n`;
+            if (bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
+            if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
+            t += `🚀 *MILHARES SUGERIDAS:*\n`;
+            if (palpites && palpites.milhar) {const linhasMilhar = palpites.milhar.slice(0, 8).map(function(m) {return m.invertida ? "🔹 " + m.palpite + " ↔ " + m.invertida : "🔹 " + m.palpite;});t += formatarEmColunas(linhasMilhar, 1) + "\n\n";}
+            t += `💯 *CENTENAS QUENTES:*\n`;
+            if (palpites && palpites.centena) t += formatarEmColunas(palpites.centena.slice(0,10).map(c => c.palpite), 5) + `\n\n`;
+            t += `${divisor}\n\n`;
+            if (dezenasFechamento && dezenasFechamento.length === 5) t += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\nJogue as 5 dezenas combinadas:\n🎯 *${dezenasFechamento.join(' - ')}*\n\n`;
+            t += `🤝 *DUQUES DE DEZENA:*\n`;
+            if (palpites && palpites.duques) { let d = []; palpites.duques.forEach(x => d.push(...x.combinacoes)); t += formatarEmColunas(d.map(c => `💠 ${c}`), 3) + `\n\n`; }
+            t += `🤝 *TERNOS DE DEZENA:*\n`;
+            if (palpites && palpites.ternos) { let r = []; palpites.ternos.forEach(x => r.push(...x.combinacoes)); t += formatarEmColunas(r.map(c => `🏆 ${c}`), 2) + `\n\n`; }
+            t += `${divisor}\n🍀 *BOA SORTE!* 🍀\n🗓️ Gerado: ${dataSimples} às ${horaAgora}\n📲 VIP - I.A in Real Time\n`;
+            return t;
+        });
 
-        if (dezenasFechamento && dezenasFechamento.length === 5) {
-            shareText += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\n`;
-            shareText += `Jogue as 5 dezenas combinadas:\n`;
-            shareText += `🎯 *${dezenasFechamento.join(' - ')}*\n\n`;
-        }
-
-        shareText += `🤝 *DUQUES DE DEZENA:*\n`;
-        if (palpites && palpites.duques) {
-            let todosDuques = [];
-            palpites.duques.forEach(d => todosDuques.push(...d.combinacoes)); 
-            const duquesFormatados = todosDuques.map(c => `💠 ${c}`);
-            shareText += formatarEmColunas(duquesFormatados, 3) + `\n\n`; 
-        }
-
-        shareText += `🤝 *TERNOS DE DEZENA:*\n`;
-        if (palpites && palpites.ternos) {
-            let todosTernos = [];
-            palpites.ternos.forEach(t => todosTernos.push(...t.combinacoes)); 
-            const ternosFormatados = todosTernos.map(c => `🏆 ${c}`);
-            shareText += formatarEmColunas(ternosFormatados, 2) + `\n\n`; 
-        }
-        
-        shareText += `${divisor}\n`;
-        shareText += `🍀 *BOA SORTE!* 🍀\n`;
-        shareText += `🗓️ Gerado: ${dataSimples} às ${horaAgora}\n`;
-        shareText += `📲 VIP - I.A in Real Time\n`;
-
-        // ==============================================================
-        // 🔒 CORREÇÃO DA DUPLICAÇÃO: CRIA UM ID ÚNICO PARA O DOCUMENTO
-        // ==============================================================
+        // Salva no Firebase (apenas 1ª extração)
         try {
-            const dataID = dataSimples.replace(/\//g, ''); // Ex: 05032026
-            const horarioLimpo = drawDisplay.replace(/[\s:]/g, '_'); // Ex: RIO_14_20
-            const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`; // ID Final
-
-            const palpiteHistorico = {
-                loteria: loteria,
-                loteriaNome: loteriaNome,
-                horario: drawDisplay,
-                data: dataSimples,
+            const dataID = dataSimples.replace(/\//g, '');
+            const horarioLimpo = drawDisplay.replace(/[\s:]/g, '_');
+            const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`;
+            const { rankingTop5 } = analisesPorExtracao[0];
+            await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).set({
+                loteria, loteriaNome, horario: drawDisplay, data: dataSimples,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 
-                conteudo: shareText, 
-                ranking: rankingTop5.map(b => ({animal: b.animal, emoji: b.emoji, confianca: b.confianca}))
-            };
+                expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+                conteudo: shareTexts[0],
+                ranking: rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
+            });
+        } catch (e) { console.error("Erro ao gravar histórico:", e); }
 
-            // O comando SET substitui se já existir, evitando a clonagem!
-            await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).set(palpiteHistorico);
-        } catch (e) {
-            console.error("Erro ao gravar histórico:", e);
-        }
-
-        // ==============================================================
-        // 🤫 MODO SILENCIOSO: Se for auto-update, para por aqui sem abrir telas
-        // ==============================================================
         if (isSilent) return;
 
-        window.iaPalpiteShareText = shareText;
+        window.iaPalpiteShareText = shareTexts[0];
+        window.iaPalpiteShareTexts = shareTexts;
+        window.iaPalpiteShareExtracoes = proximasExtracoes;
 
         const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
         if (resultsOutput) {
-            resultsOutput.innerHTML = `
-                <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                    <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; margin-bottom: 5px;">Palpite Fixo Gerado</div>
-                    <div style="font-size: 1.2rem;">${drawDisplay}</div>
-                </div>
-                <div style="text-align:left; font-family: 'Courier New', monospace; background:rgba(0,0,0,0.05); padding:15px; border-radius:10px; border: 1px solid rgba(0,0,0,0.1); font-size:0.9rem; white-space:pre-wrap; line-height: 1.4;">${shareText.replace(/\*/g, '')}</div>
-                
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button onclick="copyIAPalpites(this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 15px; font-weight: bold; font-size: 1.1rem; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
-                        📋 Copiar
-                    </button>
-                    <button onclick="shareIAPalpites()" class="save-button" style="flex: 1; background:#25D366; padding:15px; font-weight:bold; font-size:1.1rem; border-radius:10px; box-shadow: 0 4px 0 #128c7e; border: none; cursor: pointer; color: white;">
-                       📲 Enviar no WhatsApp
-                    </button>
-                </div>
-            `;
+            const labelExtracao = ['⚡ PRÓXIMA', '🔮 2ª EXTRAÇÃO', '🌟 3ª EXTRAÇÃO'];
+            const coresAba = ['#e83e8c', '#6f42c1', '#17a2b8'];
+
+            let tabsHtml = `<div style="display:flex;gap:6px;margin-bottom:14px;">`;
+            proximasExtracoes.forEach((ex, idx) => {
+                const ativo = idx === 0;
+                tabsHtml += `<button onclick="switchPalpiteTab(${idx})" id="tab-palpite-${idx}"
+                    style="flex:1;padding:9px 4px;border-radius:8px;border:2px solid ${ativo ? coresAba[idx] : '#ccc'};
+                    background:${ativo ? coresAba[idx] : 'transparent'};color:${ativo ? 'white' : '#666'};
+                    font-weight:bold;font-size:0.75rem;cursor:pointer;transition:all 0.2s;">
+                    ${labelExtracao[idx]}<br><span style="font-size:0.7rem;font-weight:normal;">${ex.display}</span>
+                </button>`;
+            });
+            tabsHtml += `</div>`;
+
+            let contentHtml = '';
+            analisesPorExtracao.forEach(({ extracao, volatilidade }, idx) => {
+                const corVol = volatilidade.nivel.includes('🟢') ? '#86efac' : volatilidade.nivel.includes('🟡') ? '#fcd34d' : '#fca5a5';
+                contentHtml += `<div id="content-palpite-${idx}" style="display:${idx === 0 ? 'block' : 'none'};">
+                    <div style="background:linear-gradient(135deg,#1e293b,#0f172a);color:white;padding:12px;border-radius:12px;text-align:center;font-weight:bold;margin-bottom:12px;box-shadow:0 4px 10px rgba(0,0,0,0.3);">
+                        <div style="font-size:0.65rem;color:#fbbf24;text-transform:uppercase;margin-bottom:3px;">${labelExtracao[idx]}</div>
+                        <div style="font-size:1.15rem;">${extracao.display}</div>
+                        <div style="font-size:0.72rem;color:${corVol};margin-top:4px;">${volatilidade.nivel} ${volatilidade.texto}</div>
+                    </div>
+                    <div style="text-align:left;font-family:'Courier New',monospace;background:rgba(0,0,0,0.05);padding:13px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);font-size:0.82rem;white-space:pre-wrap;line-height:1.4;max-height:380px;overflow-y:auto;">${shareTexts[idx].replace(/\*/g, '')}</div>
+                    <div style="display:flex;gap:8px;margin-top:12px;">
+                        <button onclick="copyIAPalpitesTab(${idx},this)" style="flex:1;background:#6f42c1;color:white;padding:12px;font-weight:bold;font-size:0.9rem;border-radius:10px;border:none;cursor:pointer;box-shadow:0 4px 0 #5a359b;">📋 Copiar</button>
+                        <button onclick="shareIAPalpitesTab(${idx})" style="flex:1;background:#25D366;color:white;padding:12px;font-weight:bold;font-size:0.9rem;border-radius:10px;border:none;cursor:pointer;box-shadow:0 4px 0 #128c7e;">📲 WhatsApp</button>
+                    </div>
+                </div>`;
+            });
+
+            resultsOutput.innerHTML = tabsHtml + contentHtml;
             document.getElementById('iaPalpiteForm').style.display = 'none';
             document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
             document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
+            const shareBtn = document.getElementById('iaPalpiteShareBtn');
+            if (shareBtn) shareBtn.style.display = 'none';
         }
 
     } catch (error) {
@@ -9902,42 +9848,42 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
     }
 }
 
-// --- NOVA FUNÇÃO: GERA O HISTÓRICO DE TODAS AS LOTERIAS EM SEGUNDO PLANO ---
-async function autoGerarHistoricoIA() {
-    const loterias = [
-        { id: 'rj', nome: 'PT Rio (RJ)' },
-        { id: 'lk', nome: 'Look Goiás (LK)' },
-        { id: 'ln', nome: 'Loteria Nacional (LN)' },
-        { id: 'fd', nome: 'Federal (FD)' }
-    ];
-    console.log("[Auto-IA] Gerando histórico silencioso para todas as loterias...");
-    
-    for (const lot of loterias) {
-        // Chama a função com o terceiro parâmetro 'true' (Modo Silencioso ativado)
-        await generateIAPalpites(lot.id, lot.nome, true); 
+// Funções auxiliares das abas
+function switchPalpiteTab(idx) {
+    const coresAba = ['#e83e8c', '#6f42c1', '#17a2b8'];
+    const total = window.iaPalpiteShareExtracoes ? window.iaPalpiteShareExtracoes.length : 3;
+    for (let i = 0; i < total; i++) {
+        const tab = document.getElementById(`tab-palpite-${i}`);
+        const content = document.getElementById(`content-palpite-${i}`);
+        if (tab && content) {
+            const ativo = i === idx;
+            tab.style.background = ativo ? coresAba[i] : 'transparent';
+            tab.style.color = ativo ? 'white' : '#666';
+            tab.style.borderColor = ativo ? coresAba[i] : '#ccc';
+            content.style.display = ativo ? 'block' : 'none';
+        }
     }
+    if (window.iaPalpiteShareTexts) window.iaPalpiteShareText = window.iaPalpiteShareTexts[idx];
 }
 
-// --- FUNÇÃO PARA COMPARTILHAR A ANÁLISE COMPLETA (MÉTODO DO RECIBO) ---
-function shareIAPalpites() {
-    if (!window.iaPalpiteShareText) {
-        showToast('Erro: Nenhum texto de palpite para compartilhar.', 'error');
-        return;
-    }
+function copyIAPalpitesTab(idx, btn) {
+    const text = window.iaPalpiteShareTexts ? window.iaPalpiteShareTexts[idx] : window.iaPalpiteShareText;
+    if (!text) return;
+    const orig = btn.innerHTML;
+    navigator.clipboard.writeText(text).then(() => {
+        btn.innerHTML = '✅ Copiado!';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }).catch(() => {
+        btn.innerHTML = '❌ Erro';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    });
+}
 
-    // Codifica a mensagem para formato de link
-    const encodedMessage = encodeURIComponent(window.iaPalpiteShareText);
-    
-    // URL EXATA usada no recibo que funciona perfeitamente
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
-
-    // A MÁGICA DO RECIBO: Altera a URL atual forçando o app a abrir
-    window.location.href = whatsappUrl;
-
-    // Fecha o modal da I.A. após acionar o WhatsApp
-    setTimeout(() => {
-        closePalpitesIAModal();
-    }, 300);
+function shareIAPalpitesTab(idx) {
+    const text = window.iaPalpiteShareTexts ? window.iaPalpiteShareTexts[idx] : window.iaPalpiteShareText;
+    if (!text) { showToast('Nenhum texto para compartilhar.', 'error'); return; }
+    window.location.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    setTimeout(() => { closePalpitesIAModal(); }, 300);
 }
 
 // --- FUNÇÃO PARA COMPARTILHAR OS DUQUES/TERNOS (MÉTODO DO RECIBO) ---
@@ -10096,39 +10042,54 @@ function estimateSuggestionsForBicho(bichoGroup, lottery) {
 // === MOTOR I.A. V2: ANÁLISE SEPARADA POR HORÁRIO (ALTA PRECISÃO) ===
 // ============================================================================
 
+// 1. Definições de Cache no topo (Escopo Global)
 let iaSummaryCache = {}; 
 const IA_CACHE_DURATION = 30 * 60 * 1000; 
+let iaFetchPromises = {};
 
-// --- FUNÇÃO INTELIGENTE: Descobre qual é o próximo sorteio ---
-function getNextDrawName(loteria) {
+// 2. Função correta para retornar os próximos N horários
+function getNextNDrawNames(loteria, n = 3) {
     const horarios = horariosLoterias[loteria];
-    if (!horarios) return 'geral';
-    
+    if (!horarios) return [{ nome: 'geral', display: 'Geral' }];
+
     const agora = new Date();
+    const resultado = [];
+    
+    // Busca horários que ainda não passaram hoje
     for (const h of horarios) {
+        if (resultado.length >= n) break;
         const dataSorteio = new Date();
         dataSorteio.setHours(h.hora, h.minuto, 0, 0);
         dataSorteio.setMinutes(dataSorteio.getMinutes() - 5); // 5 min de tolerância
         if (agora < dataSorteio) {
-            return h.nome; // Ex: 'RIO 14:20'
+            resultado.push({ nome: h.nome, display: h.display });
         }
     }
-    return horarios[0].nome; // Se já acabaram os de hoje, pega o primeiro de amanhã
+    
+    // Se não atingiu N, completa com os primeiros (wrap-around para amanhã)
+    if (resultado.length < n) {
+        for (const h of horarios) {
+            if (resultado.length >= n) break;
+            if (!resultado.some(r => r.nome === h.nome)) {
+                resultado.push({ nome: h.nome, display: h.display });
+            }
+        }
+    }
+    
+    return resultado.slice(0, n);
 }
 
-// 1. LEITURA OTIMIZADA DO FIREBASE
-let iaFetchPromises = {};
-
+// 3. Função de leitura otimizada do Firebase
 async function getIaSummaryDocument(loteria) {
     if (!loteria) return null;
     const now = new Date().getTime();
     
-    // 1. Se já está no cache local, retorna na hora
+    // Verificação de cache local
     if (iaSummaryCache[loteria] && (now - iaSummaryCache[loteria].time < IA_CACHE_DURATION)) {
         return iaSummaryCache[loteria].data;
     }
 
-    // 2. SE JÁ EXISTE UM PEDIDO EM ANDAMENTO, NÃO PEDE DE NOVO. ESPERA O ANTERIOR.
+    // Trava para evitar múltiplas leituras simultâneas para a mesma loteria
     if (iaFetchPromises[loteria]) {
         console.log(`[IA V2] Aguardando leitura já iniciada para ${loteria.toUpperCase()}...`);
         return iaFetchPromises[loteria];
@@ -10136,9 +10097,8 @@ async function getIaSummaryDocument(loteria) {
 
     console.log(`[IA V2] Iniciando leitura ÚNICA do Firebase para ${loteria.toUpperCase()}`);
     
-    // Cria a promessa de leitura e guarda na "trava"
     iaFetchPromises[loteria] = firestoreDB.collection('analises_ia').doc(loteria).get().then(doc => {
-        delete iaFetchPromises[loteria]; // Libera a trava ao terminar
+        delete iaFetchPromises[loteria]; 
         if (doc.exists) {
             const data = doc.data();
             iaSummaryCache[loteria] = { data: data, time: now };
@@ -10146,7 +10106,7 @@ async function getIaSummaryDocument(loteria) {
         }
         return null;
     }).catch(e => {
-        delete iaFetchPromises[loteria]; // Libera a trava em caso de erro
+        delete iaFetchPromises[loteria];
         console.error(`Erro ao ler I.A.:`, e);
         return null;
     });
@@ -10224,9 +10184,10 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
 }
 
 function calcularPontuacaoBicho(bichoGrupo, analise) {
-    let score = 25; 
+    let score = 25;
     let motivos = [];
-    
+    let fontesBonusCount = 0; // Para detectar confluência
+
     const listaAtrasados = analise.atrasados || analise.bichosAtrasados || [];
     const listaFrequentes = analise.frequentes || analise.bichosFrequentes || [];
 
@@ -10237,31 +10198,29 @@ function calcularPontuacaoBicho(bichoGrupo, analise) {
         pontuacaoAtraso = 40 - (idxAtrasado * 5);
         score += pontuacaoAtraso;
         motivos.push(`⏰ Ranking Atraso (+${pontuacaoAtraso})`);
+        fontesBonusCount++;
     }
 
     // 2. LÓGICA DE CALOR (FREQUENTES)
     const idxFreq = listaFrequentes.findIndex(b => b.grupo === bichoGrupo);
     if (idxFreq !== -1) {
         let ptsFreq = 20 - (idxFreq * 4);
-        // Se o bicho está muito atrasado, ele não pode ser "quente" ao mesmo tempo (evita conflito)
         if (pontuacaoAtraso > 20) ptsFreq = Math.round(ptsFreq * 0.5);
         score += ptsFreq;
         motivos.push(`🔥 Tendência Quente (+${ptsFreq})`);
+        fontesBonusCount++;
     }
 
-    // 3. NOVO: FILTRO DE RESFRIAMENTO (Gelo no bicho que acabou de sair)
+    // 3. FILTRO DE RESFRIAMENTO
     if (analise.ciclos && analise.ciclos[bichoGrupo]) {
         let c = analise.ciclos[bichoGrupo];
-        
-        // Se saiu há menos de 1 dia (sorteios muito recentes)
         if (c.atual < 1) {
-            score -= 45; // Penalidade pesada
+            score -= 45;
             motivos.push(`❄️ Resfriando: Saiu muito recente (-45)`);
-        } 
-        // Se o ciclo médio foi estourado (está "na hora" de vir)
-        else if (c.estourado) {
+        } else if (c.estourado) {
             score += 35;
             motivos.push(`🚨 Ciclo Estourado (+35)`);
+            fontesBonusCount++;
         }
     }
 
@@ -10269,10 +10228,49 @@ function calcularPontuacaoBicho(bichoGrupo, analise) {
     if (analise.puxada && analise.puxada.includes(bichoGrupo)) {
         score += 20;
         motivos.push(`🔗 Puxada de Resultado (+20)`);
+        fontesBonusCount++;
     }
 
-    // Garante que o score fique entre 1 e 99
-    return { forca: Math.max(1, Math.min(99, score)), motivos: motivos };
+    // 5. ★ NOVO: PADRÃO DO DIA DA SEMANA
+    const diaSemanaHoje = new Date().getDay(); // 0=Dom...6=Sab
+    const nomesDia = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    if (analise.bicho1PremioPorDia && analise.bicho1PremioPorDia[diaSemanaHoje]) {
+        const countsDia = analise.bicho1PremioPorDia[diaSemanaHoje];
+        const totalDia = Object.values(countsDia).reduce((a, v) => a + v, 0) || 1;
+        const countBicho = countsDia[bichoGrupo] || 0;
+        const freqEsperada = totalDia / 25; // distribuição uniforme entre 25 bichos
+        if (countBicho >= freqEsperada * 1.5) {
+            const bonus = Math.min(30, Math.round((countBicho / freqEsperada - 1) * 15));
+            score += bonus;
+            motivos.push(`📅 Forte nas ${nomesDia[diaSemanaHoje]}feiras (+${bonus})`);
+            fontesBonusCount++;
+        } else if (countBicho < freqEsperada * 0.4) {
+            score -= 10;
+            motivos.push(`📅 Fraco nas ${nomesDia[diaSemanaHoje]}feiras (-10)`);
+        }
+    }
+
+    // 6. ★ NOVO: BÔNUS DE CONFLUÊNCIA (múltiplos sinais juntos)
+    if (fontesBonusCount >= 3) {
+        const bonusConf = fontesBonusCount * 8;
+        score += bonusConf;
+        motivos.unshift(`⚡ CONFLUÊNCIA ${fontesBonusCount} sinais (+${bonusConf})`);
+    }
+
+    // ★ TENDÊNCIA DOS ÚLTIMOS 7 DIAS (sinal de calor recente no 1º prêmio)
+if (analise.tendenciaRecente && analise.tendenciaRecente[bichoGrupo]) {
+    var aparicoes7d = analise.tendenciaRecente[bichoGrupo];
+    if (aparicoes7d >= 3) {
+        score += 25;
+        motivos.push("🔥 Muito quente: " + aparicoes7d + "x em 7 dias (+25)");
+        fontesBonusCount++;
+    } else if (aparicoes7d === 2) {
+        score += 12;
+        motivos.push("♨️ Aquecendo: 2x em 7 dias (+12)");
+    }
+}
+
+    return { forca: Math.max(1, Math.min(120, score)), motivos: motivos };
 }
 
 // --- CÉREBRO DA I.A. ATUALIZADO (SUPORTA AUTO-TREINAMENTO SILENCIOSO) ---
@@ -10280,7 +10278,6 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) return;
 
-    // Se for manual (clique no botão), pede confirmação e mostra a tela preta
     if (!isAutomatic) {
         const confirmed = await showCustomConfirm('Treinar I.A. com Ciclos de Retorno, Duplas e Horários? (Consumirá leituras)', 'Sim, Compilar', 'Cancelar', 'updateModal');
         if (!confirmed) return;
@@ -10288,8 +10285,7 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
     } else {
         console.log(`[Auto-IA] Re-treinando a I.A. silenciosamente para: ${loteriaAlvo}`);
     }
-    
-    // Se o sistema mandou uma loteria específica, treina só ela para ser mais rápido!
+
     const loterias = loteriaAlvo ? [loteriaAlvo] : ['rj', 'lk', 'ln', 'fd'];
 
     try {
@@ -10303,7 +10299,11 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 prefixoCounts: {}, milharLastDate: {}, blacklist: new Set(),
                 dezenaCounts: {}, ultimosVistos1Premio: new Map(), bichoFrequencia: new Map(),
                 ultimasDezenas: new Map(), ultimasCentenas: new Map(), ultimasUnidades: new Map(),
-                draws: {}, bicho1PremioCount: {}, datasSorteios: [] 
+                draws: {}, bicho1PremioCount: {}, datasSorteios: [],
+                bicho1PremioPorDia: {},
+                dezena1PremioCount: {},
+                dezenaPorBicho1Premio: {},
+                tendenciaRecente: {}
             });
 
             const containers = { geral: createContainer() };
@@ -10314,11 +10314,12 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
             const dataBlacklist = new Date(); dataBlacklist.setDate(dataBlacklist.getDate() - 60);
             const dataAtrasada = new Date(); dataAtrasada.setDate(dataAtrasada.getDate() - 180);
             const dataFrequente = new Date(); dataFrequente.setDate(dataFrequente.getDate() - 21);
+            const dataRecente = new Date(); dataRecente.setDate(dataRecente.getDate() - 7);
 
             snapshot.forEach(doc => {
                 const data = doc.data();
                 if (!data.milhar || data.milhar.length !== 4 || !data.bichoGrupo) return;
-                
+
                 const m = data.milhar, g = data.bichoGrupo, dS = data.data.toDate(), p = data.posicao;
                 const prefixo = m.substring(0, 2), dez = m.slice(-2), cent = m.slice(-3), uni = m.slice(-1);
                 const drawName = data.nomeSorteio;
@@ -10332,17 +10333,35 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                     if (dS >= dataBlacklist) c.blacklist.add(m);
                     if (!c.milharLastDate[m] || dS > c.milharLastDate[m]) c.milharLastDate[m] = dS;
                     c.dezenaCounts[dez] = (c.dezenaCounts[dez] || 0) + 1;
-                    
                     c.datasSorteios.push(dS.getTime());
+
                     if (p === 1) {
                         c.bicho1PremioCount[g] = (c.bicho1PremioCount[g] || 0) + 1;
-                        if (!c.ultimosVistos1Premio.has(g) || dS > c.ultimosVistos1Premio.get(g)) {c.ultimosVistos1Premio.set(g, dS);
-                        }}
+                        if (!c.ultimosVistos1Premio.has(g) || dS > c.ultimosVistos1Premio.get(g)) {
+                            c.ultimosVistos1Premio.set(g, dS);
+                        }
+
+                        // Dia da semana
+                        const diaSem = dS.getDay();
+                        if (!c.bicho1PremioPorDia[diaSem]) c.bicho1PremioPorDia[diaSem] = {};
+                        c.bicho1PremioPorDia[diaSem][g] = (c.bicho1PremioPorDia[diaSem][g] || 0) + 1;
+
+                        // Dezenas do 1º prêmio
+                        c.dezena1PremioCount[dez] = (c.dezena1PremioCount[dez] || 0) + 1;
+                        if (!c.dezenaPorBicho1Premio[g]) c.dezenaPorBicho1Premio[g] = {};
+                        c.dezenaPorBicho1Premio[g][dez] = (c.dezenaPorBicho1Premio[g][dez] || 0) + 1;
+
+                        // Tendência recente (últimos 7 dias)
+                        if (dS >= dataRecente) {
+                            c.tendenciaRecente[g] = (c.tendenciaRecente[g] || 0) + 1;
+                        }
+                    }
+
                     if (dS >= dataFrequente) c.bichoFrequencia.set(g, (c.bichoFrequencia.get(g) || 0) + 1);
                     if (!c.ultimasDezenas.has(dez)) c.ultimasDezenas.set(dez, dS);
                     if (!c.ultimasCentenas.has(cent)) c.ultimasCentenas.set(cent, dS);
                     if (!c.ultimasUnidades.has(uni)) c.ultimasUnidades.set(uni, dS);
-                    
+
                     const drawKey = `${dS.getTime()}_${drawName || 'geral'}`;
                     if (!c.draws[drawKey]) c.draws[drawKey] = new Set();
                     c.draws[drawKey].add(g);
@@ -10357,6 +10376,7 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 for (const g in c.prefixoCounts) {
                     prefixosPorBichoFinal[g] = Object.keys(c.prefixoCounts[g]).sort((a, b) => c.prefixoCounts[g][b] - c.prefixoCounts[g][a]).slice(0, 20);
                 }
+
                 const getAtrasos = (map, limit) => Array.from(map.entries()).map(([numero, data]) => ({ numero, data })).sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, limit);
 
                 const pairCounts = {};
@@ -10369,6 +10389,7 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                         }
                     }
                 });
+
                 const afinidades = {};
                 for (let i = 1; i <= 25; i++) {
                     const g = String(i).padStart(2, '0');
@@ -10381,24 +10402,38 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 }
 
                 const ciclos = {};
-                let maxTime = c.datasSorteios.length > 0 ? Math.max(...c.datasSorteios) : new Date().getTime();
-                let minTime = c.datasSorteios.length > 0 ? Math.min(...c.datasSorteios) : new Date().getTime();
-                let totalDias = Math.max(1, (maxTime - minTime) / (1000 * 60 * 60 * 24)); 
+                const maxTime = c.datasSorteios.length > 0 ? Math.max(...c.datasSorteios) : new Date().getTime();
+                const minTime = c.datasSorteios.length > 0 ? Math.min(...c.datasSorteios) : new Date().getTime();
+                const totalDias = Math.max(1, (maxTime - minTime) / (1000 * 60 * 60 * 24));
 
                 for (let i = 1; i <= 25; i++) {
                     const g = String(i).padStart(2, '0');
-                    const count = c.bicho1PremioCount[g] || 0.1; 
-                    const cicloMedioDias = totalDias / count; 
-                    
+                    const count = c.bicho1PremioCount[g] || 0.1;
+                    const cicloMedioDias = totalDias / count;
                     const lastSeen = c.ultimosVistos1Premio.get(g) || dataAntiga;
                     const atrasoDias = (maxTime - lastSeen.getTime()) / (1000 * 60 * 60 * 24);
-                    
-                    ciclos[g] = { 
-                        medio: Number(cicloMedioDias.toFixed(1)), 
+                    ciclos[g] = {
+                        medio: Number(cicloMedioDias.toFixed(1)),
                         atual: Number(atrasoDias.toFixed(1)),
-                        estourado: atrasoDias >= cicloMedioDias 
+                        estourado: atrasoDias >= cicloMedioDias
                     };
                 }
+
+                // Monta objetos auxiliares sem IIFE para evitar erro de return
+                const dezenaPorBicho1PremioFinal = {};
+                for (const g in c.dezenaPorBicho1Premio) {
+                    dezenaPorBicho1PremioFinal[g] = Object.keys(c.dezenaPorBicho1Premio[g])
+                        .sort((a, b) => c.dezenaPorBicho1Premio[g][b] - c.dezenaPorBicho1Premio[g][a]);
+                }
+
+                const bicho1PremioPorDiaFinal = {};
+                for (const dia in c.bicho1PremioPorDia) {
+                    bicho1PremioPorDiaFinal[String(dia)] = c.bicho1PremioPorDia[dia];
+                }
+
+                const tendenciaRecenteFinal = Object.fromEntries(
+                    Object.entries(c.tendenciaRecente).sort((a, b) => b[1] - a[1])
+                );
 
                 compiledData[key] = {
                     prefixosPorBicho: prefixosPorBichoFinal,
@@ -10411,18 +10446,20 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                     centenasAtrasadas: getAtrasos(c.ultimasCentenas, 5),
                     unidadesAtrasadas: getAtrasos(c.ultimasUnidades, 2),
                     afinidades: afinidades,
-                    ciclos: ciclos 
+                    ciclos: ciclos,
+                    dezenasQuentes1Premio: Object.keys(c.dezena1PremioCount).sort((a, b) => c.dezena1PremioCount[b] - c.dezena1PremioCount[a]).slice(0, 30),
+                    dezenaPorBicho1Premio: dezenaPorBicho1PremioFinal,
+                    tendenciaRecente: tendenciaRecenteFinal,
+                    bicho1PremioPorDia: bicho1PremioPorDiaFinal
                 };
             }
-            
+
             compiledData.lastUpdated = firebase.firestore.FieldValue.serverTimestamp();
             await firestoreDB.collection('analises_ia').doc(loteria).set(compiledData);
         }
 
-        iaSummaryCache = {}; // Limpa o cache para obrigar a ler a nova versão
+        iaSummaryCache = {};
         await calcularPlacarAutomatico();
-
-        // 👉 CHAMA O ROBOZINHO DE HISTÓRICO AQUI 👈
         await autoGerarHistoricoIA();
 
         if (!isAutomatic) {
@@ -10481,6 +10518,7 @@ async function fetchAndCacheIaPrefixes(loteria) {
         console.error("Erro na sincronização IA:", e);
         updateIaSuggestionCountsDisplay(null);
     }
+    
 }
 
 function updateIaSuggestionCountsDisplay(lottery) {
@@ -21352,10 +21390,11 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
     let todosJuntos = [...topAtrasados, ...restantes];
 
     // 📈 MEDIDOR DE CONFIANÇA (%)
-    todosJuntos.forEach((b, index) => {
-        let baseConf = 97 - (index * 4) + getSeededInt(3); 
-        b.confianca = Math.max(65, baseConf) + '%';
-    });
+    var melhorScore = todosJuntos[0] ? todosJuntos[0].forca : 1;
+todosJuntos.forEach(function(b, index) {
+    var confReal = Math.round((b.forca / Math.max(melhorScore, 1)) * 94);
+    b.confianca = Math.min(94, Math.max(40, confReal)) + '%';
+});
 
     let rankingTop5 = todosJuntos.slice(0, 5);
     let rankingTop10 = todosJuntos.slice(0, 10);
@@ -21383,33 +21422,59 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
     let alertaDobradinha = false;
     const dezenasGemeas = ['00', '11', '22', '33', '44', '55', '66', '77', '88', '99'];
 
-    // 1. ESCOLHA DIVERSIFICADA DE DEZENAS PARA O TOP 10
-    const dezenasEscolhidas = []; 
-    rankingTop10.forEach((b, index) => {
-        let dezena = b.dezenasBase[getSeededInt(4)]; 
-        
-        if (index === 0) {
-            const temGemea = b.dezenasBase.find(d => dezenasGemeas.includes(d));
-            if (temGemea && getSeededInt(10) > 3) { 
-                alertaDobradinha = true;
-                dezena = temGemea; 
-            }
-        } 
-        else if ((index === 1 || index === 2) && unidadesTop.length > 0) {
-            const dezenaUnidade = b.dezenasBase.find(d => d.endsWith(unidadesTop[0]) || d.endsWith(unidadesTop[1]));
-            if (dezenaUnidade) dezena = dezenaUnidade;
-        }
-        dezenasEscolhidas.push(dezena);
-    });
+    // 1. ESCOLHA INTELIGENTE DE DEZENAS (1º prêmio + quentes recentes)
+const dezenasQuentes1Premio = new Set(analise.dezenasQuentes1Premio || analise.dezenasQuentes || []);
+const dezenaPorBicho1Premio = analise.dezenaPorBicho1Premio || {};
+const tendenciaRecente = analise.tendenciaRecente || {};
 
-    // 2. MILHARES (Foco no Top 8)
-    palpites.milhar = [];
-    for(let i = 0; i < 8; i++) {
-        let b = rankingTop10[i];
-        let prefixo = analise.prefixosPorBicho?.[b.grupo]?.[i % 3] || String(getSeededInt(100)).padStart(2, '0');
-        if (centenasTop.length > 0) prefixo = prefixo.charAt(0) + centenasTop[0];
-        palpites.milhar.push({ palpite: prefixo + dezenasEscolhidas[i], tipo: b.animal });
+const dezenasEscolhidas = [];
+rankingTop10.forEach(function(b, index) {
+    var dezena;
+
+    // Prioridade 1: dezena do bicho que mais saiu especificamente no 1º prêmio
+    var dezenasOrdenadas1Premio = dezenaPorBicho1Premio[b.grupo] || [];
+    var melhorDezena1Premio = dezenasOrdenadas1Premio[0] || null;
+
+    // Prioridade 2: dezena do bicho que está na lista de quentes do 1º prêmio
+    var dezenasQuentesDoBicho = b.dezenasBase.filter(function(d) { return dezenasQuentes1Premio.has(d); });
+
+    if (index === 0) {
+        var temGemea = b.dezenasBase.find(function(d) { return dezenasGemeas.includes(d); });
+        if (temGemea && getSeededInt(10) > 3) {
+            alertaDobradinha = true;
+            dezena = temGemea;
+        } else {
+            dezena = melhorDezena1Premio || (dezenasQuentesDoBicho[0]) || b.dezenasBase[getSeededInt(4)];
+        }
+    } else if ((index === 1 || index === 2) && unidadesTop.length > 0) {
+        var dezenaUnidade = b.dezenasBase.find(function(d) {
+            return d.endsWith(unidadesTop[0]) || d.endsWith(unidadesTop[1]);
+        });
+        dezena = dezenaUnidade || melhorDezena1Premio || dezenasQuentesDoBicho[0] || b.dezenasBase[getSeededInt(4)];
+    } else {
+        dezena = melhorDezena1Premio || (dezenasQuentesDoBicho.length > 0
+            ? dezenasQuentesDoBicho[0]
+            : b.dezenasBase[getSeededInt(4)]);
     }
+    dezenasEscolhidas.push(dezena);
+});
+
+// 2. MILHARES — sempre usa o MELHOR prefixo (índice 0) + invertida
+palpites.milhar = [];
+for (var i = 0; i < 8; i++) {
+    var b = rankingTop10[i];
+    // CORRIGIDO: sempre pega o prefixo de maior frequência [0], não [i%3]
+    var prefixo = (analise.prefixosPorBicho && analise.prefixosPorBicho[b.grupo] && analise.prefixosPorBicho[b.grupo][0])
+        || String(getSeededInt(100)).padStart(2, '0');
+    if (centenasTop.length > 0) prefixo = prefixo.charAt(0) + centenasTop[0];
+    var milharDireta = prefixo + dezenasEscolhidas[i];
+    var milharInvertida = milharDireta.split('').reverse().join('');
+    palpites.milhar.push({
+        palpite: milharDireta,
+        tipo: b.animal,
+        invertida: milharInvertida !== milharDireta ? milharInvertida : null
+    });
+}
 
     // 3. CENTENAS DUPLAS
     palpites.centena = [];
