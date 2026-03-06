@@ -6138,6 +6138,32 @@ body.dark-mode .kit-bicho-card.esgotado {
     max-height: 85vh;
 }
 
+/* ========================================================
+   CORREÇÃO DO BUG DE VAZAMENTO DE TELA (MENU ADMIN/CONFIG)
+   ======================================================== */
+
+/* 1. Trava o tamanho do Fieldset (A caixa com borda vermelha) */
+fieldset.generator-options {
+    width: 100% !important;
+    min-width: 0 !important; /* O SEGREDO: Força o fieldset a respeitar a tela do celular */
+    box-sizing: border-box !important;
+}
+
+/* 2. Trava a linha que segura o nome do menu e o botão de ligar/desligar */
+.admin-config-row {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 3. Se a tela for muito pequena, corta o texto com "..." em vez de empurrar o botão pra fora */
+.admin-config-label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding-right: 10px !important; /* Garante um respiro antes do botão */
+}
+
 </style>
 </head>
 
@@ -7455,8 +7481,7 @@ body.dark-mode .kit-bicho-card.esgotado {
         <input type="checkbox" id="checkBannerIA" onchange="toggleSystemBanner('iaScoreboardBanner', this.checked)">
         <span class="slider"></span>
     </label>
-
-    <div class="admin-config-row">
+</div> <div class="admin-config-row">
     <span class="admin-config-label">⚙️ Configurações</span>
     <label class="ios-switch">
         <input type="checkbox" id="checkBtnSettings" onchange="toggleMenuButton('btnMenuSettings', this.checked)">
@@ -7470,7 +7495,6 @@ body.dark-mode .kit-bicho-card.esgotado {
         <input type="checkbox" id="checkBtnSubBoletimGlobal" onchange="toggleMenuButton('btnSubBoletimGlobal', this.checked)">
         <span class="slider"></span>
     </label>
-</div>
 </div>
 
     </div>
@@ -9762,11 +9786,13 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
                 });
             }
             t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
-            if (rankingTop10 && rankingTop10.length >= 10) {
-                for (let i = 0; i < 5; i++) {
-                    t += `*${String(i+1).padStart(2,'0')}º* ${(rankingTop10[i].emoji+' '+rankingTop10[i].animal).padEnd(12,' ')} ┃  *${String(i+6).padStart(2,'0')}º* ${rankingTop10[i+5].emoji} ${rankingTop10[i+5].animal}\n`;
-                }
-            }
+if (rankingTop10 && rankingTop10.length >= 10) {
+    for (let i = 0; i < 5; i++) {
+        let esq = `${rankingTop10[i].emoji} G${rankingTop10[i].grupo} - ${rankingTop10[i].animal}`;
+        let dir = `${rankingTop10[i+5].emoji} G${rankingTop10[i+5].grupo} - ${rankingTop10[i+5].animal}`;
+        t += `*${String(i+1).padStart(2,'0')}º* ${esq.padEnd(19,' ')} ┃  *${String(i+6).padStart(2,'0')}º* ${dir}\n`;
+    }
+}
             t += `${divisor}\n\n`;
             if (bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
             if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
@@ -10232,11 +10258,11 @@ function calcularPontuacaoBicho(bichoGrupo, analise) {
 
     // 3. RESFRIAMENTO / CICLO
     if (analise.ciclos && analise.ciclos[bichoGrupo]) {
-        const c = analise.ciclos[bichoGrupo];
-        if (c.atual < 1) {
-            score -= 45;
-            motivos.push('❄️ Resfriando: Saiu muito recente (-45)');
-        } else if (c.estourado) {
+            const c = analise.ciclos[bichoGrupo];
+            if (c.atual < 1) {
+                score -= 80; // Aumentamos a punição para ele cair no ranking
+                motivos.push('❄️ Resfriando: Já saiu hoje (-80)');
+            } else if (c.estourado) {
             score += 35;
             motivos.push('🚨 Ciclo Estourado (+35)');
             fontesBonusCount++;
@@ -10307,7 +10333,7 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
         console.log(`[Auto-IA] Re-treinando a I.A. silenciosamente para: ${loteriaAlvo}`);
     }
 
-    const loterias = loteriaAlvo ? [loteriaAlvo] : ['rj', 'lk', 'ln', 'fd'];
+    const loterias = loteriaAlvo ? [loteriaAlvo] : ['rj', 'lk', 'ln', 'fd', 'ba'];
 
     try {
         for (const loteria of loterias) {
@@ -10641,6 +10667,13 @@ const horariosLoterias = {
         { nome: 'NACIONAL 21:00', display: 'NACIONAL 21h', hora: 21, minuto: 5 }, /* <-- ALTERADO DE 20:00 PARA 21:00 */
         { nome: 'NACIONAL 23:00', display: 'NACIONAL 23h', hora: 23, minuto: 5 }
     ],
+    'ba': [
+        { nome: 'BAHIA 12:00', display: 'BAHIA 12h', hora: 12, minuto: 0 },
+        { nome: 'BAHIA 15:00', display: 'BAHIA 15h', hora: 15, minuto: 0 },
+        { nome: 'BAHIA 19:00', display: 'BAHIA 19h', hora: 19, minuto: 0 },
+        { nome: 'BAHIA 21:00', display: 'BAHIA 21h', hora: 21, minuto: 0 }
+    ],
+
     'fd': [
         { nome: 'FEDERAL', display: 'FEDERAL (Qua/Sáb 20:00)', hora: 20, minuto: 5 }    
     ]
@@ -10674,8 +10707,14 @@ const mapaSorteios = {
         'NACIONAL 15:00': 'div_display_15', 
         'NACIONAL 17:00': 'div_display_17', 
         'NACIONAL 19:00': 'div_display_19',
-        'NACIONAL 21:00': 'div_display_21', /* <-- ALTERADO DE 20:00 PARA 21:00 (ID provável '21') */
+        'NACIONAL 21:00': 'div_display_21', 
         'NACIONAL 23:00': 'div_display_23',
+
+        // Bahia (BA)
+        'BAHIA 12:00': 'div_display_12',
+        'BAHIA 15:00': 'div_display_15',
+        'BAHIA 19:00': 'div_display_19',
+        'BAHIA 21:00': 'div_display_21',
         
         // Federal (FD)
         'FEDERAL': 'div_display_20'
@@ -18159,6 +18198,14 @@ async function ensureCorrectGenModeVisualState() {
         document.getElementById('tabelaBichosModal').classList.remove('active');
     }
 
+function getNextDrawName(loteria) {
+    const proximosSorteios = getNextNDrawNames(loteria, 1);
+    if (proximosSorteios && proximosSorteios.length > 0) {
+        return proximosSorteios[0].nome;
+    }
+    return 'geral'; // Fallback seguro caso não encontre horário
+}
+
     function populateTabelaBichos() {
         const container = document.getElementById('tabelaBichosContainer');
         container.innerHTML = '';
@@ -19336,40 +19383,61 @@ function renderPermToggles(uid, userPerms) {
             ]
         },
         {
-    titulo: "🎲 Menu Superior",
-    btns: [
-        { id: 'btnMenuMCD', label: 'Gerador MCD', emoji: '🎲' },
-        { id: 'btnMenuFechamento', label: 'Duque/Terno', emoji: '🔢' },
-        { id: 'btnMenuBolao', label: 'Gerar Bolão', emoji: '📋' },
-        { id: 'btnMenuTabela', label: 'Ver Tabelas', emoji: '📊' },
-        { id: 'btnMenuAnalises', label: 'Hub Análises', emoji: '🔮' },
-        { id: 'btnMenuKitsMCD', label: 'Kits Vendas', emoji: '🛍️' },
-        { id: 'btnMenuSettings', label: 'Configurações', emoji: '⚙️' } 
-    ]
-},
-        {
-    titulo: "🛠️ Botões de Ação",
-    btns: [
-        { id: 'btnMainClear', label: 'Limpar Tudo', emoji: '🛑' },
-        { id: 'btnMainSave', label: 'Salvar Lista', emoji: '💾' },
-        { id: 'btnMainLists', label: 'Listas Salvas', emoji: '👁️' },
-        { id: 'btnMainCheckWinner', label: 'Conferir', emoji: '🏆' },
-        { id: 'btnMainAddNames', label: 'Add Nomes', emoji: '👥' },
-        { id: 'btnMainCount', label: 'Contar Números', emoji: '#️⃣' }
-    ]
-},
-        {
-            titulo: "🧠 Ferramentas I.A.",
+            titulo: "🎲 Menu Superior",
             btns: [
-                { id: 'btnSubAtrasados', label: 'Atrasados', emoji: '⏱️' },
+                { id: 'btnMenuMCD', label: 'Gerador MCD', emoji: '🎲' },
+                { id: 'btnMenuFechamento', label: 'Duque/Terno', emoji: '🔢' },
+                { id: 'btnMenuBolao', label: 'Gerar Bolão', emoji: '📋' },
+                { id: 'btnMenuTabela', label: 'Ver Tabelas', emoji: '📊' },
+                { id: 'btnMenuAnalises', label: 'Hub Análises', emoji: '🔮' },
+                { id: 'btnMenuKitsMCD', label: 'Kits Vendas', emoji: '🛍️' },
+                { id: 'btnMenuSettings', label: 'Configurações', emoji: '⚙️' } 
+            ]
+        },
+        {
+            titulo: "🛠️ Botões de Ação",
+            btns: [
+                { id: 'btnMainClear', label: 'Limpar Tudo', emoji: '🛑' },
+                { id: 'btnMainSave', label: 'Salvar Lista', emoji: '💾' },
+                { id: 'btnMainLists', label: 'Listas Salvas', emoji: '👁️' },
+                { id: 'btnMainCheckWinner', label: 'Conferir', emoji: '🏆' },
+                { id: 'btnMainAddNames', label: 'Add Nomes', emoji: '👥' },
+                { id: 'btnMainCount', label: 'Contar Números', emoji: '#️⃣' }
+            ]
+        },
+        {
+            titulo: "🧠 Ferramentas I.A. e Consultas",
+            btns: [
+                { id: 'btnSubAtrasados', label: 'Bichos Atrasados', emoji: '⏱️' },
                 { id: 'btnSubMcdSearch', label: 'Busca Milhar', emoji: '🔎' },
-                { id: 'btnSubResultadosLive', label: 'Live Result', emoji: '📲' },
+                { id: 'btnSubResultadosLive', label: 'Result. Extrações', emoji: '📲' },
                 { id: 'btnSubPalpitesIA', label: 'Palpites I.A', emoji: '🧠' },
-                { id: 'btnSubAuditoriaIA', label: 'Auditoria', emoji: '🔍' },
+                { id: 'btnSubAuditoriaIA', label: 'Auditoria I.A.', emoji: '🔍' },
                 { id: 'btnSubBoletimGlobal', label: 'Boletim Diário', emoji: '📈' }
             ]
         }
     ];
+
+    return menuGroups.map(group => `
+        <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+            <strong style="font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">
+                ${group.titulo}
+            </strong>
+            <div class="user-perms-grid">
+                ${group.btns.map(btn => {
+                    // Se não tiver registro falso no banco, o botão nasce ativado
+                    const isChecked = userPerms[btn.id] !== false; 
+                    return `
+                    <label class="perm-button-label">
+                        <input type="checkbox" class="perm-check-${uid}" data-btnid="${btn.id}" ${isChecked ? 'checked' : ''}>
+                        <div style="font-size: 1.4rem; margin-bottom: 5px;">${btn.emoji}</div>
+                        <div class="text" style="font-size: 0.70rem; text-align: center; line-height: 1.1;">${btn.label}</div>
+                    </label>`;
+                }).join('')}
+            </div>
+        </div>
+    `).join('');
+}
 
     return menuGroups.map(group => `
         <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
@@ -19390,7 +19458,6 @@ function renderPermToggles(uid, userPerms) {
             </div>
         </div>
     `).join('');
-}
 
 async function saveUserPermissions(uid, email) {
     const checks = document.querySelectorAll(`.perm-check-${uid}`);
@@ -21331,6 +21398,11 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
             if (topAtrasados.length >= 5) break; 
             const bData = tabelaDeGrupos.find(tg => limpaTexto(tg.animal) === limpaTexto(a.nome));
             if (bData) {
+                // TRAVA DE SEGURANÇA: Se já saiu hoje (atual < 1), ignora a lista do site e derruba o bicho
+                if (analise && analise.ciclos && analise.ciclos[bData.grupo] && analise.ciclos[bData.grupo].atual < 1) {
+                    continue; 
+                }
+                
                 let motivos = [`⏰ Atrasado há ${a.dias} dias`];
                 if(checarBichoDaCruz(bData.dezenas)) motivos.unshift(`🌟 Bicho da Cruz do Dia`);
                 if (turnoAtual === 'dia' && bichosDiurnos.includes(bData.grupo)) motivos.push(`☀️ Forte de Dia`);
@@ -21346,6 +21418,12 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
         for (const bInt of atrasadosInternos) {
             if (topAtrasados.length >= 5) break;
             if (topAtrasados.some(t => t.grupo === bInt.grupo)) continue;
+            
+            // TRAVA DE SEGURANÇA: Se já saiu hoje (atual < 1), ignora e derruba o bicho
+            if (analise && analise.ciclos && analise.ciclos[bInt.grupo] && analise.ciclos[bInt.grupo].atual < 1) {
+                continue; 
+            }
+            
             const bData = tabelaDeGrupos.find(tg => tg.grupo === bInt.grupo);
             if (bData) {
                 let motivos = [`⏰ Atrasado há ${bInt.dias || 0} dias`];
@@ -21857,11 +21935,13 @@ async function autoGerarHistoricoIA() {
                     });
                 }
                 t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
-                if (rankingTop10 && rankingTop10.length >= 10) {
-                    for (let i = 0; i < 5; i++) {
-                        t += `*${String(i+1).padStart(2,'0')}º* ${(rankingTop10[i].emoji+' '+rankingTop10[i].animal).padEnd(12,' ')} ┃  *${String(i+6).padStart(2,'0')}º* ${rankingTop10[i+5].emoji} ${rankingTop10[i+5].animal}\n`;
-                    }
-                }
+if (rankingTop10 && rankingTop10.length >= 10) {
+    for (let i = 0; i < 5; i++) {
+        let esq = `${rankingTop10[i].emoji} G${rankingTop10[i].grupo} - ${rankingTop10[i].animal}`;
+        let dir = `${rankingTop10[i+5].emoji} G${rankingTop10[i+5].grupo} - ${rankingTop10[i+5].animal}`;
+        t += `*${String(i+1).padStart(2,'0')}º* ${esq.padEnd(19,' ')} ┃  *${String(i+6).padStart(2,'0')}º* ${dir}\n`;
+    }
+}
                 t += `${divisor}\n\n`;
                 if (bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
                 if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
