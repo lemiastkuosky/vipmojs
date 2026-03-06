@@ -4430,18 +4430,6 @@ body.dark-mode #bolaoExtractionsWrapper label:has(input:checked) {
     display: none !important; /* Força que eles fiquem invisíveis */
 }
 
-.admin-config-row {
-    display: flex;
-    align-items: center;
-    width: 100%; /* Garante que a linha ocupe toda a largura disponível */
-    padding: 12px 15px;
-    margin-bottom: 8px;
-    background-color: rgba(255, 255, 255, 0.5); 
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    box-sizing: border-box; /* Evita que o padding estoure a largura */
-}
-
 /* O texto do botão */
 .admin-config-label {
     flex-grow: 1; /* <--- O SEGREDO: Ocupa todo o espaço vazio, empurrando o botão */
@@ -4502,32 +4490,26 @@ input:checked + .slider:before {
     transform: translateX(20px);
 }
 
-/* --- MODO ESCURO --- */
-body.dark-mode .admin-config-row {
-    background-color: #2a2a2a;
-    border-color: #444;
-}
-
 body.dark-mode .admin-config-label {
     color: #f0f0f0;
 }
 
-/* A linha que contém o texto e o botão */
 .admin-config-row {
     display: flex;
     align-items: center;
-    justify-content: space-between; /* <--- ISSO JOGA O BOTÃO PARA A DIREITA */
+    justify-content: space-between;
+    width: 100%;
     padding: 12px 15px;
     margin-bottom: 8px;
-    background-color: rgba(255, 255, 255, 0.5); /* Fundo leve */
+    background-color: rgba(0, 0, 0, 0.03); 
     border: 1px solid #ccc;
     border-radius: 10px;
+    box-sizing: border-box; /* ISSO AQUI IMPEDE O BOTÃO DE VAZAR DA TELA */
     transition: all 0.2s;
 }
 
-/* Ajuste para Modo Escuro */
 body.dark-mode .admin-config-row {
-    background-color: #2a2a2a;
+    background-color: rgba(255, 255, 255, 0.05);
     border-color: #444;
 }
 
@@ -9655,11 +9637,11 @@ function showAnalysisHubModal() {
 // --- FUNÇÃO PARA CALCULAR A MILHAR DA SOMA (1º AO 5º) ---
 async function getSomaUltimoSorteio(loteria) {
     try {
-        // Busca os últimos 15 resultados (garante que pega o sorteio mais recente completo)
+        // Busca os últimos 30 resultados para garantir que pegamos um bloco inteiro
         const snapshot = await firestoreDB.collection('resultados')
             .where('loteria', '==', loteria)
             .orderBy('data', 'desc')
-            .limit(15)
+            .limit(30)
             .get();
 
         if (snapshot.empty) return null;
@@ -9667,14 +9649,15 @@ async function getSomaUltimoSorteio(loteria) {
         const resultados = [];
         snapshot.forEach(doc => resultados.push(doc.data()));
 
-        // Encontra o identificador do resultado mais recente
-        const ultimoSorteioId = resultados[0].nomeSorteio;
-        const ultimaData = resultados[0].data.toDate().toLocaleDateString('pt-BR');
+        // Encontra exatamente qual é o sorteio MAIS RECENTE salvo no banco
+        const ultimoRegistro = resultados[0];
+        const ultimoSorteioId = ultimoRegistro.nomeSorteio;
+        const dataMaisRecenteTime = ultimoRegistro.data.toMillis();
 
         // Filtra pegando só os prêmios de 1 a 5 desse sorteio exato
         const premiosDoSorteio = resultados.filter(r => 
             r.nomeSorteio === ultimoSorteioId && 
-            r.data.toDate().toLocaleDateString('pt-BR') === ultimaData &&
+            r.data.toMillis() === dataMaisRecenteTime &&
             r.posicao >= 1 && r.posicao <= 5
         );
 
@@ -10243,80 +10226,53 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
 function calcularPontuacaoBicho(bichoGrupo, analise) {
     let score = 25; 
     let motivos = [];
-    let isCritico = false;
+    
     const listaAtrasados = analise.atrasados || analise.bichosAtrasados || [];
     const listaFrequentes = analise.frequentes || analise.bichosFrequentes || [];
-     // 1. ATRASADOS (Até 40 pts)
 
+    // 1. LÓGICA DE ATRASO (Até 40 pts)
     const idxAtrasado = listaAtrasados.findIndex(b => b.grupo === bichoGrupo);
-
     let pontuacaoAtraso = 0;
-
     if (idxAtrasado !== -1) {
-
-        pontuacaoAtraso = 40 - (idxAtrasado * 7);
-
+        pontuacaoAtraso = 40 - (idxAtrasado * 5);
         score += pontuacaoAtraso;
-
-        motivos.push(`Atrasado (+${pontuacaoAtraso})`);
-
+        motivos.push(`⏰ Ranking Atraso (+${pontuacaoAtraso})`);
     }
 
-    // 2. FREQUENTES — penalizado se o bicho já pontuou alto por atraso
-
+    // 2. LÓGICA DE CALOR (FREQUENTES)
     const idxFreq = listaFrequentes.findIndex(b => b.grupo === bichoGrupo);
-
     if (idxFreq !== -1) {
-
-        let ptsFreq = 25 - (idxFreq * 5);
-
-        // Se já está muito atrasado, não faz sentido ser "quente" — reduz o bônus
-
-        if (pontuacaoAtraso > 25) ptsFreq = Math.round(ptsFreq * 0.3);
-
+        let ptsFreq = 20 - (idxFreq * 4);
+        // Se o bicho está muito atrasado, ele não pode ser "quente" ao mesmo tempo (evita conflito)
+        if (pontuacaoAtraso > 20) ptsFreq = Math.round(ptsFreq * 0.5);
         score += ptsFreq;
-
-        motivos.push(`Quente (+${ptsFreq})`);
-
+        motivos.push(`🔥 Tendência Quente (+${ptsFreq})`);
     }
-    // 3. PUXADA DO DIA (+18 pts)
-    if (analise.puxada && Array.isArray(analise.puxada) && analise.puxada.includes(bichoGrupo)) {
-        score += 18;
-        motivos.push(`Puxada Forte (+18)`);
-    }
-     // 4. CICLO DE RETORNO + RESFRIAMENTO
 
+    // 3. NOVO: FILTRO DE RESFRIAMENTO (Gelo no bicho que acabou de sair)
     if (analise.ciclos && analise.ciclos[bichoGrupo]) {
-
         let c = analise.ciclos[bichoGrupo];
-
-        // Janela de resfriamento: saiu faz menos de 2 dias → penaliza forte
-
-        if (c.atual < 2) {
-
-            score -= 30;
-
-            motivos.push(`Resfriando: saiu há ${c.atual.toFixed(1)} dias (-30)`);
-
-        } else if (c.medio > 0 && c.atual > c.medio) {
-
-            // Ciclo estourado: bônus proporcional
-
-            let multiplicador = Math.min(2.5, c.atual / c.medio);
-
-            let pts = Math.round(12 * multiplicador);
-
-            score += pts;
-
-            motivos.push(`Ciclo Quebrado (+${pts})`);
-
-            if (multiplicador >= 1.6) isCritico = true;
-
+        
+        // Se saiu há menos de 1 dia (sorteios muito recentes)
+        if (c.atual < 1) {
+            score -= 45; // Penalidade pesada
+            motivos.push(`❄️ Resfriando: Saiu muito recente (-45)`);
+        } 
+        // Se o ciclo médio foi estourado (está "na hora" de vir)
+        else if (c.estourado) {
+            score += 35;
+            motivos.push(`🚨 Ciclo Estourado (+35)`);
         }
-
     }
 
-    return { forca: Math.min(99, score), motivos: motivos, isCritico: isCritico };
+    // 4. PUXADA E AFINIDADE
+    if (analise.puxada && analise.puxada.includes(bichoGrupo)) {
+        score += 20;
+        motivos.push(`🔗 Puxada de Resultado (+20)`);
+    }
+
+    // Garante que o score fique entre 1 e 99
+    return { forca: Math.max(1, Math.min(99, score)), motivos: motivos };
 }
 
 // --- CÉREBRO DA I.A. ATUALIZADO (SUPORTA AUTO-TREINAMENTO SILENCIOSO) ---
@@ -15411,7 +15367,7 @@ function showAnalysisHubModal() {
 }
 
 async function abrirHistoricoPalpitesIA() {
-    // 1. Fecha o menu de análises para limpar a visão e evitar conflitos de z-index
+    // 1. Fecha o menu de análises para limpar a visão e evitar conflitos
     if (typeof closeAnalysisHubModal === 'function') closeAnalysisHubModal();
 
     const modal = document.getElementById('historicoPalpitesIAModal');
@@ -15426,63 +15382,77 @@ async function abrirHistoricoPalpitesIA() {
     container.innerHTML = `
         <div style="text-align: center; padding: 40px;">
             <div class="spinner-border" style="color:#6f42c1;"></div>
-            <p style="margin-top:15px; font-weight:bold; color:#6f42c1;">Buscando suas análises...</p>
+            <p style="margin-top:15px; font-weight:bold; color:#6f42c1;">Buscando suas análises mais recentes...</p>
         </div>
     `;
 
-    // 3. Configura exibição e força para a camada mais alta
     modal.classList.add('active');
     modal.style.zIndex = "10000";
     modal.style.display = "flex";
 
-    // === NOVO: DEFINE O FOCO NO BOTÃO DE FECHAR PARA ACESSIBILIDADE ===
     const closeBtn = modal.querySelector('.close-modal');
     if (closeBtn) {
-        // Garante que o elemento seja focável caso seja um span sem tabindex
         if (!closeBtn.hasAttribute('tabindex')) {
             closeBtn.setAttribute('tabindex', '0');
         }
-        // Pequeno atraso para aguardar o fim da animação de abertura do modal
         setTimeout(() => closeBtn.focus(), 300);
     }
 
     try {
+        // BUSCA AGRESSIVA: Aumentamos o limite e forçamos a busca por timestamp exato
         const snapshot = await firestoreDB.collection('historico_palpites_ia')
             .orderBy('timestamp', 'desc')
-            .limit(30)
+            .limit(60) // Puxamos mais para garantir que as de 21h entrem no filtro
             .get();
 
         if (snapshot.empty) {
-            container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhuma análise salva nos últimos 5 dias.</p>';
+            container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhuma análise salva nos últimos dias.</p>';
             return;
         }
 
         let html = '';
+        const jaMostrados = new Set(); 
+
         snapshot.forEach(doc => {
             const data = doc.data();
-            const topBicho = data.ranking && data.ranking[0] ? data.ranking[0].emoji : '🔮';
             
-            // Limpa caracteres que podem quebrar o HTML interno
+            // Chave única baseada em loteria, horário e data para evitar duplicados
+            const chaveUnica = `${data.loteria}_${data.horario}_${data.data}`;
+            
+            if (jaMostrados.has(chaveUnica)) return;
+            jaMostrados.add(chaveUnica);
+
+            const topBicho = data.ranking && data.ranking[0] ? data.ranking[0].emoji : '🔮';
             const textoLimpo = data.conteudo.replace(/`/g, "'");
 
             html += `
             <div class="saved-item" style="border-left: 4px solid #6f42c1; margin-bottom: 12px; background: rgba(128,128,128,0.05); border-radius: 8px;">
-                <div class="saved-item-header" style="padding: 12px; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                    <div class="saved-item-title" style="font-size: 0.9rem; font-weight: bold;">
+                
+                <div class="saved-item-header" style="padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <div class="saved-item-title" style="font-size: 0.9rem; font-weight: bold; line-height: 1.4;">
                         ${topBicho} ${data.loteriaNome} - ${data.horario}<br>
                         <small style="color: #888; font-weight: normal;">Gerado em: ${data.data}</small>
                     </div>
-                    <div class="saved-item-toggle">▼</div>
+                    <div class="saved-item-toggle" style="font-size: 1.2rem;">▼</div>
                 </div>
+
                 <div class="saved-item-content" style="display: none; padding: 15px; background: rgba(0,0,0,0.03); font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; border-top: 1px solid rgba(0,0,0,0.1);">
                     ${textoLimpo}
-                    <button onclick="copyToClipboard(\`${textoLimpo}\`, this)" class="load-button" style="width: 100%; margin-top: 10px; padding: 12px; font-weight: bold; border-radius: 8px;">
-                        📋 Copiar Novamente
-                    </button>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button onclick="copyToClipboard(\`${textoLimpo}\`, this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
+                            📋 Copiar
+                        </button>
+                        <button onclick="window.open('https://wa.me/?text=' + encodeURIComponent(\`${textoLimpo}\`), '_blank')" style="flex: 1; background-color: #25D366; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #128c7e;">
+                            📲 Zap
+                        </button>
+                    </div>
                 </div>
+
             </div>`;
         });
-        container.innerHTML = html;
+        
+        container.innerHTML = html || '<p style="text-align: center; padding: 20px;">Nenhuma análise nova encontrada para exibir.</p>';
 
     } catch (e) {
         console.error("Erro ao carregar histórico:", e);
@@ -15787,7 +15757,7 @@ async function abrirAuditoriaIA() {
         <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
         <h3 class="modal-title" style="margin-bottom: 5px;">📊 Performance da Inteligência</h3>
 
-        <div id="auditoriaLoteriasMenu" style="display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+        <div id="auditoriaLoteriasMenu" style="display: flex; gap: 5px; overflow-x: auto; padding: 25px 0; margin-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,0.2);">
             <button onclick="filtrarAuditoria('todas')" class="receipt-extraction-btn selected" id="filter-todas" style="min-width: 80px;">Geral</button>
             <button onclick="filtrarAuditoria('rj')" class="receipt-extraction-btn" id="filter-rj" style="min-width: 60px;">RJ</button>
             <button onclick="filtrarAuditoria('lk')" class="receipt-extraction-btn" id="filter-lk" style="min-width: 60px;">LK</button>
@@ -21674,9 +21644,8 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     }
 }
 
-// --- FUNÇÃO DEFINITIVA: AUTO-SYNC ANTES DA I.A. (FUSO CORRIGIDO + RODAPÉ) ---
+// --- FUNÇÃO DEFINITIVA: AUTO-SYNC ANTES DA I.A. ---
 async function syncLotteryBeforeIA(loteria) {
-    // 1. Pega a data CORRETA do aparelho (Fuso Local/Brasil)
     const agora = new Date();
     const anoStr = agora.getFullYear();
     const mesStr = String(agora.getMonth() + 1).padStart(2, '0');
@@ -21686,7 +21655,6 @@ async function syncLotteryBeforeIA(loteria) {
     let htmlLoteria = null;
     let precisaTreinarIA = false;
 
-    // 2. Descobre que horas a I.A. "estudou" pela última vez
     let iaLastUpdated = new Date(0); 
     try {
         const iaDoc = await firestoreDB.collection('analises_ia').doc(loteria).get();
@@ -21701,18 +21669,17 @@ async function syncLotteryBeforeIA(loteria) {
         const momentoSorteio = new Date();
         momentoSorteio.setHours(horarioInfo.hora, horarioInfo.minuto, 0, 0);
         
-        // Tolerância de 10 minutos após o horário oficial para tentar buscar
+        // Tolerância para tentar buscar: 5 minutos após o horário oficial
         const momentoLimite = new Date(momentoSorteio);
-        momentoLimite.setMinutes(momentoSorteio.getMinutes() + 10); 
+        momentoLimite.setMinutes(momentoSorteio.getMinutes() + 5); 
 
-        // Só nos importamos com os sorteios que JÁ DEVIAM TER SAÍDO hoje
         if (agora >= momentoLimite) {
             const idSorteioTeste = `${loteria}-${anoStr}${mesStr}${diaStr}-${horarioInfo.nome}-1`; 
 
             try {
                 const docRef = await firestoreDB.collection('resultados').doc(idSorteioTeste).get();
                 
-                // SITUAÇÃO A: O resultado daquele horário AINDA NÃO ESTÁ no banco!
+                // Se o resultado NÃO está no banco, força a busca na internet
                 if (!docRef.exists) {
                     if (!htmlLoteria) {
                         htmlLoteria = await fetchLotteryResults(loteria, dataHojeLocal);
@@ -21724,18 +21691,14 @@ async function syncLotteryBeforeIA(loteria) {
                             for (const item of dadosExtraidos.slice(0, 5)) {
                                 if (item.milhar && item.milhar.length === 4) {
                                     await salvarResultadoNoHistoricoIA(loteria, momentoSorteio, horarioInfo.nome, item);
-                                    precisaTreinarIA = true; // Baixou milhar nova!
+                                    precisaTreinarIA = true; 
                                 }
                             }
                         }
                     }
                 } 
-                // SITUAÇÃO B: A milhar ESTÁ no banco, mas a I.A. tá com preguiça (desatualizada)
-                else {
-                    // Se o horário do sorteio for DEPOIS da última vez que a I.A. rodou
-                    if (momentoSorteio > iaLastUpdated) {
-                        precisaTreinarIA = true;
-                    }
+                else if (momentoSorteio > iaLastUpdated) {
+                    precisaTreinarIA = true;
                 }
             } catch (e) {
                 console.error("Erro no Auto-Sync da Loteria:", e);
@@ -21743,19 +21706,14 @@ async function syncLotteryBeforeIA(loteria) {
         }
     }
 
-    // 3. SE PRECISAR, ATUALIZA A I.A. E O RODAPÉ!
     if (precisaTreinarIA) {
-        showToast(`✅ Atualizando cálculos da I.A. para o último sorteio...`, 'info');
-        
+        showToast(`✅ Baixando resultados recentes para a I.A...`, 'info');
         await runFullIAAnalysisUpdate(true, loteria); 
-        
-        // 👉 ESSA LINHA FORÇA O HORÁRIO LÁ EMBAIXO A MUDAR IMEDIATAMENTE
         verificarStatusRoboIA(); 
         
-        showToast(`🚀 I.A. 100% calibrada com o novo sorteio!`, 'success');
-    } else {
-        // Se já tava tudo certo, apenas garante que o rodapé tá mostrando a hora certa
-        verificarStatusRoboIA(); 
+        // MÁGICA: Espera 1 segundo para garantir que o Firebase indexou tudo antes de seguir!
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        showToast(`🚀 I.A. calibrada com sucesso!`, 'success');
     }
 }
 
@@ -23395,7 +23353,7 @@ function promptForReenviarHistorico(historicoVendas, bichoDetails, numKit) {
                 📈 Boletim Global I.A. <span style="font-weight: normal; font-size: 0.85rem;">(Resumo do dia I.A)</span>
             </button>
 
-            <button id="btnSubPalpitesIA" onclick="openPalpitesIAFromHub()" style="background-color: #00bcd4; color: #212529; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
+            <button id="btnSubPalpitesIA" onclick="openPalpitesIAFromHub()" style="background-color: #e83e8c; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
                 🧠 Palpites da I.A. <span style="font-weight: normal; font-size: 0.85rem;">(Previsões baseadas em dados)</span>
             </button>
 
