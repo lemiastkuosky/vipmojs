@@ -16473,7 +16473,7 @@ async function aplicarPermissoesIndividuais(user) {
             for (const [permKey, selector] of Object.entries(loteriaSelectors)) {
                 // Se a permissão estiver como FALSE (desativada no painel admin)
                 if (perms[permKey] === false) {
-                    cssRules += `${selector} { display: none !important; }\n`;
+                    cssRules += `${selector} { opacity: 0.3 !important; pointer-events: none !important; }\n`;
                 }
             }
             
@@ -19399,6 +19399,9 @@ function renderPermToggles(uid, userPerms) {
     `).join('');
 }
 
+// =========================================================
+// 1. RENDERIZADOR DE PERMISSÕES INDIVIDUAIS DO ADMIN
+// =========================================================
 function renderPermToggles(uid, userPerms) {
     const menuGroups = [
         {
@@ -19462,7 +19465,6 @@ function renderPermToggles(uid, userPerms) {
             </strong>
             <div class="user-perms-grid">
                 ${group.btns.map(btn => {
-                    // Se não tiver registro falso no banco, o botão nasce ativado
                     const isChecked = userPerms[btn.id] !== false; 
                     return `
                     <label class="perm-button-label">
@@ -19476,25 +19478,34 @@ function renderPermToggles(uid, userPerms) {
     `).join('');
 }
 
-    return menuGroups.map(group => `
-        <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-            <strong style="font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">
-                ${group.titulo}
-            </strong>
-            <div class="user-perms-grid">
-                ${group.btns.map(btn => {
-                    // Ativo por padrão se não houver registro no banco
-                    const isChecked = userPerms[btn.id] !== false; 
-                    return `
-                    <label class="perm-button-label">
-                        <input type="checkbox" class="perm-check-${uid}" data-btnid="${btn.id}" ${isChecked ? 'checked' : ''}>
-                        <div class="icon">${btn.emoji}</div>
-                        <div class="text">${btn.label}</div>
-                    </label>`;
-                }).join('')}
-            </div>
-        </div>
-    `).join('');
+// =========================================================
+// 2. SALVAR PERMISSÕES NO BANCO
+// =========================================================
+async function saveUserPermissions(uid, email) {
+    const checks = document.querySelectorAll(`.perm-check-${uid}`);
+    const newPermissions = {};
+
+    checks.forEach(cb => {
+        newPermissions[cb.dataset.btnid] = cb.checked;
+    });
+
+    showLoadingIndicator("Atualizando Acessos...");
+
+    try {
+        await firestoreDB.collection('users').doc(uid).update({
+            permissions: newPermissions
+        });
+
+        showToast(`Acessos de ${email} salvos!`, "success");
+        toggleUserPermsSection(uid);
+        
+    } catch (error) {
+        console.error("Erro ao salvar:", error);
+        showToast("Falha na conexão com o servidor.", "error");
+    } finally {
+        hideLoadingIndicator();
+    }
+}
 
 async function saveUserPermissions(uid, email) {
     const checks = document.querySelectorAll(`.perm-check-${uid}`);
