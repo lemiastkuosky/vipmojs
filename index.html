@@ -16440,19 +16440,45 @@ async function aplicarPermissoesIndividuais(user) {
         if (doc.exists && doc.data().permissions) {
             const perms = doc.data().permissions;
             
+            // 1. Aplica regras normais (Botões, Banners e Menus)
             for (const [btnId, isVisible] of Object.entries(perms)) {
                 const element = document.getElementById(btnId);
                 
                 if (element) {
-                    // Esconde ou mostra o elemento (Botão ou Banner)
                     element.style.display = isVisible ? '' : 'none';
-                    
-                    // Caso específico do Banner de Resultados: remove o espaço no topo do site
                     if (btnId === 'resultNotificationBanner' && !isVisible) {
                         document.body.classList.remove('has-notification-banner');
                     }
                 }
             }
+
+            // 2. Aplica o Filtro Global de Loterias (Cria uma regra CSS invisível)
+            let styleBlock = document.getElementById('dynamic-lottery-perms');
+            if (!styleBlock) {
+                styleBlock = document.createElement('style');
+                styleBlock.id = 'dynamic-lottery-perms';
+                document.head.appendChild(styleBlock);
+            }
+
+            // O sistema procura por menus, botões, opções de select e abas de cada loteria
+            const loteriaSelectors = {
+                'loteria_rj': `option[value="rj"], option[value="Rio de Janeiro"], label:has(input[value="rj"]), label:has(input[value="RJ"]), button[data-loteria="rj"], button[onclick*="'rj'"], button[onclick*="'Rio de Janeiro'"], button#filter-rj`,
+                'loteria_lk': `option[value="lk"], option[value="Look"], label:has(input[value="lk"]), label:has(input[value="LK"]), button[data-loteria="lk"], button[onclick*="'lk'"], button[onclick*="'Look'"], button#filter-lk`,
+                'loteria_ln': `option[value="ln"], option[value="Nacional"], label:has(input[value="ln"]), label:has(input[value="NC"]), button[data-loteria="ln"], button[onclick*="'ln'"], button[onclick*="'Nacional'"], button#filter-ln`,
+                'loteria_fd': `option[value="fd"], option[value="Loteria Federal"], label:has(input[value="fd"]), label:has(input[value="FD"]), button[data-loteria="fd"], button[onclick*="'fd'"], button[onclick*="'Loteria Federal'"], button#filter-fd`,
+                'loteria_ba': `option[value="ba"], option[value="PT Bahia"], label:has(input[value="ba"]), label:has(input[value="BA"]), button[data-loteria="ba"], button[onclick*="'ba'"], button[onclick*="'PT Bahia'"], button#filter-ba`
+            };
+
+            let cssRules = '';
+            for (const [permKey, selector] of Object.entries(loteriaSelectors)) {
+                // Se a permissão estiver como FALSE (desativada no painel admin)
+                if (perms[permKey] === false) {
+                    cssRules += `${selector} { display: none !important; }\n`;
+                }
+            }
+            
+            // Aplica as regras na tela na mesma hora
+            styleBlock.innerHTML = cssRules;
         }
     } catch (error) {
         console.error("Erro ao aplicar restrições:", error);
@@ -19414,6 +19440,17 @@ function renderPermToggles(uid, userPerms) {
                 { id: 'btnSubPalpitesIA', label: 'Palpites I.A', emoji: '🧠' },
                 { id: 'btnSubAuditoriaIA', label: 'Auditoria I.A.', emoji: '🔍' },
                 { id: 'btnSubBoletimGlobal', label: 'Boletim Diário', emoji: '📈' }
+            ]
+        },
+        {
+            titulo: "🎰 Loterias Liberadas",
+            btns: [
+                { id: 'loteria_rj', label: 'PT Rio', emoji: '🏖️' },
+                { id: 'loteria_lk', label: 'Look', emoji: '👀' },
+                { id: 'loteria_ln', label: 'Nacional', emoji: '🇧🇷' },
+                { id: 'loteria_ba', label: 'Bahia', emoji: '🌴' },
+                { id: 'loteria_fd', label: 'Federal', emoji: '🏛️' }
+                
             ]
         }
     ];
