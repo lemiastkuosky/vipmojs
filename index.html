@@ -3253,11 +3253,16 @@ body.dark-mode .copy-bicho-type-btn:hover { background-color: rgba(77, 163, 255,
 .receipt-divider { text-align: center; margin: 10px 0; color: #888; font-size: 0.9em; display: block;}
 
 #auth-status-indicator {
-  padding: 3px 6px;
-  border-radius: 4px;
-  font-size: 0.85em;
+  display: inline-flex !important; /* Faz o card envolver apenas o conteúdo */
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1px 4px !important; /* Padding reduzido para o card ficar menor */
+  border-radius: 8px !important;
+  font-size: 0.82rem !important; /* Fonte levemente menor para um look refinado */
   font-weight: bold;
-  transition: background-color 0.3s, color 0.3s;
+  gap: 6px; /* Espaço fixo entre o diamante, o texto VIP e o e-mail */
+  transition: all 0.3s ease;
+  margin: 5px auto !important;
 }
 
 #auth-status-indicator.status-logged-in {
@@ -8879,71 +8884,61 @@ async function ativarNotificacoes(user) {
     const logoutButton = document.getElementById('logout-button');
 
     if (user) {
-        // ========================================================
-        // TUDO AQUI DENTRO RODA QUANDO O USUÁRIO ESTÁ LOGADO ✅
-        // ========================================================
-        console.log('Auth State Changed: Logado como', user.email);
-        
-        if(statusIndicator) {
-            statusIndicator.textContent = `Logado: ${user.email}`;
-            statusIndicator.className = 'status-logged-in';
-        }
         if(logoutButton) logoutButton.style.display = 'inline-block';
+        carregarNomesSalvos();
+        getMilharCount(user);
+        verificarStatusRoboIA();
 
-        aplicarPermissoesIndividuais(user);
-        
-        // 1. Monitora sessão única imediatamente
         try {
-            await monitorarSessaoUnica(user);
-        } catch(e) {
-            console.warn("Erro ao monitorar sessão:", e);
-        }
+            const doc = await firestoreDB.collection('users').doc(user.uid).get();
+            let statusPrefix = ""; // Onde guardaremos o ícone e o texto VIP/ADMIN
+            let isAtivo = false;
 
-        // 2. Carrega dados iniciais
-        if(typeof carregarNomesSalvos === 'function') carregarNomesSalvos();
-        if(typeof getMilharCount === 'function') getMilharCount(user);
+            if (doc.exists) {
+                const data = doc.data();
+                isAtivo = (data.ativo === true);
+                const perms = data.permissions || {};
+                
+                const isAdmin = (data.role === 'admin');
+                const isVIP = (perms.isVIP === true) || (data.isVIP === true);
 
-        // 3. Ativa as Notificações Push
-        if(typeof ativarNotificacoes === 'function') {
-            ativarNotificacoes(user);
-        }
-
-        // 4. Verifica status de aprovação no Firestore
-        const userDocRef = firestoreDB.collection('users').doc(user.uid);
-        userDocRef.get().then(doc => {
-            if (!doc.exists || doc.data().ativo !== true) {
-                if(statusIndicator) {
-                    statusIndicator.textContent += ' (Pendente)';
-                    statusIndicator.className = 'status-logged-out';
+                // 1. ADMIN: Diamante + Estrela + Texto Amarelo
+                if (isAdmin) {
+                    statusPrefix = '<span style="font-size: 1.2rem;">💎⭐</span>' +
+                                   '<span style="color: #ffc107; margin-right: 5px;">ADMIN</span>';
+                } 
+                // 2. VIP: Diamante + Texto Azul (Agora centralizado e antes do nome)
+                else if (isVIP) {
+                    statusPrefix = '<span style="font-size: 1.2rem;">💎</span>' +
+                                   '<span style="color: #4da3ff; margin-right: 5px;">VIP</span>';
                 }
-                console.log("Atenção: Usuário logado mas ainda pendente de aprovação.");
-            } else {
-                console.log("Usuário logado e aprovado!");
             }
-        }).catch(e => console.error("Erro auth check:", e));
+
+            if (statusIndicator) {
+                if (!isAtivo) {
+                    statusIndicator.innerHTML = `${statusPrefix} <span style="opacity:0.8;">Logado: ${user.email} (Pendente)</span>`;
+                    statusIndicator.className = 'status-logged-out';
+                } else {
+                    // O DIAMANTE E O TEXTO VIP APARECEM AGORA ANTES DO "LOGADO"
+                    statusIndicator.innerHTML = `${statusPrefix} <span style="opacity:0.9;">Logado: ${user.email}</span>`;
+                    statusIndicator.className = 'status-logged-in';
+                }
+            }
+        } catch (e) {
+            console.error("Erro status VIP:", e);
+            if(statusIndicator) statusIndicator.textContent = `Logado: ${user.email}`;
+        }
+
+        if(typeof aplicarPermissoesIndividuais === 'function') aplicarPermissoesIndividuais(user);
 
     } else {
-        // ========================================================
-        // TUDO AQUI DENTRO RODA QUANDO O USUÁRIO ESTÁ DESLOGADO ❌
-        // ========================================================
-        console.log('Auth State Changed: Deslogado');
-        
         if(statusIndicator) {
             statusIndicator.textContent = 'Deslogado';
             statusIndicator.className = 'status-logged-out';
         }
         if(logoutButton) logoutButton.style.display = 'none';
-        
-        // Limpa dados sensíveis
-        nomesSalvos = [];
-        if(typeof atualizarSelectNomes === 'function') atualizarSelectNomes();
         localStorage.removeItem('app_authenticated');
-        
-        const countSpan = document.getElementById('milharTotalCount');
-        if(countSpan) countSpan.textContent = 'N/A';
-
-        // Se estiver deslogado, verifica se precisa mostrar o modal de login
-        if(typeof checkAuth === 'function') checkAuth();
+        checkAuth();
     }
 });
 
@@ -19429,33 +19424,30 @@ async function generateSelectedNumbers() {
     const user = firebase.auth().currentUser;
     if (!user) return;
 
-    // --- 1. VERIFICAÇÃO DE COTA (APENAS PARA NÃO-ADMINS) ---
+    // 1. BUSCA DADOS DO USUÁRIO
     const userDoc = await firestoreDB.collection('users').doc(user.uid).get();
     const userData = userDoc.data();
     
-    // Verifica se o usuário tem o cargo de administrador
-    const isPrivileged = userData && (userData.role === 'admin' || userData.isVIP === true);
+    // 2. DEFINE AS VARIÁVEIS DE PERMISSÃO (CORREÇÃO DO ERRO)
+    const perms = userData?.permissions || {};
+    const isAdmin = (userData?.role === 'admin'); 
+    const isVIP = (perms.isVIP === true) || (userData?.isVIP === true);
+    const isPrivileged = isAdmin || isVIP;
 
-// Só aplica a trava se NÃO for privilegiado
-if (!isPrivileged) {
-        const hoje = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    // 3. VERIFICAÇÃO DE COTA
+    if (!isPrivileged) {
+        const hoje = new Date().toISOString().split('T')[0];
         const contagemAtual = userData.geracoesHoje || 0;
         const dataUltimaGeracao = userData.dataUltimaGeracao || "";
-
-        // Reset Automático: Se o dia mudou, a contagem efetiva volta a ser zero
         let contagemEfetiva = (dataUltimaGeracao === hoje) ? contagemAtual : 0;
 
         if (contagemEfetiva >= 20) {
             await showCustomConfirm(
-                "⚠️ <strong>LIMITE DIÁRIO ATINGIDO!</strong> ⚠️<br><br>" +
-                "Sua cota gratuita de 20 gerações por dia acabou.<br><br>" +
-                "Para liberar palpites <strong>ilimitados</strong>, entre em contato com o administrador para se tornar um <strong>Usuário VIP</strong>.",
+                "⚠️ <strong>LIMITE DIÁRIO ATINGIDO!</strong> ⚠️<br><br>Sua cota gratuita de 20 gerações acabou.",
                 "Entendi", null, "randomGeneratorModal"
             );
-            return; // Bloqueia a execução aqui
+            return; 
         }
-
-        // Armazena temporariamente para salvar apenas após a confirmação final
         window.novaContagemUso = contagemEfetiva + 1;
         window.dataUsoHoje = hoje;
     }
@@ -19767,14 +19759,12 @@ if (!isPrivileged) {
     const userConfirmed = await showCustomConfirm(finalMessageHTML, "Sim, Gerar", 'Cancelar', 'randomGeneratorModal');
     
     if (userConfirmed) {
-        // Se o usuário não for admin e a variável temporária existir, grava o novo uso
-        if (!isAdmin && window.novaContagemUso !== undefined) {
+        // Agora 'isAdmin' e 'isPrivileged' já estão definidos no topo da função
+        if (!isPrivileged && window.novaContagemUso !== undefined) {
             await firestoreDB.collection('users').doc(user.uid).update({
                 geracoesHoje: window.novaContagemUso,
                 dataUltimaGeracao: window.dataUsoHoje
             }).catch(e => console.error("Erro ao atualizar cota:", e));
-            
-            console.log(`Cota atualizada para ${user.email}: ${window.novaContagemUso}/20`);
         }
 
         // Remove números do pool (se for cercado)
@@ -20017,13 +20007,14 @@ function renderPermToggles(uid, userPerms) {
         {
             titulo: "⭐ Assinatura e Alertas",
             btns: [
-                { id: 'isVIP', label: 'Usuário VIP', emoji: '💎' }, // Novo botão VIP
+                { id: 'isVIP', label: 'Usuário VIP', emoji: '💎' }, // <-- NOVO BOTÃO VIP
                 { id: 'resultNotificationBanner', label: 'Aviso Sorteio', emoji: '🔔' },
                 { id: 'iaScoreboardBanner', label: 'Placar I.A.', emoji: '🤖' }
             ]
         },
         {
             titulo: "🎲 Menu Superior",
+           
             btns: [
                 { id: 'btnMenuMCD', label: 'Gerador MCD', emoji: '🎲' },
                 { id: 'btnMenuFechamento', label: 'Duque/Terno', emoji: '🔢' },
