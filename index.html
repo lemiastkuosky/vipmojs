@@ -1701,8 +1701,8 @@ body.dark-mode .kit-fixo-toggle-box:hover {
 }
 
 body.dark-mode .kit-fixo-toggle-box:has(input:checked) {
-    background: linear-gradient(145deg, #451a03, #220f00);
-    border-color: #b45309;
+    background: linear-gradient(145deg, #064e3b, #022c22);
+    border-color: #10b981;
 }
 
 /* Estilo específico para o botão no Modo Escuro */
@@ -5830,33 +5830,6 @@ body.dark-mode .logo-mojs {
     justify-content: center;
 }
 
-.modal {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    visibility: hidden;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-
-
-/* 2. Efeito "Mola" (Slide-up) nas Janelas (Modal Content) */
-.modal-content {
-    /* Começa um pouco mais baixo e menor */
-    transform: translateY(40px) scale(0.95);
-    opacity: 0;
-    /* O 'cubic-bezier' cria aquele efeito elástico e natural de app mobile */
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
-}
-
-/* Quando ativo, a janela sobe e assume o tamanho normal */
-.modal.active .modal-content {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-}
-
 /* 3. Surgimento Suave dos Resultados Gerados (Fica muito chique!) */
 @keyframes fadeUpIn {
     from {
@@ -6060,35 +6033,45 @@ body.dark-mode .offline-ia-warning {
    MODERNIZAÇÃO DOS CARDS DE BICHOS (KITS MCD)
    ======================================================== */
 
-/* O Container da Grade */
+/* O Container da Grade nos Kits - Autoajustável */
 #kitsBichosSelector {
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)) !important; 
-    gap: 10px !important;
-    padding: 12px !important;
+    /* Tenta encaixar botões de no mínimo 75px. Cabe 4 na maioria dos celulares, e 3 nos bem pequenos */
+    grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)) !important; 
+    gap: 5px !important; /* Espaço reduzido entre os botões */
+    padding: 8px !important; /* Margem interna menor para sobrar espaço */
     border: 1px solid rgba(128,128,128,0.2);
     border-radius: 12px;
-    max-height: 220px;
+    max-height: 250px; /* Aumentado um pouco para ver mais bichos */
     overflow-y: auto;
     background: rgba(0,0,0,0.02);
 }
-body.dark-mode #kitsBichosSelector { background: rgba(0,0,0,0.2); }
 
-/* O Cartão do Bicho (Botão) */
+/* O Cartão do Bicho (Botão) - Mais compacto */
 .kit-bicho-card {
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 12px 5px 10px 5px;
+    padding: 6px 2px !important; /* Padding bem reduzido para caber mais */
     background-color: #ffffff;
     border: 2px solid transparent; 
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    user-select: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Ajuste no Emoji e Texto para não apertar */
+.kit-bicho-emoji { 
+    font-size: 1.6rem !important; /* Emoji levemente menor */
+    margin-bottom: 2px !important; 
+}
+
+.kit-bicho-name { 
+    font-size: 0.65rem !important; /* Fonte menor para o nome não quebrar linha */
+    font-weight: 800; 
 }
 body.dark-mode .kit-bicho-card {
     background-color: #2a2a2a;
@@ -6490,6 +6473,48 @@ body.dark-mode #kitFixoLista textarea {
     font-weight: 900;
 }
 
+/* ========================================================
+   BLINDAGEM ANTI-TRAVAMENTO (GHOST OVERLAYS)
+   ======================================================== */
+/* 1. Mata qualquer modal fechado que tentar continuar na tela invisível */
+.modal:not(.active) {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    z-index: -100 !important;
+}
+
+/* 2. Impede o container invisível dos avisos (Toasts) de roubar os cliques da tela */
+#toast-container {
+    pointer-events: none !important;
+}
+#toast-container .toast {
+    pointer-events: auto !important; /* Só a caixinha colorida recebe clique */
+}
+
+/* 3. Garante que a tela preta de carregamento libere o dedo na hora que sumir */
+#loadingOverlay[style*="opacity: 0"], 
+#loadingOverlay[style*="opacity:0"] {
+    display: none !important;
+    pointer-events: none !important;
+    z-index: -100 !important;
+}
+
+/* ========================================================
+   CORREÇÃO DEFINITIVA DE CAMADAS (Z-INDEX) DAS ANÁLISES
+   ======================================================== */
+#analysisHubModal {
+    z-index: 2000 !important;
+}
+
+#mcdSearchModal,
+#palpitesIAModal, 
+#historicoPalpitesIAModal, 
+#auditoriaIAModal {
+    z-index: 2100 !important;
+}
+
 </style>
 </head>
 
@@ -6502,9 +6527,8 @@ body.dark-mode #kitFixoLista textarea {
 
 <body>
     
-<div id="loadingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:#050505; display:flex; flex-direction:column; justify-content:center; align-items:center; transition: opacity 0.5s ease-out;">
-        <div class="spinner-border" role="status"></div>
-        <div class="loading-text">CARREGANDO SISTEMA...</div>
+<div id="loadingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:#050505; display:flex; flex-direction:column; justify-content:center; align-items:center; transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), transform 1.2s cubic-bezier(0.4, 0, 0.2, 1), filter 1.2s ease-in-out;">        <div class="spinner-border" role="status"></div>
+        <div class="loading-text">LOADING VIP IN REAL-TIME</div>
     </div>
 
     <div id="passwordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #121212; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; overflow-y: auto; padding: 20px 0;">
@@ -6882,7 +6906,7 @@ body.dark-mode #kitFixoLista textarea {
     </div>
 </div>
 
-<div id="palpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+<div id="palpitesIAModal" class="modal modal-super-top" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 550px;">
       <span class="close-modal" onclick="closePalpitesIAModal()">×</span>
       <h3 class="modal-title">🧠 Palpites da I.A.</h3>
@@ -8611,8 +8635,6 @@ body.dark-mode #kitFixoLista textarea {
                 </label>
                 <div id="kitFixoOptions" style="display:none; flex-direction:column; gap:12px; margin-top:12px;">
 
-                <div id="kitFixoOptions" style="display:none; flex-direction:column; gap:12px; margin-top:12px;">
-
                     <div id="kitFixoLista" style="display:flex; flex-direction:column; gap:10px;"></div>
 
                     <button onclick="adicionarKitFixo()" style="width:100%; padding:10px; background:#eff6ff; color:#3b82f6; border:1.5px dashed #93c5fd; border-radius:8px; font-weight:800; font-size:0.88rem; cursor:pointer;">
@@ -10164,14 +10186,27 @@ if (rankingTop10 && rankingTop10.length >= 10) {
             tabsHtml += `</div>`;
 
             let contentHtml = '';
-            analisesPorExtracao.forEach(({ extracao, volatilidade }, idx) => {
+            // 1. Adicionamos a variável 'palpites' aqui para poder ler os números
+            analisesPorExtracao.forEach(({ extracao, volatilidade, palpites }, idx) => {
                 const corVol = volatilidade.nivel.includes('🟢') ? '#86efac' : volatilidade.nivel.includes('🟡') ? '#fcd34d' : '#fca5a5';
+                
+                // 2. MATEMÁTICA: Conta as dobradinhas nas milhares geradas para esta extração
+                let contadorDobradinhas = 0;
+                if (palpites && palpites.milhar) {
+                    contadorDobradinhas = palpites.milhar.filter(m => /(.)\1/.test(m.palpite.toString().padStart(4, '0'))).length;
+                }
+
                 contentHtml += `<div id="content-palpite-${idx}" style="display:${idx === 0 ? 'block' : 'none'};">
                     <div style="background:linear-gradient(135deg,#1e293b,#0f172a);color:white;padding:12px;border-radius:12px;text-align:center;font-weight:bold;margin-bottom:12px;box-shadow:0 4px 10px rgba(0,0,0,0.3);">
                         <div style="font-size:0.65rem;color:#fbbf24;text-transform:uppercase;margin-bottom:3px;">${labelExtracao[idx]}</div>
                         <div style="font-size:1.15rem;">${extracao.display}</div>
                         <div style="font-size:0.72rem;color:${corVol};margin-top:4px;">${volatilidade.nivel} ${volatilidade.texto}</div>
                     </div>
+
+                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 12px;">
+                        👯 Dobradinhas (Milhar): ${contadorDobradinhas}
+                    </div>
+
                     <div style="text-align:left;font-family:'Courier New',monospace;background:rgba(0,0,0,0.05);padding:13px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);font-size:0.82rem;white-space:pre-wrap;line-height:1.4;max-height:380px;overflow-y:auto;">${shareTexts[idx].replace(/\*/g, '')}</div>
                     <div style="display:flex;gap:8px;margin-top:12px;">
                         <button onclick="copyIAPalpitesTab(${idx},this)" style="flex:1;background:#6f42c1;color:white;padding:12px;font-weight:bold;font-size:0.9rem;border-radius:10px;border:none;cursor:pointer;box-shadow:0 4px 0 #5a359b;">📋 Copiar</button>
@@ -15064,19 +15099,21 @@ if (mcdSearchInput && clearMcdSearchBtn) {
 }
 
     function hideSplashScreen() {
-    // Agora procura pelo novo ID
     const loadingOverlay = document.getElementById('loadingOverlay');
-    
     if (!loadingOverlay) return;
 
-    // Aguarda um pouco para garantir que carregou tudo
+    // 1. O tempo de 3.5 segundos garante que o sistema leia as permissões do usuário
     setTimeout(() => {
-        loadingOverlay.style.opacity = '0'; // Faz desaparecer suavemente
+        // 2. Aciona o efeito visual (Opacidade + Zoom + Desfoque)
+        loadingOverlay.style.opacity = '0';
+        loadingOverlay.style.transform = 'scale(1.2)'; // Efeito de aproximação enquanto some
+        loadingOverlay.style.filter = 'blur(20px)';   // Esmaecimento suave
         
+        // 3. Após o tempo da animação (1.2s), remove o bloqueio da tela
         setTimeout(() => {
-            loadingOverlay.style.display = 'none'; // Remove da tela
-        }, 2000); // Tempo da transição (0.5s)
-    }, 1000); // Tempo extra de exibição (1 segundo)
+            loadingOverlay.style.display = 'none';
+        }, 1200); 
+    }, 3500); 
 }
 
      async function loadPersistedData() {
@@ -16534,6 +16571,7 @@ async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
     });
 
     // === CONTADORES ===
+    let hitsGerais = 0; // <-- NOVO CONTADOR
     let hitsUnidadeCabeca = 0, hitsDezenaCabeca = 0, hitsMilharCabeca = 0, hitsMilhar1ao5 = 0;
     let hitsCentenaCabeca = 0, hitsCentena1ao5 = 0, hitsBichoCabeca = 0, hitsDuque = 0;
     let hitsTerno = 0, hitsJogadaDeMestre = 0, hitsMilharSoma = 0, hitsBichoEsquecido = 0;
@@ -16632,7 +16670,7 @@ async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
         if (bichoEsquecidoNaCabeca) hitsBichoEsquecido++;
 
         const teveAcerto = cravouBichoCabeca || milharNaCabeca || centenaNaCabeca || dezenaNaCabeca || unidadeNaCabeca || milharNo1ao5 || centenaNo1ao5 || fezTerno || fezDuque || mestreCravado || somaCravada || bichoEsquecidoNaCabeca;
-
+        if (teveAcerto) hitsGerais++;
         let badgesHtml = "";
         if (cravouBichoCabeca) badgesHtml += `<span style="background:#28a745; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🎯 GRUPO (${indexAcertoBicho + 1}º)</span>`;
         if (milharNaCabeca) badgesHtml += '<span style="background:#d63384; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🚀 MILHAR (CAB)</span>';
@@ -16754,8 +16792,8 @@ async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
     };
 
     if (statPercentEl && statTotalTextEl && rightPanelContainer) {
-        const acertosTotais = hitsBichoCabeca + hitsUnidadeCabeca + hitsDezenaCabeca + hitsMilharCabeca + hitsMilhar1ao5 + hitsCentenaCabeca + hitsCentena1ao5 + hitsDuque + hitsTerno + hitsJogadaDeMestre + hitsMilharSoma + hitsBichoEsquecido;
-        const porcentagem = totalSorteios > 0 ? Math.min(100, Math.round((acertosTotais / totalSorteios) * 100)) : 0;
+        // Agora a porcentagem é baseada em: quantos sorteios a IA ganhou / total de sorteios
+        const porcentagem = totalSorteios > 0 ? Math.round((hitsGerais / totalSorteios) * 100) : 0;
         
         statPercentEl.textContent = `${porcentagem}%`;
         window.currentAuditStats.porcentagem = porcentagem;
@@ -17714,7 +17752,7 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
         let html = `
             <div class="venda-pro-container">
                 <div style="text-align: center; margin-bottom: 5px;">
-                    <p style="font-size: 1.2rem; color: #6f42c1; font-weight: 900; margin: 0;">🛒 Venda Casada</p>
+                    <p style="font-size: 1.2rem; color: #6f42c1; font-weight: 900; margin: 0;">🛒 MultiKit</p>
                     <p style="font-size: 0.8rem; color: #666; margin: 0;">Escolha bichos de pacotes diferentes.</p>
                 </div>
 
@@ -17761,7 +17799,7 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
 
         messageEl.innerHTML = html;
         
-        okBtn.textContent = '✅ Registrar Venda Casada';
+        okBtn.textContent = '✅ Registrar MultiKit';
         okBtn.style.backgroundColor = '#6f42c1';
         cancelBtn.textContent = 'Cancelar';
         cancelBtn.style.display = 'inline-flex';
@@ -23516,8 +23554,7 @@ function adicionarKitFixo() {
     entrada.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
             <div class="kit-fixo-id-badge">KIT FIXO #${lista.children.length + 1}</div>
-            <button onclick="removerKitFixo(${idx})" style="background:rgba(220,53,69,0.1); color:#ff4d4d; border:1px solid #dc3545; border-radius:6px; font-size:0.75rem; font-weight:800; padding:5px 10px; cursor:pointer;">✕ Remover</button>
-        </div>
+<button onclick="removerKitFixo(${idx})" style="background:rgba(220,53,69,0.1); color:#ff4d4d; border:1px solid #dc3545; border-radius:6px; font-size:0.75rem; font-weight:800; padding:5px 15px; cursor:pointer; width: auto !important; flex: 0 0 auto;">✕ Remover</button>        </div>
 
         <div style="display:grid; grid-template-columns:90px 1fr; gap:10px; margin-bottom:15px;">
             <div style="text-align:center; border: 1px solid #444; border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.2);">
@@ -24109,10 +24146,6 @@ function renderizarListaDeKits() {
     }
 }
 
-
-// ========================================================================
-// === GERADOR DE RELATÓRIO PDF DA INTELIGÊNCIA ARTIFICIAL (DEFINITIVO) ===
-// ========================================================================
 async function gerarRelatorioPDF() {
     showLoadingIndicator("Renderizando PDF Premium... Aguarde.");
 
@@ -24433,216 +24466,168 @@ function promptForReenviarHistorico(historicoVendas, bichoDetails, numKit) {
 }
 
 // =========================================================================
-// 1. JANELA DE VENDA (PADRÃO DASHBOARD PROFISSIONAL + SOMA AUTOMÁTICA)
+// MOTOR DE GESTÃO DE KITS E VENDAS (VERSÃO LIMPA E CONSOLIDADA)
 // =========================================================================
+
 window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSelecionado) {
     return new Promise(resolve => {
         const modal = document.getElementById('customConfirmModal');
         const messageEl = document.getElementById('customConfirmModalMessage');
         const okBtn = document.getElementById('customConfirmOk');
         const cancelBtn = document.getElementById('customConfirmCancel');
-
-        // Extrai o valor base em número (Ex: "R$ 10,00" vira 10.00)
-        const parseCurrency = (str) => {
-            if(!str) return 0;
-            return parseFloat(str.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
-        };
-        const precoBaseNumber = parseCurrency(valorAtual);
-
-        // --- INJETA CSS PARA PADRONIZAR A JANELA E O AUTOCOMPLETAR ---
-        if (!document.getElementById('venda-pro-styles')) {
-            const style = document.createElement('style');
-            style.id = 'venda-pro-styles';
-            style.innerHTML = `
-                .venda-pro-container { text-align: left; display: flex; flex-direction: column; gap: 15px; width: 100%; }
-                .venda-pro-input-group { display: flex; flex-direction: column; gap: 5px; position: relative; }
-                .venda-pro-label { font-size: 0.85rem; font-weight: 700; color: #64748b; }
-                body.dark-mode .venda-pro-label { color: #94a3b8; }
-                .venda-pro-field { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 1rem; font-weight: 600; color: #0f172a; width: 100%; box-sizing: border-box; }
-                body.dark-mode .venda-pro-field { background: #2a2a2a; border-color: #444; color: #f8fafc; }
-                .venda-pro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
-                .venda-pro-check-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s; }
-                body.dark-mode .venda-pro-check-card { background: #2a2a2a; border-color: #444; }
-                .venda-pro-check-card:has(input:checked) { border-color: #007bff; background: rgba(0, 123, 255, 0.05); }
-                body.dark-mode .venda-pro-check-card:has(input:checked) { border-color: #4da3ff; background: rgba(77, 163, 255, 0.1); }
-                .venda-pro-check-card input { transform: scale(1.3); accent-color: #007bff; }
-                .venda-pro-price-box { background: #f1f5f9; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; transition: background 0.3s; }
-                body.dark-mode .venda-pro-price-box { background: rgba(255,255,255,0.03); border-color: #333; }
-                .venda-pro-price-input { background: transparent; border: none; text-align: center; font-size: 1.5rem; font-weight: 900; color: #28a745; width: 100%; outline: none; transition: color 0.3s; }
-                
-                /* ESTILOS DO NOVO AUTOCOMPLETAR */
-                .venda-autocomplete-list { display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 2000; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; max-height: 160px; overflow-y: auto; padding: 0; margin: 4px 0 0 0; list-style: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-                body.dark-mode .venda-autocomplete-list { background: #2a2a2a; border-color: #444; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-                .venda-autocomplete-item { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; color: #0f172a; font-weight: 500; font-size: 0.95rem; }
-                body.dark-mode .venda-autocomplete-item { border-bottom-color: #333; color: #f8fafc; }
-                .venda-autocomplete-item:hover { background: rgba(0,123,255,0.05); }
-                body.dark-mode .venda-autocomplete-item:hover { background: rgba(77,163,255,0.15); }
-            `;
-            document.head.appendChild(style);
-        }
+        
+        const precoBaseNumber = parseFloat(valorAtual.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
 
         let html = `
             <div class="venda-pro-container">
-                <div style="text-align: center; margin-bottom: 5px;">
-                    <p style="font-size: 1.2rem; color: #007bff; font-weight: 900; margin: 0;">📦 Nova Venda - Kit #${numKit}</p>
-                </div>
-
+                <div style="text-align: center; margin-bottom: 5px;"><p style="font-size: 1.2rem; color: #007bff; font-weight: 900; margin: 0;">📦 Venda - Kit #${numKit}</p></div>
                 <div class="venda-pro-input-group">
                     <label class="venda-pro-label">👤 Nome do Cliente:</label>
                     <input type="text" id="popupKitCliente" class="venda-pro-field" placeholder="Ex: João Silva" autocomplete="off">
                     <ul id="vendaAutocompleteList" class="venda-autocomplete-list"></ul>
                 </div>
-
                 <div class="venda-pro-input-group">
                     <label class="venda-pro-label">🐾 Selecione os bichos:</label>
                     <div class="venda-pro-grid" id="popupKitBichos">
         `;
-
         bichosDoKit.forEach(b => {
             const preChecked = grupoPreSelecionado && b.grupo === grupoPreSelecionado ? 'checked' : '';
-            html += `
-                <label class="venda-pro-check-card">
-                    <input type="checkbox" value="${b.grupo}" ${preChecked}> 
-                    <span style="font-weight: 700; font-size: 0.95rem;">${b.emoji} G${b.grupo}</span>
-                </label>
-            `;
+            html += `<label class="venda-pro-check-card"><input type="checkbox" value="${b.grupo}" ${preChecked}><span style="font-weight: 700; font-size: 0.95rem;">${b.emoji} G${b.grupo}</span></label>`;
         });
-
-        html += `
-                    </div>
-                </div>
-
-                <div class="venda-pro-price-box" id="priceBoxContainer">
-                    <label class="venda-pro-label" style="display:block; margin-bottom:5px;">Valor Total da Venda:</label>
-                    <input type="text" id="popupKitPrice" class="venda-pro-price-input" value="${valorAtual}" oninput="formatCurrency(this)">
-                </div>
-            </div>
-        `;
+        html += `</div></div><div class="venda-pro-price-box" id="priceBoxContainer"><label class="venda-pro-label" style="display:block; margin-bottom:5px;">Valor Total da Venda:</label><input type="text" id="popupKitPrice" class="venda-pro-price-input" value="${valorAtual}"></div></div>`;
 
         messageEl.innerHTML = html;
-        
         okBtn.textContent = '✅ Registrar Venda';
         okBtn.style.backgroundColor = '#28a745';
-        
-        cancelBtn.textContent = 'Cancelar';
         cancelBtn.style.display = 'inline-flex';
-        
-        modal.style.zIndex = '1600'; 
         modal.classList.add('active');
 
-        // --- LÓGICA DO AUTOCOMPLETAR INTELIGENTE E MATEMÁTICA ---
-        const fecharListaFora = (e) => {
-            const input = document.getElementById('popupKitCliente');
-            const lista = document.getElementById('vendaAutocompleteList');
-            if (lista && e.target !== input && e.target !== lista) {
-                lista.style.display = 'none';
-            }
-        };
-
         setTimeout(() => {
-            // Lógica do Autocompletar
             const inputCliente = document.getElementById('popupKitCliente');
             const autocompleteList = document.getElementById('vendaAutocompleteList');
-
-            if (inputCliente && autocompleteList) {
+            if (inputCliente) {
                 inputCliente.addEventListener('input', function() {
                     const val = this.value.toLowerCase().trim();
                     autocompleteList.innerHTML = '';
-                    
-                    if (!val) {
-                        autocompleteList.style.display = 'none';
-                        return;
-                    }
-
-                    const nomes = typeof nomesSalvos !== 'undefined' ? nomesSalvos : [];
-                    const matches = nomes.filter(n => n.toLowerCase().includes(val));
-
+                    if (!val) { autocompleteList.style.display = 'none'; return; }
+                    const matches = nomesSalvos.filter(n => n.toLowerCase().includes(val));
                     if (matches.length > 0) {
                         matches.forEach(match => {
                             const li = document.createElement('li');
                             li.className = 'venda-autocomplete-item';
-                            const regex = new RegExp(`(${val})`, "gi");
-                            li.innerHTML = match.replace(regex, "<strong style='color:#007bff;'>$1</strong>");
-                            
-                            li.onclick = function() {
-                                inputCliente.value = match;
-                                autocompleteList.style.display = 'none';
-                            };
+                            li.innerHTML = match;
+                            li.onclick = () => { inputCliente.value = match; autocompleteList.style.display = 'none'; };
                             autocompleteList.appendChild(li);
                         });
                         autocompleteList.style.display = 'block';
-                    } else {
-                        autocompleteList.style.display = 'none';
                     }
                 });
-
-                document.addEventListener('click', fecharListaFora);
             }
-
-            // ==========================================
-            // LÓGICA DA MATEMÁTICA AUTOMÁTICA
-            // ==========================================
-            const checkboxes = modal.querySelectorAll('#popupKitBichos input[type="checkbox"]');
-            const priceInput = document.getElementById('popupKitPrice');
-            const priceBox = document.getElementById('priceBoxContainer');
-
-            const calcularValorAoVivo = () => {
-                // Conta quantos bichos estão marcados
-                const marcados = modal.querySelectorAll('#popupKitBichos input[type="checkbox"]:checked').length;
-                
-                // A regra: Se marcou 2, multiplica por 2. Se marcou 0, conta como 1 (pra não ficar R$ 0,00).
-                const multiplicador = Math.max(1, marcados);
-                const novoValorNumber = precoBaseNumber * multiplicador;
-
-                // Formata de volta para R$ (Ex: 20 -> R$ 20,00)
-                const valorFormatado = novoValorNumber.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$', 'R$ ');
-                
-                priceInput.value = valorFormatado;
-
-                // Efeito visual de piscar para mostrar que o valor mudou
-                priceInput.style.color = '#007bff';
-                priceBox.style.backgroundColor = 'rgba(0, 123, 255, 0.1)';
-                setTimeout(() => {
-                    priceInput.style.color = '#28a745';
-                    priceBox.style.backgroundColor = '';
-                }, 300);
-            };
-
-            // Adiciona o evento de clique em todos os quadradinhos de bichos
-            checkboxes.forEach(cb => cb.addEventListener('change', calcularValorAoVivo));
-            
-            // Roda uma vez para ajustar o preço caso algum bicho já venha marcado de fábrica
-            calcularValorAoVivo();
-
+            const checkboxes = modal.querySelectorAll('#popupKitBichos input');
+            checkboxes.forEach(cb => cb.addEventListener('change', () => {
+                const marcados = modal.querySelectorAll('#popupKitBichos input:checked').length;
+                const total = precoBaseNumber * Math.max(1, marcados);
+                document.getElementById('popupKitPrice').value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            }));
         }, 100);
 
         const onOk = () => {
-            const checkedValues = Array.from(modal.querySelectorAll('#popupKitBichos input:checked')).map(cb => cb.value);
-            const finalPrice = document.getElementById('popupKitPrice').value;
-            let nomeCli = document.getElementById('popupKitCliente').value.trim();
-            
-            if (!nomeCli) nomeCli = "Nome não salvo"; 
-            
-            if (checkedValues.length === 0) {
-                showToast("Selecione pelo menos um bicho.", "error");
-                return; 
-            }
-
-            cleanup();
-            resolve({ selectedGrupos: checkedValues, finalPrice: finalPrice, nomeCliente: nomeCli });
-        };
-        
-        const onCancel = () => { cleanup(); resolve(null); };
-        
-        const cleanup = () => {
-            document.removeEventListener('click', fecharListaFora);
+            const checked = Array.from(modal.querySelectorAll('#popupKitBichos input:checked')).map(cb => cb.value);
+            const price = document.getElementById('popupKitPrice').value;
+            const name = document.getElementById('popupKitCliente').value.trim() || "Nome não salvo";
+            if (checked.length === 0) { showToast("Selecione um bicho.", "error"); return; }
             modal.classList.remove('active');
-            okBtn.replaceWith(okBtn.cloneNode(true));
-            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+            resolve({ selectedGrupos: checked, finalPrice: price, nomeCliente: name });
         };
+        okBtn.onclick = onOk;
+        cancelBtn.onclick = () => { modal.classList.remove('active'); resolve(null); };
+    });
+};
 
-        document.getElementById('customConfirmOk').addEventListener('click', onOk, { once: true });
-        document.getElementById('customConfirmCancel').addEventListener('click', onCancel, { once: true });
+window.abrirVendaMultiKit = async function() {
+    if (!window.currentGeneratedKits || window.currentGeneratedKits.length === 0) { showToast("Gere os kits primeiro.", "error"); return; }
+    let todosBichos = [];
+    window.currentGeneratedKits.forEach((kit, idx) => {
+        const details = {};
+        kit.forEach(num => {
+            const data = getBichoDataFromNumber(num);
+            if (data) {
+                if (!details[data.grupo]) details[data.grupo] = { ...data, milhares: [], kitIndex: idx };
+                details[data.grupo].milhares.push(num);
+            }
+        });
+        todosBichos.push(...Object.values(details));
+    });
+    const result = await promptForMultiKitBichos(todosBichos, document.getElementById('kitsValorInput').value);
+    if (!result) return;
+
+    // Lógica de registro da venda casada
+    const code = generateReceiptCode();
+    let milharesVendidas = [];
+    let resumoTexto = "";
+    result.selectedItems.forEach(key => {
+        const [kIdx, grupo] = key.split('_');
+        const b = todosBichos.find(x => x.kitIndex == kIdx && x.grupo == grupo);
+        milharesVendidas.push(...b.milhares);
+        resumoTexto += `📦 Kit #${parseInt(kIdx)+1} | ${b.emoji} G${b.grupo}\n`;
+    });
+
+    const msg = `✅ *VENDA CASADA REGISTRADA!*\n\nID: ${code}\nVALOR: ${result.finalPrice}\n\n*BICHOS:*\n${resumoTexto}\n\nBoa sorte! 🍀`;
+    window.ultimaVendaKit = { numerosPuros: milharesVendidas.join(' '), textoWhats: msg };
+    
+    // Salva nos históricos
+    result.selectedItems.forEach(key => {
+        const kIdx = key.split('_')[0];
+        if (!window.kitsSoldStatus[kIdx]) window.kitsSoldStatus[kIdx] = { historicoVendas: [] };
+        window.kitsSoldStatus[kIdx].historicoVendas.push({ cliente: result.nomeCliente + " (Casada)", grupos: [key.split('_')[1]], valor: "Casada", codigo: code, dataHora: new Date().toLocaleTimeString() });
+    });
+
+    saveData('kitsSoldStatusData', window.kitsSoldStatus);
+    renderizarListaDeKits();
+    mostrarSucessoVendaKit("Múltiplo", result.selectedItems.map(x => x.split('_')[1]), {});
+};
+
+window.promptForMultiKitBichos = function(todosBichos, valorAtual) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('customConfirmModal');
+        const messageEl = document.getElementById('customConfirmModalMessage');
+        const okBtn = document.getElementById('customConfirmOk');
+        const cancelBtn = document.getElementById('customConfirmCancel');
+        const precoBase = parseFloat(valorAtual.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+
+        const bichosPorKit = {};
+        todosBichos.forEach(b => { if(!bichosPorKit[b.kitIndex]) bichosPorKit[b.kitIndex] = []; bichosPorKit[b.kitIndex].push(b); });
+
+        let html = `<div class="venda-pro-container"><div style="text-align: center;"><p style="font-size: 1.2rem; color: #6f42c1; font-weight: 900; margin: 0;">🛒 Venda Casada</p></div>
+            <div class="venda-pro-input-group"><label class="venda-pro-label">👤 Cliente:</label><input type="text" id="popupMultiCliente" class="venda-pro-field" placeholder="Nome"></div>
+            <div class="venda-pro-input-group"><label class="venda-pro-label">🐾 Seleção Livre:</label><div style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 10px;">`;
+        
+        Object.keys(bichosPorKit).forEach(k => {
+            html += `<div style="font-weight: 900; color: #007bff; margin: 10px 0 5px 0; font-size: 0.85rem; border-bottom: 1px solid #eee;">📦 Kit #${parseInt(k)+1}</div><div class="venda-pro-grid">`;
+            bichosPorKit[k].forEach(b => { html += `<label class="venda-pro-check-card" style="padding:8px;"><input type="checkbox" class="multi-check" value="${b.kitIndex}_${b.grupo}"><span>${b.emoji} G${b.grupo}</span></label>`; });
+            html += `</div>`;
+        });
+        html += `</div></div><div class="venda-pro-price-box"><input type="text" id="popupMultiPrice" class="venda-pro-price-input" value="${valorAtual}"></div></div>`;
+
+        messageEl.innerHTML = html;
+        okBtn.textContent = 'Confirmar Venda Casada';
+        okBtn.style.backgroundColor = '#6f42c1';
+        modal.classList.add('active');
+
+        setTimeout(() => {
+            modal.querySelectorAll('.multi-check').forEach(cb => cb.addEventListener('change', () => {
+                const count = modal.querySelectorAll('.multi-check:checked').length;
+                document.getElementById('popupMultiPrice').value = (precoBase * Math.max(1, count)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            }));
+        }, 100);
+
+        okBtn.onclick = () => {
+            const items = Array.from(modal.querySelectorAll('.multi-check:checked')).map(cb => cb.value);
+            if (items.length === 0) return;
+            modal.classList.remove('active');
+            resolve({ selectedItems: items, finalPrice: document.getElementById('popupMultiPrice').value, nomeCliente: document.getElementById('popupMultiCliente').value || "Nome não salvo" });
+        };
+        cancelBtn.onclick = () => { modal.classList.remove('active'); resolve(null); };
     });
 };
 
@@ -24903,13 +24888,13 @@ window.renderizarListaDeKits = function() {
 
     let htmlFinal = `
         <div style="margin-bottom: 15px;">
-            <p style="font-size: 0.85rem; font-weight: 800; color: #64748b; margin: 0 0 8px 0; text-align:center;">
+            <p style="font-size: 0.85rem; font-weight: 800; color: #fff; margin: 0 0 8px 0; text-align:center;">
                 👥 ${totalVendasGeral} cliente${totalVendasGeral !== 1 ? 's' : ''} | 🐾 ${totalBichosVendidosGeral} bicho${totalBichosVendidosGeral !== 1 ? 's' : ''} | 💰 R$ ${faturamentoGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
             </p>
             
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <button type="button" onclick="abrirVendaMultiKit()" style="flex: 1; background: #6f42c1; color: white; border: none; border-radius: 8px; font-weight: 900; font-size: 0.95rem; padding: 12px; cursor: pointer; box-shadow: 0 3px 0 #5a359b; transition: transform 0.1s;">
-                    🛒 Venda Casada (Multi-Kit)
+                    🛒 Multi-Kit
                 </button>
             </div>
 
@@ -25601,7 +25586,6 @@ window.abrirVendaMultiKit = async function() {
 ==============================
 
 Cliente........: ${nomeComprador}
-Pacote.........: Venda Casada (Multi-Kit)
 Código.........: ${code}
 Data/Hora......: ${dataHora}
 Extração.......: ${extracao} - ${horario}
@@ -25637,7 +25621,7 @@ ${numerosTextoInternoArr.join('\n\n')}
     else if (horaStr >= 18 || horaStr < 5) saudacao = "Boa noite";
 
     let msg = `${saudacao} *${nomeComprador}*, Segue suas milhares da sorte!\n\n`;
-    msg += `✅ SEU RECIBO (VENDA CASADA) FOI REGISTRADO! ✅\n\n`;
+    msg += `✅ SEU RECIBO FOI REGISTRADO! ✅\n\n`;
     msg += `━━━━━━━━━━━━━━━\n\n`;
     msg += `🔑 ID: ${code}\n`;
     msg += `💰 VALOR: ${valorCobrado}\n`;
@@ -25745,7 +25729,7 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
         let html = `
             <div class="venda-pro-container">
                 <div style="text-align: center; margin-bottom: 5px;">
-                    <p style="font-size: 1.2rem; color: #6f42c1; font-weight: 900; margin: 0;">🛒 Venda Casada</p>
+                    <p style="font-size: 1.2rem; color: #6f42c1; font-weight: 900; margin: 0;">🛒 MultiKit</p>
                     <p style="font-size: 0.8rem; color: #666; margin: 0;">Escolha bichos de pacotes diferentes.</p>
                 </div>
 
@@ -25791,7 +25775,7 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
 
         messageEl.innerHTML = html;
         
-        okBtn.textContent = '✅ Registrar Venda Casada';
+        okBtn.textContent = '✅ Registrar MultiKit';
         okBtn.style.backgroundColor = '#6f42c1';
         cancelBtn.textContent = 'Cancelar';
         cancelBtn.style.display = 'inline-flex';
@@ -25883,9 +25867,28 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
     });
 };
 
+// ========================================================
+// REPARO DO SISTEMA DE CARREGAMENTO (DESTRAVA TELA)
+// ========================================================
+window.hideLoadingIndicator = function() {
+    const indicator = document.getElementById('loadingOverlay');
+    if (typeof loadingTimerInterval !== 'undefined') {
+        clearInterval(loadingTimerInterval);
+    }
+    if (indicator) {
+        indicator.style.opacity = '0';
+        indicator.style.pointerEvents = 'none'; // Libera os cliques na hora
+        
+        // Remove do caminho instantaneamente após o fade
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 200);
+    }
+};
+
 </script> 
 
-<div id="analysisHubModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+<div id="analysisHubModal" class="modal modal-top" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 450px;">
         <span class="close-modal" onclick="closeAnalysisHubModal()">×</span>
         <h3 class="modal-title" style="margin-bottom: 15px;">🔮 Análises e Consultas</h3>
@@ -25897,7 +25900,6 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
         </div>
 
         <div id="hubTabGeral" style="display: flex; flex-direction: column; gap: 12px;">
-            
             <button id="btnSubAtrasados" onclick="openAtrasadosFromHub()" style="background-color: #c82333; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
                 ⏱️ Bichos Atrasados <span style="font-weight: normal; font-size: 0.85rem;">(Analise ao vivo)</span>
             </button>
@@ -25909,9 +25911,9 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
             <button id="btnSubResultadosLive" onclick="openResultadosLiveFromHub()" style="background-color: #28a745; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
                 📲 Resultados Live <span style="font-weight: normal; font-size: 0.85rem;">(Ver extrações)</span>
             </button>
+        </div>
 
-            <div id="hubTabIA" style="display: none; flex-direction: column; gap: 12px;">
-            
+        <div id="hubTabIA" style="display: none; flex-direction: column; gap: 12px;">
             <button id="btnSubBoletimGlobal" onclick="shareGlobalDailyBriefing()" style="background-color: #fd7e14; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
                 📈 Boletim Global I.A. <span style="font-weight: normal; font-size: 0.85rem;">(Resumo do dia I.A)</span>
             </button>
@@ -25927,12 +25929,12 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
             <button id="btnSubAuditoriaIA" onclick="openAuditoriaFromHub()" style="background-color: #17a2b8; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%;">
                 🔍 Auditoria de Acertos <span style="font-weight: normal; font-size: 0.85rem;">(Conferencia I.A)</span>
             </button>
-            
         </div>
+
     </div>
 </div>
 
-<div id="historicoPalpitesIAModal" class="modal modal-advanced" role="dialog" aria-modal="true">
+<div id="historicoPalpitesIAModal" class="modal modal-super-top" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 500px;">
         <span class="close-modal" tabindex="0" onclick="document.getElementById('historicoPalpitesIAModal').classList.remove('active')">×</span>
         <h3 class="modal-title">📜 Histórico de Análises</h3>
@@ -25949,7 +25951,7 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
     </div>
 </div>
 
-<div id="auditoriaIAModal" class="modal modal-top" role="dialog" aria-modal="true">
+<div id="auditoriaIAModal" class="modal modal-super-top" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
         <span class="close-modal" onclick="fecharAuditoriaIA()">×</span>
         <h3 class="modal-title" style="margin-bottom: 5px;">📊 Performance da Inteligência</h3>
