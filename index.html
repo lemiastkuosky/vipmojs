@@ -10146,7 +10146,7 @@ if (rankingTop10 && rankingTop10.length >= 10) {
                     horario: horarioAtual, 
                     data: dataSimples,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Expira em 5 dias
+                    expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
                     conteudo: shareTexts[index],
                     ranking: analise.rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
                 });
@@ -16506,6 +16506,7 @@ function updateIaLotterySelection(value) {
 }
 
 async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
+    // 1. GERENCIAMENTO DE ESTADOS E FILTROS
     window.loteriaFiltroAtiva = loteriaFiltro || window.loteriaFiltroAtiva || 'todas';
     if (periodoArg !== null) window.periodoFiltroAtivo = periodoArg;
     
@@ -16517,56 +16518,48 @@ async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
     const containerZap = document.getElementById('auditoriaBotaoZap');
     const loteriaMenu = document.getElementById('auditoriaLoteriasMenu');
     
-    const lista = window.auditoriaSorteiosProcessados || auditoriaSorteiosProcessados; 
-    if (!lista || lista.length === 0) return;
+    const lista = window.auditoriaSorteiosProcessados || []; 
+    if (!lista || lista.length === 0) {
+        if(container) container.innerHTML = '<p style="text-align:center; padding:20px;">Nenhum sorteio encontrado no banco.</p>';
+        return;
+    }
 
-    // Atualiza apenas os botões dentro do menu de loterias
+    // Atualiza visualmente o menu de loterias
     if (loteriaMenu) {
         loteriaMenu.querySelectorAll('.receipt-extraction-btn').forEach(btn => btn.classList.remove('selected'));
         const btnAtivo = loteriaMenu.querySelector(`#filter-${loteriaAtual}`);
         if (btnAtivo) btnAtivo.classList.add('selected');
     }
 
-    let listaDaLoteria = loteriaAtual === 'todas' ? lista : lista.filter(s => s.loteria === loteriaAtual);
+    // 2. LÓGICA ROBUSTA DE FILTRAGEM POR DATA
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
 
-    // === SISTEMA DE DIAS ===
-    let dataMaisRecente = new Date(0);
-    listaDaLoteria.forEach(s => {
-        let sDate = new Date(0);
-        if (s.dataObj) {
-            sDate = new Date(s.dataObj);
-        } else if (s.data && typeof s.data === 'string' && s.data.includes('/')) {
-            const parts = s.data.split('/');
-            sDate = new Date(parts[2], parts[1]-1, parts[0]);
-        }
-        if (sDate > dataMaisRecente) {
-            dataMaisRecente = sDate;
-        }
-    });
-    dataMaisRecente.setHours(0, 0, 0, 0);
+    let listaFiltrada = lista.filter(s => {
+        // Filtro de Loteria
+        if (loteriaAtual !== 'todas' && s.loteria !== loteriaAtual) return false;
 
-    let limiteData = new Date(dataMaisRecente);
-    if (periodoAtual !== 999) {
-        limiteData.setDate(limiteData.getDate() - (periodoAtual - 1));
-    }
-
-    let listaFiltrada = listaDaLoteria.filter(s => {
+        // Filtro de Período (999 = Mostrar Tudo)
         if (periodoAtual === 999) return true; 
-        
-        let sDate = new Date(0);
-        if (s.dataObj) {
-            sDate = new Date(s.dataObj);
-        } else if (s.data && typeof s.data === 'string' && s.data.includes('/')) {
-            const parts = s.data.split('/');
-            sDate = new Date(parts[2], parts[1]-1, parts[0]);
+
+        let dataSorteio = s.dataObj ? new Date(s.dataObj) : null;
+        if (!dataSorteio && s.data && s.data.includes('/')) {
+            const p = s.data.split('/');
+            dataSorteio = new Date(p[2], p[1]-1, p[0]);
         }
-        sDate.setHours(0, 0, 0, 0);
         
-        return sDate >= limiteData; 
+        if (!dataSorteio) return false;
+        dataSorteio.setHours(0, 0, 0, 0);
+
+        // Calcula a diferença exata em dias
+        const diffTempo = Math.abs(hoje - dataSorteio);
+        const diffDias = Math.ceil(diffTempo / (1000 * 60 * 60 * 24));
+
+        return diffDias <= (periodoAtual - 1); // Garante que "1 dia" pegue apenas hoje
     });
 
-    // === CONTADORES ===
-    let hitsGerais = 0; // <-- NOVO CONTADOR
+    // 3. CONTADORES DE PERFORMANCE (CORREÇÃO DE NOMES)
+    let hitsGerais = 0; 
     let hitsUnidadeCabeca = 0, hitsDezenaCabeca = 0, hitsMilharCabeca = 0, hitsMilhar1ao5 = 0;
     let hitsCentenaCabeca = 0, hitsCentena1ao5 = 0, hitsBichoCabeca = 0, hitsDuque = 0;
     let hitsTerno = 0, hitsJogadaDeMestre = 0, hitsMilharSoma = 0, hitsBichoEsquecido = 0;
@@ -16574,269 +16567,105 @@ async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
     let totalSorteios = 0;
     let html = '';
 
+    // Função auxiliar para calcular soma retroativa
     const calcularSomaMemoria = (premios) => {
         let soma = 0;
         premios.forEach(p => { if (p.posicao >= 1 && p.posicao <= 5) soma += parseInt(p.milhar.replace(/\D/g, ''), 10); });
         return String(soma).slice(-4).padStart(4, '0');
     };
 
+    // 4. PROCESSAMENTO DOS ACERTOS
     for (const sorteio of listaFiltrada) {
         totalSorteios++;
-        
-        const resultadosSorteio = sorteio.premios.sort((a, b) => a.posicao - b.posicao);
-        const res1 = resultadosSorteio.find(p => p.posicao === 1);
+        const premios = sorteio.premios.sort((a, b) => a.posicao - b.posicao);
+        const res1 = premios.find(p => p.posicao === 1);
         if (!res1) continue;
 
-        let dataFormatada = 'Sem Data';
-        if (sorteio.data && typeof sorteio.data === 'string' && sorteio.data.includes('/')) dataFormatada = sorteio.data;
-        else if (res1.dataObj && typeof res1.dataObj.toLocaleDateString === 'function') dataFormatada = res1.dataObj.toLocaleDateString('pt-BR');
+        const dataFormatada = res1.dataObj ? res1.dataObj.toLocaleDateString('pt-BR') : (sorteio.data || 'S/D');
 
+        // Simula a I.A. para este sorteio específico
         const analiseIA = await getIaDataForDraw(res1.loteria, 'geral');
         const seedAudit = `${dataFormatada}-${res1.loteria}-${res1.nomeSorteio}`;
         const simulacao = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
         
         const milharesSugeridas = simulacao.palpites.milhar.map(m => m.palpite);
         const centenasSugeridas = simulacao.palpites.centena.map(c => c.palpite);
-        
-        let rankingIA = tabelaDeGrupos.map(b => ({ ...b, forca: calcularPontuacaoBicho(b.grupo, analiseIA || {}).forca, dezenasBase: b.dezenas })).sort((a, b) => b.forca - a.forca);
-        const top10IA = rankingIA.slice(0, 10);
-        const top10Grupos = top10IA.map(b => b.grupo);
+        const top10Grupos = simulacao.rankingTop10.map(b => b.grupo);
         const indexAcertoBicho = top10Grupos.indexOf(res1.bichoGrupo);
-        const cravouBichoCabeca = indexAcertoBicho !== -1;
 
-        const top10Emojis = top10IA.map((b, index) => {
-            const isMatch = (index === indexAcertoBicho);
-            const spanStyle = isMatch 
-                ? `display: inline-block; white-space: nowrap; margin-right: 8px; background-color: rgba(40, 167, 69, 0.2); border: 2px solid #28a745; border-radius: 20px; padding: 2px 8px; box-shadow: 0 0 6px rgba(40, 167, 69, 0.5); transform: scale(1.05);`
-                : `white-space: nowrap; margin-right: 8px; opacity: 0.8;`;
-            return `<span style="${spanStyle}"><strong style="font-size: 0.85rem; color: #6c757d;">${index + 1}º</strong> ${b.emoji}</span>`;
-        }).join('');
-
-        const dezenasSugeridas = rankingIA.slice(0,5).flatMap(b => b.dezenasBase);
-        const unidadesSugeridas = (analiseIA?.unidadesAtrasadas || []).slice(0, 2).map(u => u.numero);
-
-        const premios1ao5 = resultadosSorteio.filter(p => p.posicao >= 1 && p.posicao <= 5);
+        const premios1ao5 = premios.filter(p => p.posicao <= 5);
         const milhares1ao5 = premios1ao5.map(p => p.milhar);
         const centenas1ao5 = milhares1ao5.map(m => m.slice(-3));
-        const dezenas1ao5 = milhares1ao5.map(m => m.slice(-2));
 
-        let milharDaSomaCalculada = null;
-        const indexNaGeral = listaDaLoteria.indexOf(sorteio);
-        if (indexNaGeral + 1 < listaDaLoteria.length) {
-            milharDaSomaCalculada = calcularSomaMemoria(listaDaLoteria[indexNaGeral + 1].premios);
-        }
-
+        // Verificações individuais
+        const bichoNaCabeca = indexAcertoBicho !== -1 && indexAcertoBicho < 5;
         const milharNaCabeca = milharesSugeridas.includes(res1.milhar);
         const centenaNaCabeca = centenasSugeridas.includes(res1.milhar.slice(-3));
-        const dezenaNaCabeca = dezenasSugeridas.includes(res1.milhar.slice(-2));
-        const unidadeNaCabeca = unidadesSugeridas.includes(res1.milhar.slice(-1));
-        const bichoEsquecidoNaCabeca = simulacao.bichoSombra && res1.bichoGrupo === simulacao.bichoSombra.grupo;
-
         const milharNo1ao5 = milhares1ao5.some(m => milharesSugeridas.includes(m));
-        const centenaNo1ao5 = centenas1ao5.some(c => centenasSugeridas.includes(c));
-        const somaCravada = milharDaSomaCalculada && milhares1ao5.includes(milharDaSomaCalculada);
 
+        // Acerto de Mestre e Soma
         let mestreCravado = false;
         if (simulacao.jogadaDeMestre) {
             const mestreSorted = simulacao.jogadaDeMestre.palpite.split('').sort().join('');
             mestreCravado = milhares1ao5.some(m => m.split('').sort().join('') === mestreSorted);
         }
 
-        const [top1, top2, top3, top4] = rankingIA;
-        const d1 = top1.dezenasBase[0]; const d2 = top2.dezenasBase[0];
-        const d3 = top3.dezenasBase[0]; const d4 = top4.dezenasBase[0];
-        const sugestoesDuque = [{ aposta: [d1, d2] }, { aposta: [d1, d3] }, { aposta: [d2, d4] }];
-        const sugestoesTerno = [{ aposta: [d1, d2, d3] }, { aposta: [d2, d3, d4] }];
+        // Soma retroativa
+        const indexNaLista = lista.indexOf(sorteio);
+        let milharSomaAudit = (indexNaLista + 1 < lista.length) ? calcularSomaMemoria(lista[indexNaLista+1].premios) : null;
+        const somaCravada = milharSomaAudit && milhares1ao5.includes(milharSomaAudit);
 
-        const fezTerno = sugestoesTerno.some(s => s.aposta.every(dez => dezenas1ao5.includes(dez)));
-        const fezDuque = !fezTerno && sugestoesDuque.some(s => s.aposta.every(dez => dezenas1ao5.includes(dez)));
-
-        if (cravouBichoCabeca) hitsBichoCabeca++;
-        if (unidadeNaCabeca) hitsUnidadeCabeca++;
-        if (dezenaNaCabeca) hitsDezenaCabeca++;
+        // Incremento de estatísticas
+        if (bichoNaCabeca) hitsBichoCabeca++;
         if (milharNaCabeca) hitsMilharCabeca++;
-        if (milharNo1ao5 && !milharNaCabeca) hitsMilhar1ao5++; 
         if (centenaNaCabeca) hitsCentenaCabeca++;
-        if (centenaNo1ao5 && !centenaNaCabeca) hitsCentena1ao5++; 
-        if (fezDuque) hitsDuque++;
-        if (fezTerno) hitsTerno++;
         if (mestreCravado) hitsJogadaDeMestre++;
         if (somaCravada) hitsMilharSoma++;
-        if (bichoEsquecidoNaCabeca) hitsBichoEsquecido++;
-
-        const teveAcerto = cravouBichoCabeca || milharNaCabeca || centenaNaCabeca || dezenaNaCabeca || unidadeNaCabeca || milharNo1ao5 || centenaNo1ao5 || fezTerno || fezDuque || mestreCravado || somaCravada || bichoEsquecidoNaCabeca;
+        
+        const teveAcerto = bichoNaCabeca || milharNaCabeca || centenaNaCabeca || milharNo1ao5 || mestreCravado || somaCravada;
         if (teveAcerto) hitsGerais++;
+
+        // Visual do Card
         let badgesHtml = "";
-        if (cravouBichoCabeca) badgesHtml += `<span style="background:#28a745; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🎯 GRUPO (${indexAcertoBicho + 1}º)</span>`;
-        if (milharNaCabeca) badgesHtml += '<span style="background:#d63384; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🚀 MILHAR (CAB)</span>';
-        else if (milharNo1ao5) badgesHtml += '<span style="background:#d63384; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🚀 MILHAR (1-5)</span>';
-        if (centenaNaCabeca) badgesHtml += '<span style="background:#0dcaf0; color:#000; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px; font-weight:bold;">💯 CENTENA (CAB)</span>';
-        else if (centenaNo1ao5) badgesHtml += '<span style="background:#0dcaf0; color:#000; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px; font-weight:bold;">💯 CENTENA (1-5)</span>';
-        if (dezenaNaCabeca) badgesHtml += '<span style="background:#198754; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🎲 DEZ (CAB)</span>';
-        if (unidadeNaCabeca) badgesHtml += '<span style="background:#198754; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🔹 UNI (CAB)</span>';
-        if (mestreCravado) badgesHtml += '<span style="background:#6f42c1; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">👑 MESTRE</span>';
-        if (somaCravada) badgesHtml += '<span style="background:#ffc107; color:#000; font-weight:bold; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🧮 SOMA</span>';
-        if (bichoEsquecidoNaCabeca) badgesHtml += '<span style="background:#333; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">👻 ZEBRA (CAB)</span>';
-        if (fezTerno) badgesHtml += '<span style="background:#17a2b8; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🏆 TERNO</span>';
-        else if (fezDuque) badgesHtml += '<span style="background:#fd7e14; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.6rem; margin-right:3px;">🤝 DUQUE</span>';
-
-        let acertosTextLines = [];
-        if (cravouBichoCabeca) acertosTextLines.push(`🎯 GRUPO NA CABEÇA: ✅ <br><span style="font-size: 0.8rem; font-weight: normal; opacity: 0.85;">(Foi a <b>${indexAcertoBicho + 1}ª</b> sugestão da I.A: ${top10IA[indexAcertoBicho].emoji} ${top10IA[indexAcertoBicho].animal})</span>`);
-        if (bichoEsquecidoNaCabeca) acertosTextLines.push(`👻 ZEBRA NA CABEÇA: ✅ <br><span style="font-size: 0.8rem; font-weight: normal; opacity: 0.85;">(Bicho Esquecido: ${simulacao.bichoSombra.emoji} ${simulacao.bichoSombra.animal})</span>`);
-        if (milharNaCabeca) acertosTextLines.push('🚀 MILHAR EXATA (CABEÇA): ✅');
-        if (centenaNaCabeca && !milharNaCabeca) acertosTextLines.push('💯 CENTENA EXATA (CABEÇA): ✅');
-        if (milharNo1ao5 && !milharNaCabeca) acertosTextLines.push('🚀 MILHAR (1º ao 5º): ✅');
-        if (centenaNo1ao5 && !centenaNaCabeca && !milharNo1ao5) acertosTextLines.push('💯 CENTENA (1º ao 5º): ✅');
-        if (dezenaNaCabeca) acertosTextLines.push('🎲 DEZENA (CABEÇA): ✅');
-        if (unidadeNaCabeca) acertosTextLines.push('🔹 UNIDADE ATRASADA (CABEÇA): ✅');
-        if (mestreCravado) acertosTextLines.push('👑 JOGADA DE MESTRE (Invertida): ✅');
-        if (somaCravada) acertosTextLines.push('🧮 MILHAR DA SOMA (1º ao 5º): ✅');
-        if (fezTerno) acertosTextLines.push(`🤝 TERNO DE DEZENAS (Cravado): ✅`);
-        else if (fezDuque) acertosTextLines.push(`🤝 DUQUE DE DEZENAS (Cravado): ✅`);
-
-        let msgCardPrincipal = teveAcerto ? acertosTextLines.join('<br>') : '⚪ Nenhum acerto da I.A. neste sorteio';
-
-        const listaResultadosHtml = premios1ao5.map(p => {
-            let mark = '';
-            if (p.posicao === 1 && top10Grupos.includes(p.bichoGrupo)) {
-                const posSugerida = top10Grupos.indexOf(p.bichoGrupo) + 1;
-                mark = `<span style="color:#28a745;">✅ (${posSugerida}º Palpite)</span>`;
-            }
-            const fw = p.posicao === 1 ? 'bold' : 'normal';
-            const op = p.posicao === 1 ? '1' : '0.8';
-            const sz = p.posicao === 1 ? '0.9rem' : '0.8rem';
-            
-            return `<div style="display: flex; justify-content: space-between; font-size: ${sz}; font-weight: ${fw}; opacity: ${op}; border-bottom: 1px dashed rgba(128,128,128,0.2); padding-bottom: 4px; margin-bottom: 4px;">
-                <span>${p.posicao}º Prêmio</span><span><strong>${p.milhar}</strong> <span style="font-size:0.9em;">(${p.bichoNome})</span> ${mark}</span>
-            </div>`;
-        }).join('');
-
-        let caixaProvaHtml = '';
-        if (teveAcerto) {
-            caixaProvaHtml = `
-            <div style="margin-top: 10px; padding: 10px; background: rgba(128,128,128,0.1); border: 1px solid rgba(128,128,128,0.2); border-radius: 6px; font-size: 0.8rem;">
-                <div style="margin-bottom: 0;">
-                    <strong style="color: #007bff;">🔮 Top 10 Sugerido na Época:</strong><br>
-                    <div style="font-size: 1.15rem; letter-spacing: 1px; line-height: 1.6; margin-top: 5px; display: flex; flex-wrap: wrap;">${top10Emojis}</div>
-                </div>
-            </div>`;
-        }
+        if (milharNaCabeca) badgesHtml += '<span class="badge-ready" style="background:#d63384; margin-right:4px;">🚀 MILHAR CAB</span>';
+        if (bichoNaCabeca) badgesHtml += `<span class="badge-ready" style="background:#28a745; margin-right:4px;">🎯 GRUPO (${indexAcertoBicho+1}º)</span>`;
+        if (mestreCravado) badgesHtml += '<span class="badge-ready" style="background:#6f42c1; margin-right:4px;">👑 MESTRE</span>';
+        if (somaCravada) badgesHtml += '<span class="badge-ready" style="background:#ffc107; color:#000; margin-right:4px;">🧮 SOMA</span>';
 
         html += `
             <div style="border-left: 5px solid ${teveAcerto ? '#28a745' : '#6c757d'}; padding: 12px; margin-bottom: 10px; background: rgba(128,128,128,0.05); border-radius: 8px;">
-                <div style="display:flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.6; font-weight: bold; margin-bottom: 10px;">
+                <div style="display:flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.7; font-weight: bold; margin-bottom: 8px;">
                     <span>🎰 ${res1.nomeLoteria || res1.loteria.toUpperCase()} (${res1.nomeSorteio})</span>
                     <span>${dataFormatada}</span>
                 </div>
-                <div style="background: rgba(128,128,128,0.1); border: 1px solid rgba(128,128,128,0.1); border-radius: 6px; padding: 8px; margin-bottom: 10px;">
-                    ${listaResultadosHtml}
-                </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;">
-                    ${badgesHtml || '<span style="font-size: 0.75rem; color: #888;">Sem acertos diretos da I.A. neste sorteio.</span>'}
-                </div>
-                <div style="font-size: 0.85rem; font-weight: bold; opacity: 0.95; line-height: 1.4;">${msgCardPrincipal}</div>
-                ${caixaProvaHtml}
+                <div style="font-size:0.9rem; margin-bottom:8px;"><b>Resultado:</b> ${res1.milhar} (${res1.bichoNome})</div>
+                <div style="display:flex; flex-wrap:wrap; gap:4px;">${badgesHtml || '<span style="font-size:0.75rem; color:#888;">Nenhum acerto direto</span>'}</div>
             </div>`;
     }
 
-    // ==========================================
-    // MENU DE DIAS QUE APARECE LOGO ABAIXO DA LOTERIA
-    // ==========================================
-    const periodos = [
-        { val: 1, label: 'Hoje' },
-        { val: 2, label: '2 Dias' },
-        { val: 7, label: '1 Semana' },
-        { val: 15, label: '15 Dias' },
-        { val: 30, label: '1 Mês' },
-        { val: 999, label: 'Tudo' }
-    ];
-
-    if (containerMenu) {
-        containerMenu.innerHTML = `
-            <div style="font-size: 0.65rem; font-weight: bold; margin-bottom: 5px; color: #777; text-transform: uppercase; text-align: center; letter-spacing: 1px;">⏳ Desempenho por Período:</div>
-            <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; -ms-overflow-style: none;">
-                ${periodos.map(p => `
-                    <button onclick="filtrarAuditoria('${loteriaAtual}', ${p.val})" 
-                            style="padding: 8px 16px; border-radius: 20px; border: none; white-space: nowrap; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9rem;
-                            ${periodoAtual === p.val ? 'background: #007bff; color: white; box-shadow: 0 2px 4px rgba(0,123,255,0.3);' : 'background: #e9ecef; color: #495057;'}">
-                        ${p.label}
-                    </button>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    // ==========================================
-    // ATUALIZA O PLACAR (SCOREBOARD)
-    // ==========================================
-    const statPercentEl = document.getElementById('statPercent');
-    const statTotalTextEl = document.getElementById('statTotalText');
-    const rightPanelContainer = document.getElementById('statRightPanel');
-    const labelTempo = periodos.find(p => p.val === periodoAtual).label;
+    // 5. ATUALIZAÇÃO DA INTERFACE (PLACAR)
+    const porcentagem = totalSorteios > 0 ? Math.round((hitsGerais / totalSorteios) * 100) : 0;
+    const percentEl = document.getElementById('statPercent');
+    if (percentEl) percentEl.textContent = `${porcentagem}%`;
     
-    window.currentAuditStats = {
-        loteria: loteriaAtual === 'todas' ? 'Todas as Loterias' : loteriaAtual.toUpperCase(),
-        periodo: labelTempo,
-        sorteios: totalSorteios,
-        porcentagem: 0,
-        hitsBichoCabeca, hitsUnidadeCabeca, hitsDezenaCabeca,
-        hitsCentenaCabeca, hitsCentena1ao5,
-        hitsMilharCabeca, hitsMilhar1ao5,
-        hitsDuque, hitsTerno,
-        hitsJogadaDeMestre, hitsMilharSoma, hitsBichoEsquecido
-    };
-
-    if (statPercentEl && statTotalTextEl && rightPanelContainer) {
-        // Agora a porcentagem é baseada em: quantos sorteios a IA ganhou / total de sorteios
-        const porcentagem = totalSorteios > 0 ? Math.round((hitsGerais / totalSorteios) * 100) : 0;
-        
-        statPercentEl.textContent = `${porcentagem}%`;
-        window.currentAuditStats.porcentagem = porcentagem;
-        statTotalTextEl.innerHTML = `Análise de <b>${totalSorteios}</b> extrações (Filtro: ${labelTempo.toLowerCase()}).`;
-
-        rightPanelContainer.style.textAlign = 'left';
-        rightPanelContainer.style.paddingLeft = '10px';
-        rightPanelContainer.style.borderLeft = '1px solid rgba(0,123,255,0.2)';
-        rightPanelContainer.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.72rem; line-height: 1.3;">
-                <div>
-                    <div style="margin-bottom: 2px;">Grupo (Cab): <strong style="color:#28a745;">${hitsBichoCabeca}</strong></div>
-                    <div style="margin-bottom: 2px;">Uni (Cab): <strong style="color:#198754;">${hitsUnidadeCabeca}</strong></div>
-                    <div style="margin-bottom: 2px;">Dez (Cab): <strong style="color:#198754;">${hitsDezenaCabeca}</strong></div>
-                    <div style="margin-bottom: 2px;">C. Cabeça: <strong style="color:#0dcaf0;">${hitsCentenaCabeca}</strong></div>
-                    <div style="margin-bottom: 2px;">C. 1 ao 5: <strong style="color:#0dcaf0;">${hitsCentena1ao5}</strong></div>
-                    <div style="margin-bottom: 2px;">M. Cabeça: <strong style="color:#d63384;">${hitsMilharCabeca}</strong></div>
-                </div>
-                <div>
-                    <div style="margin-bottom: 2px;">M. 1 ao 5: <strong style="color:#d63384;">${hitsMilhar1ao5}</strong></div>
-                    <div style="margin-bottom: 2px;">Duque: <strong style="color:#fd7e14;">${hitsDuque}</strong></div>
-                    <div style="margin-bottom: 2px;">Terno: <strong style="color:#17a2b8;">${hitsTerno}</strong></div>
-                    <div style="margin-bottom: 2px;">Mestre: <strong style="color:#6f42c1;">${hitsJogadaDeMestre}</strong></div>
-                    <div style="margin-bottom: 2px;">M. Soma: <strong style="color:#ffc107;">${hitsMilharSoma}</strong></div>
-                    <div style="margin-bottom: 2px;">Zebra/Esq: <strong style="color:#666;">${hitsBichoEsquecido}</strong></div>
-                </div>
+    const totalEl = document.getElementById('statTotalText');
+    if (totalEl) totalEl.innerHTML = `Análise de <b>${totalSorteios}</b> extrações registradas.`;
+    
+    const rightPanel = document.getElementById('statRightPanel');
+    if (rightPanel) {
+        rightPanel.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.72rem; text-align: left;">
+                <div>Grupo (Cab): <b>${hitsBichoCabeca}</b></div>
+                <div>M. Cabeça: <b>${hitsMilharCabeca}</b></div>
+                <div>C. Cabeça: <b>${hitsCentenaCabeca}</b></div>
+                <div>Mestre: <b>${hitsJogadaDeMestre}</b></div>
+                <div>M. Soma: <b>${hitsMilharSoma}</b></div>
+                <div>Jogos Ganhos: <b>${hitsGerais}</b></div>
             </div>
         `;
     }
 
-    if (containerZap) {
-        if (totalSorteios > 0) {
-            containerZap.innerHTML = `
-                <button onclick="shareAuditSummary()" class="save-button" style="width: 100%; padding: 12px; background-color: #25D366; font-size: 1rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; color: white;">
-                    📲 Enviar Resumo no WhatsApp
-                </button>
-            `;
-        } else {
-            containerZap.innerHTML = '';
-        }
-    }
-
-    // ==== O SEGREDO QUE RESOLVE SEU BUG ====
-    // Apenas a lista de cartões (HTML) é jogada aqui dentro.
-    // Os botões do topo nunca mais serão sobrescritos!
-    if (container) {
-        container.innerHTML = html || '<p style="text-align:center; padding:20px; color:#555;">Nenhum sorteio processado para este período.</p>';
-    }
+    if (container) container.innerHTML = html || '<p style="text-align:center; padding:20px;">Nenhum sorteio para este filtro.</p>';
 }
 
 // Função para carregar e aplicar as permissões configuradas no Firestore para o usuário logado
@@ -17887,19 +17716,25 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
     });
 };
 
-// --- NOVA FUNÇÃO: BOLETIM GERAL DA I.A. (COM PREVIEW) ---
-async function shareGlobalDailyBriefing() {
-    showLoadingIndicator("Compilando Boletim Geral I.A...");
-    try {
-        // 1. Atualização silenciosa rápida para garantir os sorteios de hoje
-        await runSilentIAUpdate(1);
+async function shareGlobalDailyBriefing(dias = 1) {
+    const msgLoading = dias === 1 ? "Compilando Boletim de Hoje..." : `Analisando Performance de ${dias} dias...`;
+    showLoadingIndicator(msgLoading);
 
-        // 2. Busca os últimos 200 prêmios para termos dados abundantes
+    try {
+        // 1. Define o período de busca retroativo
+        const limiteData = new Date();
+        limiteData.setDate(limiteData.getDate() - (dias - 1));
+        limiteData.setHours(0, 0, 0, 0);
+
+        // 2. Busca resultados no Firestore (Aumentamos o limite para maior precisão semanal)
         const snapshot = await firestoreDB.collection('resultados')
-            .orderBy('data', 'desc').limit(200).get();
+            .where('data', '>=', firebase.firestore.Timestamp.fromDate(limiteData))
+            .orderBy('data', 'desc')
+            .limit(1000) 
+            .get();
 
         if (snapshot.empty) {
-            showToast('Nenhum dado encontrado no banco.', 'info');
+            showToast('Nenhum dado encontrado para este período.', 'info');
             hideLoadingIndicator();
             return;
         }
@@ -17911,149 +17746,112 @@ async function shareGlobalDailyBriefing() {
             resultadosBrutos.push(d);
         });
 
-        // 3. Descobre qual é a data mais recente que possui sorteios registrados
-        let dataMaisRecente = new Date(0);
-        resultadosBrutos.forEach(s => {
-            if (s.dataObj > dataMaisRecente) dataMaisRecente = s.dataObj;
-        });
-        const dataFiltroStr = dataMaisRecente.toLocaleDateString('pt-BR');
-
-        // Filtra apenas os resultados do dia escolhido
-        const resultadosDoDia = resultadosBrutos.filter(s => s.dataObj.toLocaleDateString('pt-BR') === dataFiltroStr);
-
-        // 4. Estrutura para contar as estatísticas
+        // 3. Estrutura para contagem detalhada
         const loteriasStats = {
-            'rj': { nome: 'PT Rio', sorteios: 0, hits: 0, detalhes: [] },
-            'lk': { nome: 'Look Goiás', sorteios: 0, hits: 0, detalhes: [] },
-            'ln': { nome: 'Nacional', sorteios: 0, hits: 0, detalhes: [] },
-            'fd': { nome: 'Federal', sorteios: 0, hits: 0, detalhes: [] }
+            'rj': { nome: 'PT Rio', sorteios: 0, hits: 0, detalhes: { milhar: 0, centena: 0, grupo: 0 } },
+            'lk': { nome: 'Look Goiás', sorteios: 0, hits: 0, detalhes: { milhar: 0, centena: 0, grupo: 0 } },
+            'ln': { nome: 'Nacional', sorteios: 0, hits: 0, detalhes: { milhar: 0, centena: 0, grupo: 0 } },
+            'fd': { nome: 'Federal', sorteios: 0, hits: 0, detalhes: { milhar: 0, centena: 0, grupo: 0 } }
         };
 
         const sorteiosAgrupados = {};
-        resultadosDoDia.forEach(res => {
-            const key = `${res.loteria}-${res.nomeSorteio}`;
+        resultadosBrutos.forEach(res => {
+            const dataStr = res.dataObj.toLocaleDateString('pt-BR');
+            const key = `${res.loteria}-${res.nomeSorteio}-${dataStr}`;
             if (!sorteiosAgrupados[key]) {
-                sorteiosAgrupados[key] = { loteria: res.loteria, nomeSorteio: res.nomeSorteio, premios: [] };
+                sorteiosAgrupados[key] = { loteria: res.loteria, nomeSorteio: res.nomeSorteio, data: dataStr, premios: [] };
             }
             sorteiosAgrupados[key].premios.push(res);
         });
 
-        // 5. Simula a I.A. para cada sorteio e verifica os acertos na Cabeça
+        // 4. Simulação de acertos da I.A. no período
         for (const key in sorteiosAgrupados) {
             const sorteio = sorteiosAgrupados[key];
             const loteria = sorteio.loteria;
             if (!loteriasStats[loteria]) continue;
 
             loteriasStats[loteria].sorteios++;
-
             const res1 = sorteio.premios.find(p => p.posicao == 1);
             if (!res1) continue;
 
             const analiseIA = await getIaDataForDraw(loteria, 'geral');
-            const seedAudit = `${dataFiltroStr}-${loteria}-${res1.nomeSorteio}`;
+            const seedAudit = `${sorteio.data}-${loteria}-${res1.nomeSorteio}`;
             const simulacao = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
             
-            const top10Grupos = simulacao.rankingTop10.map(b => b.grupo);
-            const milharesSugeridas = simulacao.palpites.milhar.map(m => m.palpite);
-            const centenasSugeridas = simulacao.palpites.centena.map(c => c.palpite);
-            
-            const cravouBichoCabeca = top10Grupos.includes(res1.bichoGrupo);
-            let cravouMilharExata = milharesSugeridas.includes(res1.milhar);
-            let cravouCentenaExata = centenasSugeridas.includes(res1.milhar.slice(-3));
+            const top5Grupos = simulacao.rankingTop10.slice(0, 5).map(b => b.grupo);
+            const milharesIA = simulacao.palpites.milhar.map(m => m.palpite);
+            const centenasIA = simulacao.palpites.centena.map(c => c.palpite);
 
-            let teveAcerto = false;
-            let tipoAcerto = '';
-
-            if (cravouMilharExata) { teveAcerto = true; tipoAcerto = '🚀 Milhar'; }
-            else if (cravouCentenaExata) { teveAcerto = true; tipoAcerto = '💯 Centena'; }
-            else if (cravouBichoCabeca) { teveAcerto = true; tipoAcerto = '🎯 Grupo'; }
-
-            if (teveAcerto) {
+            if (milharesIA.includes(res1.milhar)) {
                 loteriasStats[loteria].hits++;
-                loteriasStats[loteria].detalhes.push(`↳ ${res1.nomeSorteio} (${tipoAcerto})`);
+                loteriasStats[loteria].detalhes.milhar++;
+            } else if (centenasIA.includes(res1.milhar.slice(-3))) {
+                loteriasStats[loteria].hits++;
+                loteriasStats[loteria].detalhes.centena++;
+            } else if (top5Grupos.includes(res1.bichoGrupo)) {
+                loteriasStats[loteria].hits++;
+                loteriasStats[loteria].detalhes.grupo++;
             }
         }
 
-        // 6. Elege a Melhor Loteria do Dia
-        let melhorLoteria = null;
-        let maiorTaxa = -1;
+        // 5. Montagem do Texto do Boletim
+        let subtitulo = dias === 1 ? `Boletim de Performance (Hoje)` : `Ranking Estratégico (${dias} Dias)`;
+        let msg = `🌐 *BOLETIM GLOBAL I.A. VIP* 🌐\n📊 ${subtitulo}\n🗓️ Ref: *${new Date().toLocaleDateString('pt-BR')}*\n\n`;
 
-        const loteriasArray = Object.values(loteriasStats).filter(l => l.sorteios > 0);
-        
-        loteriasArray.forEach(l => {
-            l.taxa = Math.round((l.hits / l.sorteios) * 100);
-            if (l.taxa > maiorTaxa) {
-                maiorTaxa = l.taxa;
-                melhorLoteria = l;
-            } else if (l.taxa === maiorTaxa && l.hits > (melhorLoteria ? melhorLoteria.hits : -1)) {
-                melhorLoteria = l; // Desempate por quantidade absoluta de acertos
-            }
-        });
-
-        // 7. Monta o Texto de Vendas para o WhatsApp
-        let msg = `🌐 *BOLETIM GLOBAL I.A. VIP* 🌐\n`;
-        msg += `🗓️ Referência: *${dataFiltroStr}*\n\n`;
-
-        if (melhorLoteria && melhorLoteria.hits > 0) {
-            msg += `🏆 *DESTAQUE DO DIA:*\n`;
-            msg += `A loteria *${melhorLoteria.nome}* está com o melhor desempenho, cravando *${melhorLoteria.taxa}%* dos sorteios na cabeça!\n\n`;
-        } else {
-            msg += `⚠️ *MERCADO INSTÁVEL:*\n`;
-            msg += `A I.A. está detectando alta volatilidade (zebras) em todas as loterias no momento. Recomendamos cautela.\n\n`;
-        }
-
-        msg += `📊 *RESUMO DAS LOTERIAS:*\n\n`;
-
-        loteriasArray.forEach(l => {
-            msg += `🎰 *${l.nome}* (${l.sorteios} sorteios apurados)\n`;
+        Object.values(loteriasStats).filter(l => l.sorteios > 0).forEach(l => {
+            const taxa = Math.round((l.hits / l.sorteios) * 100);
+            msg += `🎰 *${l.nome}*\n↳ Aprov: *${taxa}%* (${l.hits}/${l.sorteios} sorteios)\n`;
             if (l.hits > 0) {
-                msg += `✅ *${l.hits} Acerto(s) Registrado(s):*\n`;
-                msg += l.detalhes.join('\n') + '\n';
-            } else {
-                msg += `⚪ Aguardando alinhamento de padrões.\n`;
-            }
+                let premiosArr = [];
+                if (l.detalhes.milhar > 0) premiosArr.push(`🚀 ${l.detalhes.milhar}x Milhar`);
+                if (l.detalhes.centena > 0) premiosArr.push(`💯 ${l.detalhes.centena}x Centena`);
+                if (l.detalhes.grupo > 0) premiosArr.push(`🎯 ${l.detalhes.grupo}x Grupo`);
+                msg += `✅ *Acertos:* ${premiosArr.join(' | ')}\n`;
+            } else { msg += `⚪ _Aguardando padrões..._\n`; }
             msg += `\n`;
         });
+        msg += `━━━━━━━━━━━━━━━\n📲 VIP - I.A. in Real-Time`;
 
-        msg += `━━━━━━━━━━━━━━━\n`;
-        msg += `💡 *Dica:* Concentre seus jogos na loteria Destaque, pois é onde a matemática está mais alinhada com nossos cálculos hoje.\n\n`;
-        msg += `📲 VIP - I.A. in Real-Time`;
+        hideLoadingIndicator();
 
-        // === 8. A MÁGICA DA PRÉ-VISUALIZAÇÃO (NOVIDADE AQUI) ===
-        hideLoadingIndicator(); // Removemos o loading da frente
-
-        // Convertemos os asteriscos (*) do WhatsApp em negrito (<b>) para o Preview ficar perfeito
+        // 6. UI PROFISSIONAL CENTRALIZADA (Visual Premium)
         let msgPreview = msg.replace(/\*(.*?)\*/g, '<b>$1</b>');
 
-        const htmlPreview = `
-            <div style="margin-bottom: 10px; font-size: 1rem;"><strong>Pré-visualização do Boletim:</strong></div>
-            <div style="text-align: left; font-size: 0.85rem; line-height: 1.4; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,0.2); white-space: pre-wrap; font-family: sans-serif;">${msgPreview}</div>
-            <div style="margin-top: 15px; font-size: 0.95rem;">Deseja enviar este boletim no WhatsApp?</div>
+        const htmlFinal = `
+            <div style="display: flex; justify-content: center; gap: 12px; margin-bottom: 25px; padding-top: 5px;">
+                <button onclick="shareGlobalDailyBriefing(1)" style="
+                    background-color: #fd7e14; color: white; border: ${dias === 1 ? '3px solid #fff' : '1px solid rgba(255,255,255,0.1)'}; 
+                    padding: 14px 22px; border-radius: 15px; font-size: 1rem; font-weight: 800; cursor: pointer; flex: 0 1 auto; 
+                    box-shadow: ${dias === 1 ? '0 0 15px rgba(253, 126, 20, 0.7)' : '0 4px 10px rgba(0,0,0,0.3)'}; 
+                    display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;
+                    transform: ${dias === 1 ? 'scale(1.05)' : 'scale(1)'};">
+                    📅 Hoje
+                </button>
+                <button onclick="shareGlobalDailyBriefing(7)" style="
+                    background-color: #e83e8c; color: white; border: ${dias === 7 ? '3px solid #fff' : '1px solid rgba(255,255,255,0.1)'}; 
+                    padding: 14px 22px; border-radius: 15px; font-size: 1rem; font-weight: 800; cursor: pointer; flex: 0 1 auto; 
+                    box-shadow: ${dias === 7 ? '0 0 15px rgba(232, 62, 140, 0.7)' : '0 4px 10px rgba(0,0,0,0.3)'}; 
+                    display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;
+                    transform: ${dias === 7 ? 'scale(1.05)' : 'scale(1)'};">
+                    🗓️ 7 Dias
+                </button>
+            </div>
+            <div style="text-align: left; font-size: 0.82rem; line-height: 1.6; max-height: 260px; overflow-y: auto; padding: 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); white-space: pre-wrap; background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.2) 100%); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; box-shadow: inset 0 2px 10px rgba(0,0,0,0.4);">
+                ${msgPreview}
+            </div>
+            <p style="font-size: 0.95rem; margin-top: 20px; font-weight: 600;">Deseja enviar este resumo oficial no WhatsApp?</p>
         `;
 
-        // Chama o popup nativo do seu sistema
-        const userConfirmed = await showCustomConfirm(
-            htmlPreview,
-            "✅ Enviar no WhatsApp",
-            "❌ Cancelar",
-            "analysisHubModal" // Garante que a camada (z-index) fique perfeita acima do menu
-        );
+        const userConfirmed = await showCustomConfirm(htmlFinal, "✅ Enviar Agora", "❌ Cancelar", "analysisHubModal");
 
         if (userConfirmed) {
-            // Se apertou OK, dispara o link
-            const encodedMessage = encodeURIComponent(msg);
-            window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-            closeAnalysisHubModal(); // Fecha o menu base
-            showToast('Abrindo WhatsApp...', 'success');
-        } else {
-            // Se cancelou, não faz nada
-            showToast('Envio do boletim cancelado.', 'info');
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         }
         
     } catch (e) {
-        console.error("Erro no Boletim Global:", e);
-        showToast("Erro ao gerar boletim.", "error");
-        hideLoadingIndicator(); // Garante que o loading saia em caso de erro
+        console.error("Erro no processamento acumulado:", e);
+        showToast("Erro ao processar dados acumulados.", "error");
+        hideLoadingIndicator();
     }
 }
 
@@ -22672,7 +22470,7 @@ if (rankingTop10 && rankingTop10.length >= 10) {
                     horario: h.display,
                     data: dataSimples,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Apaga sozinho depois de 5 dias
+                    expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
                     conteudo: t,
                     ranking: rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
                 });
