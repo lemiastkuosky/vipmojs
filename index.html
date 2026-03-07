@@ -6822,7 +6822,7 @@ fieldset.generator-options {
                 <span style="font-size: 1.5rem; line-height: 1;">📜</span>
                 <div>
                     <strong>Ver Histórico de Gerações</strong>
-                    <small style="font-weight: normal;">(Seus rascunhos salvos no aparelho)</small>
+                    <small style="font-weight: normal;">(Seus rascunhos não enviados)</small>
                 </div>
             </button>
 
@@ -6830,7 +6830,7 @@ fieldset.generator-options {
                 <span style="font-size: 1.5rem; line-height: 1;">🧾</span>
                 <div>
                     <strong>Ver Recibos Salvos</strong>
-                    <small style="font-weight: normal;">(Comprovantes oficiais salvos na nuvem)</small>
+                    <small style="font-weight: normal;">(Comprovantes enviados e salvos na nuvem)</small>
                 </div>
             </button>
             
@@ -6853,7 +6853,7 @@ fieldset.generator-options {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V13.93</strong>
+            <strong>V13.95</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -8138,7 +8138,7 @@ fieldset.generator-options {
     </div>
 </div>
 
-<div id="savedReceiptsModal" class="modal modal-top" role="dialog" aria-modal="true" aria-labelledby="savedReceiptsModalTitle">    <div class="modal-content">
+<div id="savedReceiptsModal" class="modal modal-super-top" role="dialog" aria-modal="true" aria-labelledby="savedReceiptsModalTitle">   <div class="modal-content">
         <span class="close-modal" onclick="closeSavedReceiptsModal()" aria-label="Fechar">×</span>
         <h3 id="savedReceiptsModalTitle" class="modal-title">🧾 Recibos Salvos</h3>
         <input type="search" id="searchReceiptsInput" class="modal-search-input" placeholder="🔎 Buscar por nome ou código..." oninput="filterSavedReceipts()">
@@ -8280,9 +8280,14 @@ fieldset.generator-options {
                 </button>
             </div>
             
-            <button type="button" onclick="fecharKitsMCD()" class="load-button" style="width: 100%; margin-top: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; padding: 12px; cursor: pointer; box-shadow: 0 3px 0 #5a6268; transition: 0.2s;">
-                ❌ Fechar Janela
-            </button>
+            <div style="display: flex; gap: 10px; margin-top: 15px; width: 100%;">
+                <button type="button" onclick="showSavedReceiptsModal('kit')" class="view-button" style="flex: 1; border: none; border-radius: 8px; font-weight: bold; padding: 12px; cursor: pointer; box-shadow: 0 3px 0 #117a8b; transition: 0.2s;">
+                    🧾 Histórico Vendas
+                </button>
+                <button type="button" onclick="fecharKitsMCD()" class="load-button" style="flex: 1; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; padding: 12px; cursor: pointer; box-shadow: 0 3px 0 #5a6268; transition: 0.2s;">
+                    ❌ Fechar
+                </button>
+            </div>
 
         </div>
     </div>
@@ -9797,9 +9802,9 @@ if (rankingTop10 && rankingTop10.length >= 10) {
             if (bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
             if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
             t += `🚀 *MILHARES SUGERIDAS:*\n`;
-            if (palpites && palpites.milhar) {const linhasMilhar = palpites.milhar.slice(0, 8).map(function(m) {return m.invertida ? "🔹 " + m.palpite + " ↔ " + m.invertida : "🔹 " + m.palpite;});t += formatarEmColunas(linhasMilhar, 1) + "\n\n";}
+            if (palpites && palpites.milhar) {const linhasMilhar = palpites.milhar.slice(0, 5).map(function(m) {return m.invertida ? "🔹 " + m.palpite + " ↔ " + m.invertida : "🔹 " + m.palpite;});t += formatarEmColunas(linhasMilhar, 1) + "\n\n";}
             t += `💯 *CENTENAS QUENTES:*\n`;
-            if (palpites && palpites.centena) t += formatarEmColunas(palpites.centena.slice(0,10).map(c => c.palpite), 5) + `\n\n`;
+            if (palpites && palpites.centena) t += formatarEmColunas(palpites.centena.slice(0,5).map(c => c.palpite), 5) + `\n\n`;
             t += `${divisor}\n\n`;
             if (dezenasFechamento && dezenasFechamento.length === 5) t += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\nJogue as 5 dezenas combinadas:\n🎯 *${dezenasFechamento.join(' - ')}*\n\n`;
             t += `🤝 *DUQUES DE DEZENA:*\n`;
@@ -9890,6 +9895,74 @@ if (rankingTop10 && rankingTop10.length >= 10) {
         if (!isSilent) showToast("Erro ao processar análise inteligente.", "error");
     } finally {
         if (!isSilent) hideLoadingIndicator();
+    }
+}
+
+// =========================================================
+// RENDERIZAR O HISTÓRICO LOCAL DE GERAÇÕES (ÚLTIMOS JOGOS)
+// =========================================================
+async function renderIntegratedHistory() {
+    const container = document.getElementById('integratedHistoryContainer');
+    if (!container) return;
+
+    container.innerHTML = '<p style="text-align: center; color: #6c757d;">Carregando histórico...</p>';
+
+    try {
+        // Busca o histórico salvo no aparelho
+        const history = await getData('generationHistory') || [];
+
+        if (history.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 15px;">Nenhuma geração recente salva no aparelho.</p>';
+            return;
+        }
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto; padding-right: 5px;">';
+
+        // Monta um card para cada item salvo
+        history.forEach((item) => {
+            const dateObj = new Date(item.date);
+            const dataFormatada = dateObj.toLocaleDateString('pt-BR');
+            const horaFormatada = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const code = item.code || String(item.id).slice(-6);
+
+            let details = [];
+            if (item.results) {
+                if (item.results.milhar && item.results.milhar.length > 0) details.push(`<strong>${item.results.milhar.length}</strong> Milhares`);
+                if (item.results.centena && item.results.centena.length > 0) details.push(`<strong>${item.results.centena.length}</strong> Centenas`);
+                if (item.results.dezena && item.results.dezena.length > 0) details.push(`<strong>${item.results.dezena.length}</strong> Dezenas`);
+            }
+            const detailsStr = details.length > 0 ? details.join(' • ') : 'Sem números válidos';
+
+            // Html de cada caixinha
+            html += `
+            <div style="background-color: rgba(128,128,128,0.05); border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 15px; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(128,128,128,0.2); padding-bottom: 8px; margin-bottom: 10px;">
+                    <strong style="color: #007bff; font-size: 1.05rem;">Cód: ${code}</strong>
+                    <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">📅 ${dataFormatada} às ${horaFormatada}</span>
+                </div>
+                
+                <div style="font-size: 0.9rem; margin-bottom: 15px; color: inherit; opacity: 0.9;">
+                    ${detailsStr}
+                </div>
+                
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="openFoundReceipt(${item.id})" class="save-button" style="flex: 2; padding: 10px; font-size: 0.85rem; font-weight: bold; margin: 0;">👁️ Ver Números</button>
+                    <button onclick="copyHistoryItem(${item.id}, this)" class="view-button" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Copiar">📋</button>
+                    <button onclick="deleteHistoryItem(${item.id})" class="import-btn" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Apagar">🗑️</button>
+                </div>
+            </div>`;
+        });
+
+        html += '</div>';
+        
+        // Botão de apagar TUDO no final
+        html += `<button onclick="clearGenerationHistory()" class="import-btn" style="width: 100%; margin-top: 15px; padding: 12px; font-weight: bold; background-color: #dc3545;">🗑️ Apagar Todo o Histórico</button>`;
+
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error("Erro ao renderizar histórico:", error);
+        container.innerHTML = '<p style="text-align: center; color: #dc3545;">Erro ao carregar o histórico de jogos.</p>';
     }
 }
 
@@ -10263,8 +10336,8 @@ function calcularPontuacaoBicho(bichoGrupo, analise) {
                 score -= 80; // Aumentamos a punição para ele cair no ranking
                 motivos.push('❄️ Resfriando: Já saiu hoje (-80)');
             } else if (c.estourado) {
-            score += 35;
-            motivos.push('🚨 Ciclo Estourado (+35)');
+            score += 20;
+motivos.push('🚨 Ciclo Estourado (+20)');
             fontesBonusCount++;
         }
     }
@@ -10292,8 +10365,8 @@ function calcularPontuacaoBicho(bichoGrupo, analise) {
             motivos.push('📅 Forte nas ' + chavesDia[diaSemanaHoje] + ' (+' + bonus + ')');
             fontesBonusCount++;
         } else if (countBicho < freqEsperada * 0.4) {
-            score -= 10;
-            motivos.push('📅 Fraco nas ' + chavesDia[diaSemanaHoje] + ' (-10)');
+            score -= 20;
+motivos.push('📅 Fraco nas ' + chavesDia[diaSemanaHoje] + ' (-20)');
         }
     }
 
@@ -10851,7 +10924,7 @@ async function shareReceiptToWhatsApp() {
             content: receiptContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: showCheckEmoji,
-            expiresAt: dataExpiracao
+            tipo: 'mcd' // <--- ADICIONE ESTA LINHA
         });
 
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
@@ -11207,7 +11280,7 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
         textoMensagem = `🌟 *Resultado ${nomeLoteriaDisplay.toUpperCase()} ${horarioCurto ? horarioCurto + ' ' : ''}- 1º ao 5º* 🌟\n\n`;
         
         // --- LINHAS ADICIONADAS ---
-        textoMensagem += `*GRUPO APP OFICIAL*\n`;
+        textoMensagem += `*VIP I.A REAL TIME*\n`;
         textoMensagem += `━━━━━━━━━━━━━━━\n\n`;
         // --- FIM DAS LINHAS ADICIONADAS ---
 
@@ -13831,14 +13904,6 @@ function openHistoryFromSubmenu() {
         if (document.getElementById('integratedHistoryPanel').style.display !== 'block') {
             toggleHistoryPanel();
         }
-    }, 200);
-}
-
-function openReceiptsFromSubmenu() {
-    closeConsultasModal();
-    // Adiciona um pequeno atraso para a transição ficar mais suave
-    setTimeout(() => {
-        showSavedReceiptsModal();
     }, 200);
 }
 
@@ -19578,6 +19643,44 @@ async function deleteUserAdmin(event, uid, email) {
     }
 }
 
+// =========================================================
+// SALVAR BANNER DO PLACAR DA I.A. (ADMIN)
+// =========================================================
+async function salvarPlacarAdmin() {
+    const textInput = document.getElementById('adminPlacarText');
+    if (!textInput) return;
+
+    const novoTexto = textInput.value.trim();
+
+    showLoadingIndicator("Salvando banner...");
+
+    try {
+        // Salva o texto manual no banco de dados do Firebase
+        await firestoreDB.collection('config').doc('placar_ia').set({
+            texto_manual: novoTexto,
+            ultimaAtualizacaoManual: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        showToast("Banner salvo com sucesso!", "success");
+        
+        // Atualiza o banner na tela inicial imediatamente
+        if (typeof loadIAScoreboard === 'function') {
+            loadIAScoreboard();
+        }
+        
+        // Se o admin deixou o campo vazio, avisa que o sistema automático vai assumir
+        if (novoTexto === '') {
+            showToast("Modo manual desativado. A I.A. fará o banner automático.", "info");
+        }
+
+    } catch (error) {
+        console.error("Erro ao salvar o banner do placar:", error);
+        showToast("Erro ao conectar com o servidor.", "error");
+    } finally {
+        hideLoadingIndicator();
+    }
+}
+
 function renderSecureKeypad(inputElement) {
     const container = document.getElementById('secureKeypad');
     if (!container) return;
@@ -21053,129 +21156,147 @@ const docRef = await firestoreDB.collection('receipts').add({
     }
 }
 
-async function showSavedReceiptsModal() {
-    await updateSavedReceiptsContainer(); // Agora é async
-    document.getElementById('savedReceiptsModal').classList.add('active');
-}
-
 function closeSavedReceiptsModal() {
     document.getElementById('savedReceiptsModal').classList.remove('active');
+}
+
+// =========================================================
+// MOTOR DE HISTÓRICO DE RECIBOS E KITS
+// =========================================================
+let currentReceiptsFilter = 'mcd'; // Variável global de controle
+
+function openReceiptsFromSubmenu() {
+    closeConsultasModal();
+    setTimeout(() => {
+        showSavedReceiptsModal('mcd'); // Garante que abra os recibos do MCD
+    }, 200);
+}
+
+async function showSavedReceiptsModal(filtro = 'mcd') {
+    currentReceiptsFilter = filtro;
+    
+    // Atualiza o título do modal dependendo de onde ele veio
+    const titleEl = document.getElementById('savedReceiptsModalTitle');
+    if (titleEl) {
+        titleEl.innerHTML = filtro === 'kit' ? '🧾 Histórico de Kits Vendidos' : '🧾 Recibos Salvos (MCD)';
+    }
+
+    await updateSavedReceiptsContainer(); 
+    document.getElementById('savedReceiptsModal').classList.add('active');
 }
 
 async function updateSavedReceiptsContainer() {
     const container = document.getElementById('savedReceiptsContainer');
     if (!container) return;
-    container.innerHTML = '<p style="text-align: center;">Buscando recibos online...</p>';
+    container.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner-border" style="color:#007bff;"></div><p style="margin-top:10px;">Buscando recibos...</p></div>';
 
     try {
-        const querySnapshot = await firestoreDB.collection('receipts').orderBy('createdAt', 'desc').limit(100).get();        
+        // Puxa mais itens (200) para garantir que temos o suficiente para o filtro separar
+        const querySnapshot = await firestoreDB.collection('receipts').orderBy('createdAt', 'desc').limit(200).get();        
         
         if (querySnapshot.empty) {
             container.innerHTML = '<div class="no-saved-items">Nenhum recibo salvo na nuvem.</div>';
             return;
         }
 
-        container.innerHTML = ''; // Limpa "buscando..."
-        
+        let html = '<div style="display: flex; flex-direction: column; gap: 12px; max-height: 60vh; overflow-y: auto; padding-right: 5px;">';
+        const renderQueue = [];
+        let countExibidos = 0;
+
         querySnapshot.forEach(doc => {
             const item = doc.data();
             const id = doc.id;
 
-            const itemElement = document.createElement('div');
-            itemElement.className = 'saved-item';
-            itemElement.dataset.id = id;
+            // FILTRO INTELIGENTE (Separa MCD normal dos KITS)
+            // Se for um recibo antigo (antes de pormos o "tipo"), ele checa pelo texto "Pacote.........: Kit"
+            const isKit = item.tipo === 'kit' || (item.content && item.content.includes('Pacote.........: Kit'));
+            
+            if (currentReceiptsFilter === 'kit' && !isKit) return; // Se quer ver Kit mas é MCD, pula
+            if (currentReceiptsFilter === 'mcd' && isKit) return;  // Se quer ver MCD mas é Kit, pula
+
+            countExibidos++;
 
             const creationDate = item.createdAt ? item.createdAt.toDate() : new Date();
-            const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(creationDate);
+            const dataFormatada = creationDate.toLocaleDateString('pt-BR');
+            const horaFormatada = creationDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-            // --- INÍCIO DA LÓGICA MELHORADA ---
-
-            // 1. Extrai os dados do recibo com mais precisão
             const codeMatch = item.content.match(/Código\.*:\s*(\S+)/);
             const code = codeMatch ? codeMatch[1] : 'S/C';
 
             const extractionMatch = item.content.match(/Extração\.*:\s*(.*)/);
             let extraction = 'N/A';
-            if (extractionMatch && extractionMatch[1]) {
-                const fullExtraction = extractionMatch[1].trim();
-                const parts = fullExtraction.split(' - ');
-                const city = parts[0];
-                let cityAbbr = city;
-                if (city === 'Rio de Janeiro') cityAbbr = 'RJ';
-                else if (city === 'Nacional') cityAbbr = 'NAC';
-                else if (city === 'Look') cityAbbr = 'LOOK';
-                else if (city === 'Loteria Federal') cityAbbr = 'FED';
-                
-                const time = parts[1] ? parts[1].split(' ')[0] : '';
-                extraction = `${cityAbbr} ${time}`.trim();
-            }
+            if (extractionMatch && extractionMatch[1]) extraction = extractionMatch[1].trim();
 
             const valueMatch = item.content.match(/Valor Pago\.*:\s*(R\$\s*[\d,.]+)/);
             const value = valueMatch ? valueMatch[1] : '';
 
-            // 2. Monta o novo título/resumo
-            const titleText = `[Cód: ${code}] ${extraction} - ${value}`;
+            const pacoteMatch = item.content.match(/Pacote\.*:\s*(.*)/);
+            const pacote = pacoteMatch ? pacoteMatch[1].trim() : 'Avulso';
 
-            // --- FIM DA LÓGICA MELHORADA ---
-            
-            // 3. Monta o HTML do item, agora corrigido e com o novo título
-            itemElement.innerHTML = `
-                <div class="saved-item-header" role="button" tabindex="0">
-                    <div class="saved-item-title">${titleText}</div>
-                    <div class="header-actions">
-                        <button class="header-btn" style="font-size: 0.8rem; color: #6c757d;" disabled>${formattedDate}</button>
-                        <button class="header-btn copy-btn" title="Copiar Recibo">📋</button>
-                        <button class="header-btn resend-btn" title="Reenviar Link no WhatsApp" style="background-color: #25D366; color: white;">▶️</button>
-                        <button class="header-btn delete-btn" title="Excluir Recibo">🗑️</button>
-                    </div>
-                    <div class="saved-item-toggle" style="transform: rotate(-90deg);">▼</div>
-                </div>
-                <div class="saved-item-content" style="display: none;">
-                    <div class="saved-item-text" style="white-space: pre-wrap;"></div>
-                </div>
-            `;
-            
-            // --- INÍCIO DA MODIFICAÇÃO (Bug "Copiar M") ---
             const rawContent = item.content || '';
-            // Remove qualquer tag <button> que tenha sido salva por engano em recibos antigos
             const cleanedContent = rawContent.replace(/<button[^>]*>.*?<\/button>/g, '');
-            
-            // Define o HTML limpo
-            itemElement.querySelector('.saved-item-text').innerHTML = cleanedContent;
-            // --- FIM DA MODIFICAÇÃO ---
-            
-            // Adiciona os eventos de clique dinamicamente
-            itemElement.querySelector('.copy-btn').addEventListener('click', e => {
-                e.stopPropagation();
-                // --- MODIFICAÇÃO: Copia o texto limpo ---
-                copyToClipboard(itemElement.querySelector('.saved-item-text').textContent, e.currentTarget);
+
+            // Renderiza o Card
+            html += `
+            <div class="saved-item" style="background-color: rgba(128,128,128,0.05); border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 15px; text-align: left; margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(128,128,128,0.2); padding-bottom: 8px; margin-bottom: 10px;">
+                    <strong style="color: #007bff; font-size: 1.05rem;">Cód: ${code}</strong>
+                    <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">📅 ${dataFormatada} às ${horaFormatada}</span>
+                </div>
+                
+                <div style="font-size: 0.95rem; margin-bottom: 5px; color: inherit; font-weight: bold;">
+                    🎯 ${extraction}
+                </div>
+                <div style="font-size: 0.85rem; margin-bottom: 15px; color: inherit; opacity: 0.9;">
+                    💰 Valor: ${value} <span style="margin: 0 5px;">|</span> 📦 Método: ${pacote}
+                </div>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <button id="btn-view-${id}" class="save-button" style="flex: 2; padding: 10px; font-size: 0.85rem; font-weight: bold; margin: 0; background-color: #17a2b8;">👀 Ver Recibo</button>
+                    <button id="btn-resend-${id}" class="view-button" style="flex: 2; padding: 10px; font-size: 0.85rem; font-weight: bold; margin: 0; background-color: #25D366; color: white;" title="Reenviar Link no WhatsApp">📲 Zap</button>
+                    <button id="btn-copy-${id}" class="view-button" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0; background-color: #6f42c1;" title="Copiar Texto">📋</button>
+                    <button id="btn-del-${id}" class="import-btn" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Apagar da Nuvem">🗑️</button>
+                </div>
+                
+                <div id="content-${id}" style="display: none; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); margin-top: 10px;">
+                    <div id="text-${id}" style="white-space: pre-wrap; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            </div>`;
+
+            renderQueue.push({ id, cleanedContent });
+        });
+
+        if (countExibidos === 0) {
+            container.innerHTML = `<div class="no-saved-items">Nenhum histórico encontrado para ${currentReceiptsFilter === 'kit' ? 'Kits' : 'MCD'}.</div>`;
+            return;
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Adiciona os eventos
+        renderQueue.forEach(item => {
+            document.getElementById(`text-${item.id}`).innerHTML = item.cleanedContent;
+
+            document.getElementById(`btn-view-${item.id}`).addEventListener('click', (e) => {
+                const contentDiv = document.getElementById(`content-${item.id}`);
+                const isHidden = contentDiv.style.display === 'none';
+                contentDiv.style.display = isHidden ? 'block' : 'none';
+                e.currentTarget.innerHTML = isHidden ? '🙈 Ocultar' : '👀 Ver Recibo';
             });
 
-            itemElement.querySelector('.resend-btn').addEventListener('click', e => {
-                e.stopPropagation();
-                resendReceiptLink(id);
+            document.getElementById(`btn-copy-${item.id}`).addEventListener('click', (e) => {
+                const text = document.getElementById(`text-${item.id}`).textContent;
+                copyToClipboard(text, e.currentTarget);
             });
 
-            itemElement.querySelector('.delete-btn').addEventListener('click', e => {
-                e.stopPropagation();
-                deleteSavedReceipt(id);
-            });
-
-            itemElement.querySelector('.saved-item-header').addEventListener('click', e => {
-                if (e.target.closest('button')) return;
-                const content = itemElement.querySelector('.saved-item-content');
-                const toggle = itemElement.querySelector('.saved-item-toggle');
-                const isExpanded = content.style.display === 'block';
-                content.style.display = isExpanded ? 'none' : 'block';
-                toggle.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
-            });
-
-            container.appendChild(itemElement);
+            document.getElementById(`btn-resend-${item.id}`).addEventListener('click', () => resendReceiptLink(item.id));
+            document.getElementById(`btn-del-${item.id}`).addEventListener('click', () => deleteSavedReceipt(item.id));
         });
 
     } catch (error) {
         console.error("Erro ao buscar recibos:", error);
-        container.innerHTML = '<div class="no-saved-items" style="color: #dc3545;">Erro ao carregar recibos. Verifique sua conexão.</div>';
+        container.innerHTML = '<div class="no-saved-items" style="color: #dc3545;">Erro ao carregar histórico. Verifique sua conexão.</div>';
     }
 }
 
@@ -21433,7 +21554,7 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
     const checarBichoDaCruz = (dezenas) => dezenas.some(dez => cruzDoDia.includes(parseInt(dez.charAt(0))) && cruzDoDia.includes(parseInt(dez.charAt(1))));
 
     // ⏰ INTELIGÊNCIA DE TURNO
-    const isNoite = drawName.toLowerCase().match(/cor|ptn|18|19|21|22|noite/);
+    const isNoite = drawName.toLowerCase().match(/cor|ptn|18|19|21|22|23|noite/);
     const turnoAtual = isNoite ? 'noite' : 'dia';
     const bichosDiurnos = ['01', '02', '03', '05', '06', '07', '11', '13', '21', '25']; 
     const bichosNoturnos = ['04', '09', '14', '15', '16', '17', '18', '22', '23', '24']; 
@@ -21521,8 +21642,8 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
         if (analise.ciclos && analise.ciclos[b.grupo]) {
             const cg = analise.ciclos[b.grupo];
             if (cg.atual >= 1 && cg.atual < 2) {
-                scoreFinal -= 20;
-                novosMotivos.push('❄️ Resfriando: saiu ontem (-20)');
+                scoreFinal -= 30;
+novosMotivos.push('❄️ Resfriando: saiu ontem (-30)');
             }
         }
 
@@ -21578,7 +21699,7 @@ todosJuntos.forEach(function(b) {
     b.confianca = Math.min(94, Math.max(45, confReal)) + '%';
 });
 
-    let rankingTop5 = todosJuntos.slice(0, 5);
+    let rankingTop5 = todosJuntos.slice(0, 3);
     let rankingTop10 = todosJuntos.slice(0, 10);
     const palpites = { milhar: [], centena: [], duques: [], ternos: [] };
 
@@ -21647,7 +21768,7 @@ var blacklistSet = new Set(analise.blacklist || []);
 palpites.milhar = [];
 var milharesJaAdicionadas = new Set();
 
-for (var i = 0; i < 8; i++) {
+for (var i = 0; i < 5; i++) {
     var b = rankingTop10[i];
     var prefixosDisponiveis = (analise.prefixosPorBicho && analise.prefixosPorBicho[b.grupo])
         ? analise.prefixosPorBicho[b.grupo]
@@ -21688,7 +21809,7 @@ for (var i = 0; i < 8; i++) {
 
 // 3. CENTENAS DUPLAS
 palpites.centena = [];
-for (var i = 0; i < 10; i++) {
+for (var i = 0; i < 5; i++) {
     var bc = rankingTop10[i];
     var prefixoCent = (analise.prefixosPorBicho && analise.prefixosPorBicho[bc.grupo] && analise.prefixosPorBicho[bc.grupo][1])
         || String(getSeededInt(100)).padStart(2, '0');
@@ -21854,7 +21975,7 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         const horaF = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
         let zapText = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n`;
-        zapText += `*GRUPO APP OFICIAL*\n`;
+        zapText += `*VIP I.A REAL TIME*\n`;
         zapText += `━━━━━━━━━━━━━━━\n\n`;
         zapText += `⏳ *MAIS ATRASADOS:*\n`;
 
@@ -21994,7 +22115,7 @@ if (rankingTop10 && rankingTop10.length >= 10) {
                 if (bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
                 if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
                 t += `🚀 *MILHARES SUGERIDAS:*\n`;
-                if (palpites && palpites.milhar) {const linhasMilhar = palpites.milhar.slice(0, 8).map(function(m) {return m.invertida ? "🔹 " + m.palpite + " ↔ " + m.invertida : "🔹 " + m.palpite;});t += formatarEmColunas(linhasMilhar, 1) + "\n\n";}
+                if (palpites && palpites.milhar) {const linhasMilhar = palpites.milhar.slice(0, 5).map(function(m) {return m.invertida ? "🔹 " + m.palpite + " ↔ " + m.invertida : "🔹 " + m.palpite;});t += formatarEmColunas(linhasMilhar, 1) + "\n\n";}
                 t += `💯 *CENTENAS QUENTES:*\n`;
                 if (palpites && palpites.centena) t += formatarEmColunas(palpites.centena.slice(0,10).map(c => c.palpite), 5) + `\n\n`;
                 t += `${divisor}\n\n`;
@@ -23639,7 +23760,8 @@ ${numerosTextoInterno}
             content: rawReceiptContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: false,
-            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000)
+            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+            tipo: 'kit' // <--- ADICIONE ESTA LINHA
         });
         linkOficial = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
     } catch (e) {
