@@ -2534,17 +2534,45 @@ body.dark-mode .winner-list .winner-number {
     background-color: #28a745 !important;
     color: #ffffff !important;
 }
+/* --- MENU SUPERIOR PROFISSIONAL --- */
+/* --- MENU SUPERIOR BÁSICO E COMPACTO --- */
 .top-button-menu {
-  margin-top: 0;   /* ZERA a margem acima do grupo de botões */
-  row-gap: 5px;      /* Define um espaço VERTICAL MÍNIMO entre as linhas */
-  column-gap: 5px;  /* Mantém o espaço HORIZONTAL entre botões lado a lado */
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 5px !important;
+    justify-content: center !important;
 }
 
-/* Força os dois primeiros botões a ocuparem 100% da largura */
-.top-button-menu button:nth-child(1),
-.top-button-menu button:nth-child(2) {
-  flex-basis: 100%;
+.top-button-menu button {
+    flex: 1 1 48% !important; /* 2 botões por linha no celular */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 48px !important; /* Altura padrão básica */
+    padding: 5px 10px !important;
+    border-radius: 8px !important;
+    font-size: 0.78rem !important;
+    font-weight: bold !important;
+    gap: 8px !important;
+    border: none !important;
+    color: white !important;
+    text-transform: none !important; /* Remove o excesso de letras maiúsculas */
 }
+
+/* Botões de largura total (Destaques) */
+#btnMenuMCD, #btnMenuFechamento, #btnMenuSettings {
+    flex: 1 1 100% !important;
+    height: 52px !important;
+}
+
+/* Cores Originais */
+#btnMenuMCD { background-color: #007bff !important; }
+#btnMenuBolao, #btnMenuTabela { background-color: #4b5563 !important; }
+#btnMenuAnalises { background-color: #d49500 !important; }
+#btnMenuKitsMCD { background-color: #e83e8c !important; }
+#btnMenuFechamento { background-color: #374151 !important; }
+#btnMenuSettings { background-color: #dc3545 !important; }
 
 @media (max-width: 768px) {
     #fechamentoModal .modal-content {
@@ -6520,6 +6548,18 @@ body.dark-mode #kitFixoLista textarea {
     z-index: 2100 !important;
 }
 
+/* Ajuste para o Boletim não ficar gigante no celular */
+#customConfirmModal .modal-content {
+    width: 90% !important;
+    max-width: 360px !important;
+    padding: 15px !important;
+}
+
+#customConfirmModal .modal-body {
+    font-size: 0.8rem !important;
+    line-height: 1.3 !important;
+}
+
 </style>
 </head>
 
@@ -6870,14 +6910,34 @@ body.dark-mode #kitFixoLista textarea {
 <div id="resultNotificationBanner" onclick="openResultFromNotification()">
     <span id="notificationText">🔔 Novo resultado disponível! Clique para ver.</span>
 </div>
-   <div class="button-group top-button-menu" style="margin-bottom: 10px;">
-    <button type="button" id="btnMenuMCD" onclick="showRandomGeneratorModal()" class="generator-button">🎲 1- Gerador MCD</button>
-    <button type="button" id="btnMenuFechamento" onclick="showFechamentoModal()" class="calculator-button">🔢 2- Gerador Duque e Terno</button>
-    <button type="button" id="btnMenuBolao" onclick="showBolaoModal()" class="bolao-button">📋 Gerar Lista Bolão</button>
-    <button type="button" id="btnMenuTabela" onclick="showTabelaBichosModal()" class="view-button">📊 Mostrar Tabela Bichos</button>
-    <button type="button" id="btnMenuAnalises" onclick="showAnalysisHubModal()" class="analysis-button">🔮 Análises e Consultas</button>
-    <button type="button" id="btnMenuKitsMCD" onclick="abrirKitsMCD()" class="save-button" style="background-color: #e83e8c; color: white;">🛍️ Kits de Vendas (MCD)</button>
-    <button type="button" id="btnMenuSettings" onclick="showSettingsModal()" class="manage-data-button" style="flex-basis: 100%;">⚙️ Configurações do Sistema</button>
+  <div class="button-group top-button-menu">
+    <button type="button" id="btnMenuMCD" onclick="showRandomGeneratorModal()">
+        <span>🎲</span> 1- Gerador MCD
+    </button>
+
+    <button type="button" id="btnMenuBolao" onclick="showBolaoModal()">
+        <span>📋</span> Lista Bolão
+    </button>
+
+    <button type="button" id="btnMenuTabela" onclick="showTabelaBichosModal()">
+        <span>📊</span> Tabela Bichos
+    </button>
+
+    <button type="button" id="btnMenuAnalises" onclick="showAnalysisHubModal()">
+        <span>🔮</span> Análises e I.A.
+    </button>
+
+    <button type="button" id="btnMenuKitsMCD" onclick="abrirKitsMCD()">
+        <span>🛍️</span> Kits Vendas
+    </button>
+
+    <button type="button" id="buttonMenuFechamento" onclick="showFechamentoModal()">
+        <span>🔢</span> 2- Gerador Duque/Terno
+    </button>
+
+    <button type="button" id="btnMenuSettings" onclick="showSettingsModal()">
+        <span>⚙️</span> Configurações do Sistema
+    </button>
 </div>
 
 <div id="mcdSearchModal" class="modal modal-advanced" role="dialog" aria-modal="true">
@@ -10032,18 +10092,37 @@ async function getSomaUltimoSorteio(loteria) {
     }
 }
 
-// --- FUNÇÃO ATUALIZADA: SUPORTA MODO SILENCIOSO E BLOQUEIA DUPLICATAS ---
+// --- MOTOR I.A. TURBO: OPINIÃO CERTEIRA E ANTI-INSTABILIDADE ---
 async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
     if (!loteria || !loteriaNome) return;
 
     const proximasExtracoes = getNextNDrawNames(loteria, 3);
-    const nextDrawName = proximasExtracoes[0].nome;
-    const drawDisplay = proximasExtracoes[0].display;
+    const extracaoFoco = proximasExtracoes[0];
+    const dataSimples = new Date().toLocaleDateString('pt-BR');
+    const dataID = dataSimples.replace(/\//g, '');
+    const horarioLimpo = extracaoFoco.display.replace(/[\s:]/g, '_');
+    const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`;
+
+    // 1. FILTRO DE ESTABILIDADE: Verifica se o palpite já foi consolidado hoje
+    if (!isSilent) {
+        showLoadingIndicator(`Verificando integridade da análise...`);
+        try {
+            const doc = await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).get();
+            if (doc.exists && !window.forceIARegeneration) {
+                console.log("[IA] Recuperando análise estável do banco.");
+                const data = doc.data();
+                window.iaPalpiteShareText = data.conteudo;
+                exibirResultadoSalvoIA(data.conteudo, loteriaNome, extracaoFoco.display);
+                hideLoadingIndicator();
+                return; // Bloqueia novo cálculo para evitar conflito de resultados
+            }
+        } catch(e) { console.warn("Erro histórico:", e); }
+    }
 
     if (!isSilent) {
         showLoadingIndicator(`Sincronizando últimos sorteios...`);
-        try { await syncLotteryBeforeIA(loteria); } catch (e) { console.warn("Falha no Auto-Sync:", e); }
-        showLoadingIndicator(`Analisando ${proximasExtracoes.length} extrações...`);
+        try { await syncLotteryBeforeIA(loteria); } catch (e) { }
+        showLoadingIndicator(`Calculando Opinião Certeira...`);
     }
 
     try {
@@ -10054,108 +10133,64 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
             getSomaUltimoSorteio(loteria)
         ]);
 
-        const dadosReais = typeof extrairDadosDoHTML === 'function' && htmlAtrasados
-            ? extrairDadosDoHTML(htmlAtrasados) : { bichos: [], unidades: [] };
-
+        const dadosReais = typeof extrairDadosDoHTML === 'function' && htmlAtrasados ? extrairDadosDoHTML(htmlAtrasados) : { bichos: [] };
         const agora = new Date();
-        const dataSimples = agora.toLocaleDateString('pt-BR');
         const horaAgora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const divisor = "───────────────────";
 
-        const formatarEmColunas = (lista, itensPorLinha) => {
-            let linhas = [];
-            for (let i = 0; i < lista.length; i += itensPorLinha) {
-                linhas.push(lista.slice(i, i + itensPorLinha).join('  •  '));
-            }
-            return linhas.join('\n');
-        };
-
-        // Gera análise independente para cada uma das 3 extrações
         const analisesPorExtracao = proximasExtracoes.map((extracao) => {
             const analiseHorario = dataIA ? (dataIA[extracao.nome] || dataIA['geral']) : {};
-            const analiseCompleta = {
-    ...analiseHorario,
-    puxada,
-    prefixosPorBicho: analiseHorario && analiseHorario.prefixosPorBicho
-        ? analiseHorario.prefixosPorBicho
-        : (dataIA && dataIA['geral'] ? dataIA['geral'].prefixosPorBicho || {} : {})
-};
             const seed = `${dataSimples}-${loteria}-${extracao.nome}`;
-            const unidadesAtrasadas = (analiseCompleta.unidadesAtrasadas || []).slice(0, 2);
-            const { palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento } =
-                getPalpitesMisturadosIA(analiseCompleta, seed, dadosReais.bichos || [], extracao.nome);
-            return { extracao, palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento, unidadesAtrasadas };
+            return { extracao, ...getPalpitesMisturadosIA({...analiseHorario, puxada}, seed, dadosReais.bichos, extracao.nome) };
         });
 
-        // Monta texto de compartilhamento para cada extração
-        const shareTexts = analisesPorExtracao.map(({ extracao, palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento, unidadesAtrasadas }) => {
+        const shareTexts = analisesPorExtracao.map((an) => {
             let t = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
-            t += `${divisor}\n🎯 *FOCO:* ${extracao.display}\n`;
-            t += `🚦 *VOLATILIDADE:* ${volatilidade.nivel} - ${volatilidade.texto}\n${divisor}\n\n`;
-            if (alertaDobradinha) t += `🚨 *ALERTA I.A:* Padrão de *DOBRADINHA* com alta probabilidade neste sorteio!\n${divisor}\n\n`;
-            if (jogadaDeMestre) t += `👑 *JOGADA DE MESTRE*\n💸 *${jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n↳ O ${jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
-            if (dadosSoma && dadosSoma.bicho) t += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n↳ Base Matemática: ${dadosSoma.sorteioBase} Anterior\n💸 *${dadosSoma.milhar}* - ${dadosSoma.bicho.emoji} *${dadosSoma.bicho.animal.toUpperCase()}*\n\n`;
-            t += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
-            if (rankingTop5 && rankingTop5.length > 0) {
-                const medalhas = ['🥇', '🥈', '🥉', '🏅', '🏅'];
-                rankingTop5.forEach((b, i) => {
-                    t += `${medalhas[i] || '🏅'} *${i + 1}º LUGAR* - ${b.emoji} *${b.animal.toUpperCase()}* [🎯 ${b.confianca}]\n`;
-                    if (b.motivos && b.motivos.length > 0) b.motivos.forEach(m => { t += `  ↳ ${m}\n`; });
-                    else t += `  ↳ 🔥 Alta Convergência de Dados\n`;
-                    t += `\n`;
-                });
+            t += `${divisor}\n🎯 *FOCO:* ${an.extracao.display}\n`;
+            
+            // --- NOVIDADE: SEÇÃO DE OPINIÃO CERTEIRA ---
+            t += `💎 *INDICAÇÃO MESTRE (CERTEIRA):*\n`;
+            t += `🐾 *${an.rankingTop10[0].animal.toUpperCase()}* [🎯 ${an.rankingTop10[0].confianca}]\n`;
+            t += `💸 *${an.palpites.milhar[0].palpite}* (Milhar Principal)\n`;
+            t += `↳ _Análise de convergência máxima detectada._\n\n`;
+
+            t += `🚦 *VOLATILIDADE:* ${an.volatilidade.nivel}\n${divisor}\n\n`;
+            
+            if (dadosSoma && dadosSoma.bicho) {
+                t += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n`;
+                t += `↳ Base Matemática: ${dadosSoma.sorteioBase}\n`;
+                t += `💸 *${dadosSoma.milhar}* - ${dadosSoma.bicho.emoji} *${dadosSoma.bicho.animal.toUpperCase()}*\n\n`;
             }
-            t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
-if (rankingTop10 && rankingTop10.length >= 10) {
-    for (let i = 0; i < 5; i++) {
-        let esq = `${rankingTop10[i].emoji} G${rankingTop10[i].grupo} - ${rankingTop10[i].animal}`;
-        let dir = `${rankingTop10[i+5].emoji} G${rankingTop10[i+5].grupo} - ${rankingTop10[i+5].animal}`;
-        t += `*${String(i+1).padStart(2,'0')}º* ${esq.padEnd(19,' ')} ┃  *${String(i+6).padStart(2,'0')}º* ${dir}\n`;
-    }
-}
-            t += `${divisor}\n\n`;
-            if (bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
-            if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
-            t += `🚀 *MILHARES SUGERIDAS:*\n`;
-            if (palpites && palpites.milhar) {const linhasMilhar = palpites.milhar.slice(0, 5).map(function(m) {return m.invertida ? "🔹 " + m.palpite + " ↔ " + m.invertida : "🔹 " + m.palpite;});t += formatarEmColunas(linhasMilhar, 1) + "\n\n";}
-            t += `💯 *CENTENAS QUENTES:*\n`;
-            if (palpites && palpites.centena) t += formatarEmColunas(palpites.centena.slice(0,5).map(c => c.palpite), 5) + `\n\n`;
-            t += `${divisor}\n\n`;
-            if (dezenasFechamento && dezenasFechamento.length === 5) t += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\nJogue as 5 dezenas combinadas:\n🎯 *${dezenasFechamento.join(' - ')}*\n\n`;
-            t += `🤝 *DUQUES DE DEZENA:*\n`;
-            if (palpites && palpites.duques) { let d = []; palpites.duques.forEach(x => d.push(...x.combinacoes)); t += formatarEmColunas(d.map(c => `💠 ${c}`), 3) + `\n\n`; }
-            t += `🤝 *TERNOS DE DEZENA:*\n`;
-            if (palpites && palpites.ternos) { let r = []; palpites.ternos.forEach(x => r.push(...x.combinacoes)); t += formatarEmColunas(r.map(c => `🏆 ${c}`), 2) + `\n\n`; }
-            t += `${divisor}\n🍀 *BOA SORTE!* 🍀\n🗓️ Gerado: ${dataSimples} às ${horaAgora}\n📲 VIP - I.A in Real Time\n`;
+
+            t += `📊 *TERMÔMETRO DE APOIO:*\n`;
+            an.rankingTop5.slice(1, 3).forEach((b, i) => {
+                t += `${i === 0 ? '🥈' : '🥉'} *${b.animal.toUpperCase()}* (${b.confianca})\n`;
+            });
+            
+            t += `\n🚀 *MILHARES SUGERIDAS:* \n`;
+            an.palpites.milhar.slice(1, 4).forEach(m => { 
+                t += `🔹 ${m.palpite}${m.invertida ? ' ↔ '+m.invertida : ''}\n`; 
+            });
+
+            t += `\n🛡️ *FECHO DE DEZENAS:* ${an.dezenasFechamento.join(' - ')}\n`;
+            t += `${divisor}\n🗓️ ${dataSimples} às ${horaAgora}\n📲 VIP - I.A in Real Time\n`;
             return t;
         });
 
-        // Salva no Firebase (apenas 1ª extração)
-        // Salva no Firebase TODAS as extrações geradas (Próxima, 2ª e 3ª)
+        // Gravação Múltipla para manter o histórico estável
         try {
-            const dataID = dataSimples.replace(/\//g, '');
-            
-            const promessasSalvamento = analisesPorExtracao.map((analise, index) => {
-                const horarioAtual = analise.extracao.display;
-                const horarioLimpo = horarioAtual.replace(/[\s:]/g, '_');
-                const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`;
-                
-                return firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).set({
-                    loteria: loteria, 
-                    loteriaNome: loteriaNome, 
-                    horario: horarioAtual, 
-                    data: dataSimples,
+            const promessas = analisesPorExtracao.map((an, i) => {
+                const hL = an.extracao.display.replace(/[\s:]/g, '_');
+                return firestoreDB.collection('historico_palpites_ia').doc(`${loteria}_${dataID}_${hL}`).set({
+                    loteria, loteriaNome, horario: an.extracao.display, data: dataSimples,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-                    conteudo: shareTexts[index],
-                    ranking: analise.rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
+                    conteudo: shareTexts[i],
+                    ranking: an.rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
                 });
             });
-
-            // Executa todos os salvamentos ao mesmo tempo sem travar a tela
-            await Promise.all(promessasSalvamento);
-            
-        } catch (e) { console.error("Erro ao gravar histórico múltiplo:", e); }
+            await Promise.all(promessas);
+        } catch(e) { console.error("Erro salvamento:", e); }
 
         if (isSilent) return;
 
@@ -10163,67 +10198,100 @@ if (rankingTop10 && rankingTop10.length >= 10) {
         window.iaPalpiteShareTexts = shareTexts;
         window.iaPalpiteShareExtracoes = proximasExtracoes;
 
-        const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
-        if (resultsOutput) {
-            const labelExtracao = ['⚡ PRÓXIMA', '🔮 2ª EXTRAÇÃO', '🌟 3ª EXTRAÇÃO'];
-            const coresAba = ['#e83e8c', '#6f42c1', '#17a2b8'];
-
-            let tabsHtml = `<div style="display:flex;gap:6px;margin-bottom:14px;">`;
-            proximasExtracoes.forEach((ex, idx) => {
-                const ativo = idx === 0;
-                tabsHtml += `<button onclick="switchPalpiteTab(${idx})" id="tab-palpite-${idx}"
-                    style="flex:1;padding:9px 4px;border-radius:8px;border:2px solid ${ativo ? coresAba[idx] : '#ccc'};
-                    background:${ativo ? coresAba[idx] : 'transparent'};color:${ativo ? 'white' : '#666'};
-                    font-weight:bold;font-size:0.75rem;cursor:pointer;transition:all 0.2s;">
-                    ${labelExtracao[idx]}<br><span style="font-size:0.7rem;font-weight:normal;">${ex.display}</span>
-                </button>`;
-            });
-            tabsHtml += `</div>`;
-
-            let contentHtml = '';
-            // 1. Adicionamos a variável 'palpites' aqui para poder ler os números
-            analisesPorExtracao.forEach(({ extracao, volatilidade, palpites }, idx) => {
-                const corVol = volatilidade.nivel.includes('🟢') ? '#86efac' : volatilidade.nivel.includes('🟡') ? '#fcd34d' : '#fca5a5';
-                
-                // 2. MATEMÁTICA: Conta as dobradinhas nas milhares geradas para esta extração
-                let contadorDobradinhas = 0;
-                if (palpites && palpites.milhar) {
-                    contadorDobradinhas = palpites.milhar.filter(m => /(.)\1/.test(m.palpite.toString().padStart(4, '0'))).length;
-                }
-
-                contentHtml += `<div id="content-palpite-${idx}" style="display:${idx === 0 ? 'block' : 'none'};">
-                    <div style="background:linear-gradient(135deg,#1e293b,#0f172a);color:white;padding:12px;border-radius:12px;text-align:center;font-weight:bold;margin-bottom:12px;box-shadow:0 4px 10px rgba(0,0,0,0.3);">
-                        <div style="font-size:0.65rem;color:#fbbf24;text-transform:uppercase;margin-bottom:3px;">${labelExtracao[idx]}</div>
-                        <div style="font-size:1.15rem;">${extracao.display}</div>
-                        <div style="font-size:0.72rem;color:${corVol};margin-top:4px;">${volatilidade.nivel} ${volatilidade.texto}</div>
-                    </div>
-
-                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 12px;">
-                        👯 Dobradinhas (Milhar): ${contadorDobradinhas}
-                    </div>
-
-                    <div style="text-align:left;font-family:'Courier New',monospace;background:rgba(0,0,0,0.05);padding:13px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);font-size:0.82rem;white-space:pre-wrap;line-height:1.4;max-height:380px;overflow-y:auto;">${shareTexts[idx].replace(/\*/g, '')}</div>
-                    <div style="display:flex;gap:8px;margin-top:12px;">
-                        <button onclick="copyIAPalpitesTab(${idx},this)" style="flex:1;background:#6f42c1;color:white;padding:12px;font-weight:bold;font-size:0.9rem;border-radius:10px;border:none;cursor:pointer;box-shadow:0 4px 0 #5a359b;">📋 Copiar</button>
-                        <button onclick="shareIAPalpitesTab(${idx})" style="flex:1;background:#25D366;color:white;padding:12px;font-weight:bold;font-size:0.9rem;border-radius:10px;border:none;cursor:pointer;box-shadow:0 4px 0 #128c7e;">📲 WhatsApp</button>
-                    </div>
-                </div>`;
-            });
-
-            resultsOutput.innerHTML = tabsHtml + contentHtml;
-            document.getElementById('iaPalpiteForm').style.display = 'none';
-            document.getElementById('iaPalpiteLoteriaNome').textContent = loteriaNome;
-            document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
-            const shareBtn = document.getElementById('iaPalpiteShareBtn');
-            if (shareBtn) shareBtn.style.display = 'none';
-        }
+        renderizarTabsIA(proximasExtracoes, analisesPorExtracao, shareTexts);
 
     } catch (error) {
-        console.error("Erro ao gerar palpites IA:", error);
-        if (!isSilent) showToast("Erro ao processar análise inteligente.", "error");
+        console.error(error);
+        if (!isSilent) showToast("Erro na análise inteligente.", "error");
     } finally {
-        if (!isSilent) hideLoadingIndicator();
+        if (!isSilent) { 
+            hideLoadingIndicator(); 
+            window.forceIARegeneration = false; 
+        }
     }
+}
+
+function renderizarTabsIA(proximasExtracoes, analisesPorExtracao, shareTexts) {
+    const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
+    if (!resultsOutput) return;
+
+    const labelExtracao = ['⚡ PRÓXIMA', '🔮 2ª EXTRAÇÃO', '🌟 3ª EXTRAÇÃO'];
+    const coresAba = ['#e83e8c', '#6f42c1', '#17a2b8'];
+
+    // 1. Geração dos Botões das Abas
+    let tabsHtml = `<div style="display:flex; gap:6px; margin-bottom:18px;">`;
+    proximasExtracoes.forEach((ex, idx) => {
+        const ativo = idx === 0;
+        tabsHtml += `
+            <button onclick="switchPalpiteTab(${idx})" id="tab-palpite-${idx}"
+                style="flex:1; padding:10px 4px; border-radius:12px; border:2px solid ${ativo ? coresAba[idx] : 'rgba(128,128,128,0.2)'};
+                background:${ativo ? coresAba[idx] : 'transparent'}; color:${ativo ? 'white' : '#888'};
+                font-weight:bold; font-size:0.75rem; cursor:pointer; transition:all 0.3s ease; line-height:1.2;">
+                ${labelExtracao[idx]}<br><span style="font-size:0.65rem; font-weight:normal; opacity:0.8;">${ex.display}</span>
+            </button>`;
+    });
+    tabsHtml += `</div>`;
+
+    // 2. Geração do Conteúdo de Cada Aba
+    let contentHtml = '';
+    analisesPorExtracao.forEach((an, idx) => {
+        const corVol = an.volatilidade.nivel.includes('🟢') ? '#86efac' : an.volatilidade.nivel.includes('🟡') ? '#fcd34d' : '#fca5a5';
+        
+        // Extrai a Indicação Mestre para destaque visual no topo
+        const indicacaoMestre = an.rankingTop10[0];
+        const milharMestre = an.palpites.milhar[0].palpite;
+
+        contentHtml += `
+        <div id="content-palpite-${idx}" style="display:${idx === 0 ? 'block' : 'none'}; animation: fadeUpIn 0.4s ease;">
+            
+            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border-left: 5px solid #fbbf24; padding: 18px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 0.65rem; font-weight: 800; color: #fbbf24; text-transform: uppercase; letter-spacing: 1.5px;">💎 INDICAÇÃO MESTRE</span>
+                    <span style="font-size: 0.7rem; color: ${corVol}; font-weight: bold;">${an.volatilidade.nivel}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="font-size: 2.5rem;">${indicacaoMestre.emoji}</div>
+                    <div>
+                        <div style="font-size: 1.4rem; font-weight: 900; color: white;">${indicacaoMestre.animal.toUpperCase()}</div>
+                        <div style="font-size: 1.8rem; font-weight: 900; color: #fbbf24; font-family: monospace; letter-spacing: 2px;">${milharMestre}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align:left; font-family:'Courier New', monospace; background:rgba(255,255,255,0.03); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); font-size:0.82rem; white-space:pre-wrap; line-height:1.4; max-height:300px; overflow-y:auto; color: #cbd5e1;">
+                ${shareTexts[idx].replace(/\*/g, '')}
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button onclick="copyIAPalpitesTab(${idx}, this)" style="flex:1; background:#6f42c1; color:white; padding:15px; font-weight:bold; border-radius:12px; border:none; cursor:pointer; box-shadow:0 4px 0 #5a359b;">📋 Copiar</button>
+                <button onclick="shareIAPalpitesTab(${idx})" style="flex:1; background:#25D366; color:white; padding:15px; font-weight:bold; border-radius:12px; border:none; cursor:pointer; box-shadow:0 4px 0 #128c7e;">📲 Zap</button>
+            </div>
+        </div>`;
+    });
+
+    resultsOutput.innerHTML = tabsHtml + contentHtml;
+    
+    // Atualiza referências globais para o botão de partilha
+    window.iaPalpiteShareTexts = shareTexts;
+}
+
+// FUNÇÃO AUXILIAR: EXIBE RESULTADO CONSOLIDADO DO BANCO
+function exibirResultadoSalvoIA(conteudo, loteriaNome, horario) {
+    const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
+    resultsOutput.innerHTML = `
+        <div style="background:#1e293b; color:white; padding:15px; border-radius:12px; margin-bottom:15px; border-left: 5px solid #fbbf24;">
+            <div style="font-size:0.7rem; color:#fbbf24; font-weight:bold;">✅ ANÁLISE JÁ CONSOLIDADA</div>
+            <div style="font-size:1.1rem; font-weight:bold;">${loteriaNome} - ${horario}</div>
+            <p style="font-size:0.8rem; opacity:0.8; margin-top:5px;">Esta análise foi salva anteriormente e é a oficial para este horário.</p>
+        </div>
+        <div style="text-align:left; font-family:monospace; background:rgba(0,0,0,0.05); padding:15px; border-radius:10px; font-size:0.85rem; white-space:pre-wrap; line-height:1.4;">${conteudo.replace(/\*/g, '')}</div>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button onclick="copyToClipboard(window.iaPalpiteShareText, this)" style="flex:1; background:#6f42c1; color:white; padding:12px; border-radius:8px; font-weight:bold; border:none; cursor:pointer;">📋 Copiar</button>
+            <button onclick="window.forceIARegeneration = true; generateIAPalpites('${loteriaNome.toLowerCase()}', '${loteriaNome}')" style="flex:1; background:#dc3545; color:white; padding:12px; border-radius:8px; font-weight:bold; border:none; cursor:pointer;">♻️ Refazer (Novo Sync)</button>
+        </div>
+    `;
+    document.getElementById('iaPalpiteForm').style.display = 'none';
+    document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
 }
 
 // =========================================================
