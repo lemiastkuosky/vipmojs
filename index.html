@@ -22253,8 +22253,13 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
         // Evita Math.abs(INT_MIN) que retorna negativo em JS
         seed = seed >>> 0;
         if (seed === 0) seed = 1; // PRNG não pode iniciar em 0
+        
+        // CORREÇÃO APLICADA AQUI 👇
         randomFunc = function() {
             var t = seed += 0x6D2B79F5;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
         };
     }
     const getSeededInt = (max) => Math.floor(randomFunc() * max);
@@ -22822,105 +22827,97 @@ async function autoGerarHistoricoIA() {
     const divisor = "───────────────────";
 
     const formatarEmColunas = (lista, itensPorLinha) => {
-        let linhas = [];
-        for (let i = 0; i < lista.length; i += itensPorLinha) {
-            linhas.push(lista.slice(i, i + itensPorLinha).join('  •  '));
-        }
-        return linhas.join('\n');
-    };
-
-    for (const [loteria, loteriaNome] of Object.entries(loterias)) {
-        const horarios = horariosLoterias[loteria] || [];
-        if(horarios.length === 0) continue;
-
-        const analiseCompleta = await getIaSummaryDocument(loteria);
-        if(!analiseCompleta) continue;
-
-        const puxada = await getPuxadaDoDiaIA(loteria);
-        // Injeta puxada em TODOS os containers (geral + por horário)
-        Object.keys(analiseCompleta).forEach(chave => {
-            if (analiseCompleta[chave] && typeof analiseCompleta[chave] === 'object') {
-                analiseCompleta[chave].puxada = puxada;
+            let linhas = [];
+            for (let i = 0; i < lista.length; i += itensPorLinha) {
+                linhas.push(lista.slice(i, i + itensPorLinha).join('  •  '));
             }
-        });
+            return linhas.join('\n');
+        };
 
-        // Passa por todos os horários cadastrados da loteria no dia
-        for (const h of horarios) {
-            const horarioLimpo = h.display.replace(/[\s:]/g, '_');
-            const docIdUnico = `${loteria}_${dataID}_${horarioLimpo}`;
+        const shareTexts = analisesPorExtracao.map((an) => {
+            const analiseHorario = dataIA ? (dataIA[an.extracao.nome] || dataIA['geral']) : {};
+            const unidadesAtrasadas = (analiseHorario.unidadesAtrasadas || []).slice(0, 2);
 
-            try {
-                // 1. Verifica no banco se o palpite já foi salvo. Se sim, pula!
-                const doc = await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).get();
-                if(doc.exists) continue;
+            let t = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
+            t += `${divisor}\n🎯 *FOCO:* ${an.extracao.display}\n`;
+            t += `🚦 *VOLATILIDADE:* ${an.volatilidade.nivel} - ${an.volatilidade.texto}\n${divisor}\n\n`;
+            
+            if (an.alertaDobradinha) t += `🚨 *ALERTA I.A:* Padrão de *DOBRADINHA* com alta probabilidade neste sorteio!\n${divisor}\n\n`;
 
-                // 2. Se não existir, a I.A retroage e gera o palpite com a mesma semente daquele horário
-                const analiseParaUsar = analiseCompleta[h.nome] || analiseCompleta.geral || analiseCompleta;
-                const seed = `${dataSimples}-${loteria}-${h.nome}`;
+            if (an.jogadaDeMestre) {
+                t += `👑 *JOGADA DE MESTRE*\n💸 *${an.jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n↳ O ${an.jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
+            }
 
-                const { palpites, rankingTop5, rankingTop10, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento } =
-                    getPalpitesMisturadosIA(analiseParaUsar, seed, [], h.nome);
+            if (dadosSoma && dadosSoma.bicho) {
+                t += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n`;
+                t += `↳ Base Matemática: ${dadosSoma.sorteioBase}\n`;
+                t += `💸 *${dadosSoma.milhar}* - ${dadosSoma.bicho.emoji} *${dadosSoma.bicho.animal.toUpperCase()}*\n\n`;
+            }
 
-                const unidadesAtrasadas = (analiseParaUsar.unidadesAtrasadas || []).slice(0, 2);
-                
-                // Monta o texto exato do palpite
-                let t = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
-                t += `${divisor}\n🎯 *FOCO:* ${h.display}\n`;
-                t += `🚦 *VOLATILIDADE:* ${volatilidade.nivel} - ${volatilidade.texto}\n${divisor}\n\n`;
-                if (alertaDobradinha) t += `🚨 *ALERTA I.A:* Padrão de *DOBRADINHA* com alta probabilidade neste sorteio!\n${divisor}\n\n`;
-                if (jogadaDeMestre) t += `👑 *JOGADA DE MESTRE*\n💸 *${jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n↳ O ${jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
-                t += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
-                if (rankingTop5 && rankingTop5.length > 0) {
-                    const medalhas = ['🥇', '🥈', '🥉', '🏅', '🏅'];
-                    rankingTop5.forEach((b, i) => {
-                        t += `${medalhas[i] || '🏅'} *${i + 1}º LUGAR* - ${b.emoji} *${b.animal.toUpperCase()}* [🎯 ${b.confianca}]\n`;
-                        if (b.motivos && b.motivos.length > 0) b.motivos.forEach(m => { t += `  ↳ ${m}\n`; });
-                        else t += `  ↳ 🔥 Alta Convergência de Dados\n`;
-                        t += `\n`;
-                    });
-                }
-                t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
-if (rankingTop10 && rankingTop10.length >= 10) {
-    for (let i = 0; i < 5; i++) {
-        let esq = `${rankingTop10[i].emoji} G${rankingTop10[i].grupo} - ${rankingTop10[i].animal}`;
-        let dir = `${rankingTop10[i+5].emoji} G${rankingTop10[i+5].grupo} - ${rankingTop10[i+5].animal}`;
-        t += `*${String(i+1).padStart(2,'0')}º* ${esq.padEnd(19,' ')} ┃  *${String(i+6).padStart(2,'0')}º* ${dir}\n`;
-    }
-}
-                t += `${divisor}\n\n`;
-                if (bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${bichoSombra.emoji} *${bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
-                if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
-                t += `🚀 *MILHARES SUGERIDAS:*\n`;
-                if (palpites && palpites.milhar) {const linhasMilhar = palpites.milhar.slice(0, 5).map(function(m) {return m.invertida ? "🔹 " + m.palpite + " ↔ " + m.invertida : "🔹 " + m.palpite;});t += formatarEmColunas(linhasMilhar, 1) + "\n\n";}
-                t += `💯 *CENTENAS QUENTES:*\n`;
-                if (palpites && palpites.centena) t += formatarEmColunas(palpites.centena.slice(0,10).map(c => c.palpite), 5) + `\n\n`;
-                t += `${divisor}\n\n`;
-                if (dezenasFechamento && dezenasFechamento.length === 5) t += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\nJogue as 5 dezenas combinadas:\n🎯 *${dezenasFechamento.join(' - ')}*\n\n`;
-                t += `🤝 *DUQUES DE DEZENA:*\n`;
-                if (palpites && palpites.duques) { let d = []; palpites.duques.forEach(x => d.push(...x.combinacoes)); t += formatarEmColunas(d.map(c => `💠 ${c}`), 3) + `\n\n`; }
-                t += `🤝 *TERNOS DE DEZENA:*\n`;
-                if (palpites && palpites.ternos) { let r = []; palpites.ternos.forEach(x => r.push(...x.combinacoes)); t += formatarEmColunas(r.map(c => `🏆 ${c}`), 2) + `\n\n`; }
-                t += `${divisor}\n🍀 *BOA SORTE!* 🍀\n🗓️ Gerado (Auto): ${dataSimples}\n📲 VIP - I.A in Real Time\n`;
-
-                // 3. Salva silenciosamente no Firebase
-                await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).set({
-                    loteria: loteria,
-                    loteriaNome: loteriaNome,
-                    horario: h.display,
-                    data: dataSimples,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-                    conteudo: t,
-                    ranking: rankingTop5.map(b => ({ animal: b.animal, emoji: b.emoji, confianca: b.confianca }))
+            t += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
+            if (an.rankingTop5 && an.rankingTop5.length > 0) {
+                const medalhas = ['🥇', '🥈', '🥉', '🏅', '🏅'];
+                an.rankingTop5.forEach((b, i) => {
+                    t += `${medalhas[i] || '🏅'} *${i + 1}º LUGAR* - ${b.emoji} *${b.animal.toUpperCase()}* [🎯 ${b.confianca}]\n`;
+                    if (b.motivos && b.motivos.length > 0) {
+                        b.motivos.forEach(m => { t += `  ↳ ${m}\n`; });
+                    } else {
+                        t += `  ↳ 🔥 Alta Convergência de Dados\n`;
+                    }
+                    t += `\n`;
                 });
-
-            } catch(e) {
-                console.error("Erro ao auto-gerar: ", e);
             }
-        }
+            
+            t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
+            if (an.rankingTop10 && an.rankingTop10.length >= 10) {
+                for (let i = 0; i < 5; i++) {
+                    let esq = `${String(i+1).padStart(2,'0')}º ${an.rankingTop10[i].emoji} ${an.rankingTop10[i].animal}`;
+                    let dir = `${String(i+6).padStart(2,'0')}º ${an.rankingTop10[i+5].emoji} ${an.rankingTop10[i+5].animal}`;
+                    t += `${esq.padEnd(16, ' ')} ┃  ${dir}\n`;
+                }
+            }
+            t += `${divisor}\n\n`;
+            
+            if (an.bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${an.bichoSombra.emoji} *${an.bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
+            
+            if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
+            
+            t += `🚀 *MILHARES SUGERIDAS:*\n`;
+            if (an.palpites && an.palpites.milhar) {
+                // Alterado de slice(0, 5) para slice(0, 8) para mostrar mais milhares como no original
+                const linhasMilhar = an.palpites.milhar.slice(0, 8).map(m => m.invertida ? `🔹 ${m.palpite} ↔ ${m.invertida}` : `🔹 ${m.palpite}`);
+                t += formatarEmColunas(linhasMilhar, 1) + "\n\n";
+            }
+            
+            t += `💯 *CENTENAS QUENTES:*\n`;
+            if (an.palpites && an.palpites.centena) {
+                t += formatarEmColunas(an.palpites.centena.slice(0,10).map(c => c.palpite), 5) + `\n\n`;
+            }
+            
+            t += `${divisor}\n\n`;
+            
+            if (an.dezenasFechamento && an.dezenasFechamento.length === 5) {
+                t += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\nJogue as 5 dezenas combinadas:\n🎯 *${an.dezenasFechamento.join(' - ')}*\n\n`;
+            }
+            
+            t += `🤝 *DUQUES DE DEZENA:*\n`;
+            if (an.palpites && an.palpites.duques) { 
+                let d = []; 
+                an.palpites.duques.forEach(x => d.push(...x.combinacoes)); 
+                t += formatarEmColunas(d.map(c => `💠 ${c}`), 3) + `\n\n`; 
+            }
+            
+            t += `🤝 *TERNOS DE DEZENA:*\n`;
+            if (an.palpites && an.palpites.ternos) { 
+                let r = []; 
+                an.palpites.ternos.forEach(x => r.push(...x.combinacoes)); 
+                t += formatarEmColunas(r.map(c => `🏆 ${c}`), 2) + `\n\n`; 
+            }
+            
+            t += `${divisor}\n🍀 *BOA SORTE!* 🍀\n🗓️ Gerado: ${dataSimples} às ${horaAgora}\n📲 VIP - I.A in Real Time\n`;
+            return t;
+        });
     }
-    console.log("[Auto-IA] Todos os palpites do dia estão salvos no Histórico!");
-}
 
 // --- FUNÇÃO DEFINITIVA: AUTO-SYNC ANTES DA I.A. ---
 async function syncLotteryBeforeIA(loteria) {
@@ -24295,11 +24292,13 @@ window.resetKitsVendas = async function() {
     showToast("Tela limpa e estoque zerado!", "success");
 }
 
+// ========================================================================
+// === GERADOR DE RELATÓRIO PDF DA INTELIGÊNCIA ARTIFICIAL (PREMIUM V2) ===
+// ========================================================================
 async function gerarRelatorioPDF() {
     showLoadingIndicator("Renderizando PDF Premium... Aguarde.");
 
     try {
-        // 1. Busca os últimos 30 palpites salvos no banco
         const snapshot = await firestoreDB.collection('historico_palpites_ia')
             .orderBy('timestamp', 'desc')
             .limit(30)
@@ -24311,123 +24310,225 @@ async function gerarRelatorioPDF() {
             return;
         }
 
-        // 2. Cria a "Folha Virtual" com Alta Resolução (1024px de largura)
-        const tempDiv = document.createElement('div');
-        tempDiv.style.fontFamily = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-        tempDiv.style.color = '#1e293b'; // Texto cinza escuro elegante
-        tempDiv.style.background = '#f8fafc'; // Fundo levemente acinzentado (papel premium)
-        tempDiv.style.width = '1024px'; // Força qualidade de monitor
-        tempDiv.style.padding = '40px'; // Respiro das bordas
-        tempDiv.style.boxSizing = 'border-box';
-
-        // Cabeçalho de Relatório Oficial
-        let html = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #6f42c1; padding-bottom: 20px; margin-bottom: 30px;">
-                <div>
-                    <h1 style="color: #6f42c1; margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.5px;">VIP EMOJS</h1>
-                    <h3 style="margin: 5px 0 0 0; color: #475569; font-size: 16px; font-weight: 600;">RELATÓRIO ANALÍTICO DE I.A.</h3>
-                </div>
-                <div style="text-align: right; font-size: 13px; color: #64748b; font-weight: 500;">
-                    <div>Emitido em:</div>
-                    <div style="font-size: 16px; color: #0f172a; font-weight: bold;">${new Date().toLocaleString('pt-BR')}</div>
-                </div>
-            </div>
-        `;
-
-        let ultimaDataVistoriada = '';
-
-        // --- FUNÇÃO INTERNA PARA EMBELEZAR O TEXTO ---
-        const processarTextoPDF = (textoCru) => {
-            return textoCru
-                .replace(/\*(.*?)\*/g, '<strong style="color: #0f172a; font-weight: 800;">$1</strong>') // Negrito mais forte
-                .replace(/_/g, '')
-                .replace(/`/g, '')
-                .replace(/───────────────────/g, '<hr style="border: 0; border-bottom: 2px dashed #cbd5e1; margin: 15px 0;">')
-                .replace(/━━━━━━━━━━━━━━━/g, '<hr style="border: 0; border-bottom: 3px solid #e2e8f0; margin: 15px 0;">')
-                // Divide cada parágrafo em um bloco isolado (evita cortes no meio da frase)
-                .split('\n\n')
-                .map(p => `<div style="margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; line-height: 1.5;">${p.replace(/\n/g, '<br>')}</div>`)
-                .join('');
+        const extrairBloco = (texto, inicio, fins) => {
+            const i = texto.indexOf(inicio);
+            if (i === -1) return '';
+            let fim = texto.length;
+            for (const f of fins) {
+                const j = texto.indexOf(f, i + inicio.length);
+                if (j !== -1 && j < fim) fim = j;
+            }
+            return texto.substring(i + inicio.length, fim).trim();
         };
 
-        // 3. Monta o conteúdo
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            
-            // Etiqueta de Data (Estilo Badge)
-            if (data.data !== ultimaDataVistoriada) {
-                html += `
-                    <div style="display: flex; justify-content: center; margin: 40px 0 25px 0;">
-                        <div style="background: #1e293b; color: #fbbf24; padding: 10px 30px; border-radius: 50px; font-weight: 800; font-size: 18px; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            🗓️ DATA DOS SORTEIOS: ${data.data}
+        const limpar = (t) => t.replace(/\*/g, '').replace(/_/g, '').replace(/`/g, '').trim();
+
+        const parsearConteudo = (texto, ranking) => {
+            const vol = (() => { const i = texto.indexOf('🚦 *VOLATILIDADE:*'); if (i === -1) return ''; const j = texto.indexOf('\n', i); return texto.substring(i + 20, j === -1 ? undefined : j).trim().replace(/\*/g,''); })();
+            const volNivel = vol.includes('🟢') ? 'baixa' : vol.includes('🟡') ? 'media' : 'alta';
+            const temDobradinha = texto.includes('DOBRADINHA');
+
+            const jogadaMestre = (() => {
+                const i = texto.indexOf('👑 *JOGADA DE MESTRE*');
+                if (i === -1) return '';
+                const sub = texto.substring(i);
+                const m = sub.match(/💸 \*([^*]+)\*/);
+                return m ? m[1].trim() : '';
+            })();
+
+            const somaRaw = (() => {
+                const i = texto.indexOf('🧮 *MILHAR DA SOMA');
+                if (i === -1) return '';
+                const bloco = texto.substring(i, texto.indexOf('\n\n', i));
+                const m = bloco.match(/💸 \*([^*]+)\*/);
+                return m ? limpar(m[1]) : '';
+            })();
+
+            const medalhas = ['🥇','🥈','🥉','🏅','🏅'];
+            const cores    = ['#f59e0b','#94a3b8','#b45309','#6b7280','#6b7280'];
+            const bgCores  = ['#fffbeb','#f8fafc','#fef3c7','#f9fafb','#f9fafb'];
+
+            const top5Html = (() => {
+                const lista = ranking && ranking.length > 0 ? ranking.slice(0,5) : [];
+                if (lista.length === 0) return '';
+                return lista.map((b, i) => `
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bgCores[i]};border-radius:10px;margin-bottom:7px;border-left:4px solid ${cores[i]};">
+                        <span style="font-size:22px;line-height:1;">${medalhas[i]}</span>
+                        <div style="flex:1;">
+                            <div style="font-weight:800;font-size:14px;color:#0f172a;">${b.emoji} ${b.animal.toUpperCase()}</div>
+                            ${b.confianca ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">🎯 ${b.confianca}</div>` : ''}
                         </div>
-                    </div>`;
-                ultimaDataVistoriada = data.data;
-            }
+                        <div style="background:${cores[i]};color:white;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;">${i+1}º</div>
+                    </div>`).join('');
+            })();
 
-            // O SEGREDO: Cortamos o texto cirurgicamente no título das milhares
-            let textoCompleto = data.conteudo;
-            let palavrasChaveCorte = ['🚀 *MILHARES SUGERIDAS:*', '🎯 *UNIDADES ATRASADAS', '👻 *BICHO ESQUECIDO:*', '💯 *CENTENAS QUENTES:*'];
-            
-            let indiceDeCorte = -1;
-            for (let kw of palavrasChaveCorte) {
-                indiceDeCorte = textoCompleto.indexOf(kw);
-                if (indiceDeCorte !== -1) break;
-            }
-            
-            // Se por algum acaso não achar a palavra exata, corta na metade exata
-            if (indiceDeCorte === -1) indiceDeCorte = Math.floor(textoCompleto.length / 2);
+            const top10Html = (() => {
+                const bloco = extrairBloco(texto, '🐾 *TOP 10', ['━━━','───','👻','🎯 *UNIDADES','🚀']);
+                if (!bloco) return '';
+                const linhas = bloco.split('\n').filter(l => l.trim());
+                if (linhas.length === 0) return '';
+                return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;">` +
+                    linhas.map(l => `<div style="font-size:11.5px;padding:4px 8px;background:#f8fafc;border-radius:6px;color:#334155;">${limpar(l)}</div>`).join('') +
+                `</div>`;
+            })();
 
-            let colunaEsquerdaCrua = textoCompleto.substring(0, indiceDeCorte);
-            let colunaDireitaCrua = textoCompleto.substring(indiceDeCorte);
+            const unidades = limpar(extrairBloco(texto, '🎯 *UNIDADES ATRASADAS', ['\n\n','🚀']));
 
-            let htmlEsquerda = processarTextoPDF(colunaEsquerdaCrua);
-            let htmlDireita = processarTextoPDF(colunaDireitaCrua);
+            const milharesHtml = (() => {
+                const bloco = extrairBloco(texto, '🚀 *MILHARES SUGERIDAS:*', ['💯','━━━','───']);
+                if (!bloco) return '';
+                const itens = bloco.split('\n').filter(l => l.includes('🔹'));
+                if (itens.length === 0) return '';
+                return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">` +
+                    itens.map(m => {
+                        const txt = limpar(m.replace('🔹','').trim());
+                        const partes = txt.split('↔');
+                        return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:7px 10px;font-family:'Courier New',monospace;font-size:13px;font-weight:700;color:#166534;text-align:center;">
+                            ${partes[0].trim()}${partes[1] ? '<br><span style="font-size:10px;color:#4ade80;">↔ '+partes[1].trim()+'</span>' : ''}
+                        </div>`;
+                    }).join('') +
+                `</div>`;
+            })();
 
-            const topBicho = data.ranking && data.ranking[0] ? data.ranking[0].emoji : '🔮';
+            const centenasHtml = (() => {
+                const bloco = extrairBloco(texto, '💯 *CENTENAS QUENTES:*', ['━━━','───','🛡️','🤝']);
+                if (!bloco) return '';
+                const itens = bloco.replace(/\n/g,' ').trim().split(/\s+/).filter(c => /^\d{3}$/.test(c));
+                if (itens.length === 0) return '';
+                return `<div style="display:flex;flex-wrap:wrap;gap:5px;">` +
+                    itens.map(c => `<span style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 9px;font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:#1d4ed8;">${c}</span>`).join('') +
+                `</div>`;
+            })();
 
-            // Monta o Card Perfeito
-            html += `
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; border-top: 8px solid #6f42c1; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); page-break-inside: avoid; break-inside: avoid;">
-                    
-                    <div style="text-align: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px;">
-                        <span style="font-size: 28px; line-height: 1;">${topBicho}</span>
-                        <h2 style="margin: 5px 0 0 0; color: #1e293b; font-size: 22px; font-weight: 800;">
-                            <span style="color: #6f42c1;">${data.loteriaNome}</span> - ${data.horario}
-                        </h2>
-                    </div>
-                    
-                    <div style="display: flex; gap: 40px; font-size: 15px;">
-                        <div style="flex: 1; min-width: 0;">
-                            ${htmlEsquerda}
-                        </div>
-                        
-                        <div style="flex: 1; min-width: 0; padding-left: 40px; border-left: 2px dashed #e2e8f0;">
-                            ${htmlDireita}
-                        </div>
-                    </div>
-                    
+            const fechoHtml = (() => {
+                const bloco = extrairBloco(texto, '🛡️ *FECHO DE DEZENAS', ['🤝','━━━','───']);
+                if (!bloco) return '';
+                const nums = bloco.match(/\d{2}/g);
+                if (!nums || nums.length < 5) return '';
+                return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">` +
+                    nums.slice(0,5).map(n => `<span style="background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;padding:5px 10px;font-size:14px;font-weight:900;color:#92400e;">${n}</span>`).join('') +
+                `</div>`;
+            })();
+
+            const combinacoesHtml = (() => {
+                let html = '';
+                const tipos = [
+                    { label: 'DUQUES', emoji: '💠', inicio: '🤝 *DUQUES DE DEZENA:*', stops: ['🤝 *TERNOS','━━━','───','🍀'] },
+                    { label: 'TERNOS', emoji: '🏆', inicio: '🤝 *TERNOS DE DEZENA:*', stops: ['━━━','───','🍀'] }
+                ];
+                tipos.forEach(({ label, emoji, inicio, stops }) => {
+                    const bloco = extrairBloco(texto, inicio, stops);
+                    if (!bloco) return;
+                    const txt = limpar(bloco).replace(new RegExp(emoji,'g'),'').trim();
+                    if (!txt) return;
+                    const itens = txt.split(/\s{2,}|\n/).filter(Boolean);
+                    html += `<div style="margin-top:10px;">
+                        <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">${emoji} ${label}</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                            ${itens.slice(0,16).map(x => `<span style="background:#faf5ff;border:1px solid #ddd6fe;border-radius:6px;padding:3px 8px;font-family:'Courier New',monospace;font-size:11.5px;color:#5b21b6;">${x.trim()}</span>`).join('')}
+                        </div></div>`;
+                });
+                return html;
+            })();
+
+            return { vol, volNivel, temDobradinha, jogadaMestre, somaRaw, top5Html, top10Html,
+                     unidades, milharesHtml, centenasHtml, fechoHtml, combinacoesHtml };
+        };
+
+        const coresLoteria = { rj: '#dc2626', lk: '#7c3aed', ln: '#0e7490', fd: '#b45309' };
+        const getCor = (lot) => coresLoteria[lot] || '#6f42c1';
+
+        const tempDiv = document.createElement('div');
+        tempDiv.style.cssText = 'font-family:"Segoe UI",Roboto,Arial,sans-serif;color:#1e293b;background:#eef2f7;width:1040px;padding:30px 36px;box-sizing:border-box;';
+
+        let html = `
+            <div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);color:white;border-radius:20px;padding:32px 40px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:11px;letter-spacing:3px;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;">Análise Inteligente</div>
+                    <div style="font-size:36px;font-weight:900;letter-spacing:-1px;">VIP<span style="color:#a78bfa;">EMOJS</span></div>
+                    <div style="font-size:13px;color:#64748b;margin-top:4px;">Relatório Analítico de Inteligência Artificial</div>
                 </div>
-            `;
+                <div style="text-align:right;">
+                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:2px;">Emitido em</div>
+                    <div style="font-size:18px;font-weight:700;color:#e2e8f0;margin-top:4px;">${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+                    <div style="font-size:13px;color:#94a3b8;">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+                </div>
+            </div>`;
+
+        let ultimaData = '';
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            const cor = getCor(d.loteria);
+            const p = parsearConteudo(d.conteudo || '', d.ranking || []);
+
+            const corVol = p.volNivel === 'baixa' ? '#22c55e' : p.volNivel === 'media' ? '#f59e0b' : '#ef4444';
+            const bgVol  = p.volNivel === 'baixa' ? '#f0fdf4' : p.volNivel === 'media' ? '#fffbeb' : '#fef2f2';
+            const labelVol = p.volNivel === 'baixa' ? '🟢 BAIXA' : p.volNivel === 'media' ? '🟡 MÉDIA' : '🔴 ALTA';
+
+            if (d.data !== ultimaData) {
+                html += `
+                    <div style="display:flex;align-items:center;gap:12px;margin:30px 0 18px;">
+                        <div style="flex:1;height:1px;background:#cbd5e1;"></div>
+                        <div style="background:#1e293b;color:#fbbf24;padding:8px 24px;border-radius:30px;font-weight:800;font-size:14px;letter-spacing:1px;white-space:nowrap;">🗓️ ${d.data}</div>
+                        <div style="flex:1;height:1px;background:#cbd5e1;"></div>
+                    </div>`;
+                ultimaData = d.data;
+            }
+
+            html += `
+                <div style="background:white;border-radius:18px;margin-bottom:24px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.07);page-break-inside:avoid;break-inside:avoid;">
+                    <div style="background:linear-gradient(135deg,${cor}ee,${cor}99);padding:20px 28px;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase;">Análise I.A.</div>
+                            <div style="font-size:24px;font-weight:900;color:white;margin-top:2px;">${d.loteriaNome}</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 18px;color:white;">
+                                <div style="font-size:11px;opacity:0.8;">EXTRAÇÃO</div>
+                                <div style="font-size:16px;font-weight:800;">${d.horario}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="background:${bgVol};border:1px solid ${corVol};border-radius:20px;padding:6px 14px;display:inline-block;">
+                                <div style="font-size:11px;font-weight:700;color:${corVol};">VOLATILIDADE ${labelVol}</div>
+                            </div>
+                            ${p.temDobradinha ? `<div style="background:#fef2f2;border:1px solid #ef4444;border-radius:20px;padding:5px 12px;margin-top:6px;display:inline-block;"><span style="font-size:11px;font-weight:700;color:#ef4444;">🚨 DOBRADINHA DETECTADA</span></div>` : ''}
+                        </div>
+                    </div>
+
+                    <div style="display:flex;">
+                        <div style="flex:1;padding:22px 24px;border-right:1px solid #f1f5f9;">
+                            ${p.top5Html ? `<div style="font-size:11px;font-weight:700;color:${cor};text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">📊 Termômetro — Top 5</div>${p.top5Html}` : ''}
+                            ${p.top10Html ? `<div style="margin-top:16px;"><div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">🐾 Top 10 Geral</div>${p.top10Html}</div>` : ''}
+                            ${p.jogadaMestre ? `<div style="margin-top:16px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;padding:12px 14px;border-left:4px solid #f59e0b;"><div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:4px;">👑 JOGADA DE MESTRE</div><div style="font-size:16px;font-weight:900;color:#78350f;font-family:'Courier New',monospace;">${p.jogadaMestre}</div></div>` : ''}
+                            ${p.somaRaw ? `<div style="margin-top:12px;background:#f0fdf4;border-radius:10px;padding:10px 14px;border-left:4px solid #22c55e;"><div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:3px;">🧮 MILHAR DA SOMA</div><div style="font-size:12px;color:#14532d;">${p.somaRaw}</div></div>` : ''}
+                            ${p.unidades ? `<div style="margin-top:12px;"><div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🎯 Unidades Atrasadas</div><div style="font-size:13px;font-family:'Courier New',monospace;color:#334155;">${p.unidades.replace(/\[/g,'').replace(/\]/g,'')}</div></div>` : ''}
+                        </div>
+
+                        <div style="flex:1.1;padding:22px 24px;">
+                            ${p.milharesHtml ? `<div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">🚀 Milhares Sugeridas</div>${p.milharesHtml}` : ''}
+                            ${p.centenasHtml ? `<div style="margin-top:16px;"><div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">💯 Centenas Quentes</div>${p.centenasHtml}</div>` : ''}
+                            ${p.fechoHtml ? `<div style="margin-top:16px;background:#fffbeb;border-radius:10px;padding:12px 14px;"><div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:8px;">🛡️ Fecho de Dezenas</div>${p.fechoHtml}</div>` : ''}
+                            ${p.combinacoesHtml || ''}
+                        </div>
+                    </div>
+                </div>`;
         });
+
+        html += `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;margin-top:10px;">📲 VIP EMOJS · Inteligência Artificial em Tempo Real · Gerado automaticamente</div>`;
 
         tempDiv.innerHTML = html;
 
-        // 4. Configurações Profissionais do Motor PDF
         const opt = {
-            margin:       [10, 10, 15, 10], 
-            filename:     `Relatorio_Estrategico_VIP_${new Date().getTime()}.pdf`,
-            image:        { type: 'jpeg', quality: 1 },
-            // windowWidth: 1024 é a trava de ouro. Obriga o celular a renderizar o PDF como se fosse tela de PC.
-            html2canvas:  { scale: 2, useCORS: true, windowWidth: 1024, letterRendering: true }, 
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            // Evita totalmente cortes indesejados
-            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } 
+            margin:      [8, 8, 12, 8],
+            filename:    `Relatorio_VIP_IA_${new Date().getTime()}.pdf`,
+            image:       { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 2, useCORS: true, windowWidth: 1040, letterRendering: true },
+            jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
-        // 5. Baixa o PDF
         await html2pdf().set(opt).from(tempDiv).save();
-
         showToast("✅ PDF gerado com sucesso!", "success");
 
     } catch (error) {
