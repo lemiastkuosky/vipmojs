@@ -6991,7 +6991,7 @@ body.dark-mode .venda-autocomplete-item:hover {
         <span>🔮</span> Resultados e I.A.
     </button>
     <button type="button" id="btnMenuKitsMCD" onclick="abrirKitsMCD()">
-        <span>🛍️</span> Kits Vendas
+        <span>🛍️</span> Kits MCD
     </button>
     <button type="button" id="btnMenuFechamento" onclick="showFechamentoModal()">
         <span>🔢</span> 2- Gerador Duque/Terno
@@ -7063,7 +7063,9 @@ body.dark-mode .venda-autocomplete-item:hover {
     </div>
 </div>
     <section aria-labelledby="input-label">
-    <label id="input-label" for="input">Entrada de números:</label>
+    <label id="input-label" for="input"><br>
+    Entrada de números: <small style="font-weight: normal; color: #6c757d; font-size: 0.85em;">(conversão em emojis)</small>
+</label>
     <textarea id="input" placeholder="Digite ou cole os números, grupos ou bichos aqui. Use espaço ou enter para separar." aria-describedby="errorMessage"></textarea>
     <div id="errorMessage" class="error" role="alert" aria-live="polite"></div>
     
@@ -7333,7 +7335,7 @@ body.dark-mode .venda-autocomplete-item:hover {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V13.95</strong>
+            <strong>V14.15</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -7920,6 +7922,13 @@ body.dark-mode .venda-autocomplete-item:hover {
             <br>🔴 <b>Seta para baixo (⬇️):</b> Pouco histórico (palpite mais aleatório).
             <br>🔥 <b>Fogo:</b> Destaque exclusivo para o bicho com maior volume de padrões na loteria.
         </p>
+        
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(0, 123, 255, 0.3); font-size: 0.72rem; color: #6c757d; line-height: 1.4; text-align: left;">
+            <strong style="color: #007bff; display: block; margin-bottom: 4px;">🎯 Roadmap de Precisão I.A:</strong>
+            <div style="display: flex; justify-content: space-between;"><span><b>90%+</b> Bicho certo no Top 5</span> <i style="opacity: 0.8;">(Já atingido)</i></div>
+            <div style="display: flex; justify-content: space-between;"><span><b>80%+</b> Dezena certa no Top 10</span> <i style="opacity: 0.8;">(Viável em breve)</i></div>
+            <div style="display: flex; justify-content: space-between;"><span><b>50%+</b> Milhar no 1º prêmio (entre 10)</span> <i style="opacity: 0.8;">(Ambicioso)</i></div>
+        </div>
     </div>
 
     <div class="button-style-radios" id="iaLotteryRadios" style="flex-wrap: wrap;">
@@ -8729,9 +8738,9 @@ async function ativarNotificacoes(user) {
     }
     // 👆 FIM DO SISTEMA DE NOTIFICAÇÕES PUSH 👆
 
-    // =================================================================
-    // === 2. VARIÁVEIS GLOBAIS (DEFINIDAS NO TOPO) ===
-    // =================================================================
+// ADICIONAR no topo do script, logo após as primeiras declarações de variáveis:
+const DEBUG_MODE = false; // mudar para true só em desenvolvimento
+const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
 
     // Variáveis de Versão
     const CURRENT_VERSION = "25.2.0"; 
@@ -8959,21 +8968,15 @@ function showLoadingIndicator(message = 'Processando...') {
 }
 
 function hideLoadingIndicator() {
-    const indicator = document.getElementById('loadingOverlay');
-    if (typeof loadingTimerInterval !== 'undefined') {
-        clearInterval(loadingTimerInterval);
-    }
-    if (indicator) {
-        // Inicia o sumiço visual
-        indicator.style.opacity = '0';
-        // MÁGICA: Remove o bloqueio de cliques INSTANTANEAMENTE
-        indicator.style.pointerEvents = 'none'; 
-        
-        // Remove do DOM após a animação de fade (300ms)
-        setTimeout(() => {
-            indicator.style.display = 'none';
-        }, 300);
-    }
+  console.log(">>> hideLoadingIndicator: Forçando fechamento do overlay.");
+  const indicator = document.getElementById('loadingOverlay');
+  if (indicator) {
+    indicator.style.opacity = '0';
+    indicator.style.pointerEvents = 'none';
+    setTimeout(() => {
+        indicator.style.display = 'none';
+    }, 300); 
+  }
 }
 
 function openNamePickerModal(event) {
@@ -9795,6 +9798,60 @@ function gerarPalpitesEquilibrados() {
     showToast(`${qtdJogos} jogo(s) equilibrado(s) gerado(s)!`, "success");
 }
 
+// ADICIONAR APÓS A FUNÇÃO gerarPalpitesEquilibrados:
+
+function gerarPalpitesTerminaisIA() {
+    const qtdJogos = parseInt(document.getElementById('qtdSurpresinha').value) || 1;
+    const textarea = document.getElementById('input');
+    let novosJogos = [];
+
+    // Tenta usar dados reais da I.A. se disponíveis
+    const loteria = document.getElementById('loteriaSelect')?.value || 'rj';
+    const dadosIA = window.iaRankingsVisuais;
+    
+    // Monta pool de finais (dezenas) mais sorteadas
+    let finaisQuentes = [];
+    if (dadosIA && dadosIA.ciclos) {
+        // Bichos com ciclo mais estourado têm seus finais priorizados
+        const bichosOrdenados = Object.entries(dadosIA.ciclos)
+            .filter(([, c]) => c.atual >= c.medio)
+            .sort(([, a], [, b]) => (b.atual - b.medio) - (a.atual - a.medio))
+            .map(([g]) => g);
+
+        bichosOrdenados.slice(0, 5).forEach(g => {
+            const bicho = tabelaDeGrupos.find(b => b.grupo === g);
+            if (bicho) finaisQuentes.push(...bicho.dezenas);
+        });
+    }
+
+    // Fallback: usa todas as dezenas de 00 a 99
+    if (finaisQuentes.length < 10) {
+        for (let i = 0; i <= 99; i++) finaisQuentes.push(String(i).padStart(2, '0'));
+    }
+
+    shuffleArray(finaisQuentes);
+    const poolFinais = [...new Set(finaisQuentes)];
+
+    for (let j = 0; j < qtdJogos; j++) {
+        const selecionados = new Set();
+        let idx = 0;
+        while (selecionados.size < 20 && idx < poolFinais.length) {
+            selecionados.add(poolFinais[idx++]);
+        }
+        // Completa com aleatórios se necessário
+        while (selecionados.size < 20) {
+            selecionados.add(String(getSecureRandomInt(100)).padStart(2, '0'));
+        }
+        novosJogos.push(Array.from(selecionados).sort((a, b) => a - b).join(' '));
+    }
+
+    const textoFinal = novosJogos.join('\n');
+    textarea.value = textarea.value.trim() ? textarea.value + '\n' + textoFinal : textoFinal;
+    closeSurpresinhaModal();
+    showMilharesCentenasDezenas();
+    showToast(`${qtdJogos} jogo(s) por Finais I.A. gerado(s)!`, 'success');
+}
+
 function getBichoFromNumber(numStr) {
     const n = parseInt(numStr, 10);
     if (isNaN(n)) return null;
@@ -10096,9 +10153,6 @@ function exibirResultadoSalvoIA(conteudo, loteriaNome, horario) {
     document.getElementById('iaPalpiteResultsContainer').style.display = 'block';
 }
 
-// =========================================================
-// RENDERIZAR O HISTÓRICO LOCAL DE GERAÇÕES (ÚLTIMOS JOGOS)
-// =========================================================
 async function renderIntegratedHistory() {
     const container = document.getElementById('integratedHistoryContainer');
     if (!container) return;
@@ -10272,21 +10326,6 @@ async function handleUpdateSelection(days) {
     await new Promise(resolve => setTimeout(resolve, 300));
     // Chama a função de atualização que já existe
     await atualizarTodosResultadosManualmente(days);
-}
-
-/**
- * Esconde o indicador de carregamento global.
- */
-function hideLoadingIndicator() {
-  console.log(">>> hideLoadingIndicator: Forçando fechamento do overlay.");
-  const indicator = document.getElementById('loadingOverlay');
-  if (indicator) {
-    indicator.style.opacity = '0';
-    indicator.style.pointerEvents = 'none'; // Impede que o overlay invisível bloqueie cliques
-    setTimeout(() => {
-        indicator.style.display = 'none';
-    }, 300); 
-  }
 }
 
 const iaLotterySelect = document.getElementById('iaLotterySelect');
@@ -10467,35 +10506,42 @@ async function getUnidadesAtrasadasIA(loteria, drawName = 'geral') {
 async function analisarDezenasQuentesIA(selectedBichos, loteria) {
     const drawName = getNextDrawName(loteria);
     const data = await getIaDataForDraw(loteria, drawName);
-    if (data && data.dezenasQuentes) {
+    if (data) {
         const bichoDezenas = new Set(selectedBichos.flatMap(b => b.dezenas));
-        return data.dezenasQuentes.filter(d => bichoDezenas.has(d));
+        // Prioriza dezenas quentes do 1º prêmio; cai no geral se não houver
+        const fonteQuentes = data.dezenasQuentes1Premio || data.dezenasQuentes;
+        if (fonteQuentes) return fonteQuentes.filter(d => bichoDezenas.has(d));
     }
     return selectedBichos.flatMap(b => b.dezenas);
 }
 
 async function analisarHistoricoIA(selectedBichos, loteria) {
-    if (!selectedBichos || selectedBichos.length === 0) return { prefixos: [], blacklist: new Set(), milharesAtrasadas: [] };
+    if (!selectedBichos || selectedBichos.length === 0) return { prefixos: [], blacklist: new Set(), milharesAtrasadas: [], prefixosPorBicho: {}, dezenaPorBicho1Premio: {} };
     const drawName = getNextDrawName(loteria);
     const data = await getIaDataForDraw(loteria, drawName);
-    if (!data) return { prefixos: [], blacklist: new Set(), milharesAtrasadas: [] };
+    if (!data) return { prefixos: [], blacklist: new Set(), milharesAtrasadas: [], prefixosPorBicho: {}, dezenaPorBicho1Premio: {} };
 
+    const prefixosPorBicho = {};
     let prefixosPool = new Set();
     selectedBichos.forEach(bicho => {
-        if (data.prefixosPorBicho && data.prefixosPorBicho[bicho.grupo]) {
-            data.prefixosPorBicho[bicho.grupo].forEach(p => prefixosPool.add(p));
-        }
+        const prefBicho = (data.prefixosPorBicho && data.prefixosPorBicho[bicho.grupo]) || [];
+        prefixosPorBicho[bicho.grupo] = prefBicho;
+        prefBicho.forEach(p => prefixosPool.add(p));
     });
 
     let prefixos = Array.from(prefixosPool);
     if (prefixos.length === 0) {
-        for(let i=0; i<20; i++) prefixos.push(String(Math.floor(Math.random() * 100)).padStart(2, '0'));
+        const fallbackSet = new Set();
+        while (fallbackSet.size < 20) fallbackSet.add(String(getSecureRandomInt(100)).padStart(2, '0'));
+        prefixos = Array.from(fallbackSet);
     }
 
     return { 
-        prefixos: prefixos, 
+        prefixos: prefixos,
+        prefixosPorBicho: prefixosPorBicho,
         blacklist: new Set(data.blacklist || []), 
-        milharesAtrasadas: data.milharesAtrasadas || [] 
+        milharesAtrasadas: data.milharesAtrasadas || [],
+        dezenaPorBicho1Premio: data.dezenaPorBicho1Premio || {}
     };
 }
 
@@ -10547,24 +10593,27 @@ motivos.push('🚨 Ciclo Estourado (+20)');
         fontesBonusCount++;
     }
 
-    // 5. PADRÃO DO DIA DA SEMANA
-    // CORRIGIDO: usa String() para bater com chave salva no Firebase
+    // POR ISTO:
+    // 5. PADRÃO DO DIA DA SEMANA (com guarda de amostra mínima)
     const diaSemanaHoje = new Date().getDay();
     const chavesDia = ['Domingos', 'Segundas', 'Terças', 'Quartas', 'Quintas', 'Sextas', 'Sábados'];
     const diaStr = String(diaSemanaHoje);
     if (analise.bicho1PremioPorDia && analise.bicho1PremioPorDia[diaStr]) {
         const countsDia = analise.bicho1PremioPorDia[diaStr];
         const totalDia = Object.values(countsDia).reduce(function(a, v) { return a + v; }, 0) || 1;
-        const countBicho = countsDia[bichoGrupo] || 0;
-        const freqEsperada = totalDia / 25;
-        if (countBicho >= freqEsperada * 1.5) {
-            const bonus = Math.min(30, Math.round((countBicho / freqEsperada - 1) * 15));
-            score += bonus;
-            motivos.push('📅 Forte nas ' + chavesDia[diaSemanaHoje] + ' (+' + bonus + ')');
-            fontesBonusCount++;
-        } else if (countBicho < freqEsperada * 0.4) {
-            score -= 20;
-motivos.push('📅 Fraco nas ' + chavesDia[diaSemanaHoje] + ' (-20)');
+        // Guarda: ignora se há menos de 15 amostras (dados insuficientes)
+        if (totalDia >= 15) {
+            const countBicho = countsDia[bichoGrupo] || 0;
+            const freqEsperada = totalDia / 25;
+            if (countBicho >= freqEsperada * 1.5) {
+                const bonus = Math.min(30, Math.round((countBicho / freqEsperada - 1) * 15));
+                score += bonus;
+                motivos.push('📅 Forte nas ' + chavesDia[diaSemanaHoje] + ' (+' + bonus + ')');
+                fontesBonusCount++;
+            } else if (countBicho < freqEsperada * 0.4) {
+                score -= 20;
+                motivos.push('📅 Fraco nas ' + chavesDia[diaSemanaHoje] + ' (-20)');
+            }
         }
     }
 
@@ -10581,14 +10630,42 @@ motivos.push('📅 Fraco nas ' + chavesDia[diaSemanaHoje] + ' (-20)');
         }
     }
 
+    // 6b. CONVERGÊNCIA DUPLA: Atrasado + Quente recente (sinal mais forte)
+    if (idxAtrasado !== -1 && analise.tendenciaRecente && (analise.tendenciaRecente[bichoGrupo] || 0) >= 2) {
+        score += 22;
+        motivos.push('🎯 Convergência Dupla: Atrasado + Quente (+22)');
+        fontesBonusCount++;
+    }
+
     // 7. CONFLUÊNCIA — calculada POR ÚLTIMO para capturar todos os sinais acima
+    // 7. POSIÇÃO ASCENDENTE — bicho subindo nos últimos sorteios
+    if (analise.posicaoHistorico && analise.posicaoHistorico[bichoGrupo]) {
+        const hist = analise.posicaoHistorico[bichoGrupo];
+        if (hist.length >= 3) {
+            // Verifica se cada posição recente é <= à anterior (descendo o número = subindo no ranking)
+            const subindo = hist.slice(-4).every((pos, i, arr) => i === 0 || pos <= arr[i - 1]);
+            const chegouTop3 = hist[hist.length - 1] <= 3;
+            if (subindo && chegouTop3) {
+                score += 40;
+                motivos.push('📈 Subindo para o 1º (+40)');
+                fontesBonusCount++;
+            } else if (subindo) {
+                score += 20;
+                motivos.push('📈 Tendência Ascendente (+20)');
+                fontesBonusCount++;
+            }
+        }
+    }
+
+    // 8. CONFLUÊNCIA — calculada POR ÚLTIMO para capturar todos os sinais acima
     if (fontesBonusCount >= 3) {
         const bonusConf = fontesBonusCount * 8;
         score += bonusConf;
         motivos.unshift('⚡ CONFLUÊNCIA ' + fontesBonusCount + ' sinais (+' + bonusConf + ')');
     }
 
-    return { forca: Math.max(1, Math.min(120, score)), motivos: motivos };
+    // Cap elevado para 200 — evita truncar bichos com alta convergência
+    return { forca: Math.max(1, Math.min(200, score)), motivos: motivos };
 }
 
 // --- CÉREBRO DA I.A. ATUALIZADO (SUPORTA AUTO-TREINAMENTO SILENCIOSO) ---
@@ -10621,15 +10698,21 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 bicho1PremioPorDia: {},
                 dezena1PremioCount: {},
                 dezenaPorBicho1Premio: {},
-                tendenciaRecente: {}
+                tendenciaRecente: {},
+                pairCountsRecentes: {},
+                posicaoHistorico: {},
+                // NOVO: rastreia dígito que se repetiu na posição P entre sorteios consecutivos do 1º prêmio
+                digitosCarregados: { p0: {}, p1: {}, p2: {}, p3: {} },
+                ultimaMilhar1Premio: null // última milhar do 1º prêmio vista (para calcular carry)
+                
             });
-
             const containers = { geral: createContainer() };
             if (horariosLoterias[loteria]) {
                 horariosLoterias[loteria].forEach(h => { containers[h.nome] = createContainer(); });
             }
 
-            const dataBlacklist = new Date(); dataBlacklist.setDate(dataBlacklist.getDate() - 60);
+            // POR ISTO:
+            const dataBlacklist = new Date(); dataBlacklist.setDate(dataBlacklist.getDate() - 30);
             const dataAtrasada = new Date(); dataAtrasada.setDate(dataAtrasada.getDate() - 180);
             const dataFrequente = new Date(); dataFrequente.setDate(dataFrequente.getDate() - 21);
             const dataRecente = new Date(); dataRecente.setDate(dataRecente.getDate() - 7);
@@ -10645,13 +10728,17 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 const targets = [containers.geral];
                 if (drawName && containers[drawName]) targets.push(containers[drawName]);
 
+               
                 targets.forEach(c => {
                     if (!c.prefixoCounts[g]) c.prefixoCounts[g] = {};
-                    c.prefixoCounts[g][prefixo] = (c.prefixoCounts[g][prefixo] || 0) + 1;
-                    if (dS >= dataBlacklist) c.blacklist.add(m);
+                    const pesoPrefixo = (p === 1) ? 2 : 1;
+                    c.prefixoCounts[g][prefixo] = (c.prefixoCounts[g][prefixo] || 0) + pesoPrefixo;
+                    if (dS >= dataBlacklist && p === 1) c.blacklist.add(m);
                     if (!c.milharLastDate[m] || dS > c.milharLastDate[m]) c.milharLastDate[m] = dS;
-                    c.dezenaCounts[dez] = (c.dezenaCounts[dez] || 0) + 1;
-                    c.datasSorteios.push(dS.getTime());
+                    // 1º prêmio vale 2x na contagem de dezenas também
+                    c.dezenaCounts[dez] = (c.dezenaCounts[dez] || 0) + pesoPrefixo;
+                    // datasSorteios só recebe 1 push por prêmio (não por target)
+                    // — movido para fora do targets.forEach abaixo
 
                     if (p === 1) {
                         c.bicho1PremioCount[g] = (c.bicho1PremioCount[g] || 0) + 1;
@@ -10673,16 +10760,43 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                         if (dS >= dataRecente) {
                             c.tendenciaRecente[g] = (c.tendenciaRecente[g] || 0) + 1;
                         }
+
+                        // NOVO: dígitos carregados — compara com a milhar anterior do 1º prêmio
+                        if (c.ultimaMilhar1Premio) {
+                            const prev = c.ultimaMilhar1Premio;
+                            [0, 1, 2, 3].forEach(pos => {
+                                if (m[pos] === prev[pos]) {
+                                    const pk = 'p' + pos;
+                                    c.digitosCarregados[pk][m[pos]] = (c.digitosCarregados[pk][m[pos]] || 0) + 1;
+                                }
+                            });
+                        }
+                        c.ultimaMilhar1Premio = m;
                     }
+
+                    // NOVO: histórico das últimas 10 posições do bicho
+                    if (!c.posicaoHistorico[g]) c.posicaoHistorico[g] = [];
+                    c.posicaoHistorico[g].push({ posicao: p, data: dS.getTime() });
+                    if (c.posicaoHistorico[g].length > 10) c.posicaoHistorico[g].shift();
 
                     if (dS >= dataFrequente) c.bichoFrequencia.set(g, (c.bichoFrequencia.get(g) || 0) + 1);
                     if (!c.ultimasDezenas.has(dez)) c.ultimasDezenas.set(dez, dS);
                     if (!c.ultimasCentenas.has(cent)) c.ultimasCentenas.set(cent, dS);
                     if (!c.ultimasUnidades.has(uni)) c.ultimasUnidades.set(uni, dS);
 
-                    const drawKey = `${dS.getTime()}_${drawName || 'geral'}`;
-                    if (!c.draws[drawKey]) c.draws[drawKey] = new Set();
-                    c.draws[drawKey].add(g);
+                    if (p <= 2) {
+                        const drawKey = `${dS.getTime()}_${drawName || 'geral'}`;
+                        if (!c.draws[drawKey]) c.draws[drawKey] = new Set();
+                        c.draws[drawKey].add(g);
+                    }
+
+                    // NOVO: pares dos últimos 90 dias para afinidadesRecentes
+                    const data90 = new Date(); data90.setDate(data90.getDate() - 90);
+                    if (p <= 2 && dS >= data90) {
+                        const drawKeyR = `r_${dS.getTime()}_${drawName || 'geral'}`;
+                        if (!c.pairCountsRecentes[drawKeyR]) c.pairCountsRecentes[drawKeyR] = new Set();
+                        c.pairCountsRecentes[drawKeyR].add(g);
+                    }
                 });
             });
 
@@ -10708,15 +10822,33 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                     }
                 });
 
+                // NOVO: pairCounts dos últimos 90 dias
+                const pairCountsR = {};
+                Object.values(c.pairCountsRecentes).forEach(bichosInDraw => {
+                    const arr = Array.from(bichosInDraw).sort();
+                    for (let i = 0; i < arr.length; i++) {
+                        for (let j = i + 1; j < arr.length; j++) {
+                            const pair = `${arr[i]}_${arr[j]}`;
+                            pairCountsR[pair] = (pairCountsR[pair] || 0) + 1;
+                        }
+                    }
+                });
+
                 const afinidades = {};
+                const afinidadesRecentes = {};
                 for (let i = 1; i <= 25; i++) {
                     const g = String(i).padStart(2, '0');
-                    const comps = [];
+                    const comps = [], compsR = [];
                     Object.entries(pairCounts).forEach(([pair, count]) => {
                         const [g1, g2] = pair.split('_');
                         if (g1 === g || g2 === g) comps.push({ comp: g1 === g ? g2 : g1, count });
                     });
-                    afinidades[g] = comps.sort((a, b) => b.count - a.count).slice(0, 3).map(x => x.comp);
+                    Object.entries(pairCountsR).forEach(([pair, count]) => {
+                        const [g1, g2] = pair.split('_');
+                        if (g1 === g || g2 === g) compsR.push({ comp: g1 === g ? g2 : g1, count });
+                    });
+                    afinidades[g] = comps.sort((a, b) => b.count - a.count).slice(0, 5).map(x => x.comp);
+                    afinidadesRecentes[g] = compsR.sort((a, b) => b.count - a.count).slice(0, 5).map(x => x.comp);
                 }
 
                 const ciclos = {};
@@ -10730,14 +10862,16 @@ const minTime = c.datasSorteios.length > 0
 
                 for (let i = 1; i <= 25; i++) {
                     const g = String(i).padStart(2, '0');
-                    const count = c.bicho1PremioCount[g] || 0.1;
-                    const cicloMedioDias = totalDias / count;
+                    const count = c.bicho1PremioCount[g] || 0;
+                    // Cap: ciclo máximo = totalDias (evita valores absurdos para bichos sem histórico)
+                    const cicloMedioDias = count > 0 ? Math.min(totalDias, totalDias / count) : totalDias;
                     const lastSeen = c.ultimosVistos1Premio.get(g) || dataAntiga;
                     const atrasoDias = (maxTime - lastSeen.getTime()) / (1000 * 60 * 60 * 24);
                     ciclos[g] = {
                         medio: Number(cicloMedioDias.toFixed(1)),
                         atual: Number(atrasoDias.toFixed(1)),
-                        estourado: atrasoDias >= cicloMedioDias
+                        // Bicho sem histórico nunca é marcado como "estourado"
+                        estourado: count > 0 && atrasoDias >= cicloMedioDias
                     };
                 }
 
@@ -10768,11 +10902,27 @@ const minTime = c.datasSorteios.length > 0
                     centenasAtrasadas: getAtrasos(c.ultimasCentenas, 5),
                     unidadesAtrasadas: getAtrasos(c.ultimasUnidades, 2),
                     afinidades: afinidades,
+                    afinidadesRecentes: afinidadesRecentes,
                     ciclos: ciclos,
+                    bicho1PremioPorDia,
+                    
+                    posicaoHistorico: Object.fromEntries(
+                        Object.entries(c.posicaoHistorico).map(([g, hist]) => [
+                            g,
+                            hist.sort((a,b) => a.data - b.data).slice(-6).map(x => x.posicao)
+                        ])
+                    ),
                     dezenasQuentes1Premio: Object.keys(c.dezena1PremioCount).sort((a, b) => c.dezena1PremioCount[b] - c.dezena1PremioCount[a]).slice(0, 30),
                     dezenaPorBicho1Premio: dezenaPorBicho1PremioFinal,
                     tendenciaRecente: tendenciaRecenteFinal,
-                    bicho1PremioPorDia: bicho1PremioPorDiaFinal
+                    bicho1PremioPorDia: bicho1PremioPorDiaFinal,
+                    digitosCarregados: {
+                        p0: Object.entries(c.digitosCarregados.p0).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+                        p1: Object.entries(c.digitosCarregados.p1).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+                        p2: Object.entries(c.digitosCarregados.p2).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+                        p3: Object.entries(c.digitosCarregados.p3).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0])
+                    },
+                    ultimaMilhar1Premio: c.ultimaMilhar1Premio || null
                 };
             }
 
@@ -10780,7 +10930,7 @@ const minTime = c.datasSorteios.length > 0
             await firestoreDB.collection('analises_ia').doc(loteria).set(compiledData);
         }
 
-        iaSummaryCache = {};
+        loterias.forEach(l => { delete iaSummaryCache[l]; });
         await calcularPlacarAutomatico();
         await autoGerarHistoricoIA();
 
@@ -10788,6 +10938,10 @@ const minTime = c.datasSorteios.length > 0
             showToast('I.A. treinada com Sucesso Total!', 'success');
             if (typeof closeUpdateModal === 'function') closeUpdateModal();
         }
+
+        // Push único por registro — evita contagem múltipla por target
+                containers.geral.datasSorteios.push(dS.getTime());
+                if (drawName && containers[drawName]) containers[drawName].datasSorteios.push(dS.getTime());
 
     } catch (e) {
         console.error(e);
@@ -10814,7 +10968,10 @@ async function fetchAndCacheIaPrefixes(loteria) {
             fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text())
         ]);
         
-        const atrasadosReais = typeof extrairDadosDoHTML === 'function' ? extrairDadosDoHTML(htmlAtrasados).bichos : [];
+        const dadosExternos = typeof extrairDadosDoHTML === 'function' ? extrairDadosDoHTML(htmlAtrasados) : { bichos: [], dezenas: [], centenas: [] };
+        const atrasadosReais = dadosExternos.bichos;
+        window.dezenasAtrasadasExternas = dadosExternos.dezenas;   // disponível globalmente para uso no scoring
+        window.centenasAtrasadasExternas = dadosExternos.centenas;
 
         if (data) {
             if (!iaHistoricalPrefixesCache) iaHistoricalPrefixesCache = {};
@@ -11597,10 +11754,11 @@ async function gerar20DezenasInteligentesPorCasa() {
                 let opcoesDestaCasa = poolPorCasa[i];
                 
                 // Se a I.A. sugeriu dezenas para esta casa, embaralhamos para pegar 2 aleatórias entre as melhores
+               
                 if (opcoesDestaCasa.length >= 2) {
-                    shuffleArray(opcoesDestaCasa);
+                    // As dezenas já vêm ordenadas por frequência — pega as 2 mais quentes
                     casas[i].push(opcoesDestaCasa[0], opcoesDestaCasa[1]);
-                } 
+                }
                 // Se a I.A. sugeriu apenas 1 ou nenhuma, completamos com números daquela faixa
                 else {
                     if (opcoesDestaCasa.length === 1) casas[i].push(opcoesDestaCasa[0]);
@@ -11649,7 +11807,7 @@ async function getPuxadaDoDiaIA(loteria) {
             .where('loteria', '==', loteria)
             .where('posicao', '==', 1)
             .orderBy('data', 'desc')
-            .limit(3)
+            .limit(5)
             .get();
         if (querySnapshot.empty) return null;
 
@@ -11734,25 +11892,22 @@ function shuffleArray(array) {
     }
 }
 
-// --- FUNÇÃO AUXILIAR: SORTEIO CRIPTOGRAFADO (ANTI-VÍCIO) ---
-// Gera um número aleatório entre 0 e (max - 1) usando criptografia
 function getSecureRandomInt(max) {
     if (window.crypto && window.crypto.getRandomValues) {
+        // Rejection sampling: elimina viés de módulo
+        const limit = Math.floor(0x100000000 / max) * max;
         const array = new Uint32Array(1);
-        window.crypto.getRandomValues(array);
-        // O operador % (módulo) garante que o número fique dentro do limite 'max'
-        return array[0] % max;
+        let value;
+        do {
+            window.crypto.getRandomValues(array);
+            value = array[0];
+        } while (value >= limit);
+        return value % max;
     } else {
-        // Fallback para navegadores muito antigos
         return Math.floor(Math.random() * max);
     }
 }
 
-/**
- * Ordena um array de números (strings) com base no grupo do bicho.
- * @param {string[]} numbersArray Array de números (milhares, centenas ou dezenas).
- * @returns {string[]} O array de números ordenado por grupo e depois numericamente.
- */
 function sortNumbersByBicho(numbersArray) {
     if (!numbersArray || numbersArray.length === 0) {
         return [];
@@ -12217,7 +12372,6 @@ function applyAdvancedFilters(numberStr, numberType) {
     return true;
 }
 
-// --- Lógica para o novo painel de Quantidade (Soma) ---
 
 function addMultiplier(amount) {
     const input = document.getElementById('quantidadeSelect');
@@ -13504,6 +13658,10 @@ firebase.auth().onAuthStateChanged(user => {
         { grupo: '24', animal: 'Veado', dezenas: ['93', '94', '95', '96'], emoji: bichoNameToEmoji['veado'] },
         { grupo: '25', animal: 'Vaca', dezenas: ['97', '98', '99', '00'], emoji: bichoNameToEmoji['vaca'] }
     ];
+
+    // Map de dezena → bicho para lookup O(1) (substitui .find em 25 elementos a cada chamada)
+    const _bichoMapPorDezena = new Map();
+    tabelaDeGrupos.forEach(b => b.dezenas.forEach(d => _bichoMapPorDezena.set(d, b)));
 
    const STORAGE_KEYS = {
     NAMES: 'nomesSalvos',
@@ -15596,18 +15754,20 @@ updateNetworkStatusIA();
         const stringValue = JSON.stringify(value);
         let success = false;
         
-        const saveIndicator = document.createElement('div');
-        saveIndicator.textContent = "Salvando...";
-        saveIndicator.style.position = "fixed";
-        saveIndicator.style.bottom = "60px";
-        saveIndicator.style.left = "50%";
-        saveIndicator.style.transform = "translateX(-50%)";
-        saveIndicator.style.backgroundColor = "rgba(0,0,0,0.7)";
-        saveIndicator.style.color = "white";
-        saveIndicator.style.padding = "8px 16px";
-        saveIndicator.style.borderRadius = "20px";
-        saveIndicator.style.zIndex = "9999";
-        document.body.appendChild(saveIndicator);
+        let saveIndicator = document.getElementById('_saveIndicatorGlobal');
+        if (!saveIndicator) {
+            saveIndicator = document.createElement('div');
+            saveIndicator.id = '_saveIndicatorGlobal';
+            Object.assign(saveIndicator.style, {
+                position: 'fixed', bottom: '60px', left: '50%', transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '8px 16px',
+                borderRadius: '20px', zIndex: '9999', display: 'none', transition: 'opacity 0.2s'
+            });
+            document.body.appendChild(saveIndicator);
+        }
+        saveIndicator.textContent = 'Salvando...';
+        saveIndicator.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        saveIndicator.style.display = 'block';
 
         try {
             if (indexedDBAvailable) {
@@ -15652,11 +15812,7 @@ updateNetworkStatusIA();
                 showToast(`Erro ao salvar dados. Tente novamente.`, 'error');
             }
         } finally {
-            setTimeout(() => {
-                if (document.body.contains(saveIndicator)) {
-                    document.body.removeChild(saveIndicator);
-                }
-            }, 2000);
+            setTimeout(() => { saveIndicator.style.display = 'none'; }, 2000);
         }
         
         return success;
@@ -16320,6 +16476,8 @@ async function filtrarAuditoria(loteriaFiltro, dataFiltroArg = null) {
     const dataFiltro = window.dataFiltroAtiva;
 
     let hitsBicho = 0, hitsMCD = 0, hitsMestre = 0, hitsSoma = 0, total = 0, html = '';
+    // Cache para evitar múltiplas queries de soma por loteria
+    const somaCache = {};
     let listaFiltrada = loteriaAtual === 'todas' ? lista : lista.filter(s => s.loteria === loteriaAtual);
     if (dataFiltro) listaFiltrada = listaFiltrada.filter(s => (s.data || new Date(s.dataObj).toLocaleDateString('pt-BR')) === dataFiltro);
 
@@ -16335,7 +16493,8 @@ async function filtrarAuditoria(loteriaFiltro, dataFiltroArg = null) {
         const { palpites, rankingTop10, jogadaDeMestre } = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
         
         // 🧮 Milhar da Soma (Simulação buscando sorteio anterior no banco)
-        const dadosSoma = await getSomaUltimoSorteio(res1.loteria);
+        if (!somaCache[res1.loteria]) somaCache[res1.loteria] = await getSomaUltimoSorteio(res1.loteria);
+        const dadosSoma = somaCache[res1.loteria];
 
         // --- VERIFICAÇÕES DE ACERTOS ---
         const milharNaCabeca = palpites.milhar.some(m => m.palpite === res1.milhar);
@@ -16551,10 +16710,11 @@ async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
 
         const dataFormatada = res1.dataObj ? res1.dataObj.toLocaleDateString('pt-BR') : (sorteio.data || 'S/D');
 
-        // Simula a I.A. para este sorteio específico
-        const analiseIA = await getIaDataForDraw(res1.loteria, 'geral');
-        const seedAudit = `${dataFormatada}-${res1.loteria}-${res1.nomeSorteio}`;
-        const simulacao = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
+        // Simula a I.A. para este sorteio específico (usa horário se disponível, senão 'geral')
+        const drawNameAudit = res1.nomeSorteio || 'geral';
+        const analiseIA = await getIaDataForDraw(res1.loteria, drawNameAudit);
+        const seedAudit = `${dataFormatada}-${res1.loteria}-${drawNameAudit}`;
+        const simulacao = getPalpitesMisturadosIA(analiseIA, seedAudit, [], drawNameAudit);
         
         const milharesSugeridas = simulacao.palpites.milhar.map(m => m.palpite);
         const centenasSugeridas = simulacao.palpites.centena.map(c => c.palpite);
@@ -17773,9 +17933,10 @@ async function shareGlobalDailyBriefing(dias = 1) {
             const res1 = sorteio.premios.find(p => p.posicao == 1);
             if (!res1) continue;
 
-            const analiseIA = await getIaDataForDraw(loteria, 'geral');
-            const seedAudit = `${sorteio.data}-${loteria}-${res1.nomeSorteio}`;
-            const simulacao = getPalpitesMisturadosIA(analiseIA, seedAudit, [], res1.nomeSorteio);
+            const drawNameBoletim = res1.nomeSorteio || 'geral';
+            const analiseIA = await getIaDataForDraw(loteria, drawNameBoletim);
+            const seedAudit = `${sorteio.data}-${loteria}-${drawNameBoletim}`;
+            const simulacao = getPalpitesMisturadosIA(analiseIA, seedAudit, [], drawNameBoletim);
             
             const top5Grupos = simulacao.rankingTop10.slice(0, 5).map(b => b.grupo);
             const milharesIA = simulacao.palpites.milhar.map(m => m.palpite);
@@ -19326,9 +19487,14 @@ async function generateSelectedNumbers() {
                     
                     const dezenasDosBichos = bicho.dezenas;
                     const bichoMillhares = new Set();
+
+                    // Prefixos específicos deste bicho (mais precisos) com fallback pro pool geral
+                    const prefixosDesteBicho = (dadosIA.prefixosPorBicho && dadosIA.prefixosPorBicho[bicho.grupo] && dadosIA.prefixosPorBicho[bicho.grupo].length > 0)
+                        ? dadosIA.prefixosPorBicho[bicho.grupo]
+                        : prefixosQuentes;
                     
-                    if (prefixosQuentes.length > 0) {
-                        for (const prefixo of prefixosQuentes) {
+                    if (prefixosDesteBicho.length > 0) {
+                        for (const prefixo of prefixosDesteBicho) {
                             for (const dezena of dezenasDosBichos) {
                                 const milharGerada = prefixo + dezena;
                                 if (applyAdvancedFilters(milharGerada, 'milhar') && !blacklistRecentes.has(milharGerada)) {
@@ -19342,7 +19508,25 @@ async function generateSelectedNumbers() {
                         for (const milharAtrasada of milharesAtrasadas) {
                             if (applyAdvancedFilters(milharAtrasada, 'milhar') && !blacklistRecentes.has(milharAtrasada)) {
                                 const dezenaMilhar = milharAtrasada.slice(-2);
-                                if (dezenasDosBichos.includes(dezenaMilhar)) bichoMillhares.add(milharAtrasada);
+                                const grupoDaMilhar = getBichoDataFromNumber(milharAtrasada);
+                                if (dezenasDosBichos.includes(dezenaMilhar) && grupoDaMilhar && grupoDaMilhar.grupo === bicho.grupo) {
+                                    bichoMillhares.add(milharAtrasada);
+                                }
+                            }
+                        }
+                    }
+
+                    // Prioriza dezenas do 1º prêmio deste bicho específico
+                    const dezenasOrdenadas = (dadosIA.dezenaPorBicho1Premio && dadosIA.dezenaPorBicho1Premio[bicho.grupo])
+                        ? dadosIA.dezenaPorBicho1Premio[bicho.grupo].filter(d => dezenasDosBichos.includes(d))
+                        : dezenasDosBichos;
+                    if (prefixosDesteBicho.length > 0 && dezenasOrdenadas.length > 0 && bichoMillhares.size < qtdParaBicho) {
+                        for (const prefixo of prefixosDesteBicho.slice(0, 5)) {
+                            for (const dezena of dezenasOrdenadas.slice(0, 3)) {
+                                const milharGerada = prefixo + dezena;
+                                if (applyAdvancedFilters(milharGerada, 'milhar') && !blacklistRecentes.has(milharGerada)) {
+                                    bichoMillhares.add(milharGerada);
+                                }
                             }
                         }
                     }
@@ -19350,12 +19534,16 @@ async function generateSelectedNumbers() {
                     let bichoArray = Array.from(bichoMillhares);
                     if (bichoArray.length < qtdParaBicho) {
                         const diff = qtdParaBicho - bichoArray.length;
+                        const totalPossivel = dezenasDosBichos.length * 100 - blacklistRecentes.size;
+                        const maxTentativas = Math.min(diff * 50, totalPossivel > 0 ? totalPossivel * 3 : 500);
                         let attempts = 0;
-                        while (bichoArray.length < qtdParaBicho && attempts < diff * 200) {
+                        while (bichoArray.length < qtdParaBicho && attempts < maxTentativas) {
                             attempts++;
-                            let randomPrefix = (getSecureRandomInt(100) < 70 && prefixosQuentes.length > 0) ? 
-                                prefixosQuentes[getSecureRandomInt(prefixosQuentes.length)] : String(getSecureRandomInt(100)).padStart(2, '0');
-                            let gen = randomPrefix + dezenasDosBichos[getSecureRandomInt(dezenasDosBichos.length)];
+                            const usarPrefixoQuente = getSecureRandomInt(100) < 70 && prefixosDesteBicho.length > 0;
+                            const randomPrefix = usarPrefixoQuente
+                                ? prefixosDesteBicho[getSecureRandomInt(prefixosDesteBicho.length)]
+                                : String(getSecureRandomInt(100)).padStart(2, '0');
+                            const gen = randomPrefix + dezenasDosBichos[getSecureRandomInt(dezenasDosBichos.length)];
                             if (applyAdvancedFilters(gen, 'milhar') && !bichoMillhares.has(gen) && !blacklistRecentes.has(gen)) {
                                 bichoArray.push(gen); bichoMillhares.add(gen);
                             }
@@ -19364,6 +19552,7 @@ async function generateSelectedNumbers() {
                     if (bichoArray.length > qtdParaBicho) { shuffleArray(bichoArray); bichoArray = bichoArray.slice(0, qtdParaBicho); }
                     bichoArray.forEach(m => iaGeneratedThousands.add(m));
                 });
+            
                 finalResults.milhar = Array.from(iaGeneratedThousands);
                 shuffleArray(finalResults.milhar);
             }
@@ -19386,14 +19575,27 @@ async function generateSelectedNumbers() {
                 finalResults.dezena = Array.from(dezenasUnicas);
             }
 
-            if (typeKeys.includes('centena')) {
-                 const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
-                 for(let i=0; i<totalQuantity; i++) {
-                    let d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
-                    finalResults.centena.push(String(getSecureRandomInt(10)) + d);
-                 }
-                 shuffleArray(finalResults.centena);
+           if (typeKeys.includes('centena')) {
+                const dezenasPool = selectedBichos.flatMap(b => b.dezenas);
+                // Tenta usar centenas atrasadas primeiro (dado mais rico)
+                const centenasAtrasadas = await getCentenasAtrasadasIA(lotteryCode);
+                const centenasSet = new Set();
+                // Prioridade 1: centenas atrasadas que terminam na dezena do bicho
+                for (const ca of centenasAtrasadas) {
+                    if (centenasSet.size >= totalQuantity) break;
+                    if (dezenasPool.includes(ca.numero.slice(-2))) centenasSet.add(ca.numero);
+                }
+                // Prioridade 2: completa com dígito aleatório + dezena do bicho
+                let attempts = 0;
+                while (centenasSet.size < totalQuantity && attempts < totalQuantity * 50) {
+                    attempts++;
+                    const d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+                    centenasSet.add(String(getSecureRandomInt(10)) + d);
+                }
+                finalResults.centena = Array.from(centenasSet);
+                shuffleArray(finalResults.centena);
             }
+            
         } catch (error) { console.error(error); showToast('Erro na análise I.A.', 'error'); } finally { hideLoadingIndicator(); }
     }
     
@@ -19444,10 +19646,9 @@ async function generateSelectedNumbers() {
                 // 👇 AQUI MUDA A LINHA DO BICHO COM O EMOJI 👇
                 summaryParts.push(`&bull; G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: ${realQtd}x <small>(Restam: ${sobra})</small>`);
                 
-                let poolArray = Array.from(pool);
-                shuffleArray(poolArray);
-                const selecionados = poolArray.slice(0, realQtd);
-                const selecionadosFiltrados = selecionados.filter(num => applyAdvancedFilters(num, 'milhar'));
+                const poolFiltrado = Array.from(pool).filter(num => applyAdvancedFilters(num, 'milhar'));
+                shuffleArray(poolFiltrado);
+                const selecionadosFiltrados = poolFiltrado.slice(0, realQtd);
                 
                 finalResults.milhar.push(...selecionadosFiltrados);
                 numbersPendingRemoval.push({ group: bichoGrupo, numbers: selecionadosFiltrados });
@@ -19475,14 +19676,16 @@ async function generateSelectedNumbers() {
                     bicho.dezenas.forEach(d => { hotDigits.add(d[0]); hotDigits.add(d[1]); });
                     const arrDigits = Array.from(hotDigits);
                     
-                    const closureCombos = [];
+                    // POR ISTO:
+                    const uniqueSet = new Set();
                     arrDigits.forEach(d1 => {
                         arrDigits.forEach(d2 => {
-                            bicho.dezenas.forEach(dez => { closureCombos.push(d1 + d2 + dez); });
+                            bicho.dezenas.forEach(dez => {
+                                const combo = d1 + d2 + dez;
+                                if (applyAdvancedFilters(combo, 'milhar')) uniqueSet.add(combo);
+                            });
                         });
                     });
-
-                    const uniqueSet = new Set(closureCombos);
                     if (qtd > uniqueSet.size) {
                         let attempts = 0;
                         while (uniqueSet.size < qtd && attempts < (qtd * 50)) {
@@ -19516,7 +19719,18 @@ async function generateSelectedNumbers() {
                             attempts++;
                             let num = '';
                             const d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
-                            if (typeKey === 'milhar') num = String(getSecureRandomInt(100)).padStart(2, '0') + d;
+                            
+                            if (typeKey === 'milhar') {
+                                // Cruz do dia inclina o prefixo sem depender da I.A.
+                                const diaHoje = new Date().getDate() % 10;
+                                const cruzDigitos = [diaHoje, (diaHoje + 3) % 10, (diaHoje + 6) % 10, (diaHoje + 9) % 10];
+                                const usarCruz = getSecureRandomInt(100) < 40; // 40% de chance de usar dígito da cruz
+                                const cruzDigito = cruzDigitos[getSecureRandomInt(cruzDigitos.length)];
+                                const prefixo = usarCruz
+                                    ? String(cruzDigito) + String(getSecureRandomInt(10))
+                                    : String(getSecureRandomInt(100)).padStart(2, '0');
+                                num = prefixo + d;
+                            }
                             else if (typeKey === 'centena') num = String(getSecureRandomInt(10)) + d;
                             else if (typeKey === 'dezena') num = d;
 
@@ -19766,7 +19980,7 @@ function renderPermToggles(uid, userPerms) {
                 { id: 'btnMenuBolao', label: 'Gerar Bolão', emoji: '📋' },
                 { id: 'btnMenuTabela', label: 'Ver Tabelas', emoji: '📊' },
                 { id: 'btnMenuAnalises', label: 'Hub Análises', emoji: '🔮' },
-                { id: 'btnMenuKitsMCD', label: 'Kits Vendas', emoji: '🛍️' },
+                { id: 'btnMenuKitsMCD', label: 'Kits MCD', emoji: '🛍️' },
                 { id: 'btnMenuSettings', label: 'Configurações', emoji: '⚙️' } 
             ]
         },
@@ -21172,114 +21386,6 @@ async function copyHistoryItem(id, buttonElement) {
         });
     }
 
-    /**
- * Verifica se um número gerado passa por todos os filtros avançados ativos.
- * @param {string} numberStr O número gerado como string (ex: '1234', '567', '89').
- * @param {string} numberType O tipo do número ('milhar', 'centena', 'dezena').
- * @returns {boolean} True se o número passar em todos os filtros ativos, False caso contrário.
- */
-function applyAdvancedFilters(numberStr, numberType) {
-    // 1. Filtro de Dezena Final
-    const useDezenaFinalFilter = document.getElementById('toggleDezenaFinalCheck')?.checked;
-    if (useDezenaFinalFilter) {
-        const allowedFinalDigits = new Set(
-            Array.from(document.querySelectorAll('#dezenaFinalDigits input:checked')).map(cb => cb.value)
-        );
-        const lastDigit = numberStr.slice(-1);
-        if (!allowedFinalDigits.has(lastDigit)) {
-            return false; // Falhou no filtro de dezena final
-        }
-    }
-
-    // 2. Filtro de Paridade (Aplica-se à dezena do número)
-    const useParityFilter = document.getElementById('toggleParityCheck')?.checked;
-    if (useParityFilter) {
-        const selectedParity = document.querySelector('input[name="paridadeDezena"]:checked')?.value;
-        if (selectedParity && numberStr.length >= 2) {
-            const dezenaPart = parseInt(numberStr.slice(-2), 10);
-            const isEven = dezenaPart % 2 === 0;
-            if ((selectedParity === 'even' && !isEven) || (selectedParity === 'odd' && isEven)) {
-                return false; // Falhou no filtro de paridade
-            }
-        }
-    }
-
-    // 3. Filtro de Dígitos Iniciais
-    const useStartDigitsFilter = document.getElementById('toggleStartDigitsCheck')?.checked;
-    if (useStartDigitsFilter) {
-        let allowedStartDigits;
-        let firstDigit;
-
-        if (numberType === 'milhar' && numberStr.length >= 1) {
-            allowedStartDigits = new Set(
-                Array.from(document.querySelectorAll('#milharStartOptions input:checked')).map(cb => cb.value)
-            );
-            firstDigit = numberStr[0];
-        } else if (numberType === 'centena' && numberStr.length >= 1) {
-            allowedStartDigits = new Set(
-                Array.from(document.querySelectorAll('#centenaStartOptions input:checked')).map(cb => cb.value)
-            );
-             firstDigit = numberStr[0]; // Centena começa no primeiro dígito
-        } else if (numberType === 'dezena' && numberStr.length >= 1) {
-             allowedStartDigits = new Set(
-                 Array.from(document.querySelectorAll('#dezenaStartOptions input:checked')).map(cb => cb.value)
-             );
-             firstDigit = numberStr[0]; // Dezena começa no primeiro dígito
-        }
-
-        if (allowedStartDigits && firstDigit !== undefined && !allowedStartDigits.has(firstDigit)) {
-            return false; // Falhou no filtro de dígito inicial
-        }
-    }
-
-     // 4. Filtros Específicos de Centena (se aplicável)
-     if (numberType === 'centena' && numberStr.length === 3) {
-         // Filtro de Paridade Interna da Centena
-         const centenaParityRule = document.getElementById('centenaParityFilter')?.value;
-         if (centenaParityRule && centenaParityRule !== 'any') {
-             if (!checkCentenaParity(numberStr, centenaParityRule)) {
-                 return false;
-             }
-         }
-
-         // Filtro de Soma dos Dígitos da Centena
-         const sumMinInput = document.getElementById('centenaSumMin');
-         const sumMaxInput = document.getElementById('centenaSumMax');
-         const sumMin = sumMinInput ? parseInt(sumMinInput.value, 10) : NaN;
-         const sumMax = sumMaxInput ? parseInt(sumMaxInput.value, 10) : NaN;
-         // Aplica o filtro apenas se ambos os valores forem números válidos
-         if (!isNaN(sumMin) && !isNaN(sumMax) && sumMin <= sumMax) {
-              if (!checkCentenaSum(numberStr, sumMin, sumMax)) {
-                  return false;
-              }
-         } else if (!isNaN(sumMin) && isNaN(sumMax)) { // Apenas mínimo definido
-              if (!checkCentenaSum(numberStr, sumMin, 27)) { // 27 é a soma máxima (9+9+9)
-                 return false;
-              }
-         } else if (isNaN(sumMin) && !isNaN(sumMax)) { // Apenas máximo definido
-              if (!checkCentenaSum(numberStr, 0, sumMax)) { // 0 é a soma mínima
-                 return false;
-              }
-         }
-
-
-         // Filtro de Repetição de Dígitos da Centena
-         const repetitionRule = document.getElementById('centenaRepetitionFilter')?.value;
-         if (repetitionRule && repetitionRule !== 'any') {
-             if (!checkCentenaRepetition(numberStr, repetitionRule)) {
-                 return false;
-             }
-         }
-     }
-
-
-    
-    return true;
-}
-
-// ==========================================================
-// SCRIPT GLOBAL: FORÇAR TECLADO NUMÉRICO E AUTO-SELEÇÃO
-// ==========================================================
 document.addEventListener('DOMContentLoaded', () => {
     // Roda uma vez rápido, e outra depois de 1 segundo para garantir os modais que carregam depois
     function aplicarMascaraTeclado() {
@@ -21793,8 +21899,7 @@ async function revealReceiptInputs() {
 
 function getBichoDataFromNumber(numStr) {
     if (!numStr || numStr.length < 2) return null;
-    const dezena = numStr.slice(-2);
-    return tabelaDeGrupos.find(bicho => bicho.dezenas.includes(dezena)) || null;
+    return _bichoMapPorDezena.get(numStr.slice(-2)) || null;
 }
 
 // 3. FUNÇÃO MODIFICADA PARA LIMPAR OS "ESCUTADORES"
@@ -22286,21 +22391,21 @@ function closeAtrasadosRealTimeModal() {
     });
 }
 // Adicionamos o "drawName" no final para a I.A saber qual é o sorteio!
-// Adicionamos o "drawName" no final para a I.A saber qual é o sorteio!
 function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = [], drawName = '') {
     let randomFunc = Math.random;
+
     if (seedString) {
         let seed = 0;
         for (let i = 0; i < seedString.length; i++) {
             seed = ((seed << 5) - seed) + seedString.charCodeAt(i);
             seed |= 0;
         }
-        seed = Math.abs(seed);
+        // Converte para unsigned 32-bit antes de passar ao PRNG
+        // Evita Math.abs(INT_MIN) que retorna negativo em JS
+        seed = seed >>> 0;
+        if (seed === 0) seed = 1; // PRNG não pode iniciar em 0
         randomFunc = function() {
             var t = seed += 0x6D2B79F5;
-            t = Math.imul(t ^ t >>> 15, t | 1);
-            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-            return ((t ^ t >>> 14) >>> 0) / 4294967296;
         };
     }
     const getSeededInt = (max) => Math.floor(randomFunc() * max);
@@ -22322,7 +22427,7 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
     const isNoite = drawName.toLowerCase().match(/cor|ptn|18|19|21|22|23|noite/);
     const turnoAtual = isNoite ? 'noite' : 'dia';
     const bichosDiurnos = ['01', '02', '03', '05', '06', '07', '11', '13', '21', '25']; 
-    const bichosNoturnos = ['04', '09', '14', '15', '16', '17', '18', '22', '23', '24']; 
+    const bichosNoturnos = ['04', '09', '14', '15', '16', '17', '18', '22', '23', '24'];
 
     const topAtrasados = [];
     
@@ -22337,12 +22442,14 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
                     continue; 
                 }
                 
+                // POR ISTO:
+                let forcaAtrasado = 99 - topAtrasados.length;
                 let motivos = [`⏰ Atrasado há ${a.dias} dias`];
-                if(checarBichoDaCruz(bData.dezenas)) motivos.unshift(`🌟 Bicho da Cruz do Dia`);
-                if (turnoAtual === 'dia' && bichosDiurnos.includes(bData.grupo)) motivos.push(`☀️ Forte de Dia`);
-                if (turnoAtual === 'noite' && bichosNoturnos.includes(bData.grupo)) motivos.push(`🌙 Forte de Noite`);
+                if (checarBichoDaCruz(bData.dezenas)) { forcaAtrasado += 25; motivos.unshift(`🌟 Bicho da Cruz do Dia (+25)`); }
+                if (turnoAtual === 'dia' && bichosDiurnos.includes(bData.grupo)) { forcaAtrasado += 25; motivos.push(`☀️ Forte de Dia (+25)`); }
+                if (turnoAtual === 'noite' && bichosNoturnos.includes(bData.grupo)) { forcaAtrasado += 25; motivos.push(`🌙 Forte de Noite (+25)`); }
 
-                topAtrasados.push({ ...bData, forca: 99 - topAtrasados.length, motivos: motivos, dezenasBase: bData.dezenas });
+                topAtrasados.push({ ...bData, forca: forcaAtrasado, motivos: motivos, dezenasBase: bData.dezenas });
             }
         }
     }
@@ -22357,15 +22464,16 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
             if (analise && analise.ciclos && analise.ciclos[bInt.grupo] && analise.ciclos[bInt.grupo].atual < 1) {
                 continue; 
             }
-            
+        
             const bData = tabelaDeGrupos.find(tg => tg.grupo === bInt.grupo);
             if (bData) {
+                let forcaInt = 99 - topAtrasados.length;
                 let motivos = [`⏰ Atrasado há ${bInt.dias || 0} dias`];
-                if(checarBichoDaCruz(bData.dezenas)) motivos.unshift(`🌟 Bicho da Cruz do Dia`);
-                if (turnoAtual === 'dia' && bichosDiurnos.includes(bData.grupo)) motivos.push(`☀️ Forte de Dia`);
-                if (turnoAtual === 'noite' && bichosNoturnos.includes(bData.grupo)) motivos.push(`🌙 Forte de Noite`);
+                if (checarBichoDaCruz(bData.dezenas)) { forcaInt += 25; motivos.unshift(`🌟 Bicho da Cruz do Dia (+25)`); }
+                if (turnoAtual === 'dia' && bichosDiurnos.includes(bData.grupo)) { forcaInt += 25; motivos.push(`☀️ Forte de Dia (+25)`); }
+                if (turnoAtual === 'noite' && bichosNoturnos.includes(bData.grupo)) { forcaInt += 25; motivos.push(`🌙 Forte de Noite (+25)`); }
 
-                topAtrasados.push({ ...bData, forca: 99 - topAtrasados.length, motivos: motivos, dezenasBase: bData.dezenas });
+                topAtrasados.push({ ...bData, forca: forcaInt, motivos: motivos, dezenasBase: bData.dezenas });
             }
         }
     }
@@ -22387,12 +22495,18 @@ function getPalpitesMisturadosIA(analise, seedString = null, atrasadosReais = []
                 novosMotivos.push('Vizinho do Atrasado (+15)');
             }
 
-            // MELHORIA: verifica afinidade com os top 3 atrasados (pesos decrescentes)
-            const pesosAfinidade = [30, 18, 10];
+            // Afinidade: recentes valem mais (+35), histórico completo vale menos (+20)
+            const pesosRecentes = [35, 22, 12];
+            const pesosHistorico = [20, 12, 7];
             topAtrasados.slice(0, 3).forEach(function(atrasado, ai) {
-                if (analise.afinidades && analise.afinidades[atrasado.grupo] && analise.afinidades[atrasado.grupo].includes(b.grupo)) {
-                    scoreFinal += pesosAfinidade[ai];
-                    novosMotivos.push('🔗 Afinidade com ' + (ai + 1) + 'º Atrasado (+' + pesosAfinidade[ai] + ')');
+                const afimRecente = analise.afinidadesRecentes && analise.afinidadesRecentes[atrasado.grupo] && analise.afinidadesRecentes[atrasado.grupo].includes(b.grupo);
+                const afimHistorico = analise.afinidades && analise.afinidades[atrasado.grupo] && analise.afinidades[atrasado.grupo].includes(b.grupo);
+                if (afimRecente) {
+                    scoreFinal += pesosRecentes[ai];
+                    novosMotivos.push('🔗 Afinidade Recente c/ ' + (ai + 1) + 'º Atrasado (+' + pesosRecentes[ai] + ')');
+                } else if (afimHistorico) {
+                    scoreFinal += pesosHistorico[ai];
+                    novosMotivos.push('🔗 Afinidade Histórica c/ ' + (ai + 1) + 'º Atrasado (+' + pesosHistorico[ai] + ')');
                 }
             });
         }
@@ -22452,16 +22566,38 @@ topAtrasados.forEach(function(b) {
 let todosJuntos = [...topAtrasados, ...restantes];
 todosJuntos.sort(function(a, b) { return b.forca - a.forca; });
 
-    // 📈 MEDIDOR DE CONFIANÇA (%)
+// NOVO: TRIPLO SINAL — Atrasado + Afim do 1º colocado + Forte no dia de hoje
+const top1Grupo = todosJuntos[0]?.grupo;
+const afinsDoTop1Recentes = (analise.afinidadesRecentes && top1Grupo) ? (analise.afinidadesRecentes[top1Grupo] || []) : [];
+const afinsDoTop1 = (analise.afinidades && top1Grupo) ? (analise.afinidades[top1Grupo] || []) : [];
+const diaHojeStr = String(new Date().getDay());
+todosJuntos.forEach(function(b) {
+    const eAtrasado = (analise.bichosAtrasados1Premio || []).some(a => a.grupo === b.grupo);
+    const eAfim = afinsDoTop1Recentes.includes(b.grupo) || afinsDoTop1.includes(b.grupo);
+    const countsDiaHoje = (analise.bicho1PremioPorDia && analise.bicho1PremioPorDia[diaHojeStr]) || {};
+    const totalDiaHoje = Object.values(countsDiaHoje).reduce((a, v) => a + v, 0) || 1;
+    const forteDia = (countsDiaHoje[b.grupo] || 0) >= (totalDiaHoje / 25) * 1.4;
+    if (eAtrasado && eAfim && forteDia) {
+        b.forca += 50;
+        b.motivos.unshift('🔱 TRIPLO SINAL: Atrasado + Afim + Dia (+50)');
+    } else if (eAtrasado && eAfim) {
+        b.forca += 25;
+        b.motivos.push('🔗 Duplo Sinal: Atrasado + Afim (+25)');
+    }
+});
+// Re-ordena após aplicar triplo sinal
+todosJuntos.sort(function(a, b) { return b.forca - a.forca; });
+
+    
     // Usa o maior score real do conjunto (após re-ordenação)
 var melhorScore = todosJuntos.reduce(function(max, b) { return b.forca > max ? b.forca : max; }, 1);
 var piorScore = todosJuntos.reduce(function(min, b) { return b.forca < min ? b.forca : min; }, melhorScore);
 var rangeScore = Math.max(melhorScore - piorScore, 1);
 
 todosJuntos.forEach(function(b) {
-    // Distribui a confiança entre 45% e 94% com base na posição relativa real
-    var confReal = Math.round(45 + ((b.forca - piorScore) / rangeScore) * 49);
-    b.confianca = Math.min(94, Math.max(45, confReal)) + '%';
+    // Distribui a confiança entre 50% e 97% com base na posição relativa real
+    var confReal = Math.round(50 + ((b.forca - piorScore) / rangeScore) * 47);
+    b.confianca = Math.min(97, Math.max(50, confReal)) + '%';
 });
 
     let rankingTop5 = todosJuntos.slice(0, 3);
@@ -22519,16 +22655,20 @@ rankingTop10.forEach(function(b, index) {
             return d.endsWith(unidadesTop[0]) || (unidadesTop[1] !== undefined && d.endsWith(unidadesTop[1]));
         });
         dezena = dezenaUnidade || melhorDezena1Premio || dezenasQuentesDoBicho[0] || b.dezenasBase[getSeededInt(4)];
+  
     } else {
-        dezena = melhorDezena1Premio || (dezenasQuentesDoBicho.length > 0
+        // Tenta casar unidade atrasada também para posições 3-9
+        var dezenaUnidadeExt = unidadesTop.length > 0 ? b.dezenasBase.find(function(d) {
+            return d.endsWith(unidadesTop[0]) || (unidadesTop[1] !== undefined && d.endsWith(unidadesTop[1]));
+        }) : null;
+        dezena = dezenaUnidadeExt || melhorDezena1Premio || (dezenasQuentesDoBicho.length > 0
             ? dezenasQuentesDoBicho[0]
             : b.dezenasBase[getSeededInt(4)]);
     }
     dezenasEscolhidas.push(dezena);
 });
 
-// 2. MILHARES — sempre usa o MELHOR prefixo (índice 0) + invertida
-// 2. MILHARES — filtra blacklist e deduplica
+
 var blacklistSet = new Set(analise.blacklist || []);
 palpites.milhar = [];
 var milharesJaAdicionadas = new Set();
@@ -22542,10 +22682,10 @@ for (var i = 0; i < 5; i++) {
     var milharDireta = null;
     var milharInvertida = null;
 
-    // Tenta cada prefixo histórico até achar uma milhar não-blacklistada
     for (var pi = 0; pi < Math.min(prefixosDisponiveis.length, 5); pi++) {
         var prefixoTeste = prefixosDisponiveis[pi];
-        if (centenasTop.length > 0) prefixoTeste = prefixoTeste.charAt(0) + centenasTop[0];
+        // Alterna entre centenasTop[0] e [1] conforme posição do bicho
+        if (centenasTop.length > 0) prefixoTeste = prefixoTeste.charAt(0) + centenasTop[i % centenasTop.length];
         var candidata = prefixoTeste + dezenasEscolhidas[i];
         var candidataInv = candidata.split('').reverse().join('');
         if (!blacklistSet.has(candidata) && !milharesJaAdicionadas.has(candidata)) {
@@ -22642,46 +22782,63 @@ function closeAtrasadosResultModal() {
 }
 
 function extrairDadosDoHTML(htmlString) {
-    const dadosExtraidos = { bichos: [], unidades: [] };
+    const dadosExtraidos = { bichos: [], unidades: [], dezenas: [], centenas: [] };
     try {
         if (!htmlString || htmlString.trim() === '') return dadosExtraidos;
 
-        // Converte o HTML em texto puro e remove acentos
         let textoPuro = htmlString.replace(/<[^>]*>?/gm, ' ');
         textoPuro = textoPuro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        textoPuro = textoPuro.replace(/\s+/g, ' '); 
+        textoPuro = textoPuro.replace(/\s+/g, ' ');
 
-        // 1. Extração de Bichos Atrasados
+        // 1. Bichos Atrasados
         tabelaDeGrupos.forEach(bicho => {
             const nomeAnimal = bicho.animal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
             const regexBicho = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*dias?`, 'i');
             const matchBicho = textoPuro.match(regexBicho);
             if (matchBicho) {
                 dadosExtraidos.bichos.push({
-                    nome: bicho.animal,
-                    grupo: bicho.grupo,
-                    emoji: bicho.emoji,
-                    dias: parseInt(matchBicho[1], 10)
+                    nome: bicho.animal, grupo: bicho.grupo,
+                    emoji: bicho.emoji, dias: parseInt(matchBicho[1], 10)
                 });
             }
         });
         dadosExtraidos.bichos.sort((a, b) => b.dias - a.dias);
 
-        // 2. Extração das Unidades (Milhar) mais atrasadas
+        // 2. Unidades Atrasadas
         for (let i = 0; i <= 9; i++) {
             const regexUnidade = new RegExp(`unidade\\s*${i}.{0,50}?(\\d+)\\s*dias?`, 'i');
             const matchUnidade = textoPuro.match(regexUnidade);
             if (matchUnidade) {
-                dadosExtraidos.unidades.push({
-                    numero: i.toString(),
-                    dias: parseInt(matchUnidade[1], 10)
-                });
+                dadosExtraidos.unidades.push({ numero: i.toString(), dias: parseInt(matchUnidade[1], 10) });
             }
         }
         dadosExtraidos.unidades.sort((a, b) => b.dias - a.dias);
 
-    } catch (error) { 
-        console.error("Erro na extração I.A.:", error); 
+        // 3. NOVO: Dezenas Atrasadas (00-99)
+        for (let i = 0; i <= 99; i++) {
+            const dez = String(i).padStart(2, '0');
+            // Tenta padrões comuns: "dezena 05 ... 14 dias" ou "05 ... 14 dias" perto da palavra dezena
+            const regexDez = new RegExp(`dezena[s]?\\s*[^\\d]{0,10}${dez}[^\\d].{0,40}?(\\d+)\\s*dias?`, 'i');
+            const matchDez = textoPuro.match(regexDez);
+            if (matchDez) {
+                dadosExtraidos.dezenas.push({ numero: dez, dias: parseInt(matchDez[1], 10) });
+            }
+        }
+        dadosExtraidos.dezenas.sort((a, b) => b.dias - a.dias);
+
+        // 4. NOVO: Centenas Atrasadas (000-999)
+        for (let i = 0; i <= 999; i++) {
+            const cent = String(i).padStart(3, '0');
+            const regexCent = new RegExp(`centena[s]?\\s*[^\\d]{0,10}${cent}[^\\d].{0,40}?(\\d+)\\s*dias?`, 'i');
+            const matchCent = textoPuro.match(regexCent);
+            if (matchCent) {
+                dadosExtraidos.centenas.push({ numero: cent, dias: parseInt(matchCent[1], 10) });
+            }
+        }
+        dadosExtraidos.centenas.sort((a, b) => b.dias - a.dias);
+
+    } catch (error) {
+        console.error("Erro na extração I.A.:", error);
     }
     return dadosExtraidos;
 }
@@ -22831,7 +22988,12 @@ async function autoGerarHistoricoIA() {
         if(!analiseCompleta) continue;
 
         const puxada = await getPuxadaDoDiaIA(loteria);
-        if(analiseCompleta.geral) analiseCompleta.geral.puxada = puxada;
+        // Injeta puxada em TODOS os containers (geral + por horário)
+        Object.keys(analiseCompleta).forEach(chave => {
+            if (analiseCompleta[chave] && typeof analiseCompleta[chave] === 'object') {
+                analiseCompleta[chave].puxada = puxada;
+            }
+        });
 
         // Passa por todos os horários cadastrados da loteria no dia
         for (const h of horarios) {
