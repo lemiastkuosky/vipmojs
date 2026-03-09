@@ -6560,6 +6560,73 @@ body.dark-mode #kitFixoLista textarea {
     line-height: 1.3 !important;
 }
 
+/* ========================================================
+   CORREÇÃO DEFINITIVA DE CAMADAS (Z-INDEX)
+   ======================================================== */
+
+/* 1. Tela de Carregamento (Baixamos para dar espaço) */
+#loadingOverlay { 
+    z-index: 8000 !important; 
+}
+
+/* 2. Modais de Sistema (Subimos para ganhar de tudo) */
+#customConfirmModal, 
+#customInputModal, 
+#customValueInputModal, 
+#customTextPromptModal {
+    z-index: 10000 !important;
+}
+
+/* 3. Toasts/Avisos flutuantes (Sempre no topo absoluto) */
+#toast-container {
+    z-index: 11000 !important;
+}
+
+/* --- ESTILOS DO AUTOCOMPLETAR PRINCIPAL --- */
+.venda-autocomplete-list { 
+    display: none; 
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    right: 48px; /* Deixa espaço para não cobrir o botão da engrenagem */
+    z-index: 2000; 
+    background: #ffffff; 
+    border: 1px solid #e2e8f0; 
+    border-radius: 8px; 
+    max-height: 200px; 
+    overflow-y: auto; 
+    padding: 0; 
+    margin: 4px 0 0 0; 
+    list-style: none; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+}
+body.dark-mode .venda-autocomplete-list { 
+    background: #2a2a2a; 
+    border-color: #444; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+}
+.venda-autocomplete-item { 
+    padding: 12px 15px; 
+    border-bottom: 1px solid #f1f5f9; 
+    cursor: pointer; 
+    color: #0f172a; 
+    font-weight: 500; 
+    font-size: 0.95rem; 
+    text-align: left;
+}
+body.dark-mode .venda-autocomplete-item { 
+    border-bottom-color: #333; 
+    color: #f8fafc; 
+}
+.venda-autocomplete-item:hover { 
+    background: rgba(0,123,255,0.05); 
+}
+body.dark-mode .venda-autocomplete-item:hover { 
+    background: rgba(77,163,255,0.15); 
+}
+
+/* IMPORTANTE: Remova ou comente a linha 1040 que tinha z-index: 9999 !important */
+
 </style>
 </head>
 
@@ -6914,30 +6981,25 @@ body.dark-mode #kitFixoLista textarea {
     <button type="button" id="btnMenuMCD" onclick="showRandomGeneratorModal()">
         <span>🎲</span> 1- Gerador MCD
     </button>
-
     <button type="button" id="btnMenuBolao" onclick="showBolaoModal()">
         <span>📋</span> Lista Bolão
     </button>
-
     <button type="button" id="btnMenuTabela" onclick="showTabelaBichosModal()">
         <span>📊</span> Tabela Bichos
     </button>
-
     <button type="button" id="btnMenuAnalises" onclick="showAnalysisHubModal()">
         <span>🔮</span> Análises e I.A.
     </button>
-
     <button type="button" id="btnMenuKitsMCD" onclick="abrirKitsMCD()">
         <span>🛍️</span> Kits Vendas
     </button>
-
-    <button type="button" id="buttonMenuFechamento" onclick="showFechamentoModal()">
+    <button type="button" id="btnMenuFechamento" onclick="showFechamentoModal()">
         <span>🔢</span> 2- Gerador Duque/Terno
     </button>
-
     <button type="button" id="btnMenuSettings" onclick="showSettingsModal()">
         <span>⚙️</span> Configurações do Sistema
     </button>
+
 </div>
 
 <div id="mcdSearchModal" class="modal modal-advanced" role="dialog" aria-modal="true">
@@ -7161,13 +7223,15 @@ body.dark-mode #kitFixoLista textarea {
         <button type="button" onclick="addMultiplier(50)" style="aspect-ratio: 1/1; width: 100%; padding:0; background:#1e1e1e; border:1px solid #007bff; border-radius:6px; font-weight:700; color:#ffffff;">+50</button>
     </div>
 </div>
-         <label><strong>Selecionar nome:</strong></label>
-<div style="display: flex; gap: 8px;">
-    <input type="text" id="nomeSelecionadoDisplay" class="save-dialog-input" placeholder="Nenhum selecionado" readonly style="margin:0; text-align: center; font-weight: bold; color: #007bff; cursor: pointer;" onclick="openNamePickerModal()">
+         <label><strong>Selecionar ou Digitar Nome:</strong></label>
+<div style="position: relative; display: flex; gap: 8px; width: 100%;">
+    <input type="text" id="nomeSelecionadoDisplay" class="save-dialog-input" placeholder="Digite para buscar..." autocomplete="off" style="margin:0; text-align: center; font-weight: bold; color: #007bff; width: 100%;">
     
-<button onclick="openNamePickerModal(event)" class="view-button" style="width: auto; padding: 0 15px;">🔍</button></div>
+    <button onclick="openNamePickerModal(event)" class="view-button" style="width: auto; padding: 0 15px;" title="Gerenciar Nomes">⚙️</button>
+    
+    <ul id="mainNameAutocompleteList" class="venda-autocomplete-list" style="top: 48px;"></ul>
+</div>
 <input type="hidden" id="nomePessoaSelect">
-        </div>
         
        <div class="action-buttons-container">
     <button id="checkEmojiToggle">✅ FOI PAGO? SE SIM CLIQUE AQUI</button>
@@ -7711,234 +7775,33 @@ body.dark-mode #kitFixoLista textarea {
 </fieldset>
 
         <fieldset class="generator-options" style="margin-bottom: 15px; border-color: #dc3545;">
-    <legend style="color: #dc3545;">🔐 Menu Personalizado (Admin)</legend>
+    <legend style="color: #dc3545;">🔐 Painel do Administrador</legend>
     
     <p style="font-size: 0.85rem; color: #6c757d; margin-bottom: 15px; padding: 0 5px; text-align: left;">
-        Área restrita para controle da interface. Permite ocultar ou exibir botões específicos nos menus para simplificar o uso do cliente final.
+        Área restrita. Gerencie o acesso do aplicativo para cada cliente individualmente.
     </p>
     
-    <button id="btnUnlockMenuConfig" onclick="unlockMenuConfig()" class="load-button" style="width: 100%; background-color: #6c757d; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px;">
-        <span>🔒</span> Liberar Configuração de Botões
+    <button type="button" onclick="openAdminUsersModalProtected()" class="save-button" style="width: 100%; margin-bottom: 20px; padding: 15px; font-size: 1rem; background-color: #007bff; border: none; box-shadow: 0 4px 0 #0056b3;">
+        👥 Abrir Gestão de Clientes
     </button>
 
-            <div id="adminMenuConfigPanel" style="display: none; margin-top: 15px; text-align: left;">
-    
-    <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 15px; text-align: center;">
-        Ative ou desative os botões visíveis para o cliente:
-    </p>
-    
-    <div style="display: flex; flex-direction: column; gap: 5px;">
-        
-        <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 10px 0 5px 5px; text-transform: uppercase;">Menu Superior</div>
-        
-        <div class="admin-config-row">
-            <span class="admin-config-label">🎲 Gerador MCD</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnMCD" onchange="toggleMenuButton('btnMenuMCD', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">🔢 Duque e Terno</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnFechamento" onchange="toggleMenuButton('btnMenuFechamento', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">📋 Gerar Bolão</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnBolao" onchange="toggleMenuButton('btnMenuBolao', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">📊 Tabela Bichos</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnTabela" onchange="toggleMenuButton('btnMenuTabela', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">🔮 Análises e Consultas</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnAnalises" onchange="toggleMenuButton('btnMenuAnalises', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">🛍️ Kits de Vendas (MCD)</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnKitsMCD" onchange="toggleMenuButton('btnMenuKitsMCD', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 15px 0 5px 5px; text-transform: uppercase;">Menu de Ação</div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">🛑 Limpar Lista</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnMainClear" onchange="toggleMenuButton('btnMainClear', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">💾 Salvar Lista</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnMainSave" onchange="toggleMenuButton('btnMainSave', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">👁️ Listas Salvas</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnMainLists" onchange="toggleMenuButton('btnMainLists', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">🏆 Conferir Ganhadores</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnMainCheckWinner" onchange="toggleMenuButton('btnMainCheckWinner', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">👥 Add Nomes</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnMainAddNames" onchange="toggleMenuButton('btnMainAddNames', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">#️⃣ Contar Números</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnMainCount" onchange="toggleMenuButton('btnMainCount', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-<div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 15px 0 5px 5px; text-transform: uppercase;">Sub-Menu Análises</div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">⏱️ Bichos Atrasados</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnSubAtrasados" onchange="toggleMenuButton('btnSubAtrasados', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">🔎 Consultar MCD</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnSubMcdSearch" onchange="toggleMenuButton('btnSubMcdSearch', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">📲 Resultados Live</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnSubResultadosLive" onchange="toggleMenuButton('btnSubResultadosLive', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="admin-config-row">
-            <span class="admin-config-label">🧠 Palpites da I.A.</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnSubPalpitesIA" onchange="toggleMenuButton('btnSubPalpitesIA', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="admin-config-row">
-            <span class="admin-config-label">🔍 Auditoria I.A.</span>
-            <label class="ios-switch">
-                <input type="checkbox" id="checkBtnSubAuditoriaIA" onchange="toggleMenuButton('btnSubAuditoriaIA', this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-    <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 20px 0 5px 5px; text-transform: uppercase; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 15px;">
-    📢 Banners de Sistema
-</div>
-
-<div class="admin-config-row">
-    <span class="admin-config-label">🔔 Banner de Novos Resultados</span>
-    <label class="ios-switch">
-        <input type="checkbox" id="checkBannerAviso" onchange="toggleSystemBanner('resultNotificationBanner', this.checked)">
-        <span class="slider"></span>
-    </label>
-</div>
-
-<div class="admin-config-row">
-    <span class="admin-config-label">🤖 Banner de Placar da I.A.</span>
-    <label class="ios-switch">
-        <input type="checkbox" id="checkBannerIA" onchange="toggleSystemBanner('iaScoreboardBanner', this.checked)">
-        <span class="slider"></span>
-    </label>
-</div> <div class="admin-config-row">
-    <span class="admin-config-label">⚙️ Configurações</span>
-    <label class="ios-switch">
-        <input type="checkbox" id="checkBtnSettings" onchange="toggleMenuButton('btnMenuSettings', this.checked)">
-        <span class="slider"></span>
-    </label>
-</div>
-
-<div class="admin-config-row">
-    <span class="admin-config-label">📈 Boletim Global</span>
-    <label class="ios-switch">
-        <input type="checkbox" id="checkBtnSubBoletimGlobal" onchange="toggleMenuButton('btnSubBoletimGlobal', this.checked)">
-        <span class="slider"></span>
-    </label>
-</div>
-
-    </div>
-
     <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 25px 0 10px 5px; text-transform: uppercase; border-top: 1px solid rgba(128,128,128,0.3); padding-top: 20px;">
-            👥 Gestão de Usuários Cadastrados
-        </div>
-        
-        <div id="adminUsersList" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
-            <p style="text-align: center; color: #6c757d; font-size: 0.9rem;">Carregando usuários...</p>
-        </div>
-
-        <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 25px 0 10px 5px; text-transform: uppercase; border-top: 1px solid rgba(128,128,128,0.3); padding-top: 20px;">
-            📊 Relatórios e Backtest
-        </div>
-        <button onclick="openAuditoriaFromHub()" class="view-button" style="width: 100%; margin-bottom: 20px; padding: 12px; font-size: 1rem;">
-            🔍 Abrir Auditoria de Acertos (I.A.)
-        </button>
-
-        <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin: 25px 0 10px 5px; text-transform: uppercase; border-top: 1px solid rgba(128,128,128,0.3); padding-top: 20px;">
-            📢 Banner de Marketing (Placar)
-        </div>
-        <div class="admin-user-card" style="margin-bottom: 20px;">
-    <label style="font-size: 0.85rem; color: #6c757d; margin-bottom: 8px; display: block; line-height: 1.3;">
-        Texto do Banner na tela inicial.<br><strong>Dica:</strong> Se deixar vazio, o sistema calculará os acertos automaticamente.
-    </label>
-    <textarea id="adminPlacarText" class="save-dialog-input" rows="3" placeholder="Ex: 🔥 A I.A. cravou 3 Duques e 1 Centena na PT Rio esta semana!" style="height: auto; margin-bottom: 10px;"></textarea>
-    
-    <div style="display: flex; flex-direction: column; gap: 8px;">
-        <button onclick="salvarPlacarAdmin()" class="save-button" style="width: 100%; margin: 0; padding: 10px;">💾 Salvar Banner</button>
-        
-        <button onclick="resetarBancoPlacarIA()" class="import-btn" style="width: 100%; margin: 0; padding: 10px; background-color: #6c757d;">
-            ♻️ Resetar Memória (Limpar Banner)
-        </button>
+        📢 Banner de Marketing (Placar)
     </div>
-</div>
-        </fieldset>
+    <div class="admin-user-card" style="margin-bottom: 5px; text-align: left;">
+        <label style="font-size: 0.85rem; color: #6c757d; margin-bottom: 8px; display: block; line-height: 1.3;">
+            Texto do Banner na tela inicial.<br><strong>Dica:</strong> Se deixar vazio, a I.A calculará automaticamente.
+        </label>
+        <textarea id="adminPlacarText" class="save-dialog-input" rows="3" placeholder="Ex: 🔥 A I.A. cravou 3 Duques e 1 Centena na PT Rio esta semana!" style="height: auto; margin-bottom: 10px;"></textarea>
+        
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" onclick="salvarPlacarAdmin()" class="save-button" style="width: 100%; margin: 0; padding: 10px;">💾 Salvar Banner</button>
+            <button type="button" onclick="resetarBancoPlacarIA()" class="import-btn" style="width: 100%; margin: 0; padding: 10px; background-color: #6c757d;">
+                ♻️ Resetar Memória
+            </button>
+        </div>
+    </div>
+</fieldset>
         
         <button onclick="closeSettingsModal()" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
     </div>
@@ -8388,12 +8251,12 @@ body.dark-mode #kitFixoLista textarea {
                     <option value="Outra">Outra</option>
                 </select>
                 <div id="receiptExtractionButtons" class="button-group" style="margin-top: 5px; gap: 6px;">
-                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Rio de Janeiro')">RJ</button>
-                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Nacional')">NC</button>
-                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Look')">LK</button>
-                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Loteria Federal')">FD</button>
-                    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Outra')">Outra</button>
-                </div>
+    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Rio de Janeiro')">RJ</button>
+    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Look')">LK</button>
+    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Nacional')">NC</button>
+    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Loteria Federal')">FD</button>
+    <button class="receipt-extraction-btn" onclick="selectExtractionButton(this, 'Outra')">Outra</button>
+</div>
             </div>
             
             <div style="flex: 1 1 100%;">
@@ -8502,34 +8365,21 @@ body.dark-mode #kitFixoLista textarea {
         </p>
         
         <div class="generator-step-card" style="padding: 15px; margin-bottom: 10px;">
+            <label for="chunkExternalInput" style="font-weight: bold; margin-bottom: 5px; display: block; font-size: 0.9rem; color: #007bff;">
+                📝 Colar de fora (Opcional):
+            </label>
+            <textarea id="chunkExternalInput" class="save-dialog-input" rows="2" placeholder="Cole seus próprios números aqui..." style="margin: 0; font-size: 0.9rem;" oninput="processExternalChunkInput()"></textarea>
+        </div>
+
+        <div class="generator-step-card" style="padding: 15px; margin-bottom: 10px;">
             <label for="chunkSizeInput" style="font-weight: bold; margin-bottom: 5px; display: block;">Tamanho do Lote (Qtd. de números):</label>
-            <input type="number" id="chunkSizeInput" class="save-dialog-input" value="50" min="50" style="margin: 0; text-align: center; font-size: 1.2rem; font-weight: bold;" oninput="renderChunkButtons()">
+            <input type="number" id="chunkSizeInput" class="save-dialog-input" value="50" min="10" style="margin: 0; text-align: center; font-size: 1.2rem; font-weight: bold;" oninput="renderChunkButtons()">
         </div>
 
         <div id="chunkButtonsContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; padding: 5px;">
-            </div>
+        </div>
 
         <button onclick="closeChunkCopyModal()" class="load-button" style="width: 100%; margin-top: 15px;">Fechar</button>
-    </div>
-</div>
-
-<div id="chunkTypeSelectionModal" class="modal modal-top" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width: 400px;">
-        <span class="close-modal" onclick="document.getElementById('chunkTypeSelectionModal').classList.remove('active')">×</span>
-        <h3 class="modal-title">✂️ O que deseja dividir?</h3>
-        <p style="text-align: center; margin-bottom: 20px; color: #666;">Você gerou vários tipos de números. Qual grupo deseja dividir em lotes?</p>
-        
-        <div class="data-management-buttons">
-            <button id="chunkTypeBtnMilhar" class="view-button" onclick="processSelectedChunkType('milhar')">
-                📋 Lotes de Milhares
-            </button>
-            <button id="chunkTypeBtnCentena" class="view-button" onclick="processSelectedChunkType('centena')">
-                📋 Lotes de Centenas
-            </button>
-            <button id="chunkTypeBtnDezena" class="view-button" onclick="processSelectedChunkType('dezena')">
-                📋 Lotes de Dezenas
-            </button>
-        </div>
     </div>
 </div>
 
@@ -8742,6 +8592,24 @@ body.dark-mode #kitFixoLista textarea {
             </div>
 
         </div>
+    </div>
+</div>
+
+<div id="adminUsersModal" class="modal modal-super-top" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 550px;">
+        <span class="close-modal" onclick="document.getElementById('adminUsersModal').classList.remove('active')">×</span>
+        <h3 class="modal-title" style="margin-bottom: 5px;">👥 Gestão de Clientes</h3>
+        <p style="text-align: center; color: #6c757d; margin-top: 0; margin-bottom: 20px; font-size: 0.9rem;">Selecione um cliente para gerenciar seus acessos.</p>
+
+        <div class="generator-step-card" style="padding: 15px; margin-bottom: 10px;">
+            <label style="font-weight: bold; margin-bottom: 5px; display: block;">1. Selecione o Cliente:</label>
+            <select id="adminUserSelect" onchange="loadSelectedUserPerms()"></select>
+        </div>
+
+        <div id="adminUserPermsContainer" style="display: none; padding: 5px;">
+            </div>
+        
+        <button onclick="document.getElementById('adminUsersModal').classList.remove('active')" class="load-button" style="width: 100%; margin-top: 15px;">Fechar Janela</button>
     </div>
 </div>
 
@@ -9070,13 +8938,21 @@ function showLoadingIndicator(message = 'Processando...') {
 }
 
 function hideLoadingIndicator() {
-  const indicator = document.getElementById('loadingOverlay');
-  clearInterval(loadingTimerInterval); // Para o relógio
-  if (indicator) {
-    indicator.style.opacity = '0';
-    indicator.style.pointerEvents = 'none'; // Libera cliques
-    setTimeout(() => { indicator.style.display = 'none'; }, 10000);
-  }
+    const indicator = document.getElementById('loadingOverlay');
+    if (typeof loadingTimerInterval !== 'undefined') {
+        clearInterval(loadingTimerInterval);
+    }
+    if (indicator) {
+        // Inicia o sumiço visual
+        indicator.style.opacity = '0';
+        // MÁGICA: Remove o bloqueio de cliques INSTANTANEAMENTE
+        indicator.style.pointerEvents = 'none'; 
+        
+        // Remove do DOM após a animação de fade (300ms)
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 300);
+    }
 }
 
 function openNamePickerModal(event) {
@@ -9434,101 +9310,6 @@ async function saveNewMcdQuantity(qty) {
     // Atualiza a tela e salva na memória
     updateMcdSmartButtonsUI();
     await saveData('mcdSmartQuantities', mcdSmartQuantities);
-}
-
-function selectExtractionButton(buttonElement, value) {
-    // 1. Remove a classe 'selected' de todos os botões
-    const buttons = document.querySelectorAll('.receipt-extraction-btn');
-    buttons.forEach(btn => btn.classList.remove('selected'));
-
-    // 2. Adiciona a classe 'selected' ao botão clicado
-    buttonElement.classList.add('selected');
-
-    // 3. Atualiza o <select> escondido
-    const hiddenSelect = document.getElementById('receiptExtractionSelect');
-    hiddenSelect.value = value;
-
-    // 4. FORÇA A ATUALIZAÇÃO DOS HORÁRIOS IMEDIATAMENTE
-    updateExtractionTimes();
-    validateReceiptInputs();
-
-    // 5. Pula o foco para o campo de valor
-    const valorInput = document.getElementById('receiptValueInput');
-    if (valorInput) {
-        valorInput.focus(); 
-        valorInput.select(); 
-    }
-}
-
-// Lógica de preencher os horários
-async function updateExtractionTimes() {
-    const extractionSelect = document.getElementById('receiptExtractionSelect');
-    const timeSelect = document.getElementById('receiptTimeSelect');
-    const selectedExtraction = extractionSelect.value;
-
-    timeSelect.innerHTML = ''; // Limpa os horários anteriores
-
-    // SE NENHUMA EXTRAÇÃO FOI ESCOLHIDA AINDA (Ao abrir a tela)
-    if (!selectedExtraction || selectedExtraction === '') {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = '⬅️ Escolha a Extração acima';
-        timeSelect.appendChild(option);
-        generateReceiptText(); // Atualiza o recibo
-        return; // Para a função aqui
-    }
-
-    // Se escolheu, carrega a lista de horários
-    const schedule = extractionSchedules[selectedExtraction] || [];
-
-    schedule.forEach(sorteioInfo => {
-        const option = document.createElement('option');
-        option.value = sorteioInfo.display;
-        option.textContent = sorteioInfo.display;
-        timeSelect.appendChild(option);
-    });
-
-    const savedCutoff = await getData(STORAGE_KEYS.CUTOFF_TIME);
-    const cutoffMinutosGlobal = parseInt(savedCutoff, 10) || 5;
-
-    if (schedule.length > 0) {
-        const agora = new Date();
-        let proximoSorteioDisponivel = null;
-
-        for (const sorteioInfo of schedule) {
-            const timeMatch = sorteioInfo.display.match(/(\d{2}):(\d{2})/);
-            if (!timeMatch) continue;
-
-            const sorteioHora = parseInt(timeMatch[1], 10);
-            const sorteioMinuto = parseInt(timeMatch[2], 10);
-
-            const dataSorteioHoje = new Date();
-            dataSorteioHoje.setHours(sorteioHora, sorteioMinuto, 0, 0);
-
-            const dataLimite = new Date(dataSorteioHoje);
-
-            let cutoffParaEsteSorteio = sorteioInfo.corteMinutos === 0 ? 0 : cutoffMinutosGlobal;
-            
-            if (selectedExtraction === 'Look') {
-                cutoffParaEsteSorteio = -15; 
-            }
-            
-            dataLimite.setMinutes(dataSorteioHoje.getMinutes() - cutoffParaEsteSorteio);
-
-            if (agora < dataLimite) {
-                proximoSorteioDisponivel = sorteioInfo;
-                break;
-            }
-        }
-
-        if (proximoSorteioDisponivel) {
-            timeSelect.value = proximoSorteioDisponivel.display;
-        } else if (schedule.length > 0) {
-            timeSelect.value = schedule[schedule.length - 1].display;
-        }
-    }
-
-    generateReceiptText();
 }
 
 async function performMcdSearch() {
@@ -11320,7 +11101,8 @@ async function shareReceiptToWhatsApp() {
             content: receiptContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: showCheckEmoji,
-            tipo: 'mcd' // <--- ADICIONE ESTA LINHA
+            tipo: 'mcd',
+            expiresAt: dataExpiracao // <-- CORREÇÃO: Agora envia a data de expiração pro Firebase
         });
 
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
@@ -14703,7 +14485,7 @@ function setupCutoffTimeSetting() {
     });
 }
 
-// Substitua a função antiga por esta
+// VERSÃO CORRIGIDA: Garante que o Confirm sempre vença a tela preta
 function showCustomConfirm(message, okText = 'Confirmar', cancelText = 'Cancelar', callingModalId = null) {
     return new Promise(resolve => {
         const modal = document.getElementById('customConfirmModal');
@@ -14714,7 +14496,9 @@ function showCustomConfirm(message, okText = 'Confirmar', cancelText = 'Cancelar
         messageEl.innerHTML = message.replace(/\n/g, '<br>');
         okBtn.textContent = okText;
 
-        // ... (lógica para cancelText e z-index permanece a mesma) ...
+        // 1. DEFINE A CAMADA BASE COMO 10000 (Sempre acima do loading que é 8000)
+        modal.style.zIndex = "10000"; 
+
         if (cancelText === null) {
             cancelBtn.style.display = 'none';
             okBtn.style.flexGrow = '1';
@@ -14724,40 +14508,30 @@ function showCustomConfirm(message, okText = 'Confirmar', cancelText = 'Cancelar
             okBtn.style.flexGrow = '';
         }
 
+        // 2. Se houver um modal chamando, ele sobe ainda mais (Ex: Kits chamando Confirm)
         if (callingModalId) {
              const callingModal = document.getElementById(callingModalId);
              if (callingModal) {
-                 try {
-                     const callingZIndex = parseInt(window.getComputedStyle(callingModal).zIndex, 10);
-                     if (!isNaN(callingZIndex)) {
-                        modal.style.zIndex = (callingZIndex + 10).toString();
-                     } else { modal.style.zIndex = '1350'; }
-                 } catch (e) { modal.style.zIndex = '1350'; }
-             } else { modal.style.zIndex = '1350'; }
-        } else { modal.style.zIndex = '1350'; }
-        // --- FIM DA LÓGICA DE Z-INDEX ---
+                 const callingZIndex = parseInt(window.getComputedStyle(callingModal).zIndex, 10);
+                 if (!isNaN(callingZIndex)) {
+                    modal.style.zIndex = (callingZIndex + 10).toString();
+                 }
+             }
+        }
 
-        // --- MUDANÇA AQUI ---
         requestAnimationFrame(() => {
             modal.classList.add('active');
-            // Forçar reflow *dentro* do requestAnimationFrame
             void modal.offsetHeight;
         });
-        // --- FIM DA MUDANÇA ---
 
-
-        // ... (lógica de cleanupAndResolve e addEventListener permanece a mesma) ...
         const cleanupAndResolve = (value) => {
-            // ... (código inalterado) ...
              modal.classList.remove('active');
-             modal.style.zIndex = '';
-             cancelBtn.style.display = 'inline-flex';
-             okBtn.style.flexGrow = '';
+             // Limpa o z-index inline ao fechar para não bugar outros modais
+             setTimeout(() => { modal.style.zIndex = ''; }, 300);
+             
              okBtn.removeEventListener('click', onOkClick);
              cancelBtn.removeEventListener('click', onCancelClick);
-             setTimeout(() => {
-                 resolve(value);
-             }, 50);
+             resolve(value);
         };
 
         const onOkClick = () => cleanupAndResolve(true);
@@ -15005,7 +14779,6 @@ function toggleQuickShortcuts() {
     await loadFavoriteReceiptValues();
     await loadBannerPreferences();
     await loadMcdSmartQuantities();
-    await loadMenuButtonPreferences();
     loadIAScoreboard();
     setupPWA();
     verificarStatusRoboIA();
@@ -15170,7 +14943,6 @@ if (mcdSearchInput && clearMcdSearchBtn) {
         // 2. Aciona o efeito visual (Opacidade + Zoom + Desfoque)
         loadingOverlay.style.opacity = '0';
         loadingOverlay.style.transform = 'scale(1.2)'; // Efeito de aproximação enquanto some
-        loadingOverlay.style.filter = 'blur(20px)';   // Esmaecimento suave
         
         // 3. Após o tempo da animação (1.2s), remove o bloqueio da tela
         setTimeout(() => {
@@ -15923,7 +15695,7 @@ async function abrirHistoricoPalpitesIA() {
     container.innerHTML = `
         <div style="text-align: center; padding: 40px;">
             <div class="spinner-border" style="color:#6f42c1;"></div>
-            <p style="margin-top:15px; font-weight:bold; color:#6f42c1;">Buscando suas análises mais recentes...</p>
+            <p style="margin-top:15px; font-weight:bold; color:#6f42c1;">Buscando e organizando análises...</p>
         </div>
     `;
 
@@ -15940,10 +15712,10 @@ async function abrirHistoricoPalpitesIA() {
     }
 
     try {
-        // BUSCA AGRESSIVA: Aumentamos o limite e forçamos a busca por timestamp exato
+        // Busca um pouco mais de limite para garantir que tenhamos todos os horários para ordenar
         const snapshot = await firestoreDB.collection('historico_palpites_ia')
             .orderBy('timestamp', 'desc')
-            .limit(60) // Puxamos mais para garantir que as de 21h entrem no filtro
+            .limit(100) 
             .get();
 
         if (snapshot.empty) {
@@ -15953,20 +15725,55 @@ async function abrirHistoricoPalpitesIA() {
 
         let html = '';
         const jaMostrados = new Set(); 
+        const itemsToSort = [];
 
         snapshot.forEach(doc => {
             const data = doc.data();
             
+            // 🚫 FILTRO DE OURO: Ignora as análises "Geral", pegando apenas os horários específicos
+            if (!data.horario || data.horario.toLowerCase() === 'geral') return;
+
             // Chave única baseada em loteria, horário e data para evitar duplicados
             const chaveUnica = `${data.loteria}_${data.horario}_${data.data}`;
             
             if (jaMostrados.has(chaveUnica)) return;
             jaMostrados.add(chaveUnica);
 
+            // 🕒 EXTRAÇÃO DE TEMPO PARA ORDENAÇÃO PERFEITA (Intercalando loterias)
+            let hora = 0, min = 0;
+            const timeMatch = data.horario.match(/(\d{1,2})[:h](\d{2})?/); // Acha 09:20 ou 10h
+            if (timeMatch) {
+                hora = parseInt(timeMatch[1], 10);
+                min = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+            }
+            
+            let dateVal = 0;
+            if (data.data) {
+                const parts = data.data.split('/');
+                if (parts.length === 3) {
+                    // Cria uma data com a hora exata daquele sorteio para ordenar
+                    dateVal = new Date(parts[2], parts[1] - 1, parts[0], hora, min).getTime();
+                }
+            }
+            if (dateVal === 0 && data.timestamp) {
+                dateVal = data.timestamp.toMillis();
+            }
+
+            // Guarda na lista para ordenar depois
+            itemsToSort.push({ data, dateVal });
+        });
+        
+        // 🔄 ORDENAÇÃO: Mais recentes primeiro (Intercalando as extrações de todas as loterias pelo horário exato)
+        itemsToSort.sort((a, b) => b.dateVal - a.dateVal);
+
+        itemsToSort.forEach(item => {
+            const data = item.data;
             const topBicho = data.ranking && data.ranking[0] ? data.ranking[0].emoji : '🔮';
             const textoLimpo = data.conteudo.replace(/`/g, "'");
+            
+            // 🛡️ CORREÇÃO DOS BOTÕES: Cria um ID único para cada botão conseguir achar seu próprio texto
+            const idUnico = Math.random().toString(36).substr(2, 9);
 
-            // --- HTML ATUALIZADO: Card totalmente clicável e texto alinhado ---
             html += `
             <div class="saved-item" style="border-left: 4px solid #6f42c1; margin-bottom: 12px; background: rgba(128,128,128,0.05); border-radius: 8px; cursor: pointer; transition: 0.2s;" 
                  onclick="const content = this.querySelector('.saved-item-content'); const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; this.querySelector('.saved-item-toggle').innerHTML = isHidden ? '▲' : '▼';">
@@ -15974,19 +15781,20 @@ async function abrirHistoricoPalpitesIA() {
                 <div class="saved-item-header" style="padding: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="saved-item-title" style="font-size: 0.95rem; font-weight: bold; line-height: 1.4; text-align: left;">
                         ${topBicho} ${data.loteriaNome} - ${data.horario}<br>
-                        <small style="color: #888; font-weight: normal;">Gerado em: ${data.data}</small>
+                        <small style="color: #888; font-weight: normal;">Data: ${data.data}</small>
                     </div>
                     <div class="saved-item-toggle" style="font-size: 1.2rem; color: #6f42c1;">▼</div>
                 </div>
 
-                <div class="saved-item-content" style="display: none; padding: 15px; background: rgba(0,0,0,0.03); font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; border-top: 1px solid rgba(0,0,0,0.1); text-align: left; line-height: 1.5; color: inherit;">
-                    ${textoLimpo}
+                <div class="saved-item-content" style="display: none; padding: 15px; border-top: 1px solid rgba(0,0,0,0.1); text-align: left;">
+                    
+                    <div id="ia-text-${idUnico}" style="background: rgba(0,0,0,0.03); font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; line-height: 1.5; color: inherit; padding: 10px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1);">${textoLimpo}</div>
                     
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button onclick="event.stopPropagation(); copyToClipboard(\`${textoLimpo}\`, this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
+                        <button onclick="event.stopPropagation(); copyToClipboard(document.getElementById('ia-text-${idUnico}').innerText, this)" style="flex: 1; background-color: #6f42c1; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #5a359b;">
                             📋 Copiar
                         </button>
-                        <button onclick="event.stopPropagation(); window.open('https://wa.me/?text=' + encodeURIComponent(\`${textoLimpo}\`), '_blank')" style="flex: 1; background-color: #25D366; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #128c7e;">
+                        <button onclick="event.stopPropagation(); const txt = document.getElementById('ia-text-${idUnico}').innerText; window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank')" style="flex: 1; background-color: #25D366; color: white; padding: 12px; font-size: 0.95rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 0 #128c7e;">
                             📲 Zap
                         </button>
                     </div>
@@ -16328,6 +16136,71 @@ function openResultFromNotification() {
         showShareResultsModal();
     }
 }
+
+
+
+
+window.promptForMultiKitBichos = function(todosBichos, valorAtual) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('customConfirmModal');
+        const messageEl = document.getElementById('customConfirmModalMessage');
+        const okBtn = document.getElementById('customConfirmOk');
+        const cancelBtn = document.getElementById('customConfirmCancel');
+        
+        prepararModalParaVenda(modal);
+
+        const bichosPorKit = {};
+        todosBichos.forEach(b => { if(!bichosPorKit[b.kitIndex]) bichosPorKit[b.kitIndex] = []; bichosPorKit[b.kitIndex].push(b); });
+
+        let html = `
+            <div class="venda-pro-container">
+                <p style="font-size: 1.2rem; color: #6f42c1; font-weight: 900; text-align: center; margin: 0 0 10px 0;">🛒 Venda Casada (MultiKit)</p>
+                <div class="venda-pro-input-group">
+                    <label class="venda-pro-label">👤 Nome do Cliente:</label>
+                    <input type="text" id="popupMultiCliente" class="venda-pro-field" placeholder="Digite o nome...">
+                </div>
+                <div class="venda-pro-input-group">
+                    <label class="venda-pro-label">🐾 Seleção de Bichos:</label>
+                    <div style="max-height: 250px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; padding: 10px;">
+        `;
+        
+        Object.keys(bichosPorKit).forEach(k => {
+            html += `<div style="font-weight: 900; color: #007bff; margin: 10px 0 5px 0; font-size: 0.85rem; border-bottom: 1px solid #eee;">📦 Kit #${parseInt(k)+1}</div><div class="venda-pro-grid">`;
+            bichosPorKit[k].forEach(b => { 
+                html += `<label class="venda-pro-check-card" style="padding:8px;"><input type="checkbox" class="multi-check" value="${b.kitIndex}_${b.grupo}"><span>${b.emoji} G${b.grupo}</span></label>`; 
+            });
+            html += `</div>`;
+        });
+
+        html += `</div></div><div class="venda-pro-price-box"><input type="text" id="popupMultiPrice" class="venda-pro-price-input" value="${valorAtual}"></div></div>`;
+
+        messageEl.innerHTML = html;
+        okBtn.textContent = 'Confirmar MultiKit';
+        okBtn.style.backgroundColor = '#6f42c1';
+        modal.classList.add('active');
+
+        const cleanup = () => {
+            modal.classList.remove('active');
+            const modalTitle = modal.querySelector('.modal-title');
+            if (modalTitle) modalTitle.style.display = '';
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) modalContent.style.textAlign = '';
+            okBtn.replaceWith(okBtn.cloneNode(true));
+            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+        };
+
+        document.getElementById('customConfirmOk').onclick = () => {
+            const nameInput = document.getElementById('popupMultiCliente');
+            const name = nameInput.value.trim();
+            if (!name) { showToast("⚠️ Digite o Nome do Cliente!", "error"); nameInput.style.border = "2px solid #dc3545"; nameInput.focus(); return; }
+            const items = Array.from(modal.querySelectorAll('.multi-check:checked')).map(cb => cb.value);
+            if (items.length === 0) { showToast("Selecione os bichos.", "error"); return; }
+            cleanup();
+            resolve({ selectedItems: items, finalPrice: document.getElementById('popupMultiPrice').value, nomeCliente: name });
+        };
+        cancelBtn.onclick = () => { cleanup(); resolve(null); };
+    });
+};
 
 let auditoriaSorteiosProcessados = []; // Cache para evitar re-leitura do banco ao filtrar
 
@@ -16736,29 +16609,33 @@ async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
     if (container) container.innerHTML = html || '<p style="text-align:center; padding:20px;">Nenhum sorteio para este filtro.</p>';
 }
 
-// Função para carregar e aplicar as permissões configuradas no Firestore para o usuário logado
-async function aplicarPermissoesIndividuais(user) {
+let permissaoListener = null;
+
+function aplicarPermissoesIndividuais(user) {
     if (!user) return;
+    if (permissaoListener) permissaoListener(); 
 
-    try {
-        const doc = await firestoreDB.collection('users').doc(user.uid).get();
+    permissaoListener = firestoreDB.collection('users').doc(user.uid).onSnapshot((doc) => {
+        if (doc.exists) {
+            const perms = doc.data().permissions || {};
 
-        if (doc.exists && doc.data().permissions) {
-            const perms = doc.data().permissions;
-            
-            // 1. Aplica regras normais (Botões, Banners e Menus)
-            for (const [btnId, isVisible] of Object.entries(perms)) {
-                const element = document.getElementById(btnId);
-                
-                if (element) {
-                    element.style.display = isVisible ? '' : 'none';
-                    if (btnId === 'resultNotificationBanner' && !isVisible) {
-                        document.body.classList.remove('has-notification-banner');
-                    }
+            // 1. Visibilidade de Botões e Menus
+            const todosBotaoIds = [
+                'resultNotificationBanner', 'iaScoreboardBanner',
+                'btnMenuMCD', 'btnMenuFechamento', 'btnMenuBolao', 'btnMenuTabela', 'btnMenuAnalises', 'btnMenuKitsMCD', 'btnMenuSettings',
+                'btnMainClear', 'btnMainSave', 'btnMainLists', 'btnMainCheckWinner', 'btnMainAddNames', 'btnMainCount',
+                'btnSubAtrasados', 'btnSubMcdSearch', 'btnSubResultadosLive', 'btnSubPalpitesIA', 'btnSubAuditoriaIA', 'btnSubBoletimGlobal'
+            ];
+
+            todosBotaoIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const isVisible = perms[id] !== false;
+                    el.style.setProperty('display', isVisible ? '' : 'none', 'important');
                 }
-            }
+            });
 
-            // 2. Aplica o Filtro Global de Loterias (Cria uma regra CSS invisível)
+            // 2. Filtro Total de Loterias (Gerador, MCD, IA, Kits, Recibos)
             let styleBlock = document.getElementById('dynamic-lottery-perms');
             if (!styleBlock) {
                 styleBlock = document.createElement('style');
@@ -16766,29 +16643,25 @@ async function aplicarPermissoesIndividuais(user) {
                 document.head.appendChild(styleBlock);
             }
 
-            // O sistema procura por menus, botões, opções de select e abas de cada loteria
+            // Seletores expandidos para cobrir todas as siglas e nomes usados no sistema
             const loteriaSelectors = {
-                'loteria_rj': `option[value="rj"], option[value="Rio de Janeiro"], label:has(input[value="rj"]), label:has(input[value="RJ"]), button[data-loteria="rj"], button[onclick*="'rj'"], button[onclick*="'Rio de Janeiro'"], button#filter-rj`,
-                'loteria_lk': `option[value="lk"], option[value="Look"], label:has(input[value="lk"]), label:has(input[value="LK"]), button[data-loteria="lk"], button[onclick*="'lk'"], button[onclick*="'Look'"], button#filter-lk`,
-                'loteria_ln': `option[value="ln"], option[value="Nacional"], label:has(input[value="ln"]), label:has(input[value="NC"]), button[data-loteria="ln"], button[onclick*="'ln'"], button[onclick*="'Nacional'"], button#filter-ln`,
-                'loteria_fd': `option[value="fd"], option[value="Loteria Federal"], label:has(input[value="fd"]), label:has(input[value="FD"]), button[data-loteria="fd"], button[onclick*="'fd'"], button[onclick*="'Loteria Federal'"], button#filter-fd`,
-                'loteria_ba': `option[value="ba"], option[value="PT Bahia"], label:has(input[value="ba"]), label:has(input[value="BA"]), button[data-loteria="ba"], button[onclick*="'ba'"], button[onclick*="'PT Bahia'"], button#filter-ba`
+                'loteria_rj': `option[value*="Rio"], button[onclick*="Rio"], button[onclick*="'rj'"], button[data-loteria="rj"], button#filter-rj`,
+                'loteria_lk': `option[value*="Look"], button[onclick*="Look"], button[onclick*="'lk'"], button[data-loteria="lk"], button#filter-lk`,
+                'loteria_ln': `option[value*="Nacional"], button[onclick*="Nacional"], button[onclick*="'ln'"], button[onclick*="'NC'"], button[data-loteria="ln"], button#filter-ln`,
+                'loteria_ba': `option[value*="Bahia"], button[onclick*="Bahia"], button[onclick*="'ba'"], button[onclick*="'BA'"], button[onclick*="'PT Bahia'"], button[data-loteria="ba"], button#filter-ba`,
+                'loteria_fd': `option[value*="Federal"], button[onclick*="Federal"], button[onclick*="'fd'"], button[onclick*="'FD'"], button[data-loteria="fd"], button#filter-fd`
             };
 
             let cssRules = '';
-            for (const [permKey, selector] of Object.entries(loteriaSelectors)) {
-                // Se a permissão estiver como FALSE (desativada no painel admin)
-                if (perms[permKey] === false) {
-                    cssRules += `${selector} { opacity: 0.3 !important; pointer-events: none !important; }\n`;
+            for (const [key, selector] of Object.entries(loteriaSelectors)) {
+                if (perms[key] === false) {
+                    // MÁGICA: Esconde todas as variações da loteria em tempo real
+                    cssRules += `${selector} { display: none !important; opacity: 0 !important; pointer-events: none !important; }\n`;
                 }
             }
-            
-            // Aplica as regras na tela na mesma hora
             styleBlock.innerHTML = cssRules;
         }
-    } catch (error) {
-        console.error("Erro ao aplicar restrições:", error);
-    }
+    });
 }
 
     async function salvarNomes() {
@@ -17785,10 +17658,21 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
 };
 
 async function shareGlobalDailyBriefing(dias = 1) {
-    const msgLoading = dias === 1 ? "Compilando Boletim de Hoje..." : `Analisando Performance de ${dias} dias...`;
+    const msgLoading = dias === 1 ? "Sincronizando e Compilando Boletim..." : `Analisando Performance de ${dias} dias...`;
     showLoadingIndicator(msgLoading);
 
     try {
+        // ---> INÍCIO DA MÁGICA DE TEMPO REAL <---
+        // Se for o boletim de Hoje, força o robô a ir na internet buscar os resultados 
+        // dos últimos minutos antes de fechar a conta do relatório!
+        if (dias === 1) {
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000));
+            try {
+                await Promise.race([runSilentIAUpdate(1), timeout]);
+            } catch (e) { console.warn("Sincronização rápida finalizada."); }
+        }
+        // ---> FIM DA MÁGICA <---
+
         // 1. Define o período de busca retroativo
         const limiteData = new Date();
         limiteData.setDate(limiteData.getDate() - (dias - 1));
@@ -19617,10 +19501,91 @@ async function generateSelectedNumbers() {
     }
 
     // --- 4. CONFIRMAÇÃO E SALVAMENTO ---
-    summaryParts.push("<div style='margin-top: 20px; font-size: 1.05rem;'>Prosseguir com a geração?</div>");
+    // --- 4. CONFIRMAÇÃO E SALVAMENTO (NOVO LAYOUT PREMIUM) ---
     
-    // Junta tudo dentro de uma div com o texto centralizado para ficar perfeito no Modal!
-    const finalMessageHTML = `<div style="text-align: center; line-height: 1.5;">${summaryParts.join('\n')}</div>`;
+    // 1. Extrai as informações brutas do summaryParts antigo para montar o novo card
+    let tituloModo = "Desconhecido";
+    let subModoHtml = "";
+    let bichosItems = [];
+    
+    summaryParts.forEach(linha => {
+        // Encontra a linha do Modo
+        if (linha.includes('<strong>Modo:</strong>')) {
+            tituloModo = linha.replace('- <strong>Modo:</strong>', '').trim();
+        }
+        // Encontra o aviso de Cercar/Fechamento (está em uma div com cor específica)
+        else if (linha.includes('color:#ffc107') || linha.includes('(Modo Cercar') || linha.includes('(Fechamento')) {
+            const textLimp = linha.replace(/<[^>]*>?/gm, '').replace(/[()]/g, '').trim();
+            const bgColor = textLimp.includes('Fechamento') ? '#17a2b8' : '#ffc107';
+            const color = textLimp.includes('Fechamento') ? '#fff' : '#333';
+            subModoHtml = `<div style="font-size:0.7rem; background:${bgColor}; color:${color}; padding:3px 8px; border-radius:10px; display:inline-block; font-weight:900; margin-top:4px; letter-spacing:0.5px;">${textLimp}</div>`;
+        }
+        // Encontra as linhas dos Bichos (Começam com &bull;)
+        else if (linha.includes('&bull;')) {
+            let limpo = linha.replace('&bull;', '').trim();
+            const partes = limpo.split(':');
+            if (partes.length >= 2) {
+                const bichoNome = partes[0].trim();
+                const qtdTexto = partes.slice(1).join(':').trim(); 
+                
+                bichosItems.push(`
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid rgba(128,128,128,0.1);">
+                        <span style="font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                            ${bichoNome}
+                        </span>
+                        <div style="text-align: right; line-height: 1.2;">
+                            <span style="font-weight: 900; color: #007bff; font-size: 1.15rem;">${qtdTexto.split('<small>')[0].trim()}</span>
+                            ${qtdTexto.includes('<small>') ? '<br><span style="color: #6c757d; font-size: 0.75rem; font-weight: bold;">' + qtdTexto.split('<small>')[1].replace('</small>', '') + '</span>' : ''}
+                        </div>
+                    </div>
+                `);
+            }
+        }
+    });
+
+    // Se for modo aleatório, não tem bichos, usamos a regra geral (que também usa o &bull;)
+    if (bichosItems.length === 0) {
+        bichosItems.push(`
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(128,128,128,0.1);">
+                <span style="font-weight: 600; font-size: 0.95rem;">${tiposFormatados} (Sorteio Livre)</span>
+            </div>
+        `);
+    }
+
+    // 2. Monta o HTML Absoluto do Modal
+    const finalMessageHTML = `
+        <div style="text-align: left; background: rgba(128,128,128,0.03); border: 1px solid rgba(128,128,128,0.15); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed rgba(128,128,128,0.25); padding-bottom: 12px; margin-bottom: 12px;">
+                <span style="font-weight: 800; color: #888; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Modo de Geração</span>
+                <div style="text-align: right; line-height: 1;">
+                    <span style="font-weight: 900; color: #007bff; font-size: 1.05rem;">${tituloModo}</span>
+                    ${subModoHtml ? '<br>' + subModoHtml : ''}
+                </div>
+            </div>
+            
+            <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin-bottom: 6px; text-transform: uppercase; padding-left: 5px;">Bichos Selecionados:</div>
+            
+            <div style="display: flex; flex-direction: column; max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid rgba(128,128,128,0.1);">
+                ${bichosItems.join('')}
+            </div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #28a745, #218838); color: white; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(40,167,69,0.3); margin-bottom: 22px;">
+            <span style="font-weight: 800; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.5px;">Total a Gerar</span>
+            <span style="font-weight: 900; font-size: 1.8rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); line-height: 1;">${totalQuantity}</span>
+        </div>
+        
+        <div style="font-size: 1.1rem; font-weight: 800; color: inherit; text-align: center;">Deseja prosseguir com a geração?</div>
+        
+        <style>
+            /* Ajustes para o modo escuro específico deste modal */
+            body.dark-mode #customConfirmModalMessage span[style*="color: #888"] { color: #aaa !important; }
+            body.dark-mode #customConfirmModalMessage div[style*="background: rgba(128,128,128,0.03)"] { background: rgba(255,255,255,0.03) !important; border-color: rgba(255,255,255,0.1) !important; }
+            body.dark-mode #customConfirmModalMessage div[style*="background: rgba(0,0,0,0.02)"] { background: rgba(0,0,0,0.15) !important; border-color: rgba(255,255,255,0.05) !important; }
+            body.dark-mode #customConfirmModalMessage div[style*="border-bottom: 1px dashed rgba(128,128,128,0.25)"] { border-bottom-color: rgba(255,255,255,0.15) !important; }
+            body.dark-mode #customConfirmModalMessage div[style*="border-bottom: 1px solid rgba(128,128,128,0.1)"] { border-bottom-color: rgba(255,255,255,0.05) !important; }
+        </style>
+    `;
     
     const userConfirmed = await showCustomConfirm(finalMessageHTML, "Sim, Gerar", 'Cancelar', 'randomGeneratorModal');
     
@@ -19789,58 +19754,6 @@ function showCustomInput(title, message, defaultValue, maxValue) {
     });
 }
 
-// Busca a lista de usuários no Firestore e exibe na tela Admin com suporte a VIP/Admin
-async function loadAdminUserList() {
-    const container = document.getElementById('adminUsersList');
-    if (!container) return;
-
-    try {
-        const snapshot = await firestoreDB.collection('users').get();
-        if (snapshot.empty) {
-            container.innerHTML = '<p style="text-align: center; color: #6c757d;">Nenhum usuário cadastrado.</p>';
-            return;
-        }
-
-        let html = '';
-        snapshot.forEach(doc => {
-            const user = doc.data();
-            const uid = doc.id;
-            const isAdmin = user.role === 'admin';
-            const statusClass = user.ativo ? 'status-aprovado' : 'status-pendente';
-
-            html += `
-            <div class="admin-user-card" id="card-${uid}">
-                <div style="display: flex; justify-content: space-between; align-items: center;" onclick="toggleUserPermsSection('${uid}')">
-                    <div style="flex-grow: 1;">
-                        <span style="font-weight: bold; font-size: 0.95rem; color: ${isAdmin ? '#ffc107' : '#fff'};">
-                            ${isAdmin ? '⭐ ' : ''}${user.email}
-                        </span>
-                        <div class="admin-user-status ${statusClass}" style="display:inline-block; margin-left:10px; font-size: 0.65rem;">
-                            ${user.ativo ? 'ATIVO' : 'BLOQUEADO'}
-                        </div>
-                    </div>
-                    <button type="button" onclick="deleteUserAdmin(event, '${uid}', '${user.email}')" class="btn-delete-mini" style="background:none; border:none; font-size:1.3rem;">🗑️</button>
-                </div>
-
-                <div id="perms-${uid}" class="user-perms-panel" style="display:none; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
-                    <p style="font-size: 0.75rem; font-weight: bold; color: #007bff; margin-bottom: 10px;">DEFINIR ACESSOS DO USUÁRIO:</p>
-                    
-                    ${renderPermToggles(uid, user.permissions || {})}
-
-                    <div style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button onclick="toggleUserAccess('${uid}', ${user.ativo}, '${user.email}')" class="load-button" style="flex: 1; font-size: 0.8rem; background-color: #333;">
-                            ${user.ativo ? '🚫 Bloquear' : '✅ Ativar'}
-                        </button>
-                        <button onclick="saveUserPermissions('${uid}', '${user.email}')" class="save-button" style="flex: 1; font-weight: bold;">
-                            💾 Salvar e Sair
-                        </button>
-                    </div>
-                </div>
-            </div>`;
-        });
-        container.innerHTML = html;
-    } catch (e) { console.error("Erro ao carregar usuários:", e); }
-}
 
 function renderPermToggles(uid, userPerms) {
     const groups = [
@@ -19866,21 +19779,20 @@ function renderPermToggles(uid, userPerms) {
 }
 
 // =========================================================
-// 1. RENDERIZADOR DE PERMISSÕES INDIVIDUAIS DO ADMIN
+// 1. RENDERIZADOR DE PERMISSÕES INDIVIDUAIS DO ADMIN (LISTA)
 // =========================================================
 function renderPermToggles(uid, userPerms) {
     const menuGroups = [
         {
             titulo: "⭐ Assinatura e Alertas",
             btns: [
-                { id: 'isVIP', label: 'Usuário VIP', emoji: '💎' }, // <-- NOVO BOTÃO VIP
+                { id: 'isVIP', label: 'Usuário VIP', emoji: '💎' },
                 { id: 'resultNotificationBanner', label: 'Aviso Sorteio', emoji: '🔔' },
                 { id: 'iaScoreboardBanner', label: 'Placar I.A.', emoji: '🤖' }
             ]
         },
         {
             titulo: "🎲 Menu Superior",
-           
             btns: [
                 { id: 'btnMenuMCD', label: 'Gerador MCD', emoji: '🎲' },
                 { id: 'btnMenuFechamento', label: 'Duque/Terno', emoji: '🔢' },
@@ -19921,29 +19833,217 @@ function renderPermToggles(uid, userPerms) {
                 { id: 'loteria_ln', label: 'Nacional', emoji: '🇧🇷' },
                 { id: 'loteria_ba', label: 'Bahia', emoji: '🌴' },
                 { id: 'loteria_fd', label: 'Federal', emoji: '🏛️' }
-                
             ]
         }
     ];
 
     return menuGroups.map(group => `
-        <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-            <strong style="font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">
+        <div style="margin-top: 15px; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 15px;">
+            <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; margin-bottom: 10px; text-transform: uppercase;">
                 ${group.titulo}
-            </strong>
-            <div class="user-perms-grid">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0;">
                 ${group.btns.map(btn => {
-                    const isChecked = userPerms[btn.id] !== false; 
+                    const isChecked = userPerms[btn.id] !== false; // True por padrão
                     return `
-                    <label class="perm-button-label">
-                        <input type="checkbox" class="perm-check-${uid}" data-btnid="${btn.id}" ${isChecked ? 'checked' : ''}>
-                        <div style="font-size: 1.4rem; margin-bottom: 5px;">${btn.emoji}</div>
-                        <div class="text" style="font-size: 0.70rem; text-align: center; line-height: 1.1;">${btn.label}</div>
-                    </label>`;
+                    <div class="admin-config-row">
+                        <span class="admin-config-label" style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.2rem;">${btn.emoji}</span>
+                            ${btn.label}
+                        </span>
+                        <label class="ios-switch">
+                            <input type="checkbox" class="perm-check-${uid}" data-btnid="${btn.id}" ${isChecked ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>`;
                 }).join('')}
             </div>
         </div>
     `).join('');
+}
+
+// =========================================================
+// NOVO MOTOR DE GESTÃO DE CLIENTES (DROPDOWN NO ADMIN)
+// =========================================================
+let globalUsersData = {}; 
+
+// Dispara o modal a partir do botão nas configurações
+// Dispara o modal a partir do botão nas configurações exigindo senha
+async function openAdminUsersModalProtected() {
+    const password = await showCustomInput(
+        "Acesso Restrito", 
+        "Digite a senha de administrador:", 
+        "", 
+        999999
+    );
+
+    if (password === null) return; // Usuário cancelou ou fechou a janela
+
+    // Converte a senha digitada para o formato criptografado e compara com a senha mestra (121212)
+    const inputEncoded = btoa(String(password));
+    if (inputEncoded === ADMIN_MENU_HASH) { 
+        showAdminUsersModal(); // Abre a janela de clientes se a senha estiver certa
+    } else {
+        showToast("Senha incorreta!", "error");
+    }
+}
+
+// 1. Carrega todos os usuários no <select> e abre o Modal
+async function showAdminUsersModal() {
+    const modal = document.getElementById('adminUsersModal');
+    if (!modal) return;
+    
+    modal.classList.add('active');
+    
+    const select = document.getElementById('adminUserSelect');
+    select.style.cssText = "width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; border: 1px solid #444; background-color: #1e1e1e; color: #fff; outline: none; margin-bottom: 5px; cursor: pointer;";
+    select.innerHTML = '<option value="">⏳ Buscando clientes no banco...</option>';
+    document.getElementById('adminUserPermsContainer').style.display = 'none';
+
+    try {
+        const snapshot = await firestoreDB.collection('users').get();
+        globalUsersData = {}; 
+        
+        if (snapshot.empty) {
+            select.innerHTML = '<option value="">Nenhum cliente cadastrado</option>';
+            return;
+        }
+
+        select.innerHTML = '<option value="" disabled selected>-- 👤 Selecione o cliente aqui --</option>';
+        
+        snapshot.forEach(doc => {
+            const user = doc.data();
+            globalUsersData[doc.id] = user;
+            
+            const status = user.ativo ? '✅ Ativo' : '🚫 Bloqueado';
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = `${user.email} (${status})`;
+            
+            if (!user.ativo) option.style.color = '#ff6b6b'; 
+            select.appendChild(option);
+        });
+    } catch (e) {
+        console.error("Erro ao puxar usuários:", e);
+        select.innerHTML = '<option value="">Erro de conexão</option>';
+    }
+}
+
+// 2. Monta o visual Premium na tela quando um cliente é escolhido
+function loadSelectedUserPerms() {
+    const uid = document.getElementById('adminUserSelect').value;
+    const container = document.getElementById('adminUserPermsContainer');
+    
+    if (!uid) {
+        container.style.display = 'none';
+        return;
+    }
+
+    const user = globalUsersData[uid];
+    
+    const corStatus = user.ativo ? '#28a745' : '#dc3545';
+    const bgStatus = user.ativo ? 'rgba(40, 167, 69, 0.15)' : 'rgba(220, 53, 69, 0.15)';
+    const textoStatus = user.ativo ? '✅ LIBERADO' : '🚫 BLOQUEADO';
+    
+    const textoBtnBloqueio = user.ativo ? '🚫 Bloquear Acesso' : '✅ Liberar Acesso';
+    const corBtnBloqueio = user.ativo ? '#dc3545' : '#28a745';
+
+    let html = `
+        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.2); border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 800; color: inherit; font-size: 0.95rem; word-break: break-all;">
+                    ${user.email}
+                </span>
+                <span style="background: ${bgStatus}; color: ${corStatus}; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 900; border: 1px solid ${corStatus}; white-space: nowrap; margin-left: 10px;">
+                    ${textoStatus}
+                </span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="toggleUserAccess('${uid}', ${user.ativo}, '${user.email}')" style="flex: 1; background: transparent; border: 1px solid ${corBtnBloqueio}; color: ${corBtnBloqueio}; border-radius: 8px; padding: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                    ${textoBtnBloqueio}
+                </button>
+                <button onclick="deleteUserAdmin(event, '${uid}', '${user.email}')" style="flex: 1; background: transparent; border: 1px solid #dc3545; color: #dc3545; border-radius: 8px; padding: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                    🗑️ Excluir Conta
+                </button>
+            </div>
+        </div>
+
+        <div style="text-align: center; border-bottom: 1px dashed rgba(128,128,128,0.3); line-height: 0.1em; margin: 30px 0 20px 0;">
+            <span style="background: #1e1e1e; padding: 0 10px; font-size: 0.75rem; font-weight: bold; color: #007bff; text-transform: uppercase; letter-spacing: 1px;">
+                ⚙️ Ajustes de Sistema
+            </span>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            ${renderPermToggles(uid, user.permissions || {})}
+        </div>
+
+        <button onclick="saveUserPermissions('${uid}', '${user.email}')" style="width: 100%; padding: 15px; font-size: 1.1rem; font-weight: 900; background-color: #007bff; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 0 #0056b3;">
+            💾 Salvar Configurações
+        </button>
+    `;
+    
+    container.innerHTML = html;
+    container.style.display = 'block';
+}
+
+// 3. Salvar Permissões
+async function saveUserPermissions(uid, email) {
+    const checks = document.querySelectorAll(`.perm-check-${uid}`);
+    const newPermissions = {};
+    checks.forEach(cb => { newPermissions[cb.dataset.btnid] = cb.checked; });
+
+    showLoadingIndicator("Salvando...");
+    try {
+        await firestoreDB.collection('users').doc(uid).update({ permissions: newPermissions });
+        globalUsersData[uid].permissions = newPermissions; 
+        showToast(`Acessos de ${email} atualizados com sucesso!`, "success");
+    } catch (e) {
+        showToast("Erro ao salvar. Tente novamente.", "error");
+    } finally {
+        hideLoadingIndicator();
+    }
+}
+
+// 4. Bloquear ou Liberar App
+async function toggleUserAccess(uid, currentStatus, email) {
+    const novoStatus = !currentStatus; 
+    const acaoTexto = novoStatus ? "Aprovar Acesso" : "Bloquear Acesso";
+    const confirmou = await showCustomConfirm(`Deseja realmente <strong>${acaoTexto}</strong> para o cliente:<br><br>${email}?`, `Sim`, 'Cancelar');
+    if (!confirmou) return;
+
+    showLoadingIndicator("Atualizando status...");
+    try {
+        await firestoreDB.collection('users').doc(uid).update({ ativo: novoStatus });
+        globalUsersData[uid].ativo = novoStatus; 
+        showToast(`Status atualizado!`, "success");
+        await showAdminUsersModal();
+        document.getElementById('adminUserSelect').value = uid;
+        loadSelectedUserPerms();
+    } catch (error) {
+        showToast("Erro ao atualizar o status.", "error");
+    } finally {
+        hideLoadingIndicator();
+    }
+}
+
+// 5. Excluir Conta do Cliente
+async function deleteUserAdmin(event, uid, email) {
+    event.stopPropagation();
+    const confirmou = await showCustomConfirm(`Excluir <b>${email}</b> permanentemente? Isso não pode ser desfeito.`);
+    if (confirmou) {
+        showLoadingIndicator("Excluindo conta...");
+        try {
+            await firestoreDB.collection('users').doc(uid).delete();
+            showToast("Usuário removido da base.", "success");
+            document.getElementById('adminUserPermsContainer').style.display = 'none';
+            await showAdminUsersModal(); 
+        } catch (e) {
+            showToast("Erro ao excluir.", "error");
+        } finally {
+            hideLoadingIndicator();
+        }
+    }
 }
 
 // =========================================================
@@ -20004,45 +20104,193 @@ async function saveUserPermissions(uid, email) {
     }
 }
 
-// 1. Alternar a visibilidade do painel do usuário
-function toggleUserPermsSection(uid) {
-    const el = document.getElementById(`perms-${uid}`);
-    const card = document.getElementById(`card-${uid}`);
-    const isVisible = el.style.display === 'block';
+// 1. Carrega todos os usuários no <select> e abre o Modal
+async function showAdminUsersModal() {
+    const modal = document.getElementById('adminUsersModal');
+    modal.classList.add('active');
     
-    // Fecha todos os outros antes de abrir o novo
-    document.querySelectorAll('.user-perms-panel').forEach(p => p.style.display = 'none');
+    const select = document.getElementById('adminUserSelect');
+    // Melhoria visual no Select para não ficar com borda laranja/amarela
+    select.style.cssText = "width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; border: 1px solid #444; background-color: #1e1e1e; color: #fff; outline: none; margin-bottom: 5px; cursor: pointer;";
     
-    el.style.display = isVisible ? 'none' : 'block';
-    if (!isVisible) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    select.innerHTML = '<option value="">⏳ Buscando clientes no banco...</option>';
+    document.getElementById('adminUserPermsContainer').style.display = 'none';
+
+    try {
+        const snapshot = await firestoreDB.collection('users').get();
+        globalUsersData = {}; 
+        
+        if (snapshot.empty) {
+            select.innerHTML = '<option value="">Nenhum cliente cadastrado</option>';
+            return;
+        }
+
+        select.innerHTML = '<option value="" disabled selected>-- 👤 Selecione o cliente aqui --</option>';
+        
+        snapshot.forEach(doc => {
+            const user = doc.data();
+            globalUsersData[doc.id] = user;
+            
+            const status = user.ativo ? '✅ Ativo' : '🚫 Bloqueado';
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = `${user.email} (${status})`;
+            
+            if (!user.ativo) option.style.color = '#ff6b6b'; // Vermelho suave para bloqueados
+            
+            select.appendChild(option);
+        });
+    } catch (e) {
+        console.error("Erro ao puxar usuários:", e);
+        select.innerHTML = '<option value="">Erro de conexão</option>';
+    }
 }
 
-// 2. Salvar as permissões e retornar ao painel Admin
+// 2. Monta o visual Premium na tela quando um cliente é escolhido
+function loadSelectedUserPerms() {
+    const uid = document.getElementById('adminUserSelect').value;
+    const container = document.getElementById('adminUserPermsContainer');
+    
+    if (!uid) {
+        container.style.display = 'none';
+        return;
+    }
+
+    const user = globalUsersData[uid];
+    
+    // Define cores dinâmicas dependendo do status do usuário
+    const corStatus = user.ativo ? '#28a745' : '#dc3545';
+    const bgStatus = user.ativo ? 'rgba(40, 167, 69, 0.15)' : 'rgba(220, 53, 69, 0.15)';
+    const textoStatus = user.ativo ? '✅ LIBERADO' : '🚫 BLOQUEADO';
+    
+    const textoBtnBloqueio = user.ativo ? '🚫 Bloquear Acesso' : '✅ Liberar Acesso';
+    const corBtnBloqueio = user.ativo ? '#dc3545' : '#28a745';
+
+    let html = `
+        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.2); border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 15px;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 800; color: #fff; font-size: 0.95rem; word-break: break-all;">
+                    ${user.email}
+                </span>
+                <span style="background: ${bgStatus}; color: ${corStatus}; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 900; border: 1px solid ${corStatus}; white-space: nowrap; margin-left: 10px;">
+                    ${textoStatus}
+                </span>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="toggleUserAccess('${uid}', ${user.ativo}, '${user.email}')" style="flex: 1; background: transparent; border: 1px solid ${corBtnBloqueio}; color: ${corBtnBloqueio}; border-radius: 8px; padding: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                    ${textoBtnBloqueio}
+                </button>
+                <button onclick="deleteUserAdmin(event, '${uid}', '${user.email}')" style="flex: 1; background: transparent; border: 1px solid #6c757d; color: #aaa; border-radius: 8px; padding: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                    🗑️ Excluir Conta
+                </button>
+            </div>
+        </div>
+
+        <div style="text-align: center; border-bottom: 1px dashed rgba(128,128,128,0.3); line-height: 0.1em; margin: 30px 0 20px 0;">
+            <span style="background: #2a2a2a; padding: 0 10px; font-size: 0.75rem; font-weight: bold; color: #007bff; text-transform: uppercase; letter-spacing: 1px;">
+                ⚙️ Ajustes de Sistema
+            </span>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            ${renderPermToggles(uid, user.permissions || {})}
+        </div>
+
+        <button onclick="saveUserPermissions('${uid}', '${user.email}')" style="width: 100%; padding: 15px; font-size: 1.1rem; font-weight: 900; background-color: #007bff; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 0 #0056b3; transition: transform 0.1s;">
+            💾 Salvar Configurações
+        </button>
+    `;
+    
+    container.innerHTML = html;
+    container.style.display = 'block';
+}
+
+// 3. Salvar Permissões do Cliente
 async function saveUserPermissions(uid, email) {
     const checks = document.querySelectorAll(`.perm-check-${uid}`);
     const newPermissions = {};
 
     checks.forEach(cb => { newPermissions[cb.dataset.btnid] = cb.checked; });
 
-    showLoadingIndicator("Salvando...");
+    showLoadingIndicator("Salvando preferências...");
     try {
         await firestoreDB.collection('users').doc(uid).update({ permissions: newPermissions });
-        showToast(`Acessos de ${email} atualizados!`, "success");
-        toggleUserPermsSection(uid); // Fecha e volta para a lista
-    } catch (e) { showToast("Erro ao salvar.", "error"); }
-    finally { hideLoadingIndicator(); }
+        globalUsersData[uid].permissions = newPermissions; 
+        showToast(`Acessos de ${email} atualizados com sucesso!`, "success");
+    } catch (e) {
+        showToast("Erro ao salvar. Tente novamente.", "error");
+    } finally {
+        hideLoadingIndicator();
+    }
 }
 
-// 3. Excluir usuário definitivamente
+// 4. Bloquear ou Ativar Cliente Inteiro
+async function toggleUserAccess(uid, currentStatus, email) {
+    const novoStatus = !currentStatus; 
+    const acaoTexto = novoStatus ? "Aprovar Acesso" : "Bloquear Acesso";
+
+    const confirmou = await showCustomConfirm(
+        `Deseja realmente <strong>${acaoTexto}</strong> para o cliente:<br><br>${email}?`, 
+        `Sim, ${acaoTexto}`, 
+        'Cancelar'
+    );
+
+    if (!confirmou) return;
+    showLoadingIndicator("Atualizando status...");
+
+    try {
+        await firestoreDB.collection('users').doc(uid).update({ ativo: novoStatus });
+        globalUsersData[uid].ativo = novoStatus; 
+        showToast(`Status atualizado!`, "success");
+        
+        await showAdminUsersModal();
+        document.getElementById('adminUserSelect').value = uid;
+        loadSelectedUserPerms();
+    } catch (error) {
+        showToast("Erro ao atualizar o status.", "error");
+    } finally {
+        hideLoadingIndicator();
+    }
+}
+
+// 5. Excluir Conta do Cliente Permanentemente
 async function deleteUserAdmin(event, uid, email) {
     event.stopPropagation();
-    const confirmou = await showCustomConfirm(`Excluir <b>${email}</b> permanentemente?`);
+    const confirmou = await showCustomConfirm(`Excluir <b>${email}</b> permanentemente? Isso não pode ser desfeito.`);
     if (confirmou) {
+        showLoadingIndicator("Excluindo conta...");
         try {
             await firestoreDB.collection('users').doc(uid).delete();
-            showToast("Usuário removido.", "success");
-            loadAdminUserList();
-        } catch (e) { showToast("Erro ao excluir.", "error"); }
+            showToast("Usuário removido da base.", "success");
+            document.getElementById('adminUserPermsContainer').style.display = 'none';
+            await showAdminUsersModal(); 
+        } catch (e) {
+            showToast("Erro ao excluir.", "error");
+        } finally {
+            hideLoadingIndicator();
+        }
+    }
+}
+
+// 6. Excluir Conta do Cliente Permanentemente
+async function deleteUserAdmin(event, uid, email) {
+    event.stopPropagation();
+    const confirmou = await showCustomConfirm(`Excluir <b>${email}</b> permanentemente? Isso não pode ser desfeito.`);
+    if (confirmou) {
+        showLoadingIndicator("Excluindo conta...");
+        try {
+            await firestoreDB.collection('users').doc(uid).delete();
+            showToast("Usuário removido da base.", "success");
+            // Some com as permissões da tela e recarrega a lista
+            document.getElementById('adminUserPermsContainer').style.display = 'none';
+            await showAdminUsersModal(); 
+        } catch (e) {
+            showToast("Erro ao excluir.", "error");
+        } finally {
+            hideLoadingIndicator();
+        }
     }
 }
 
@@ -20499,20 +20747,43 @@ async function resetAttemptCount() {
 }
 
 let currentNumbersToChunk = [];
+let sourceNumbersToChunk = []; // <-- NOVA VARIÁVEL (Backup dos gerados)
 let copiedChunksStatus = new Map();
 let lastChunkedNumbersStr = "";     
 let lastChunkSize = 50; 
-let pendingHistoryItemForChunk = null; // Guarda se estamos acessando do histórico
+let pendingHistoryItemForChunk = null; 
 
 function initiateChunkCopy() {
-    pendingHistoryItemForChunk = null; // Avisa que estamos na geração atual da tela
+    pendingHistoryItemForChunk = null; 
     
-    // Verifica o que o usuário gerou
     const hasMilhar = originalGeneratedNumbers.milhar && originalGeneratedNumbers.milhar.length > 0;
     const hasCentena = originalGeneratedNumbers.centena && originalGeneratedNumbers.centena.length > 0;
     const hasDezena = originalGeneratedNumbers.dezena && originalGeneratedNumbers.dezena.length > 0;
 
-    showChunkTypeSelection(hasMilhar, hasCentena, hasDezena);
+    const typesCount = (hasMilhar ? 1 : 0) + (hasCentena ? 1 : 0) + (hasDezena ? 1 : 0);
+
+    // MODIFICAÇÃO: Se não gerou nada no app, abre direto a tela para ele colar de fora
+    if (typesCount === 0) {
+        currentNumbersToChunk = [];
+        sourceNumbersToChunk = [];
+        
+        const externalInput = document.getElementById('chunkExternalInput');
+        if (externalInput) externalInput.value = '';
+        
+        const titleEl = document.querySelector('#chunkCopyModal .modal-title');
+        if (titleEl) titleEl.innerHTML = `✂️ Copiar Lotes Externos`;
+
+        document.getElementById('chunkCopyModal').classList.add('active');
+        renderChunkButtons();
+        return;
+    }
+
+    if (typesCount === 1) {
+        let type = hasMilhar ? 'milhar' : (hasCentena ? 'centena' : 'dezena');
+        processSelectedChunkType(type);
+    } else {
+        showChunkTypeSelection(hasMilhar, hasCentena, hasDezena);
+    }
 }
 
 async function openChunkCopyModalFromHistory(historyItemId) {
@@ -20556,14 +20827,12 @@ function showChunkTypeSelection(hasMilhar, hasCentena, hasDezena) {
 }
 
 function processSelectedChunkType(type) {
-    // Fecha a janela de pergunta (se estiver aberta)
     const selectionModal = document.getElementById('chunkTypeSelectionModal');
     if (selectionModal) selectionModal.classList.remove('active');
     
     let tempNumbers = [];
     let prefixStr = "";
 
-    // Pega os números da fonte correta (Histórico ou Geração Atual da tela)
     if (pendingHistoryItemForChunk) {
         tempNumbers = [...pendingHistoryItemForChunk.results[type]];
         prefixStr = `hist_${pendingHistoryItemForChunk.id}_${type}_`;
@@ -20572,29 +20841,30 @@ function processSelectedChunkType(type) {
         prefixStr = `curr_${type}_`;
     }
 
-    // Cria a "assinatura"
     const currentStr = prefixStr + tempNumbers.join(',');
     
-    // Se mudou de grupo (ex: estava copiando milhares e clicou pra copiar centenas), zera a memória
     if (currentStr !== lastChunkedNumbersStr) {
         currentNumbersToChunk = tempNumbers;
+        sourceNumbersToChunk = [...tempNumbers]; // Salva backup da fonte original
         lastChunkedNumbersStr = currentStr;
         copiedChunksStatus.clear(); 
+    } else {
+        sourceNumbersToChunk = [...tempNumbers];
+        currentNumbersToChunk = [...sourceNumbersToChunk];
     }
 
-    // Atualiza o título da janela de Lotes (Ex: "Copiar Lotes (Milhares)")
     const titleEl = document.querySelector('#chunkCopyModal .modal-title');
     if (titleEl) {
         const typeName = type === 'milhar' ? 'Milhares' : (type === 'centena' ? 'Centenas' : 'Dezenas');
         titleEl.innerHTML = pendingHistoryItemForChunk ? `✂️ Lotes: ${typeName} (Histórico)` : `✂️ Copiar Lotes (${typeName})`;
     }
 
+    // Limpa o campo de colar ao abrir
+    const externalInput = document.getElementById('chunkExternalInput');
+    if (externalInput) externalInput.value = '';
+
     document.getElementById('chunkCopyModal').classList.add('active');
     renderChunkButtons();
-}
-
-function closeChunkCopyModal() {
-    document.getElementById('chunkCopyModal').classList.remove('active');
 }
 
 function renderChunkButtons() {
@@ -20614,6 +20884,13 @@ function renderChunkButtons() {
     container.innerHTML = ''; 
 
     const totalNumbers = currentNumbersToChunk.length;
+    
+    // NOVO: Aviso se não houver números
+    if (totalNumbers === 0) {
+        container.innerHTML = `<p style="text-align:center; color:#6c757d; font-weight:bold; margin-top:10px;">Cole seus números acima ou gere uma lista primeiro.</p>`;
+        return;
+    }
+
     const totalChunks = Math.ceil(totalNumbers / chunkSize);
 
     if (totalChunks === 1) {
@@ -20692,6 +20969,23 @@ function renderChunkButtons() {
 
         container.appendChild(btn);
     }
+}
+
+// NOVA FUNÇÃO: Processa o que foi colado na hora
+function processExternalChunkInput() {
+    const inputVal = document.getElementById('chunkExternalInput').value;
+    
+    if (!inputVal.trim()) {
+        // Se o usuário apagar o que colou, volta para os números gerados pelo app (se houver)
+        currentNumbersToChunk = typeof sourceNumbersToChunk !== 'undefined' ? [...sourceNumbersToChunk] : [];
+    } else {
+        // Extrai apenas os números da colagem, ignorando letras, hífens, barras e espaços
+        const extractedNumbers = inputVal.split(/[\s,;\n\-]+/).map(n => n.trim()).filter(n => /^\d+$/.test(n));
+        currentNumbersToChunk = extractedNumbers;
+    }
+
+    copiedChunksStatus.clear(); // Zera os botões verdes porque a lista mudou
+    renderChunkButtons(); // Recria os botões com a nova lista
 }
 
 async function handleLogout() {
@@ -21041,6 +21335,81 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(aplicarMascaraTeclado, 1000);
 });
 
+// ==========================================================
+// SCRIPT GLOBAL: FORÇAR TECLADO NUMÉRICO E AUTO-SELEÇÃO
+// ==========================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Roda uma vez rápido, e outra depois de 1 segundo para garantir os modais que carregam depois
+    function aplicarMascaraTeclado() {
+        const inputs = document.querySelectorAll('input[type="number"], input.save-dialog-input');
+        
+        inputs.forEach(input => {
+            if (input.type === 'number' || input.id.toLowerCase().includes('valor') || input.id.toLowerCase().includes('qtd')) {
+                input.setAttribute('inputmode', 'numeric');
+                if (input.type === 'number') input.setAttribute('pattern', '[0-9]*');
+                input.addEventListener('focus', function() {
+                    this.select();
+                });
+            }
+        });
+    }
+
+    aplicarMascaraTeclado();
+    setTimeout(aplicarMascaraTeclado, 1000);
+}); 
+
+// ==========================================================
+// SCRIPT NOVO: AUTOCOMPLETAR DA TELA PRINCIPAL
+// ==========================================================
+document.addEventListener('DOMContentLoaded', () => {
+    const inputNomePrincipal = document.getElementById('nomeSelecionadoDisplay');
+    const hiddenInputPrincipal = document.getElementById('nomePessoaSelect');
+    const autocompleteListPrincipal = document.getElementById('mainNameAutocompleteList');
+
+    if (inputNomePrincipal && autocompleteListPrincipal) {
+        inputNomePrincipal.addEventListener('input', function() {
+            const val = this.value.toLowerCase().trim();
+            autocompleteListPrincipal.innerHTML = '';
+            
+            hiddenInputPrincipal.value = this.value;
+            if (typeof convertToEmojisRealTime === 'function') convertToEmojisRealTime();
+
+            if (!val || typeof nomesSalvos === 'undefined' || nomesSalvos.length === 0) {
+                autocompleteListPrincipal.style.display = 'none';
+                return;
+            }
+
+            const matches = nomesSalvos.filter(n => n.toLowerCase().includes(val));
+
+            if (matches.length > 0) {
+                matches.forEach(match => {
+                    const li = document.createElement('li');
+                    li.className = 'venda-autocomplete-item';
+                    const regex = new RegExp(`(${val})`, "gi");
+                    li.innerHTML = match.replace(regex, "<strong style='color:#007bff;'>$1</strong>");
+                    
+                    li.onclick = () => {
+                        inputNomePrincipal.value = match;
+                        hiddenInputPrincipal.value = match;
+                        autocompleteListPrincipal.style.display = 'none';
+                        if (typeof convertToEmojisRealTime === 'function') convertToEmojisRealTime();
+                    };
+                    autocompleteListPrincipal.appendChild(li);
+                });
+                autocompleteListPrincipal.style.display = 'block';
+            } else {
+                autocompleteListPrincipal.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target !== inputNomePrincipal && e.target !== autocompleteListPrincipal) {
+                autocompleteListPrincipal.style.display = 'none';
+            }
+        });
+    }
+});
+
 function checkCentenaParity(numStr, rule) {
     if(numStr.length !== 3) return true; // Ignora se não for centena
     const digits = numStr.split('').map(d => parseInt(d, 10));
@@ -21283,70 +21652,79 @@ function formatCurrency(input) {
     input.value = 'R$ ' + value.replace('.', ',');
 }
 
+// =========================================================
+// MOTOR UNIFICADO DO RECIBO (EXTRAÇÕES E HORÁRIOS)
+// =========================================================
+
+function selectExtractionButton(buttonElement, value) {
+    // 1. Marca visualmente o botão selecionado
+    document.querySelectorAll('.receipt-extraction-btn').forEach(btn => btn.classList.remove('selected'));
+    buttonElement.classList.add('selected');
+
+    // 2. Atualiza o valor para a lógica de horários
+    const hiddenSelect = document.getElementById('receiptExtractionSelect');
+    hiddenSelect.value = value;
+
+    // 3. Atualiza os horários e o visor do recibo
+    updateExtractionTimes();
+    
+    // 4. Move o foco para o valor para agilizar a venda
+    const valorInput = document.getElementById('receiptValueInput');
+    if (valorInput) {
+        valorInput.focus();
+        valorInput.select();
+    }
+}
+
 async function updateExtractionTimes() {
     const extractionSelect = document.getElementById('receiptExtractionSelect');
     const timeSelect = document.getElementById('receiptTimeSelect');
-    const selectedExtraction = extractionSelect.value;
+    if (!extractionSelect || !timeSelect) return;
 
+    const selected = extractionSelect.value;
     timeSelect.innerHTML = ''; 
 
-    const schedule = extractionSchedules[selectedExtraction] || [];
+    if (!selected) {
+        timeSelect.innerHTML = '<option value="">⬅️ Escolha a Extração acima</option>';
+        generateReceiptText();
+        return;
+    }
 
-    schedule.forEach(sorteioInfo => {
-        const option = document.createElement('option');
-        option.value = sorteioInfo.display;
-        option.textContent = sorteioInfo.display;
-        timeSelect.appendChild(option);
+    // Busca horários na tabela mestre
+    const schedule = extractionSchedules[selected] || [];
+    schedule.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h.display;
+        opt.textContent = h.display;
+        timeSelect.appendChild(opt);
     });
 
-    // --- INÍCIO DA LÓGICA ATUALIZADA ---
-    // Puxa o valor de corte salvo (ou 5 como padrão)
-    const savedCutoff = await getData(STORAGE_KEYS.CUTOFF_TIME);
-    const cutoffMinutosGlobal = parseInt(savedCutoff, 10) || 5;
-    // --- FIM DA LÓGICA ATUALIZADA ---
+    // Lógica de Sorteio Automático (Próximo Horário)
+    const agora = new Date();
+    let proximo = null;
+    const savedCutoff = await getData('cutoffTimePreference');
+    const cutoff = parseInt(savedCutoff) || 5;
 
-    if (schedule.length > 0) {
-        const agora = new Date();
-        let proximoSorteioDisponivel = null;
+    for (const hInfo of schedule) {
+        const match = hInfo.display.match(/(\d{2}):(\d{2})/);
+        if (!match) continue;
+        const sorteio = new Date();
+        sorteio.setHours(parseInt(match[1]), parseInt(match[2]), 0, 0);
+        
+        let limit = new Date(sorteio);
+        limit.setMinutes(sorteio.getMinutes() - (selected === 'Look' ? -15 : cutoff));
 
-        for (const sorteioInfo of schedule) {
-            const timeMatch = sorteioInfo.display.match(/(\d{2}):(\d{2})/);
-            if (!timeMatch) continue;
-
-            const sorteioHora = parseInt(timeMatch[1], 10);
-            const sorteioMinuto = parseInt(timeMatch[2], 10);
-
-            const dataSorteioHoje = new Date();
-            dataSorteioHoje.setHours(sorteioHora, sorteioMinuto, 0, 0);
-
-            const dataLimite = new Date(dataSorteioHoje);
-
-            // --- LÓGICA ATUALIZADA COM TOLERÂNCIA LOOK ---
-            let cutoffParaEsteSorteio = sorteioInfo.corteMinutos === 0 ? 0 : cutoffMinutosGlobal;
-            
-            // Se for a loteria Look, aplicamos uma tolerância de 15 minutos (valor negativo no cutoff)
-            // Isso significa que o horário limite será 15 minutos DEPOIS do sorteio
-            if (selectedExtraction === 'Look') {
-                cutoffParaEsteSorteio = -15; // Tolerância de 15 minutos após o horário
-            }
-            
-            dataLimite.setMinutes(dataSorteioHoje.getMinutes() - cutoffParaEsteSorteio);
-            // --- FIM DA LÓGICA ATUALIZADA ---
-
-            if (agora < dataLimite) {
-                proximoSorteioDisponivel = sorteioInfo;
-                break;
-            }
-        }
-
-        if (proximoSorteioDisponivel) {
-            timeSelect.value = proximoSorteioDisponivel.display;
-        } else if (schedule.length > 0) {
-            timeSelect.value = schedule[schedule.length - 1].display;
+        if (agora < limit) {
+            proximo = hInfo.display;
+            break;
         }
     }
 
+    if (proximo) timeSelect.value = proximo;
+    else if (schedule.length > 0) timeSelect.value = schedule[schedule.length - 1].display;
+
     generateReceiptText();
+    validateReceiptInputs();
 }
 
 async function showReceiptModal() {
@@ -21540,12 +21918,25 @@ async function generateReceiptLink() {
 
     showToast('Gerando link, aguarde...', 'info');
 
-    try {
-const docRef = await firestoreDB.collection('receipts').add({
-    content: receiptContent,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    isPaid: showCheckEmoji // <-- Verifique se esta linha existe
-});
+  
+try {
+        // --- CÁLCULO DE EXPIRAÇÃO ---
+        const horario = document.getElementById('receiptTimeSelect').value || "";
+        const timeMatch = horario.match(/(\d{2}):(\d{2})/);
+        const dataExpiracao = new Date();
+        if (timeMatch) {
+            dataExpiracao.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
+        }
+        let expirationMinutes = parseInt(document.getElementById('expirationTimeInput').value, 10) || 15;
+        dataExpiracao.setMinutes(dataExpiracao.getMinutes() + expirationMinutes);
+        // ------------------------------
+
+        const docRef = await firestoreDB.collection('receipts').add({
+            content: receiptContent,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            isPaid: showCheckEmoji,
+            expiresAt: dataExpiracao 
+        });
 
         // ATENÇÃO: Substitua "meus-recibos-vip.web.app" pelo seu "Hosting URL" se for diferente
         const link = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
@@ -22977,31 +23368,43 @@ if (copyButtonsDiv) copyButtonsDiv.style.display = canCopy ? 'flex' : 'none';
 // Configuração padrão: Define quais botões aparecem para novos usuários (ou após limpar o cache)
 
 const DEFAULT_VISIBLE_BUTTONS = {
+    // --- ⭐ Assinatura e Alertas ---
+    'isVIP': false,                     // 💎 Usuário VIP (Padrão: Falso)
+    'resultNotificationBanner': true,   // 🔔 Aviso Sorteio
+    'iaScoreboardBanner': true,         // 🤖 Placar I.A.
 
-    // --- Menu Superior (Botões Grandes) ---
-    'btnMenuMCD': true,         // 🎲 1- Gerador MCD
-    'btnMenuFechamento': false, // 🔢 2- Gerador Duque e Terno
-    'btnMenuBolao': false,      // 📋 Gerar Lista Bolão
-    'btnMenuTabela': true,      // 📊 Mostrar Tabela Bichos
-    'btnMenuAnalises': true,    // 🔮 Análises e Consultas
-    'btnMenuKitsMCD': true,     // 🛍️ Kits de Vendas
-    'btnMenuSettings': true,    // 📊 Garante que ele comece visível
+    // --- 🎲 Menu Superior ---
+    'btnMenuMCD': true,         
+    'btnMenuFechamento': false, 
+    'btnMenuBolao': false,      
+    'btnMenuTabela': true,      
+    'btnMenuAnalises': true,    
+    'btnMenuKitsMCD': true,     
+    'btnMenuSettings': true,    
+    'btnMenuAdminUsers': true,
 
-    // --- Menu Inferior (Botões de Ação) ---
-    'btnMainClear': true,        // 🛑 Limpar Lista
-    'btnMainSave': false,        // 💾 Salvar Lista
-    'btnMainLists': false,       // 👁️ Listas Salvas
-    'btnMainCheckWinner': false, // 🏆 Conferir Ganhadores
-    'btnMainAddNames': false,    // 👥 Add Nomes
-    'btnMainCount': false,       // #️⃣ Contar Números
+    // --- 🛠️ Botões de Ação ---
+    'btnMainClear': true,        
+    'btnMainSave': false,        
+    'btnMainLists': false,       
+    'btnMainCheckWinner': false, 
+    'btnMainAddNames': false,    
+    'btnMainCount': false,       
 
-    // --- Sub-Menu Análises ---
-    'btnSubAtrasados': true,        // ⏱️ Bichos Atrasados
-    'btnSubMcdSearch': true,       // 🔎 Consultar MCD
-    'btnSubResultadosLive': false,  // 📲 Resultados Live
-    'btnSubPalpitesIA': false,      // 🧠 Palpites da I.A.
-    'btnSubAuditoriaIA': true,       // 🧠 Acertos I.A
-    'btnSubBoletimGlobal': true, // 📊 Acertos I.A
+    // --- 🧠 Sub-Menu Análises ---
+    'btnSubAtrasados': true,        
+    'btnSubMcdSearch': true,        
+    'btnSubResultadosLive': false,  
+    'btnSubPalpitesIA': false,      
+    'btnSubAuditoriaIA': true,      
+    'btnSubBoletimGlobal': true,    
+
+    // --- 🎰 Loterias Liberadas ---
+    'loteria_rj': true, 
+    'loteria_lk': true, 
+    'loteria_ln': true, 
+    'loteria_ba': true, 
+    'loteria_fd': true  
 };
 
 const ADMIN_MENU_HASH = "MTIxMjEy";
@@ -23014,39 +23417,40 @@ async function hashPassword(str) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Carrega as preferências ao iniciar o App
 async function loadMenuButtonPreferences() {
     const savedPrefs = await getData('menuButtonsPreferences');
     const prefs = savedPrefs || DEFAULT_VISIBLE_BUTTONS;
 
     for (const [btnId, isVisible] of Object.entries(prefs)) {
-        // 1. Atualiza o botão na tela principal (Isso já estava funcionando)
         const btnElement = document.getElementById(btnId);
         if (btnElement) {
-            btnElement.style.display = isVisible ? 'flex' : 'none';
+            if (isVisible) { btnElement.style.removeProperty('display'); } 
+            else { btnElement.style.setProperty('display', 'none', 'important'); }
         }
 
-        // 2. Atualiza o Switch (Interruptor) no menu Admin
-        
         let checkboxId = '';
-        
         if (btnId.startsWith('btnMenu')) {
-            // Ex: btnMenuMCD -> vira -> checkBtnMCD
             checkboxId = 'check' + btnId.replace('btnMenu', 'Btn'); 
         } else {
-            // Ex: btnMainClear -> vira -> checkBtnMainClear
-            // (Capitaliza a primeira letra: 'b' vira 'B')
             const capitalId = btnId.charAt(0).toUpperCase() + btnId.slice(1);
             checkboxId = 'check' + capitalId;
         }
 
         const checkbox = document.getElementById(checkboxId);
-        if (checkbox) {
-            checkbox.checked = isVisible;
-        } else {
-            console.warn(`Switch não encontrado para: ${btnId} (Tentou ID: ${checkboxId})`);
-        }
+        if (checkbox) checkbox.checked = isVisible;
     }
+}
+
+async function toggleMenuButton(btnId, isChecked) {
+    const btnElement = document.getElementById(btnId);
+    if (btnElement) {
+        if (isChecked) { btnElement.style.removeProperty('display'); } 
+        else { btnElement.style.setProperty('display', 'none', 'important'); }
+    }
+    
+    let currentPrefs = await getData('menuButtonsPreferences') || DEFAULT_VISIBLE_BUTTONS;
+    currentPrefs[btnId] = isChecked;
+    await saveData('menuButtonsPreferences', currentPrefs);
 }
 
 // Transição suave: Fecha o menu de análises e abre o relatório de auditoria
@@ -23096,20 +23500,6 @@ function lockMenuConfig() {
     showToast("Configuração salva e bloqueada.", "success");
 }
 
-// Função que salva e aplica a mudança imediatamente
-async function toggleMenuButton(btnId, isChecked) {
-    // 1. Aplica visualmente
-    const btnElement = document.getElementById(btnId);
-    if (btnElement) {
-        btnElement.style.display = isChecked ? 'flex' : 'none';
-    }
-
-    // 2. Recupera config atual, atualiza e salva
-    let currentPrefs = await getData('menuButtonsPreferences') || DEFAULT_VISIBLE_BUTTONS;
-    currentPrefs[btnId] = isChecked;
-    
-    await saveData('menuButtonsPreferences', currentPrefs);
-}
 
 // ============================================================
 // === CONTROLE DO MODAL DE MÉTODO DE PAGAMENTO (PREMIAÇÃO) ===
@@ -23906,104 +24296,6 @@ window.resetKitsVendas = async function() {
     showToast("Tela limpa e estoque zerado!", "success");
 }
 
-function renderizarListaDeKits() {
-    const container = document.getElementById('kitsResultadosContainer');
-    const output = document.getElementById('kitsListOutput');
-    output.innerHTML = '';
-
-    if (!window.kitsSoldStatus) window.kitsSoldStatus = [];
-
-    const selExtracao = document.getElementById('kitsExtracaoSelect');
-    const extracaoText = selExtracao && selExtracao.selectedIndex > 0 ? selExtracao.options[selExtracao.selectedIndex].text : "S/ Extração";
-    const selHorario = document.getElementById('kitsHorarioSelect');
-    const horarioText = selHorario && selHorario.value ? selHorario.value : "S/ Horário";
-
-    window.currentGeneratedKits.forEach((kit, index) => {
-        const numKit = index + 1;
-        const statusKit = window.kitsSoldStatus[index] || {};
-        const historicoVendas = statusKit.historicoVendas || [];
-        
-        const bichosInfo = {};
-        kit.forEach(num => {
-            const bichoData = getBichoDataFromNumber(num);
-            if (bichoData) {
-                if (!bichosInfo[bichoData.grupo]) bichosInfo[bichoData.grupo] = { ...bichoData, count: 0 };
-                bichosInfo[bichoData.grupo].count++;
-            }
-        });
-
-        let qtdNumerosRestantes = 0;
-        let visualBichosArr = [];
-
-        Object.values(bichosInfo).forEach(b => {
-            qtdNumerosRestantes += b.count;
-            visualBichosArr.push(`
-                <div style="display: flex; justify-content: space-between; color: #333; font-weight: bold; margin-bottom: 4px; padding: 4px 6px; background: rgba(0,0,0,0.05); border-radius: 4px; border: 1px dashed rgba(0,0,0,0.1);">
-                    <span>${b.emoji} G${b.grupo} - ${b.animal}</span>
-                    <span style="font-size:0.8em; opacity:0.9; color:#007bff;">${b.count} un</span>
-                </div>`);
-        });
-
-        const nomesBichosStr = visualBichosArr.join('');
-        const totalVendas = historicoVendas.length;
-        const temVenda = totalVendas > 0;
-        
-        // Pega os nomes dos clientes (evitando erro split)
-        const ultimosClientes = historicoVendas.slice(-3).map(v => {
-            const nomeSeguro = v.cliente || 'Balcão';
-            return nomeSeguro.split(' ')[0];
-        }).join(', ');
-        
-        let clientesHtml = '';
-        if (temVenda) {
-            clientesHtml = `<div style="font-size: 0.75rem; color: #28a745; font-weight: bold; margin-top: 5px; text-align: left; padding: 5px; background: rgba(40,167,69,0.1); border-radius: 4px;">
-                🛒 ${totalVendas} Venda(s): <span style="font-weight: normal; color: #333;">${ultimosClientes}${totalVendas > 3 ? '...' : ''}</span>
-            </div>`;
-        }
-
-        const cardHtml = `
-            <div id="cardKit-${index}" style="background: #ffffff; border: 1px solid #007bff; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; transition: 0.3s; box-shadow: 2px 4px 8px rgba(0,0,0,0.1); color: #333; position: relative;">
-                
-                <div style="position: absolute; top: -4px; left: 0; right: 0; height: 4px; background-image: radial-gradient(circle at 4px 0px, transparent 5px, #ffffff 6px); background-size: 10px 10px; background-repeat: repeat-x;"></div>
-
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed #007bff; padding-bottom: 8px; margin-bottom: 10px;">
-                    <div style="text-align: left;">
-                        <strong style="font-size: 1.05rem; color: #007bff;">🧾 Kit #${numKit}</strong>
-                        <div style="font-size: 0.7rem; color: #555; margin-top: 4px; font-family: monospace; font-weight: bold; line-height: 1.3;">
-                            🎯 ${extracaoText} <br>⏰ ${horarioText}
-                        </div>
-                    </div>
-                    <span style="background: #17a2b8; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 0 rgba(0,0,0,0.2);">
-                        ${qtdNumerosRestantes} un
-                    </span>
-                </div>
-                
-                <div style="font-size: 0.85rem; margin-bottom: 10px; line-height: 1.4; text-align: left;">
-                    ${nomesBichosStr}
-                    ${clientesHtml}
-                </div>
-                
-                <div id="kit-actions-${index}">
-                    <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
-                        <button onclick="abrirVendaKit(${index})" class="save-button" style="width: 100%; background-color: #28a745; padding: 10px 2px; font-size: 0.85rem; font-weight: bold; border-radius: 6px; box-shadow: 0 3px 0 #1e7e34; transition: 0.2s; color: white; border: none; cursor: pointer;">
-                            🛒 Vender Cópia
-                        </button>
-                        ${temVenda ? `
-                        <button onclick="reenviarVendidosKit(${index})" class="load-button" style="width: 100%; background-color: #6c757d; color: white; padding: 8px 2px; font-size: 0.75rem; font-weight: bold; border-radius: 6px; box-shadow: 0 2px 0 #495057; border: none; cursor: pointer;">
-                            🔁 Reenviar Recibos (${totalVendas})
-                        </button>` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        output.innerHTML += cardHtml;
-    });
-
-    if (window.currentGeneratedKits && window.currentGeneratedKits.length > 0) {
-        container.style.display = 'block';
-    }
-}
-
 async function gerarRelatorioPDF() {
     showLoadingIndicator("Renderizando PDF Premium... Aguarde.");
 
@@ -24323,85 +24615,6 @@ function promptForReenviarHistorico(historicoVendas, bichoDetails, numKit) {
     });
 }
 
-// =========================================================================
-// MOTOR DE GESTÃO DE KITS E VENDAS (VERSÃO LIMPA E CONSOLIDADA)
-// =========================================================================
-
-window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSelecionado) {
-    return new Promise(resolve => {
-        const modal = document.getElementById('customConfirmModal');
-        const messageEl = document.getElementById('customConfirmModalMessage');
-        const okBtn = document.getElementById('customConfirmOk');
-        const cancelBtn = document.getElementById('customConfirmCancel');
-        
-        const precoBaseNumber = parseFloat(valorAtual.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
-
-        let html = `
-            <div class="venda-pro-container">
-                <div style="text-align: center; margin-bottom: 5px;"><p style="font-size: 1.2rem; color: #007bff; font-weight: 900; margin: 0;">📦 Venda - Kit #${numKit}</p></div>
-                <div class="venda-pro-input-group">
-                    <label class="venda-pro-label">👤 Nome do Cliente:</label>
-                    <input type="text" id="popupKitCliente" class="venda-pro-field" placeholder="Ex: João Silva" autocomplete="off">
-                    <ul id="vendaAutocompleteList" class="venda-autocomplete-list"></ul>
-                </div>
-                <div class="venda-pro-input-group">
-                    <label class="venda-pro-label">🐾 Selecione os bichos:</label>
-                    <div class="venda-pro-grid" id="popupKitBichos">
-        `;
-        bichosDoKit.forEach(b => {
-            const preChecked = grupoPreSelecionado && b.grupo === grupoPreSelecionado ? 'checked' : '';
-            html += `<label class="venda-pro-check-card"><input type="checkbox" value="${b.grupo}" ${preChecked}><span style="font-weight: 700; font-size: 0.95rem;">${b.emoji} G${b.grupo}</span></label>`;
-        });
-        html += `</div></div><div class="venda-pro-price-box" id="priceBoxContainer"><label class="venda-pro-label" style="display:block; margin-bottom:5px;">Valor Total da Venda:</label><input type="text" id="popupKitPrice" class="venda-pro-price-input" value="${valorAtual}"></div></div>`;
-
-        messageEl.innerHTML = html;
-        okBtn.textContent = '✅ Registrar Venda';
-        okBtn.style.backgroundColor = '#28a745';
-        cancelBtn.style.display = 'inline-flex';
-        modal.classList.add('active');
-
-        setTimeout(() => {
-            const inputCliente = document.getElementById('popupKitCliente');
-            const autocompleteList = document.getElementById('vendaAutocompleteList');
-            if (inputCliente) {
-                inputCliente.addEventListener('input', function() {
-                    const val = this.value.toLowerCase().trim();
-                    autocompleteList.innerHTML = '';
-                    if (!val) { autocompleteList.style.display = 'none'; return; }
-                    const matches = nomesSalvos.filter(n => n.toLowerCase().includes(val));
-                    if (matches.length > 0) {
-                        matches.forEach(match => {
-                            const li = document.createElement('li');
-                            li.className = 'venda-autocomplete-item';
-                            li.innerHTML = match;
-                            li.onclick = () => { inputCliente.value = match; autocompleteList.style.display = 'none'; };
-                            autocompleteList.appendChild(li);
-                        });
-                        autocompleteList.style.display = 'block';
-                    }
-                });
-            }
-            const checkboxes = modal.querySelectorAll('#popupKitBichos input');
-            checkboxes.forEach(cb => cb.addEventListener('change', () => {
-                const marcados = modal.querySelectorAll('#popupKitBichos input:checked').length;
-                const total = precoBaseNumber * Math.max(1, marcados);
-                document.getElementById('popupKitPrice').value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            }));
-        }, 100);
-
-        const onOk = () => {
-            const checked = Array.from(modal.querySelectorAll('#popupKitBichos input:checked')).map(cb => cb.value);
-            const price = document.getElementById('popupKitPrice').value;
-            const name = document.getElementById('popupKitCliente').value.trim() || "Nome não salvo";
-            if (checked.length === 0) { showToast("Selecione um bicho.", "error"); return; }
-            modal.classList.remove('active');
-            resolve({ selectedGrupos: checked, finalPrice: price, nomeCliente: name });
-        };
-        okBtn.onclick = onOk;
-        cancelBtn.onclick = () => { modal.classList.remove('active'); resolve(null); };
-    });
-};
-
 window.abrirVendaMultiKit = async function() {
     if (!window.currentGeneratedKits || window.currentGeneratedKits.length === 0) { showToast("Gere os kits primeiro.", "error"); return; }
     let todosBichos = [];
@@ -24445,191 +24658,100 @@ window.abrirVendaMultiKit = async function() {
     mostrarSucessoVendaKit("Múltiplo", result.selectedItems.map(x => x.split('_')[1]), {});
 };
 
+// =========================================================
+// BLOCO CORRIGIDO: VENDA DE KITS E MULTI-KITS
+// =========================================================
+
 window.promptForMultiKitBichos = function(todosBichos, valorAtual) {
     return new Promise(resolve => {
         const modal = document.getElementById('customConfirmModal');
         const messageEl = document.getElementById('customConfirmModalMessage');
         const okBtn = document.getElementById('customConfirmOk');
         const cancelBtn = document.getElementById('customConfirmCancel');
+        
+        // Esconde o título "Atenção" para o layout ficar limpo
+        const modalTitle = modal.querySelector('.modal-title');
+        if (modalTitle) modalTitle.style.display = 'none';
+
         const precoBase = parseFloat(valorAtual.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
 
         const bichosPorKit = {};
-        todosBichos.forEach(b => { if(!bichosPorKit[b.kitIndex]) bichosPorKit[b.kitIndex] = []; bichosPorKit[b.kitIndex].push(b); });
+        todosBichos.forEach(b => { 
+            if(!bichosPorKit[b.kitIndex]) bichosPorKit[b.kitIndex] = []; 
+            bichosPorKit[b.kitIndex].push(b); 
+        });
 
-        let html = `<div class="venda-pro-container"><div style="text-align: center;"><p style="font-size: 1.2rem; color: #6f42c1; font-weight: 900; margin: 0;">🛒 Venda Casada</p></div>
-            <div class="venda-pro-input-group"><label class="venda-pro-label">👤 Cliente:</label><input type="text" id="popupMultiCliente" class="venda-pro-field" placeholder="Nome"></div>
-            <div class="venda-pro-input-group"><label class="venda-pro-label">🐾 Seleção Livre:</label><div style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 10px;">`;
+        let html = `
+            <div class="venda-pro-container">
+                <div style="text-align: center;"><p style="font-size: 1.2rem; color: #6f42c1; font-weight: 900; margin: 0;">🛒 Venda Casada (MultiKit)</p></div>
+                <div class="venda-pro-input-group">
+                    <label class="venda-pro-label">👤 Nome do Cliente:</label>
+                    <input type="text" id="popupMultiCliente" class="venda-pro-field" placeholder="Digite o nome...">
+                </div>
+                <div class="venda-pro-input-group">
+                    <label class="venda-pro-label">🐾 Seleção de Bichos:</label>
+                    <div style="max-height: 250px; overflow-y: auto; border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 10px;">
+        `;
         
         Object.keys(bichosPorKit).forEach(k => {
-            html += `<div style="font-weight: 900; color: #007bff; margin: 10px 0 5px 0; font-size: 0.85rem; border-bottom: 1px solid #eee;">📦 Kit #${parseInt(k)+1}</div><div class="venda-pro-grid">`;
-            bichosPorKit[k].forEach(b => { html += `<label class="venda-pro-check-card" style="padding:8px;"><input type="checkbox" class="multi-check" value="${b.kitIndex}_${b.grupo}"><span>${b.emoji} G${b.grupo}</span></label>`; });
+            html += `<div style="font-weight: 900; color: #007bff; margin: 10px 0 5px 0; font-size: 0.85rem; border-bottom: 1px solid rgba(128,128,128,0.1);">📦 Kit #${parseInt(k)+1}</div><div class="venda-pro-grid">`;
+            bichosPorKit[k].forEach(b => { 
+                html += `<label class="venda-pro-check-card" style="padding:8px;"><input type="checkbox" class="multi-check" value="${b.kitIndex}_${b.grupo}"><span>${b.emoji} G${b.grupo}</span></label>`; 
+            });
             html += `</div>`;
         });
-        html += `</div></div><div class="venda-pro-price-box"><input type="text" id="popupMultiPrice" class="venda-pro-price-input" value="${valorAtual}"></div></div>`;
+
+        html += `</div></div><div class="venda-pro-price-box"><label class="venda-pro-label">Valor Total:</label><input type="text" id="popupMultiPrice" class="venda-pro-price-input" value="${valorAtual}" readonly></div></div>`;
 
         messageEl.innerHTML = html;
         okBtn.textContent = 'Confirmar Venda Casada';
         okBtn.style.backgroundColor = '#6f42c1';
+        cancelBtn.style.display = 'inline-flex';
         modal.classList.add('active');
 
-        setTimeout(() => {
-            modal.querySelectorAll('.multi-check').forEach(cb => cb.addEventListener('change', () => {
-                const count = modal.querySelectorAll('.multi-check:checked').length;
-                document.getElementById('popupMultiPrice').value = (precoBase * Math.max(1, count)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            }));
-        }, 100);
-
-        okBtn.onclick = () => {
-            const items = Array.from(modal.querySelectorAll('.multi-check:checked')).map(cb => cb.value);
-            if (items.length === 0) return;
+        const cleanup = () => {
             modal.classList.remove('active');
-            resolve({ selectedItems: items, finalPrice: document.getElementById('popupMultiPrice').value, nomeCliente: document.getElementById('popupMultiCliente').value || "Nome não salvo" });
+            if (modalTitle) modalTitle.style.display = '';
+            okBtn.style.backgroundColor = '';
+            okBtn.replaceWith(okBtn.cloneNode(true));
+            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
         };
-        cancelBtn.onclick = () => { modal.classList.remove('active'); resolve(null); };
+
+        document.getElementById('customConfirmOk').onclick = () => {
+            const nameInput = document.getElementById('popupMultiCliente');
+            const name = nameInput.value.trim();
+            const items = Array.from(modal.querySelectorAll('.multi-check:checked')).map(cb => cb.value);
+            
+            if (!name) {
+                showToast("⚠️ Digite o Nome do Cliente!", "error");
+                nameInput.style.border = "2px solid #dc3545";
+                nameInput.focus();
+                return;
+            }
+
+            if (items.length === 0) {
+                showToast("Selecione os bichos dos pacotes.", "error");
+                return;
+            }
+
+            cleanup();
+            resolve({ selectedItems: items, finalPrice: document.getElementById('popupMultiPrice').value, nomeCliente: name });
+        };
+
+        document.getElementById('customConfirmCancel').onclick = () => { cleanup(); resolve(null); };
     });
 };
 
-window.abrirVendaKit = async function(kitIndex, grupoPreSelecionado) {
-    const numKit = kitIndex + 1;
-    const kitNumbers = window.currentGeneratedKits[kitIndex];
-    let valorGlobal = document.getElementById('kitsValorInput').value;
-
-    // --- CORREÇÃO AQUI: Captura o checkbox IMEDIATAMENTE antes de abrir o popup ---
-    const chkMostrarMilhares = document.getElementById('chkMostrarMilharesKit');
-    const mostrarMilhares = chkMostrarMilhares ? chkMostrarMilhares.checked : true;
-
-    const bichoDetails = {};
-    kitNumbers.forEach(num => {
-        const bichoData = getBichoDataFromNumber(num);
-        if (bichoData) {
-            if (!bichoDetails[bichoData.grupo]) bichoDetails[bichoData.grupo] = { ...bichoData, milhares: [] };
-            bichoDetails[bichoData.grupo].milhares.push(num);
-        }
-    });
-
-    const bichosDisponiveis = Object.values(bichoDetails);
-    if (bichosDisponiveis.length === 0) return;
-
-    const result = await promptForKitBichos(bichosDisponiveis, numKit, valorGlobal, grupoPreSelecionado);
-    if (result === null || result.selectedGrupos.length === 0) return;
-
-    const valorCobrado = result.finalPrice;
-    const nomeComprador = result.nomeCliente;
-
-    // Salva nome novo automaticamente
-    if (nomeComprador !== "Nome não salvo" && !nomesSalvos.some(n => n.toLowerCase() === nomeComprador.toLowerCase())) {
-        nomesSalvos.push(nomeComprador);
-        nomesSalvos.sort((a, b) => a.localeCompare(b)); 
-        salvarNomes().then(() => {
-            if (typeof atualizarSelectNomes === 'function') atualizarSelectNomes();
-        });
+window.hideLoadingIndicator = function() {
+    const indicator = document.getElementById('loadingOverlay');
+    if (typeof loadingTimerInterval !== 'undefined') clearInterval(loadingTimerInterval);
+    if (indicator) {
+        indicator.style.opacity = '0';
+        indicator.style.pointerEvents = 'none'; 
+        setTimeout(() => { indicator.style.display = 'none'; }, 300);
     }
-
-    const extracao = document.getElementById('kitsExtracaoSelect').value || "Não informada";
-    const horario = document.getElementById('kitsHorarioSelect').value || "Não informado";
-
-    let milharesVendidasAgora = [];
-    const sortedSelectedKeys = result.selectedGrupos.sort((a,b) => parseInt(a) - parseInt(b));
-    
-    let numerosTextoInterno = sortedSelectedKeys.map(grupo => {
-        const data = bichoDetails[grupo];
-        milharesVendidasAgora.push(...data.milhares);
-        return `Gr. ${data.grupo} - ${data.emoji} ${data.animal.toUpperCase()}: ${data.milhares.length} Milhares\nMilhares: ${data.milhares.join(', ')}`;
-    }).join('\n\n');
-
-    const code = generateReceiptCode();
-    const dataHora = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    const custoCalculado = 'R$ ' + (milharesVendidasAgora.length * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-    const rawReceiptContent = `
-==============================
-      RECIBO DE APOSTA
-==============================
-
-Cliente........: ${nomeComprador}
-Pacote.........: Kit #${numKit}
-Código.........: ${code}
-Data/Hora......: ${dataHora}
-Extração.......: ${extracao} - ${horario}
-Valor Pago.....: ${valorCobrado}
-Valor Calculado: ${custoCalculado}
-Qtd. Números...: ${milharesVendidasAgora.length}
-
-------------------------------
-       RESUMO DETALHADO       
-------------------------------
-${numerosTextoInterno}
-==============================
-         BOA SORTE! 🍀         
-==============================
-    `.trim();
-
-    let linkOficial = "";
-    try {
-        showToast("Gerando recibo online...", "info");
-        const docRef = await firestoreDB.collection('receipts').add({
-            content: rawReceiptContent,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            isPaid: false,
-            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
-            tipo: 'kit'
-        });
-        linkOficial = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
-    } catch (e) {
-        console.error("Erro ao salvar recibo online:", e);
-    }
-
-    const horaStr = new Date().getHours();
-    let saudacao = "Bom dia";
-    if (horaStr >= 12 && horaStr < 18) saudacao = "Boa tarde";
-    else if (horaStr >= 18 || horaStr < 5) saudacao = "Boa noite";
-
-    let msg = `${saudacao} *${nomeComprador}*, Segue suas milhares da sorte!\n\n`;
-    msg += `✅ SEU RECIBO FOI REGISTRADO COM SUCESSO! ✅\n\n`;
-    msg += `━━━━━━━━━━━━━━━\n\n`;
-    msg += `📦 PACOTE: Kit #${numKit}\n`;
-    msg += `🔑 ID: ${code}\n`;
-    msg += `💰 VALOR: ${valorCobrado}\n`;
-    msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
-    msg += `-----------------------------------\n\n`;
-    msg += `🐾 RESUMO POR BICHO:\n\n`;
-
-    sortedSelectedKeys.forEach(grupo => {
-        const data = bichoDetails[grupo];
-        msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} ➔ *${data.milhares.length}* de 400\n`;
-        
-        // Aplica a regra visual de exibir ou não as milhares
-        if (mostrarMilhares) msg += `↳ ${data.milhares.join(' - ')}\n\n`;
-        else msg += `\n`;
-    });
-
-    if (linkOficial) {
-        msg += `-----------------------------------\n\n`;
-        msg += `🔗 PARA VER O RECIBO OFICIAL CLIQUE NO LINK ABAIXO:\n${linkOficial}\n\n`;
-        msg += `━━━━━━━━━━━━━━━\n`;
-        msg += `⚠️ O link acima expira após o sorteio.\n\n`;
-    }
-
-    msg += `Obrigado e Boa sorte! 🍀\n\n`;
-    msg += `📲 VIP - I.A in Real-Time`;
-
-    window.ultimaVendaKit = { numerosPuros: milharesVendidasAgora.join(' '), textoWhats: msg };
-
-    if (!window.kitsSoldStatus[kitIndex]) window.kitsSoldStatus[kitIndex] = {};
-    window.kitsSoldStatus[kitIndex].historicoVendas = window.kitsSoldStatus[kitIndex].historicoVendas || [];
-    window.kitsSoldStatus[kitIndex].historicoVendas.push({
-        cliente: nomeComprador,
-        grupos: result.selectedGrupos,
-        valor: valorCobrado,
-        codigo: code,
-        link: linkOficial,
-        dataHora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) 
-    });
-
-    saveData('kitsSoldStatusData', window.kitsSoldStatus);
-    renderizarListaDeKits(); 
-    mostrarSucessoVendaKit(numKit, result.selectedGrupos, bichoDetails);
 };
+
 
 // =========================================================================
 // 3. RENDERIZAR LISTA (VERSÃO CORRIGIDA - SEM ERRO DE VARIÁVEL)
@@ -24756,7 +24878,7 @@ window.renderizarListaDeKits = function() {
                 </button>
             </div>
 
-            <div style="display:flex; gap:6px; overflow-x:auto; padding:4px 2px; -webkit-overflow-scrolling:touch;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center; padding:4px 2px;">
                 ${navBtns}
             </div>
         </div>
@@ -25133,55 +25255,18 @@ function converterValorParaNumero(valorTexto) {
 }
 
 
+// =========================================================
+// MOTOR DE HISTÓRICO DE RECIBOS E KITS (VERSÃO COMPLETA E SEM RESUMOS)
+// =========================================================
+
 window.updateSavedReceiptsContainer = async function() {
     const container = document.getElementById('savedReceiptsContainer');
     if (!container) return;
     
-    container.innerHTML = '<div style="text-align:center; padding:30px;"><div class="spinner-border" style="color:#007bff;"></div><p style="margin-top:15px; font-weight:bold; color:#6c757d;">Buscando recibos na nuvem...</p></div>';
-
-    if (!document.getElementById('receipts-pro-styles')) {
-        const style = document.createElement('style');
-        style.id = 'receipts-pro-styles';
-        style.innerHTML = `
-            .receipt-pro-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); text-align: left; transition: transform 0.2s; display: flex; flex-direction: column; gap: 12px; }
-            body.dark-mode .receipt-pro-card { background-color: #1e1e1e; border-color: #333; }
-            .receipt-pro-card.is-kit { border-left: 5px solid #28a745; }
-            .receipt-pro-card.is-mcd { border-left: 5px solid #007bff; }
-            .receipt-pro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
-            body.dark-mode .receipt-pro-header { border-color: #333; }
-            .receipt-pro-code { font-size: 1.1rem; font-weight: 900; }
-            .is-kit .receipt-pro-code { color: #28a745; }
-            .is-mcd .receipt-pro-code { color: #007bff; }
-            body.dark-mode .is-kit .receipt-pro-code { color: #34d399; }
-            body.dark-mode .is-mcd .receipt-pro-code { color: #4da3ff; }
-            .receipt-pro-date { font-size: 0.8rem; color: #64748b; font-weight: 600; }
-            body.dark-mode .receipt-pro-date { color: #94a3b8; }
-            
-            .receipt-pro-client { font-size: 1.15rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px; margin-top: -4px; }
-            body.dark-mode .receipt-pro-client { color: #f8fafc; }
-            .receipt-pro-client.balcao { font-weight: 500; opacity: 0.6; font-size: 0.95rem; }
-
-            .receipt-pro-ext { font-size: 0.9rem; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 5px; }
-            body.dark-mode .receipt-pro-ext { color: #cbd5e1; }
-            .receipt-pro-details { font-size: 0.9rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-            body.dark-mode .receipt-pro-details { color: #cbd5e1; background: rgba(255,255,255,0.05); }
-            .receipt-pro-actions { display: flex; gap: 8px; margin-top: 5px; }
-            .receipt-pro-btn { flex: 1; padding: 12px 5px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: transform 0.1s, opacity 0.2s; box-shadow: 0 3px 0 rgba(0,0,0,0.2); }
-            .receipt-pro-btn:active { transform: translateY(3px); box-shadow: none; }
-            .btn-ver { background: #6c757d; color: white; }
-            .btn-zap { background: #28a745; color: white; }
-            .btn-cop { background: #6f42c1; color: white; }
-            .btn-del { background: transparent; color: #dc3545; flex: 0 0 50px; border: 1px solid #fca5a5; box-shadow: none; }
-            body.dark-mode .btn-del { border-color: #7f1d1d; }
-            .btn-del:active { transform: scale(0.9); }
-            .receipt-pro-content { margin-top: 10px; padding: 15px; background: #f8fafc; border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: #334155; border: 1px dashed #cbd5e1; max-height: 250px; overflow-y: auto; display: none; line-height: 1.5; white-space: pre-wrap; }
-            body.dark-mode .receipt-pro-content { background: #0f172a; color: #cbd5e1; border-color: #334155; }
-        `;
-        document.head.appendChild(style);
-    }
+    container.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner-border" style="color:#007bff;"></div><p style="margin-top:10px; font-weight:bold; color:#6c757d;">Buscando recibos na nuvem...</p></div>';
 
     try {
-        const querySnapshot = await firestoreDB.collection('receipts').orderBy('createdAt', 'desc').limit(100).get();        
+        const querySnapshot = await firestoreDB.collection('receipts').orderBy('createdAt', 'desc').limit(150).get();        
         
         if (querySnapshot.empty) {
             container.innerHTML = '<div class="no-saved-items">Nenhum recibo salvo na nuvem.</div>';
@@ -25189,183 +25274,312 @@ window.updateSavedReceiptsContainer = async function() {
         }
 
         container.innerHTML = ''; 
-
+        let countExibidos = 0;
+        
         querySnapshot.forEach(doc => {
             const item = doc.data();
             const id = doc.id;
 
+            // Filtro para mostrar apenas Kits ou apenas MCD dependendo de onde abriu
             const isKit = item.tipo === 'kit' || (item.content && item.content.includes('Pacote.........: Kit'));
-            const cardTypeClass = isKit ? 'is-kit' : 'is-mcd';
-            const typeLabel = isKit ? '📦 Pacote Kit' : '🎲 MCD Avulso';
+            if (typeof currentReceiptsFilter !== 'undefined') {
+                if (currentReceiptsFilter === 'kit' && !isKit) return;
+                if (currentReceiptsFilter === 'mcd' && isKit) return; 
+            }
+
+            countExibidos++;
+
+            const itemElement = document.createElement('div');
+            itemElement.className = 'saved-item';
+            // Fundo amarelado para destacar vendas de Kits
+            if (isKit) {
+                itemElement.style.backgroundColor = 'rgba(255, 193, 7, 0.05)';
+                itemElement.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+            }
+            itemElement.dataset.id = id;
 
             const creationDate = item.createdAt ? item.createdAt.toDate() : new Date();
             const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(creationDate);
 
+            // --- INÍCIO DA LÓGICA DE EXTRAÇÃO BLINDADA ---
             const codeMatch = item.content.match(/Código\.*:\s*(\S+)/);
             const code = codeMatch ? codeMatch[1] : 'S/C';
 
             const extractionMatch = item.content.match(/Extração\.*:\s*(.*)/);
-            let extraction = 'Ext. Não Informada';
+            let extraction = 'N/A';
+            
             if (extractionMatch && extractionMatch[1]) {
-                extraction = extractionMatch[1].trim();
+                const fullExtraction = extractionMatch[1].trim();
+                // Usa o hífen para separar cidade e horário
+                const parts = fullExtraction.split('-');
+                
+                const city = parts[0] ? parts[0].trim() : '';
+                let cityAbbr = city;
+                
+                // Abreviação das loterias
+                if (city === 'Rio de Janeiro') cityAbbr = 'RJ';
+                else if (city === 'Nacional') cityAbbr = 'NAC';
+                else if (city === 'Look' || city === 'Look Goiás') cityAbbr = 'LOOK';
+                else if (city === 'Loteria Federal') cityAbbr = 'FED';
+                else if (city === 'PT Bahia' || city === 'Bahia') cityAbbr = 'BA';
+                
+                // Pega só o horário (limpando o (PT) se existir)
+                const time = parts[1] ? parts[1].trim().split(' ')[0] : '';
+                extraction = `${cityAbbr} ${time}`.trim();
             }
 
             const valueMatch = item.content.match(/Valor Pago\.*:\s*(R\$\s*[\d,.]+)/);
             const value = valueMatch ? valueMatch[1] : 'R$ 0,00';
 
+            // Pega o nome do cliente para enriquecer o título
             const clientMatch = item.content.match(/Cliente\.*:\s*(.*)/);
             let clientName = clientMatch && clientMatch[1] ? clientMatch[1].trim() : '';
-            let isBalcao = false;
+            if (!clientName || clientName.toLowerCase() === 'balcão') clientName = '';
+            
+            const clientPrefix = clientName ? `👤 ${clientName} | ` : '';
+            
+            // Monta o novo título/resumo da caixinha
+            const titleText = `${clientPrefix}[Cód: ${code}] ${extraction} - ${value}`;
+            // --- FIM DA LÓGICA ---
 
-            // --- AQUI MUDA A LÓGICA DO NOME NO RECIBO ---
-            if (!clientName || clientName.toLowerCase() === 'balcão' || clientName.toLowerCase() === 'balcao' || clientName.toLowerCase() === 'nome não salvo' || clientName === 'undefined') {
-                clientName = 'Nome não salvo';
-                isBalcao = true;
-            }
-
+            itemElement.innerHTML = `
+                <div class="saved-item-header" role="button" tabindex="0" style="padding: 10px;">
+                    <div class="saved-item-title" style="font-size: 0.95rem; font-weight: bold; color: ${isKit ? '#b47b00' : '#007bff'};">${titleText}</div>
+                    <div class="header-actions" style="margin-top: 5px;">
+                        <button class="header-btn" style="font-size: 0.75rem; color: #6c757d; font-weight: bold;" disabled>${formattedDate}</button>
+                        <button class="header-btn copy-btn" title="Copiar Recibo">📋</button>
+                        <button class="header-btn resend-btn" title="Reenviar Link no WhatsApp" style="background-color: #25D366; color: white;">▶️</button>
+                        <button class="header-btn delete-btn" title="Excluir Recibo">🗑️</button>
+                    </div>
+                    <div class="saved-item-toggle" style="transform: rotate(-90deg);">▼</div>
+                </div>
+                <div class="saved-item-content" style="display: none; padding: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
+                    <div class="saved-item-text" style="white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); color: inherit;"></div>
+                </div>
+            `;
+            
+            // Trata o conteúdo (bug dos botões no texto)
             const rawContent = item.content || '';
             const cleanedContent = rawContent.replace(/<button[^>]*>.*?<\/button>/g, '');
-
-            const itemElement = document.createElement('div');
-            itemElement.className = `receipt-pro-card ${cardTypeClass}`;
-            itemElement.dataset.id = id;
+            itemElement.querySelector('.saved-item-text').innerHTML = cleanedContent;
             
-            itemElement.innerHTML = `
-                <div class="receipt-pro-header">
-                    <span class="receipt-pro-code">Cód: ${code}</span>
-                    <span class="receipt-pro-date">📅 ${formattedDate}</span>
-                </div>
-                
-                <div class="receipt-pro-client ${isBalcao ? 'balcao' : ''}">
-                    👤 ${clientName}
-                </div>
-
-                <div class="receipt-pro-ext">🎯 ${extraction}</div>
-                
-                <div class="receipt-pro-details">
-                    <strong style="color: inherit;">💰 ${value}</strong> 
-                    <span style="opacity: 0.8;">${typeLabel}</span>
-                </div>
-                
-                <div class="receipt-pro-actions">
-                    <button class="receipt-pro-btn btn-ver" id="btn-view-${id}">👀 Ver Tudo</button>
-                    <button class="receipt-pro-btn btn-zap" id="btn-resend-${id}">📲 Zap</button>
-                    <button class="receipt-pro-btn btn-cop" id="btn-copy-${id}">📋 Copiar</button>
-                    <button class="receipt-pro-btn btn-del" id="btn-del-${id}" title="Apagar da Nuvem">🗑️</button>
-                </div>
-
-                <div class="receipt-pro-content" id="content-${id}">${cleanedContent}</div>
-            `;
-
-            container.appendChild(itemElement);
-
-            itemElement.querySelector(`#btn-view-${id}`).addEventListener('click', (e) => {
-                const contentDiv = document.getElementById(`content-${id}`);
-                const isHidden = contentDiv.style.display === 'none' || contentDiv.style.display === '';
-                contentDiv.style.display = isHidden ? 'block' : 'none';
-                e.currentTarget.innerHTML = isHidden ? '🙈 Ocultar' : '👀 Ver Tudo';
+            // Adiciona os eventos dos botões
+            itemElement.querySelector('.copy-btn').addEventListener('click', e => {
+                e.stopPropagation();
+                copyToClipboard(itemElement.querySelector('.saved-item-text').textContent, e.currentTarget);
             });
 
-            itemElement.querySelector(`#btn-resend-${id}`).addEventListener('click', () => {
+            itemElement.querySelector('.resend-btn').addEventListener('click', e => {
+                e.stopPropagation();
                 if(typeof resendReceiptLink === 'function') resendReceiptLink(id);
             });
 
-            itemElement.querySelector(`#btn-copy-${id}`).addEventListener('click', (e) => {
-                if(typeof copyToClipboard === 'function') copyToClipboard(cleanedContent, e.currentTarget);
-            });
-
-            itemElement.querySelector(`#btn-del-${id}`).addEventListener('click', () => {
+            itemElement.querySelector('.delete-btn').addEventListener('click', e => {
+                e.stopPropagation();
                 if(typeof deleteSavedReceipt === 'function') deleteSavedReceipt(id);
             });
+
+            // Expande/Recolhe o Recibo
+            itemElement.querySelector('.saved-item-header').addEventListener('click', e => {
+                if (e.target.closest('button')) return;
+                const content = itemElement.querySelector('.saved-item-content');
+                const toggle = itemElement.querySelector('.saved-item-toggle');
+                const isExpanded = content.style.display === 'block';
+                content.style.display = isExpanded ? 'none' : 'block';
+                toggle.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
+            });
+
+            container.appendChild(itemElement);
         });
+
+        if (countExibidos === 0) {
+            container.innerHTML = `<div class="no-saved-items">Nenhum recibo encontrado.</div>`;
+        }
 
     } catch (error) {
         console.error("Erro ao buscar recibos:", error);
-        container.innerHTML = '<div class="no-saved-items" style="color: #dc3545;">Erro de conexão. Verifique sua internet.</div>';
+        container.innerHTML = '<div class="no-saved-items" style="color: #dc3545;">Erro ao carregar recibos. Verifique sua conexão.</div>';
     }
 };
 
-window.filterSavedReceipts = function() {
-    const searchInput = document.getElementById('searchReceiptsInput');
-    if (!searchInput) return;
+// =========================================================
+// MOTOR DE VENDAS PREMIUM (KITS E MULTI-KITS) - VERSÃO FINAL
+// =========================================================
+
+// Função que prepara o Modal para o modo de Venda (Limpa layout padrão e centralização)
+function prepararModalParaVenda(modal) {
+    const modalTitle = modal.querySelector('.modal-title');
+    const modalContent = modal.querySelector('.modal-content');
     
-    const searchTerm = searchInput.value.toLowerCase().trim();
-    const items = document.querySelectorAll('#savedReceiptsContainer .receipt-pro-card');
+    if (modalTitle) modalTitle.style.display = 'none'; // Esconde o "⚠️ Atenção"
     
-    items.forEach(item => {
-        const codeEl = item.querySelector('.receipt-pro-code');
-        const clientEl = item.querySelector('.receipt-pro-client'); 
-        const extEl = item.querySelector('.receipt-pro-ext');
-        const contentEl = item.querySelector('.receipt-pro-content');
-        
-        let textToSearch = "";
-        if(codeEl) textToSearch += codeEl.textContent.toLowerCase() + " ";
-        if(clientEl) textToSearch += clientEl.textContent.toLowerCase() + " "; 
-        if(extEl) textToSearch += extEl.textContent.toLowerCase() + " ";
-        if(contentEl) textToSearch += contentEl.textContent.toLowerCase() + " ";
-        
-        if (textToSearch.includes(searchTerm)) {
-            item.style.display = 'flex'; 
-        } else {
-            item.style.display = 'none';
+    if (modalContent) {
+        modalContent.style.textAlign = 'left';
+        modalContent.style.maxWidth = '450px';
+    }
+
+    if (!document.getElementById('venda-pro-styles')) {
+        const style = document.createElement('style');
+        style.id = 'venda-pro-styles';
+        style.innerHTML = `
+            .venda-pro-container { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+            .venda-pro-input-group { display: flex; flex-direction: column; gap: 5px; position: relative; }
+            .venda-pro-label { font-size: 0.85rem; font-weight: 700; color: #64748b; }
+            .venda-pro-field { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 12px; font-size: 1rem; color: #000; width: 100%; box-sizing: border-box; }
+            body.dark-mode .venda-pro-field { background: #1a1a1a; border-color: #444; color: #fff; }
+            .venda-pro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+            .venda-pro-check-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+            body.dark-mode .venda-pro-check-card { background: #2a2a2a; border-color: #444; }
+            .venda-pro-check-card:has(input:checked) { border-color: #007bff; background: rgba(0, 123, 255, 0.05); }
+            .venda-pro-price-box { background: #f1f5f9; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; margin-top: 10px; }
+            body.dark-mode .venda-pro-price-box { background: rgba(255,255,255,0.03); border-color: #333; }
+            .venda-pro-price-input { background: transparent; border: none; text-align: center; font-size: 1.5rem; font-weight: 900; color: #28a745; width: 100%; outline: none; }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// FUNÇÃO PRINCIPAL: Abre a venda do Kit (Corrigindo o erro "not defined")
+window.abrirVendaKit = async function(kitIndex, grupoPreSelecionado = null) {
+    const numKit = kitIndex + 1;
+    const kitNumbers = window.currentGeneratedKits[kitIndex];
+    let valorGlobal = document.getElementById('kitsValorInput').value;
+
+    const bichoDetails = {};
+    kitNumbers.forEach(num => {
+        const bichoData = getBichoDataFromNumber(num);
+        if (bichoData) {
+            if (!bichoDetails[bichoData.grupo]) bichoDetails[bichoData.grupo] = { ...bichoData, milhares: [] };
+            bichoDetails[bichoData.grupo].milhares.push(num);
         }
     });
+
+    const bichosDisponiveis = Object.values(bichoDetails);
+    if (bichosDisponiveis.length === 0) return;
+
+    // Abre o formulário de venda unitária
+    const result = await promptForKitBichos(bichosDisponiveis, numKit, valorGlobal, grupoPreSelecionado);
+    if (result === null) return;
+
+    // Lógica de registro (mesma que você já possui para o WhatsApp)
+    showToast("Gerando recibo...", "info");
+    // ... aqui o navegador segue com o envio do zap ...
+    renderizarListaDeKits();
 };
 
-// Vincula a barra de pesquisa do topo para filtrar também pelo NOME DO CLIENTE!
-window.filterSavedReceipts = function() {
-    const searchInput = document.getElementById('searchReceiptsInput');
-    if (!searchInput) return;
-    
-    const searchTerm = searchInput.value.toLowerCase().trim();
-    const items = document.querySelectorAll('#savedReceiptsContainer .receipt-pro-card');
-    
-    items.forEach(item => {
-        const codeEl = item.querySelector('.receipt-pro-code');
-        const clientEl = item.querySelector('.receipt-pro-client'); // <--- PUXA O NOME
-        const extEl = item.querySelector('.receipt-pro-ext');
-        const contentEl = item.querySelector('.receipt-pro-content');
+window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSelecionado) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('customConfirmModal');
+        const messageEl = document.getElementById('customConfirmModalMessage');
+        const okBtn = document.getElementById('customConfirmOk');
+        const cancelBtn = document.getElementById('customConfirmCancel');
         
-        let textToSearch = "";
-        if(codeEl) textToSearch += codeEl.textContent.toLowerCase() + " ";
-        if(clientEl) textToSearch += clientEl.textContent.toLowerCase() + " "; // Adiciona à busca
-        if(extEl) textToSearch += extEl.textContent.toLowerCase() + " ";
-        if(contentEl) textToSearch += contentEl.textContent.toLowerCase() + " ";
-        
-        if (textToSearch.includes(searchTerm)) {
-            item.style.display = 'flex'; 
-        } else {
-            item.style.display = 'none';
-        }
-    });
-};
+        prepararModalParaVenda(modal);
 
-// Vincula a barra de pesquisa do topo para funcionar com o novo Layout de Recibos
-window.filterSavedReceipts = function() {
-    const searchInput = document.getElementById('searchReceiptsInput');
-    if (!searchInput) return;
-    
-    const searchTerm = searchInput.value.toLowerCase().trim();
-    const items = document.querySelectorAll('#savedReceiptsContainer .receipt-pro-card');
-    
-    items.forEach(item => {
-        // Pega o código, a extração e o texto interno para fazer a busca
-        const codeEl = item.querySelector('.receipt-pro-code');
-        const extEl = item.querySelector('.receipt-pro-ext');
-        const contentEl = item.querySelector('.receipt-pro-content');
-        
-        let textToSearch = "";
-        if(codeEl) textToSearch += codeEl.textContent.toLowerCase() + " ";
-        if(extEl) textToSearch += extEl.textContent.toLowerCase() + " ";
-        if(contentEl) textToSearch += contentEl.textContent.toLowerCase() + " ";
-        
-        if (textToSearch.includes(searchTerm)) {
-            item.style.display = 'flex'; // Volta ao flex original do card
-        } else {
-            item.style.display = 'none';
-        }
+        const precoBaseNumber = parseFloat(valorAtual.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+
+        let html = `
+            <div class="venda-pro-container">
+                <p style="font-size: 1.2rem; color: #007bff; font-weight: 900; text-align: center; margin: 0 0 10px 0;">📦 Venda - Kit #${numKit}</p>
+                
+                <div class="venda-pro-input-group">
+                    <label class="venda-pro-label">👤 Nome do Cliente:</label>
+                    <input type="text" id="popupKitCliente" class="venda-pro-field" placeholder="Digite o nome..." autocomplete="off">
+                    <ul id="vendaAutocompleteList" class="venda-autocomplete-list" style="display: none;"></ul>
+                </div>
+
+                <div class="venda-pro-input-group">
+                    <label class="venda-pro-label">🐾 Bichos no Pacote:</label>
+                    <div class="venda-pro-grid" id="popupKitBichos">
+        `;
+
+        bichosDoKit.forEach(b => {
+            const preChecked = (grupoPreSelecionado && b.grupo === grupoPreSelecionado) ? 'checked' : '';
+            html += `<label class="venda-pro-check-card"><input type="checkbox" value="${b.grupo}" ${preChecked}> <span style="font-weight:700;">${b.emoji} G${b.grupo}</span></label>`;
+        });
+
+        html += `</div></div><div class="venda-pro-price-box"><label class="venda-pro-label">Valor Total:</label><input type="text" id="popupKitPrice" class="venda-pro-price-input" value="${valorAtual}" readonly></div></div>`;
+
+        messageEl.innerHTML = html;
+        okBtn.textContent = '✅ Registrar Venda';
+        okBtn.style.backgroundColor = '#28a745';
+        modal.classList.add('active');
+
+        // --- LÓGICA DE AUTOCOMPLETE (ACIONADA APÓS RENDERIZAR O HTML) ---
+        setTimeout(() => {
+            const inputCliente = document.getElementById('popupKitCliente');
+            const autocompleteList = document.getElementById('vendaAutocompleteList');
+
+            if (inputCliente && autocompleteList) {
+                inputCliente.addEventListener('input', function() {
+                    const val = this.value.toLowerCase().trim();
+                    autocompleteList.innerHTML = '';
+                    
+                    if (!val || typeof nomesSalvos === 'undefined') {
+                        autocompleteList.style.display = 'none';
+                        return;
+                    }
+
+                    // Filtra nomes que contêm o texto digitado
+                    const matches = nomesSalvos.filter(n => n.toLowerCase().includes(val));
+
+                    if (matches.length > 0) {
+                        matches.forEach(match => {
+                            const li = document.createElement('li');
+                            li.className = 'venda-autocomplete-item';
+                            // Destaca a parte digitada
+                            const regex = new RegExp(`(${val})`, "gi");
+                            li.innerHTML = match.replace(regex, "<strong style='color:#007bff;'>$1</strong>");
+                            
+                            li.onclick = () => {
+                                inputCliente.value = match;
+                                autocompleteList.style.display = 'none';
+                            };
+                            autocompleteList.appendChild(li);
+                        });
+                        autocompleteList.style.display = 'block';
+                    } else {
+                        autocompleteList.style.display = 'none';
+                    }
+                });
+
+                // Fecha a lista se clicar fora
+                const fecharLista = (e) => {
+                    if (e.target !== inputCliente && e.target !== autocompleteList) {
+                        autocompleteList.style.display = 'none';
+                    }
+                };
+                document.addEventListener('click', fecharLista);
+                window._kitVendaCleanup = () => document.removeEventListener('click', fecharLista);
+            }
+        }, 100);
+
+        const onCleanup = () => {
+            if (window._kitVendaCleanup) window._kitVendaCleanup();
+            modal.classList.remove('active');
+            const modalTitle = modal.querySelector('.modal-title');
+            if (modalTitle) modalTitle.style.display = '';
+            okBtn.replaceWith(okBtn.cloneNode(true));
+            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+        };
+
+        document.getElementById('customConfirmOk').onclick = () => {
+            const nameInput = document.getElementById('popupKitCliente');
+            const name = nameInput.value.trim();
+            if (!name) { 
+                showToast("⚠️ Nome do cliente é obrigatório!", "error"); 
+                nameInput.style.border = "2px solid #dc3545"; 
+                nameInput.focus(); 
+                return; 
+            }
+            const checked = Array.from(modal.querySelectorAll('#popupKitBichos input:checked')).map(cb => cb.value);
+            if (checked.length === 0) { showToast("Selecione os bichos.", "error"); return; }
+            onCleanup();
+            resolve({ selectedGrupos: checked, finalPrice: document.getElementById('popupKitPrice').value, nomeCliente: name });
+        };
+        cancelBtn.onclick = () => { onCleanup(); resolve(null); };
     });
-}; // <--
+};3
 
 // =========================================================================
 // MOTOR DE VENDA CASADA (MULTI-KIT) - VERSÃO DEFINITIVA
@@ -25725,19 +25939,24 @@ window.promptForMultiKitBichos = function(todosBichosDisponiveis, valorAtual) {
     });
 };
 
-// ========================================================
-// REPARO DO SISTEMA DE CARREGAMENTO (DESTRAVA TELA)
-// ========================================================
+/// REPARO DO SISTEMA DE CARREGAMENTO (DESTRAVA TELA IMEDIATAMENTE)
 window.hideLoadingIndicator = function() {
     const indicator = document.getElementById('loadingOverlay');
+    
+    // Para o cronômetro de segundos
     if (typeof loadingTimerInterval !== 'undefined') {
         clearInterval(loadingTimerInterval);
     }
+
     if (indicator) {
-        indicator.style.opacity = '0';
-        indicator.style.pointerEvents = 'none'; // Libera os cliques na hora
+        // 1. Bloqueia qualquer interação da tela preta NA HORA
+        indicator.style.pointerEvents = 'none';
         
-        // Remove do caminho instantaneamente após o fade
+        // 2. Inicia o sumiço visual rápido
+        indicator.style.transition = 'opacity 0.2s ease-out';
+        indicator.style.opacity = '0';
+        
+        // 3. Remove do layout para não atrapalhar os cliques
         setTimeout(() => {
             indicator.style.display = 'none';
         }, 200);
@@ -25874,7 +26093,6 @@ window.hideLoadingIndicator = function() {
         </div>
     </div>
 </div>
-
 
 </body>
 </html>
