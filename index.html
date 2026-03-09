@@ -10875,36 +10875,42 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 );
 
                 compiledData[key] = {
-                    prefixosPorBicho: prefixosPorBichoFinal,
-                    milharesAtrasadas: Object.keys(c.milharLastDate).filter(m => c.milharLastDate[m] < dataAtrasada).sort((a, b) => c.milharLastDate[a] - c.milharLastDate[b]).slice(0, 50),
-                    blacklist: Array.from(c.blacklist),
-                    dezenasQuentes: Object.keys(c.dezenaCounts).sort((a, b) => c.dezenaCounts[b] - c.dezenaCounts[a]).slice(0, 50),
-                    bichosAtrasados1Premio: tabelaDeGrupos.map(b => ({ ...b, data: c.ultimosVistos1Premio.get(b.grupo) || dataAntiga })).sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, 10),
-                    bichosFrequentes: Array.from(c.bichoFrequencia.entries()).map(([g, count]) => ({ ...tabelaDeGrupos.find(x => x.grupo === g), count })).sort((a, b) => b.count - a.count).slice(0, 10),
-                    dezenasAtrasadas: getAtrasos(c.ultimasDezenas, 5),
-                    centenasAtrasadas: getAtrasos(c.ultimasCentenas, 5),
-                    unidadesAtrasadas: getAtrasos(c.ultimasUnidades, 2),
-                    afinidades: afinidades,
-                    afinidadesRecentes: afinidadesRecentes,
-                    ciclos: ciclos,
-                    posicaoHistorico: Object.fromEntries(
-                        Object.entries(c.posicaoHistorico).map(([g, hist]) => [
-                            g,
-                            hist.sort((a,b) => a.data - b.data).slice(-6).map(x => x.posicao)
-                        ])
-                    ),
-                    dezenasQuentes1Premio: Object.keys(c.dezena1PremioCount).sort((a, b) => c.dezena1PremioCount[b] - c.dezena1PremioCount[a]).slice(0, 30),
-                    dezenaPorBicho1Premio: dezenaPorBicho1PremioFinal,
-                    tendenciaRecente: tendenciaRecenteFinal,
-                    bicho1PremioPorDia: bicho1PremioPorDiaFinal,
-                    digitosCarregados: {
-                        p0: Object.entries(c.digitosCarregados.p0).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
-                        p1: Object.entries(c.digitosCarregados.p1).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
-                        p2: Object.entries(c.digitosCarregados.p2).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
-                        p3: Object.entries(c.digitosCarregados.p3).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0])
-                    },
-                    ultimaMilhar1Premio: c.ultimaMilhar1Premio || null
-                };
+    prefixosPorBicho: prefixosPorBichoFinal || {},
+    milharesAtrasadas: Object.keys(c.milharLastDate || {})
+        .filter(m => c.milharLastDate[m] < dataAtrasada)
+        .sort((a, b) => c.milharLastDate[a] - c.milharLastDate[b])
+        .slice(0, 50),
+    blacklist: Array.from(c.blacklist || []),
+    dezenasQuentes: Object.keys(c.dezenaCounts || {}).sort((a, b) => c.dezenaCounts[b] - c.dezenaCounts[a]).slice(0, 50),
+    bichosAtrasados1Premio: (tabelaDeGrupos || [])
+        .map(b => ({ ...b, data: c.ultimosVistos1Premio.get(b.grupo) || dataAntiga }))
+        .sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, 10),
+    bichosFrequentes: Array.from(c.bichoFrequencia.entries())
+        .map(([g, count]) => ({ ...tabelaDeGrupos.find(x => x.grupo === g), count }))
+        .sort((a, b) => b.count - a.count).slice(0, 10),
+    dezenasAtrasadas: getAtrasos(c.ultimasDezenas, 5) || [],
+    centenasAtrasadas: getAtrasos(c.ultimasCentenas, 5) || [],
+    unidadesAtrasadas: getAtrasos(c.ultimasUnidades, 2) || [],
+    afinidades: afinidades || {},
+    afinidadesRecentes: afinidadesRecentes || {},
+    ciclos: ciclos || {},
+    posicaoHistorico: Object.fromEntries(
+        Object.entries(c.posicaoHistorico || {}).map(([g, hist]) => [
+            g, hist.sort((a,b) => a.data - b.data).slice(-6).map(x => x.posicao)
+        ])
+    ),
+    dezenasQuentes1Premio: Object.keys(c.dezena1PremioCount || {}).sort((a, b) => c.dezena1PremioCount[b] - c.dezena1PremioCount[a]).slice(0, 30),
+    dezenaPorBicho1Premio: dezenaPorBicho1PremioFinal || {},
+    tendenciaRecente: tendenciaRecenteFinal || {},
+    bicho1PremioPorDia: bicho1PremioPorDiaFinal || {}, // CORRIGIDO: Removido shorthand inválido
+    digitosCarregados: {
+        p0: Object.entries(c.digitosCarregados.p0 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+        p1: Object.entries(c.digitosCarregados.p1 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+        p2: Object.entries(c.digitosCarregados.p2 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+        p3: Object.entries(c.digitosCarregados.p3 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0])
+    },
+    ultimaMilhar1Premio: c.ultimaMilhar1Premio || null
+};
             }
 
             compiledData.lastUpdated = firebase.firestore.FieldValue.serverTimestamp();
