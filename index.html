@@ -25480,11 +25480,17 @@ function prepararModalParaVenda(modal) {
     }
 }
 
-// FUNÇÃO PRINCIPAL: Abre a venda do Kit (Corrigindo o erro "not defined")
+/// =========================================================
+// MOTOR DE VENDAS INDIVIDUAL (KIT ÚNICO) - CORRIGIDO
+// =========================================================
 window.abrirVendaKit = async function(kitIndex, grupoPreSelecionado = null) {
     const numKit = kitIndex + 1;
     const kitNumbers = window.currentGeneratedKits[kitIndex];
-    let valorGlobal = document.getElementById('kitsValorInput').value;
+    const valorGlobal = document.getElementById('kitsValorInput').value;
+    const extracao = document.getElementById('kitsExtracaoSelect').value;
+    const horario = document.getElementById('kitsHorarioSelect').value;
+
+    if (!extracao) { showToast("Selecione a extração primeiro!", "error"); return; }
 
     const bichoDetails = {};
     kitNumbers.forEach(num => {
@@ -25498,16 +25504,103 @@ window.abrirVendaKit = async function(kitIndex, grupoPreSelecionado = null) {
     const bichosDisponiveis = Object.values(bichoDetails);
     if (bichosDisponiveis.length === 0) return;
 
-    // Abre o formulário de venda unitária
+    // 1. Abre a janela para escolher os bichos e pegar o nome do cliente
     const result = await promptForKitBichos(bichosDisponiveis, numKit, valorGlobal, grupoPreSelecionado);
     if (result === null) return;
 
-    // Lógica de registro (mesma que você já possui para o WhatsApp)
-    showToast("Gerando recibo...", "info");
-    // ... aqui o navegador segue com o envio do zap ...
+    const nomeComprador = result.nomeCliente;
+    const gruposSelecionados = result.selectedGrupos;
+    const valorCobrado = result.finalPrice;
+
+    showLoadingIndicator("Gerando Comprovante...");
+
+    // 2. Gerar código e dados do recibo
+    const code = generateReceiptCode();
+    const dataHora = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    
+    let milharesVendidas = [];
+    let resumoTextoArr = [];
+
+    gruposSelecionados.forEach(grupo => {
+        const data = bichoDetails[grupo];
+        milharesVendidas.push(...data.milhares);
+        resumoTextoArr.push(`Gr. ${data.grupo} - ${data.emoji} ${data.animal.toUpperCase()}: ${data.milhares.length} Milhares\nMilhares: ${data.milhares.join(', ')}`);
+    });
+
+    const rawReceiptContent = `
+==============================
+      RECIBO DE APOSTA
+==============================
+Cliente........: ${nomeComprador}
+Código.........: ${code}
+Data/Hora......: ${dataHora}
+Extração.......: ${extracao} - ${horario}
+Valor Pago.....: ${valorCobrado}
+Qtd. Números...: ${milharesVendidas.length}
+------------------------------
+       RESUMO DETALHADO       
+------------------------------
+${resumoTextoArr.join('\n\n')}
+==============================
+         BOA SORTE! 🍀         
+==============================`.trim();
+
+    // 3. Salva na Nuvem para gerar o Link do Recibo
+    let linkOficial = "";
+    try {
+        const docRef = await firestoreDB.collection('receipts').add({
+            content: rawReceiptContent,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            isPaid: false,
+            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000), // Expira em 4h
+            tipo: 'kit'
+        });
+        linkOficial = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
+    } catch (e) { console.error("Erro ao salvar recibo:", e); }
+
+    // 4. Monta a mensagem do WhatsApp
+    const horaStr = new Date().getHours();
+    let saudacao = (horaStr >= 12 && horaStr < 18) ? "Boa tarde" : (horaStr >= 18 || horaStr < 5) ? "Boa noite" : "Bom dia";
+    const mostrarMilhares = document.getElementById('chkMostrarMilharesKit')?.checked;
+
+    let msg = `${saudacao} *${nomeComprador}*, segue suas milhares!\n\n`;
+    msg += `✅ REGISTRADO COM SUCESSO! ✅\n\n`;
+    msg += `━━━━━━━━━━━━━━━\n\n`;
+    msg += `🔑 ID: ${code}\n`;
+    msg += `💰 VALOR: ${valorCobrado}\n`;
+    msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
+    msg += `🐾 RESUMO POR BICHO:\n\n`;
+
+    gruposSelecionados.forEach(grupo => {
+        const data = bichoDetails[grupo];
+        msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} (*${data.milhares.length}* und)\n`;
+        if (mostrarMilhares) msg += `↳ ${data.milhares.join(' - ')}\n\n`;
+    });
+
+    if (linkOficial) msg += `🔗 RECIBO OFICIAL:\n${linkOficial}\n\n`;
+    msg += `🍀 Boa sorte!`;
+
+    window.ultimaVendaKit = { numerosPuros: milharesVendidas.join(' '), textoWhats: msg };
+
+    // 5. Atualiza o histórico de vendas do Kit
+    if (!window.kitsSoldStatus[kitIndex]) window.kitsSoldStatus[kitIndex] = {};
+    window.kitsSoldStatus[kitIndex].historicoVendas = window.kitsSoldStatus[kitIndex].historicoVendas || [];
+    window.kitsSoldStatus[kitIndex].historicoVendas.push({
+        cliente: nomeComprador,
+        grupos: gruposSelecionados,
+        valor: valorCobrado,
+        codigo: code,
+        link: linkOficial,
+        dataHora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    });
+
+    await saveData('kitsSoldStatusData', window.kitsSoldStatus);
+    hideLoadingIndicator();
     renderizarListaDeKits();
+    mostrarSucessoVendaKit(numKit, gruposSelecionados, bichoDetails);
 };
 
+// JANELA DE SELEÇÃO DE BICHOS DO KIT (PROMPT)
 window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSelecionado) {
     return new Promise(resolve => {
         const modal = document.getElementById('customConfirmModal');
@@ -25516,19 +25609,16 @@ window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSe
         const cancelBtn = document.getElementById('customConfirmCancel');
         
         prepararModalParaVenda(modal);
-
         const precoBaseNumber = parseFloat(valorAtual.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
 
         let html = `
             <div class="venda-pro-container">
                 <p style="font-size: 1.2rem; color: #007bff; font-weight: 900; text-align: center; margin: 0 0 10px 0;">📦 Venda - Kit #${numKit}</p>
-                
                 <div class="venda-pro-input-group">
                     <label class="venda-pro-label">👤 Nome do Cliente:</label>
                     <input type="text" id="popupKitCliente" class="venda-pro-field" placeholder="Digite o nome..." autocomplete="off">
-                    <ul id="vendaAutocompleteList" class="venda-autocomplete-list" style="display: none;"></ul>
+                    <ul id="vendaAutocompleteList" class="venda-autocomplete-list"></ul>
                 </div>
-
                 <div class="venda-pro-input-group">
                     <label class="venda-pro-label">🐾 Bichos no Pacote:</label>
                     <div class="venda-pro-grid" id="popupKitBichos">
@@ -25536,7 +25626,7 @@ window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSe
 
         bichosDoKit.forEach(b => {
             const preChecked = (grupoPreSelecionado && b.grupo === grupoPreSelecionado) ? 'checked' : '';
-            html += `<label class="venda-pro-check-card"><input type="checkbox" value="${b.grupo}" ${preChecked}> <span style="font-weight:700;">${b.emoji} G${b.grupo}</span></label>`;
+            html += `<label class="venda-pro-check-card"><input type="checkbox" value="${b.grupo}" ${preChecked} class="kit-solo-check"> <span style="font-weight:700;">${b.emoji} G${b.grupo}</span></label>`;
         });
 
         html += `</div></div><div class="venda-pro-price-box"><label class="venda-pro-label">Valor Total:</label><input type="text" id="popupKitPrice" class="venda-pro-price-input" value="${valorAtual}" readonly></div></div>`;
@@ -25544,89 +25634,63 @@ window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSe
         messageEl.innerHTML = html;
         okBtn.textContent = '✅ Registrar Venda';
         okBtn.style.backgroundColor = '#28a745';
-        
-        // --- CÓDIGO ADICIONADO PARA MOSTRAR O BOTÃO CANCELAR ---
-        cancelBtn.textContent = 'Cancelar';
         cancelBtn.style.display = 'inline-flex';
-        // -------------------------------------------------------
-
         modal.classList.add('active');
 
-        // --- LÓGICA DE AUTOCOMPLETE (ACIONADA APÓS RENDERIZAR O HTML) ---
+        // Lógica de cálculo de valor e autocomplete
         setTimeout(() => {
             const inputCliente = document.getElementById('popupKitCliente');
-            const autocompleteList = document.getElementById('vendaAutocompleteList');
+            const checks = modal.querySelectorAll('.kit-solo-check');
+            const priceInput = document.getElementById('popupKitPrice');
 
-            if (inputCliente && autocompleteList) {
+            const calcularValor = () => {
+                const marcados = modal.querySelectorAll('.kit-solo-check:checked').length;
+                const total = precoBaseNumber * Math.max(1, marcados);
+                priceInput.value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$', 'R$ ');
+            };
+
+            checks.forEach(cb => cb.addEventListener('change', calcularValor));
+            
+            // Autocomplete de nomes
+            if (inputCliente) {
                 inputCliente.addEventListener('input', function() {
                     const val = this.value.toLowerCase().trim();
-                    autocompleteList.innerHTML = '';
-                    
-                    if (!val || typeof nomesSalvos === 'undefined') {
-                        autocompleteList.style.display = 'none';
-                        return;
-                    }
-
-                    // Filtra nomes que contêm o texto digitado
+                    const list = document.getElementById('vendaAutocompleteList');
+                    list.innerHTML = '';
+                    if (!val) { list.style.display = 'none'; return; }
                     const matches = nomesSalvos.filter(n => n.toLowerCase().includes(val));
-
                     if (matches.length > 0) {
-                        matches.forEach(match => {
+                        matches.forEach(m => {
                             const li = document.createElement('li');
                             li.className = 'venda-autocomplete-item';
-                            // Destaca a parte digitada
-                            const regex = new RegExp(`(${val})`, "gi");
-                            li.innerHTML = match.replace(regex, "<strong style='color:#007bff;'>$1</strong>");
-                            
-                            li.onclick = () => {
-                                inputCliente.value = match;
-                                autocompleteList.style.display = 'none';
-                            };
-                            autocompleteList.appendChild(li);
+                            li.textContent = m;
+                            li.onclick = () => { inputCliente.value = m; list.style.display = 'none'; };
+                            list.appendChild(li);
                         });
-                        autocompleteList.style.display = 'block';
-                    } else {
-                        autocompleteList.style.display = 'none';
+                        list.style.display = 'block';
                     }
                 });
-
-                // Fecha a lista se clicar fora
-                const fecharLista = (e) => {
-                    if (e.target !== inputCliente && e.target !== autocompleteList) {
-                        autocompleteList.style.display = 'none';
-                    }
-                };
-                document.addEventListener('click', fecharLista);
-                window._kitVendaCleanup = () => document.removeEventListener('click', fecharLista);
             }
+            calcularValor();
         }, 100);
 
         const onCleanup = () => {
-            if (window._kitVendaCleanup) window._kitVendaCleanup();
             modal.classList.remove('active');
-            const modalTitle = modal.querySelector('.modal-title');
-            if (modalTitle) modalTitle.style.display = '';
             okBtn.replaceWith(okBtn.cloneNode(true));
             cancelBtn.replaceWith(cancelBtn.cloneNode(true));
         };
 
         document.getElementById('customConfirmOk').onclick = () => {
-            const nameInput = document.getElementById('popupKitCliente');
-            const name = nameInput.value.trim();
-            if (!name) { 
-                showToast("⚠️ Nome do cliente é obrigatório!", "error"); 
-                nameInput.style.border = "2px solid #dc3545"; 
-                nameInput.focus(); 
-                return; 
-            }
-            const checked = Array.from(modal.querySelectorAll('#popupKitBichos input:checked')).map(cb => cb.value);
+            const nome = document.getElementById('popupKitCliente').value.trim();
+            if (!nome) { showToast("⚠️ Digite o nome do cliente!", "error"); return; }
+            const checked = Array.from(modal.querySelectorAll('.kit-solo-check:checked')).map(cb => cb.value);
             if (checked.length === 0) { showToast("Selecione os bichos.", "error"); return; }
             onCleanup();
-            resolve({ selectedGrupos: checked, finalPrice: document.getElementById('popupKitPrice').value, nomeCliente: name });
+            resolve({ selectedGrupos: checked, finalPrice: document.getElementById('popupKitPrice').value, nomeCliente: nome });
         };
         cancelBtn.onclick = () => { onCleanup(); resolve(null); };
     });
-};3
+};
 
 // =========================================================================
 // MOTOR DE VENDA CASADA (MULTI-KIT) - VERSÃO DEFINITIVA
