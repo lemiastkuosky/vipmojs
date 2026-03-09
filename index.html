@@ -7335,7 +7335,7 @@ body.dark-mode .venda-autocomplete-item:hover {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V17.15</strong>
+            <strong>V15.15</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -10668,23 +10668,35 @@ motivos.push('🚨 Ciclo Estourado (+20)');
     return { forca: Math.max(1, Math.min(200, score)), motivos: motivos };
 }
 
-// --- CÉREBRO DA I.A. ATUALIZADO (SUPORTA AUTO-TREINAMENTO SILENCIOSO) ---
 async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) {
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) return;
 
+    // 1. TELA DE LOADING (Início)
     if (!isAutomatic) {
-        const confirmed = await showCustomConfirm('Treinar I.A. com Ciclos de Retorno, Duplas e Horários? (Consumirá leituras)', 'Sim, Compilar', 'Cancelar', 'updateModal');
+        const confirmed = await showCustomConfirm(
+            'Treinar I.A. com Ciclos de Retorno e Tendências? (Isso pode levar alguns segundos)', 
+            'Sim, Treinar', 
+            'Cancelar', 
+            'updateModal'
+        );
         if (!confirmed) return;
-        showLoadingIndicator('Treinando Inteligência Artificial Completa (Aguarde)...');
-    } else {
-        console.log(`[Auto-IA] Re-treinando a I.A. silenciosamente para: ${loteriaAlvo}`);
+        
+        // Ativa o indicador visual
+        showLoadingIndicator('Lendo banco de dados e treinando I.A. (Aguarde)...');
     }
+
+    const dataAtrasada = new Date(); dataAtrasada.setDate(dataAtrasada.getDate() - 180);
+    const dataRecente = new Date(); dataRecente.setDate(dataRecente.getDate() - 7);
+    const dataAntiga = new Date('2000-01-01');
 
     const loterias = loteriaAlvo ? [loteriaAlvo] : ['rj', 'lk', 'ln', 'fd', 'ba'];
 
     try {
         for (const loteria of loterias) {
+            // Atualiza a mensagem de loading para cada loteria (opcional)
+            if (!isAutomatic) showLoadingIndicator(`Processando dados de: ${loteria.toUpperCase()}...`);
+
             const snapshot = await firestoreDB.collection('resultados')
                 .where('loteria', '==', loteria).orderBy('data', 'desc').limit(5000).get();
 
@@ -10695,251 +10707,95 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 dezenaCounts: {}, ultimosVistos1Premio: new Map(), bichoFrequencia: new Map(),
                 ultimasDezenas: new Map(), ultimasCentenas: new Map(), ultimasUnidades: new Map(),
                 draws: {}, bicho1PremioCount: {}, datasSorteios: [],
-                bicho1PremioPorDia: {},
-                dezena1PremioCount: {},
-                dezenaPorBicho1Premio: {},
-                tendenciaRecente: {},
-                pairCountsRecentes: {},
-                posicaoHistorico: {},
+                bicho1PremioPorDia: {}, dezena1PremioCount: {}, dezenaPorBicho1Premio: {},
+                tendenciaRecente: {}, pairCountsRecentes: {}, posicaoHistorico: {},
                 digitosCarregados: { p0: {}, p1: {}, p2: {}, p3: {} },
                 ultimaMilhar1Premio: null 
             });
 
             const containers = { geral: createContainer() };
-            if (horariosLoterias[loteria]) {
-                horariosLoterias[loteria].forEach(h => { containers[h.nome] = createContainer(); });
+            if (window.horariosLoterias && window.horariosLoterias[loteria]) {
+                window.horariosLoterias[loteria].forEach(h => { containers[h.nome] = createContainer(); });
             }
-
-            const dataBlacklist = new Date(); dataBlacklist.setDate(dataBlacklist.getDate() - 30);
-            const dataAtrasada = new Date(); dataAtrasada.setDate(dataAtrasada.getDate() - 180);
-            const dataFrequente = new Date(); dataFrequente.setDate(dataFrequente.getDate() - 21);
-            const dataRecente = new Date(); dataRecente.setDate(dataRecente.getDate() - 7);
 
             snapshot.forEach(doc => {
                 const data = doc.data();
-                if (!data.milhar || data.milhar.length !== 4 || !data.bichoGrupo) return;
-
+                if (!data.milhar || !data.bichoGrupo) return;
                 const m = data.milhar, g = data.bichoGrupo, dS = data.data.toDate(), p = data.posicao;
-                const prefixo = m.substring(0, 2), dez = m.slice(-2), cent = m.slice(-3), uni = m.slice(-1);
                 const drawName = data.nomeSorteio;
 
                 const targets = [containers.geral];
                 if (drawName && containers[drawName]) targets.push(containers[drawName]);
 
-                // Registro de data (movido para dentro do loop do snapshot para evitar ReferenceError)
-                containers.geral.datasSorteios.push(dS.getTime());
-                if (drawName && containers[drawName]) containers[drawName].datasSorteios.push(dS.getTime());
-
                 targets.forEach(c => {
-                    if (!c.prefixoCounts[g]) c.prefixoCounts[g] = {};
-                    const pesoPrefixo = (p === 1) ? 2 : 1;
-                    c.prefixoCounts[g][prefixo] = (c.prefixoCounts[g][prefixo] || 0) + pesoPrefixo;
-                    if (dS >= dataBlacklist && p === 1) c.blacklist.add(m);
+                    c.datasSorteios.push(dS.getTime());
                     if (!c.milharLastDate[m] || dS > c.milharLastDate[m]) c.milharLastDate[m] = dS;
-                    c.dezenaCounts[dez] = (c.dezenaCounts[dez] || 0) + pesoPrefixo;
-
                     if (p === 1) {
                         c.bicho1PremioCount[g] = (c.bicho1PremioCount[g] || 0) + 1;
-                        if (!c.ultimosVistos1Premio.has(g) || dS > c.ultimosVistos1Premio.get(g)) {
-                            c.ultimosVistos1Premio.set(g, dS);
-                        }
-
                         const diaSem = dS.getDay();
                         if (!c.bicho1PremioPorDia[diaSem]) c.bicho1PremioPorDia[diaSem] = {};
                         c.bicho1PremioPorDia[diaSem][g] = (c.bicho1PremioPorDia[diaSem][g] || 0) + 1;
-
-                        c.dezena1PremioCount[dez] = (c.dezena1PremioCount[dez] || 0) + 1;
-                        if (!c.dezenaPorBicho1Premio[g]) c.dezenaPorBicho1Premio[g] = {};
-                        c.dezenaPorBicho1Premio[g][dez] = (c.dezenaPorBicho1Premio[g][dez] || 0) + 1;
-
                         if (dS >= dataRecente) c.tendenciaRecente[g] = (c.tendenciaRecente[g] || 0) + 1;
-
+                        
+                        // Captura de dígitos para Milhar Carregada
                         if (c.ultimaMilhar1Premio) {
                             const prev = c.ultimaMilhar1Premio;
-                            [0, 1, 2, 3].forEach(pos => {
+                            [0,1,2,3].forEach(pos => {
                                 if (m[pos] === prev[pos]) {
-                                    const pk = 'p' + pos;
+                                    const pk = 'p'+pos;
                                     c.digitosCarregados[pk][m[pos]] = (c.digitosCarregados[pk][m[pos]] || 0) + 1;
                                 }
                             });
                         }
                         c.ultimaMilhar1Premio = m;
                     }
-
-                    if (!c.posicaoHistorico[g]) c.posicaoHistorico[g] = [];
-                    c.posicaoHistorico[g].push({ posicao: p, data: dS.getTime() });
-                    if (c.posicaoHistorico[g].length > 10) c.posicaoHistorico[g].shift();
-
-                    if (dS >= dataFrequente) c.bichoFrequencia.set(g, (c.bichoFrequencia.get(g) || 0) + 1);
-                    if (!c.ultimasDezenas.has(dez)) c.ultimasDezenas.set(dez, dS);
-                    if (!c.ultimasCentenas.has(cent)) c.ultimasCentenas.set(cent, dS);
-                    if (!c.ultimasUnidades.has(uni)) c.ultimasUnidades.set(uni, dS);
-
-                    if (p <= 2) {
-                        const drawKey = `${dS.getTime()}_${drawName || 'geral'}`;
-                        if (!c.draws[drawKey]) c.draws[drawKey] = new Set();
-                        c.draws[drawKey].add(g);
-                    }
-
-                    const data90 = new Date(); data90.setDate(data90.getDate() - 90);
-                    if (p <= 2 && dS >= data90) {
-                        const drawKeyR = `r_${dS.getTime()}_${drawName || 'geral'}`;
-                        if (!c.pairCountsRecentes[drawKeyR]) c.pairCountsRecentes[drawKeyR] = new Set();
-                        c.pairCountsRecentes[drawKeyR].add(g);
-                    }
                 });
             });
 
-            const dataAntiga = new Date('2000-01-01');
             const compiledData = {};
-
             for (const [key, c] of Object.entries(containers)) {
-                const prefixosPorBichoFinal = {};
-                for (const g in c.prefixoCounts) {
-                    prefixosPorBichoFinal[g] = Object.keys(c.prefixoCounts[g]).sort((a, b) => c.prefixoCounts[g][b] - c.prefixoCounts[g][a]).slice(0, 20);
-                }
+                
+                const finalObject = {
+                    milharesAtrasadas: Object.keys(c.milharLastDate || {}).filter(m => c.milharLastDate[m] < dataAtrasada).slice(0, 50),
+                    dezenasQuentes: Object.keys(c.dezenaCounts || {}).sort((a, b) => c.dezenaCounts[b] - c.dezenaCounts[a]).slice(0, 50),
+                    tendenciaRecente: c.tendenciaRecente || {},
+                    bicho1PremioPorDia: c.bicho1PremioPorDia || {},
+                    digitosCarregados: {
+                        p0: Object.entries(c.digitosCarregados?.p0 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+                        p1: Object.entries(c.digitosCarregados?.p1 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+                        p2: Object.entries(c.digitosCarregados?.p2 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
+                        p3: Object.entries(c.digitosCarregados?.p3 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0])
+                    },
+                    ultimaMilhar1Premio: c.ultimaMilhar1Premio || null
+                };
 
-                const getAtrasos = (map, limit) => Array.from(map.entries()).map(([numero, data]) => ({ numero, data })).sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, limit);
+                // Limpeza contra undefined (Essencial para o Firebase)
+                const sanitize = (obj) => {
+                    if (obj === undefined) return null;
+                    if (obj === null || typeof obj !== 'object' || obj instanceof Date) return obj;
+                    const newObj = Array.isArray(obj) ? [] : {};
+                    for (const k in obj) { newObj[k] = sanitize(obj[k]); }
+                    return newObj;
+                };
 
-                const pairCounts = {};
-                Object.values(c.draws).forEach(bichosInDraw => {
-                    const arr = Array.from(bichosInDraw).sort();
-                    for (let i = 0; i < arr.length; i++) {
-                        for (let j = i + 1; j < arr.length; j++) {
-                            const pair = `${arr[i]}_${arr[j]}`;
-                            pairCounts[pair] = (pairCounts[pair] || 0) + 1;
-                        }
-                    }
-                });
-
-                const pairCountsR = {};
-                Object.values(c.pairCountsRecentes).forEach(bichosInDraw => {
-                    const arr = Array.from(bichosInDraw).sort();
-                    for (let i = 0; i < arr.length; i++) {
-                        for (let j = i + 1; j < arr.length; j++) {
-                            const pair = `${arr[i]}_${arr[j]}`;
-                            pairCountsR[pair] = (pairCountsR[pair] || 0) + 1;
-                        }
-                    }
-                });
-
-                const afinidades = {};
-                const afinidadesRecentes = {};
-                for (let i = 1; i <= 25; i++) {
-                    const g = String(i).padStart(2, '0');
-                    const comps = [], compsR = [];
-                    Object.entries(pairCounts).forEach(([pair, count]) => {
-                        const [g1, g2] = pair.split('_');
-                        if (g1 === g || g2 === g) comps.push({ comp: g1 === g ? g2 : g1, count });
-                    });
-                    Object.entries(pairCountsR).forEach(([pair, count]) => {
-                        const [g1, g2] = pair.split('_');
-                        if (g1 === g || g2 === g) compsR.push({ comp: g1 === g ? g2 : g1, count });
-                    });
-                    afinidades[g] = comps.sort((a, b) => b.count - a.count).slice(0, 5).map(x => x.comp);
-                    afinidadesRecentes[g] = compsR.sort((a, b) => b.count - a.count).slice(0, 5).map(x => x.comp);
-                }
-
-                const ciclos = {};
-                const times = c.datasSorteios;
-                const maxTime = times.length > 0 ? Math.max(...times) : new Date().getTime();
-                const minTime = times.length > 0 ? Math.min(...times) : new Date().getTime();
-                const totalDias = Math.max(1, (maxTime - minTime) / (1000 * 60 * 60 * 24));
-
-                for (let i = 1; i <= 25; i++) {
-                    const g = String(i).padStart(2, '0');
-                    const count = c.bicho1PremioCount[g] || 0;
-                    const cicloMedioDias = count > 0 ? Math.min(totalDias, totalDias / count) : totalDias;
-                    const lastSeen = c.ultimosVistos1Premio.get(g) || dataAntiga;
-                    const atrasoDias = (maxTime - lastSeen.getTime()) / (1000 * 60 * 60 * 24);
-                    ciclos[g] = {
-                        medio: Number(cicloMedioDias.toFixed(1)),
-                        atual: Number(atrasoDias.toFixed(1)),
-                        estourado: count > 0 && atrasoDias >= cicloMedioDias
-                    };
-                }
-
-                const dezenaPorBicho1PremioFinal = {};
-                for (const g in c.dezenaPorBicho1Premio) {
-                    dezenaPorBicho1PremioFinal[g] = Object.keys(c.dezenaPorBicho1Premio[g])
-                        .sort((a, b) => c.dezenaPorBicho1Premio[g][b] - c.dezenaPorBicho1Premio[g][a]);
-                }
-
-                const bicho1PremioPorDiaFinal = {};
-                for (const dia in c.bicho1PremioPorDia) {
-                    bicho1PremioPorDiaFinal[String(dia)] = c.bicho1PremioPorDia[dia];
-                }
-
-                const tendenciaRecenteFinal = Object.fromEntries(
-                    Object.entries(c.tendenciaRecente).sort((a, b) => b[1] - a[1])
-                );
-
-                // ... dentro do loop for (const [key, c] of Object.entries(containers))
-
-compiledData[key] = {
-    prefixosPorBicho: prefixosPorBichoFinal || {},
-    milharesAtrasadas: Object.keys(c.milharLastDate || {})
-        .filter(m => c.milharLastDate[m] < dataAtrasada)
-        .sort((a, b) => c.milharLastDate[a] - c.milharLastDate[b])
-        .slice(0, 50),
-    blacklist: Array.from(c.blacklist || []),
-    dezenasQuentes: Object.keys(c.dezenaCounts || {})
-        .sort((a, b) => c.dezenaCounts[b] - c.dezenaCounts[a])
-        .slice(0, 50),
-    bichosAtrasados1Premio: (tabelaDeGrupos || [])
-        .map(b => ({ ...b, data: c.ultimosVistos1Premio.get(b.grupo) || dataAntiga }))
-        .sort((a, b) => a.data.getTime() - b.data.getTime())
-        .slice(0, 10),
-    bichosFrequentes: Array.from(c.bichoFrequencia.entries())
-        .map(([g, count]) => ({ ...tabelaDeGrupos.find(x => x.grupo === g), count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10),
-    dezenasAtrasadas: getAtrasos(c.ultimasDezenas, 5) || [],
-    centenasAtrasadas: getAtrasos(c.ultimasCentenas, 5) || [],
-    unidadesAtrasadas: getAtrasos(c.ultimasUnidades, 2) || [],
-    afinidades: afinidades || {},
-    afinidadesRecentes: afinidadesRecentes || {},
-    ciclos: ciclos || {},
-    posicaoHistorico: Object.fromEntries(
-        Object.entries(c.posicaoHistorico || {}).map(([g, hist]) => [
-            g,
-            hist.sort((a,b) => a.data - b.data).slice(-6).map(x => x.posicao)
-        ])
-    ),
-    dezenasQuentes1Premio: Object.keys(c.dezena1PremioCount || {})
-        .sort((a, b) => c.dezena1PremioCount[b] - c.dezena1PremioCount[a])
-        .slice(0, 30),
-    dezenaPorBicho1Premio: dezenaPorBicho1PremioFinal || {},
-    tendenciaRecente: tendenciaRecenteFinal || {},
-    bicho1PremioPorDia: bicho1PremioPorDiaFinal || {}, // NOME CORRIGIDO AQUI
-    // Substitua o bloco digitosCarregados dentro de compiledData[key] por este:
-digitosCarregados: {
-    p0: Object.entries(c.digitosCarregados.p0 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
-    p1: Object.entries(c.digitosCarregados.p1 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]), // Corrigido aqui
-    p2: Object.entries(c.digitosCarregados.p2 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
-    p3: Object.entries(c.digitosCarregados.p3 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0])
-},
-    ultimaMilhar1Premio: c.ultimaMilhar1Premio || null
-};
+                compiledData[key] = sanitize(finalObject);
             }
 
             compiledData.lastUpdated = firebase.firestore.FieldValue.serverTimestamp();
             await firestoreDB.collection('analises_ia').doc(loteria).set(compiledData);
         }
 
-        loterias.forEach(l => { delete iaSummaryCache[l]; });
-        await calcularPlacarAutomatico();
-        await autoGerarHistoricoIA();
-
+        // Sucesso
         if (!isAutomatic) {
-            showToast('I.A. treinada com Sucesso Total!', 'success');
+            showToast('I.A. Treinada e Atualizada com Sucesso!', 'success');
             if (typeof closeUpdateModal === 'function') closeUpdateModal();
         }
 
     } catch (e) {
-        console.error(e);
-        if (!isAutomatic) showToast('Erro ao compilar I.A.', 'error');
+        console.error("Erro no treinamento:", e);
+        if (!isAutomatic) showToast('Erro crítico ao treinar I.A.', 'error');
     } finally {
+        // 2. FECHAR LOADING (Fim)
         if (!isAutomatic) hideLoadingIndicator();
     }
 }
