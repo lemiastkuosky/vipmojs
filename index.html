@@ -7335,7 +7335,7 @@ body.dark-mode .venda-autocomplete-item:hover {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V14.15</strong>
+            <strong>V15.15</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -10701,17 +10701,15 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 tendenciaRecente: {},
                 pairCountsRecentes: {},
                 posicaoHistorico: {},
-                // NOVO: rastreia dígito que se repetiu na posição P entre sorteios consecutivos do 1º prêmio
                 digitosCarregados: { p0: {}, p1: {}, p2: {}, p3: {} },
-                ultimaMilhar1Premio: null // última milhar do 1º prêmio vista (para calcular carry)
-                
+                ultimaMilhar1Premio: null 
             });
+
             const containers = { geral: createContainer() };
             if (horariosLoterias[loteria]) {
                 horariosLoterias[loteria].forEach(h => { containers[h.nome] = createContainer(); });
             }
 
-            // POR ISTO:
             const dataBlacklist = new Date(); dataBlacklist.setDate(dataBlacklist.getDate() - 30);
             const dataAtrasada = new Date(); dataAtrasada.setDate(dataAtrasada.getDate() - 180);
             const dataFrequente = new Date(); dataFrequente.setDate(dataFrequente.getDate() - 21);
@@ -10728,17 +10726,17 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 const targets = [containers.geral];
                 if (drawName && containers[drawName]) targets.push(containers[drawName]);
 
-               
+                // Registro de data (movido para dentro do loop do snapshot para evitar ReferenceError)
+                containers.geral.datasSorteios.push(dS.getTime());
+                if (drawName && containers[drawName]) containers[drawName].datasSorteios.push(dS.getTime());
+
                 targets.forEach(c => {
                     if (!c.prefixoCounts[g]) c.prefixoCounts[g] = {};
                     const pesoPrefixo = (p === 1) ? 2 : 1;
                     c.prefixoCounts[g][prefixo] = (c.prefixoCounts[g][prefixo] || 0) + pesoPrefixo;
                     if (dS >= dataBlacklist && p === 1) c.blacklist.add(m);
                     if (!c.milharLastDate[m] || dS > c.milharLastDate[m]) c.milharLastDate[m] = dS;
-                    // 1º prêmio vale 2x na contagem de dezenas também
                     c.dezenaCounts[dez] = (c.dezenaCounts[dez] || 0) + pesoPrefixo;
-                    // datasSorteios só recebe 1 push por prêmio (não por target)
-                    // — movido para fora do targets.forEach abaixo
 
                     if (p === 1) {
                         c.bicho1PremioCount[g] = (c.bicho1PremioCount[g] || 0) + 1;
@@ -10746,22 +10744,16 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                             c.ultimosVistos1Premio.set(g, dS);
                         }
 
-                        // Dia da semana
                         const diaSem = dS.getDay();
                         if (!c.bicho1PremioPorDia[diaSem]) c.bicho1PremioPorDia[diaSem] = {};
                         c.bicho1PremioPorDia[diaSem][g] = (c.bicho1PremioPorDia[diaSem][g] || 0) + 1;
 
-                        // Dezenas do 1º prêmio
                         c.dezena1PremioCount[dez] = (c.dezena1PremioCount[dez] || 0) + 1;
                         if (!c.dezenaPorBicho1Premio[g]) c.dezenaPorBicho1Premio[g] = {};
                         c.dezenaPorBicho1Premio[g][dez] = (c.dezenaPorBicho1Premio[g][dez] || 0) + 1;
 
-                        // Tendência recente (últimos 7 dias)
-                        if (dS >= dataRecente) {
-                            c.tendenciaRecente[g] = (c.tendenciaRecente[g] || 0) + 1;
-                        }
+                        if (dS >= dataRecente) c.tendenciaRecente[g] = (c.tendenciaRecente[g] || 0) + 1;
 
-                        // NOVO: dígitos carregados — compara com a milhar anterior do 1º prêmio
                         if (c.ultimaMilhar1Premio) {
                             const prev = c.ultimaMilhar1Premio;
                             [0, 1, 2, 3].forEach(pos => {
@@ -10774,7 +10766,6 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                         c.ultimaMilhar1Premio = m;
                     }
 
-                    // NOVO: histórico das últimas 10 posições do bicho
                     if (!c.posicaoHistorico[g]) c.posicaoHistorico[g] = [];
                     c.posicaoHistorico[g].push({ posicao: p, data: dS.getTime() });
                     if (c.posicaoHistorico[g].length > 10) c.posicaoHistorico[g].shift();
@@ -10790,7 +10781,6 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                         c.draws[drawKey].add(g);
                     }
 
-                    // NOVO: pares dos últimos 90 dias para afinidadesRecentes
                     const data90 = new Date(); data90.setDate(data90.getDate() - 90);
                     if (p <= 2 && dS >= data90) {
                         const drawKeyR = `r_${dS.getTime()}_${drawName || 'geral'}`;
@@ -10822,7 +10812,6 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                     }
                 });
 
-                // NOVO: pairCounts dos últimos 90 dias
                 const pairCountsR = {};
                 Object.values(c.pairCountsRecentes).forEach(bichosInDraw => {
                     const arr = Array.from(bichosInDraw).sort();
@@ -10852,30 +10841,24 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                 }
 
                 const ciclos = {};
-                const maxTime = c.datasSorteios.length > 0
-    ? c.datasSorteios.reduce(function(a, b) { return a > b ? a : b; })
-    : new Date().getTime();
-const minTime = c.datasSorteios.length > 0
-    ? c.datasSorteios.reduce(function(a, b) { return a < b ? a : b; })
-    : new Date().getTime();
+                const times = c.datasSorteios;
+                const maxTime = times.length > 0 ? Math.max(...times) : new Date().getTime();
+                const minTime = times.length > 0 ? Math.min(...times) : new Date().getTime();
                 const totalDias = Math.max(1, (maxTime - minTime) / (1000 * 60 * 60 * 24));
 
                 for (let i = 1; i <= 25; i++) {
                     const g = String(i).padStart(2, '0');
                     const count = c.bicho1PremioCount[g] || 0;
-                    // Cap: ciclo máximo = totalDias (evita valores absurdos para bichos sem histórico)
                     const cicloMedioDias = count > 0 ? Math.min(totalDias, totalDias / count) : totalDias;
                     const lastSeen = c.ultimosVistos1Premio.get(g) || dataAntiga;
                     const atrasoDias = (maxTime - lastSeen.getTime()) / (1000 * 60 * 60 * 24);
                     ciclos[g] = {
                         medio: Number(cicloMedioDias.toFixed(1)),
                         atual: Number(atrasoDias.toFixed(1)),
-                        // Bicho sem histórico nunca é marcado como "estourado"
                         estourado: count > 0 && atrasoDias >= cicloMedioDias
                     };
                 }
 
-                // Monta objetos auxiliares sem IIFE para evitar erro de return
                 const dezenaPorBicho1PremioFinal = {};
                 for (const g in c.dezenaPorBicho1Premio) {
                     dezenaPorBicho1PremioFinal[g] = Object.keys(c.dezenaPorBicho1Premio[g])
@@ -10904,8 +10887,6 @@ const minTime = c.datasSorteios.length > 0
                     afinidades: afinidades,
                     afinidadesRecentes: afinidadesRecentes,
                     ciclos: ciclos,
-                    bicho1PremioPorDia,
-                    
                     posicaoHistorico: Object.fromEntries(
                         Object.entries(c.posicaoHistorico).map(([g, hist]) => [
                             g,
@@ -10938,10 +10919,6 @@ const minTime = c.datasSorteios.length > 0
             showToast('I.A. treinada com Sucesso Total!', 'success');
             if (typeof closeUpdateModal === 'function') closeUpdateModal();
         }
-
-        // Push único por registro — evita contagem múltipla por target
-                containers.geral.datasSorteios.push(dS.getTime());
-                if (drawName && containers[drawName]) containers[drawName].datasSorteios.push(dS.getTime());
 
     } catch (e) {
         console.error(e);
