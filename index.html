@@ -7097,6 +7097,71 @@ body.dark-mode #calcTimingAviso.ideal     { background: rgba(25,135,84,0.12); }
 body.dark-mode #calcTimingAviso.cedo      { background: rgba(255,193,7,0.1); }
 body.dark-mode #calcTimingAviso.muito-cedo { background: rgba(220,53,69,0.1); }
 
+/* ── TOP 10 DEZENAS COM MOTIVO ── */
+.paltitao-dezenas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.paltitao-dez {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: rgba(13,110,253,0.08);
+    border: 1.5px solid rgba(13,110,253,0.25);
+    border-radius: 10px;
+    padding: 6px 8px;
+    min-width: 52px;
+    cursor: default;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.paltitao-dez:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13,110,253,0.2);
+    border-color: rgba(13,110,253,0.5);
+}
+
+.paltitao-dez .dez-num {
+    font-size: 1.1rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #0d6efd;
+}
+
+.paltitao-dez .dez-mot {
+    font-size: 0.48rem;
+    color: #888;
+    text-align: center;
+    line-height: 1.3;
+    max-width: 56px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Destaque especial para Cruz Dupla */
+.paltitao-dez.cruz-dupla {
+    background: rgba(255,193,7,0.1);
+    border-color: rgba(255,193,7,0.4);
+}
+.paltitao-dez.cruz-dupla .dez-num { color: #856404; }
+
+/* Destaque especial para Sinal do Dia */
+.paltitao-dez.sinal-dia {
+    background: rgba(25,135,84,0.1);
+    border-color: rgba(25,135,84,0.35);
+}
+.paltitao-dez.sinal-dia .dez-num { color: #198754; }
+
+body.dark-mode .paltitao-dez { background: rgba(13,110,253,0.1); }
+body.dark-mode .paltitao-dez.cruz-dupla { background: rgba(255,193,7,0.08); }
+body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
+
 </style>
 </head>
 
@@ -9093,7 +9158,29 @@ body.dark-mode #calcTimingAviso.muito-cedo { background: rgba(220,53,69,0.1); }
         <span class="close-modal" onclick="fecharCalculadora()">×</span>
         <h3 class="modal-title">🎯 Calculadora de Palpites</h3>
 
+        <!-- Abas -->
+        <div style="display:flex;gap:6px;padding:0 4px 10px;">
+            <button id="calcTabGerar" onclick="calcMudarAba('gerar')"
+                style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:700;
+                font-size:0.72rem;cursor:pointer;background:#0d6efd;color:#fff;">
+                ⚡ Gerar
+            </button>
+            <button id="calcTabAnalise" onclick="calcMudarAba('analise')"
+                style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:700;
+                font-size:0.72rem;cursor:pointer;background:rgba(128,128,128,0.1);color:#888;">
+                📊 Análise
+            </button>
+            <button id="calcTabHistorico" onclick="calcMudarAba('historico')"
+                style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:700;
+                font-size:0.72rem;cursor:pointer;background:rgba(128,128,128,0.1);color:#888;">
+                📈 Histórico
+            </button>
+        </div>
+
         <div class="calc-scroll-body">
+
+            <!-- ABA GERAR -->
+            <div id="calcAbaGerar">
 
             <div id="calcAnaliseWidget">
                 <div class="aw-title">
@@ -9110,7 +9197,7 @@ body.dark-mode #calcTimingAviso.muito-cedo { background: rgba(220,53,69,0.1); }
             <div class="calc-section">
                 <div class="calc-label">▸ Extração</div>
                 <div class="calc-radio-group" id="calcLotRadios">
-                    <label><input type="radio" name="calcLoteria" value="rj" checked onchange="calcAtualizarHorarios()">RJ</label>
+                    <label><input type="radio" name="calcLoteria" value="rj" onchange="calcAtualizarHorarios()">RJ</label>
                     <label><input type="radio" name="calcLoteria" value="lk" onchange="calcAtualizarHorarios()">LK</label>
                     <label><input type="radio" name="calcLoteria" value="ln" onchange="calcAtualizarHorarios()">NC</label>
                     <label><input type="radio" name="calcLoteria" value="ba" onchange="calcAtualizarHorarios()">BA</label>
@@ -9128,14 +9215,33 @@ body.dark-mode #calcTimingAviso.muito-cedo { background: rgba(220,53,69,0.1); }
                 <input type="date" id="calcDataInput" class="calc-date-input">
             </div>
 
-            <!-- Aviso de Timing -->
             <div id="calcTimingAviso"></div>
 
             <!-- Botão Gerar -->
             <button id="calcGerarBtn" onclick="calcGerarPalpites()">⚡ CALCULAR PALPITES</button>
 
-            <div id="calcResultados" class="calc-results" style="display:none;"></div>
+            </div><!-- /calcAbaGerar -->
 
+            <!-- ABA ANÁLISE -->
+            <div id="calcAbaAnalise" style="display:none;">
+                <div id="calcAnaliseWidget2">
+                    <div class="aw-title">
+                        📊 Análise — Qual Loteria Jogar?
+                        <button class="aw-refresh" onclick="calcCarregarAnalise()">↻ Atualizar</button>
+                    </div>
+                    <div id="calcAnaliseCorpo2">
+                        <div class="aw-loading">⏳ Toque em Atualizar para carregar...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA HISTÓRICO -->
+            <div id="calcAbaHistorico" style="display:none;">
+                <div id="calcHistoricoCorpo">
+                    <div class="aw-loading">⏳ Carregando histórico...</div>
+                </div>
+            </div>
+            <div id="calcTimingAviso"></div>
         </div>
     </div>
 </div>
@@ -10630,6 +10736,29 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
                 });
             });
             await Promise.all(promessas);
+
+            // Salva no histórico unificado para análise de acertos
+            if (typeof calcSalvarHistorico === 'function') {
+                analisesPorExtracao.forEach((an, i) => {
+                    const hL     = an.extracao.horario || an.extracao.display;
+                    const dezMot = (an.rankingTop5 || []).flatMap(b =>
+                        (b.dezenas || []).slice(0, 2).map(dz => ({
+                            dz,
+                            score:   b.forca || b.confianca || 0,
+                            motivos: b.motivos || [],
+                        }))
+                    ).slice(0, 10);
+
+                    calcSalvarHistorico(
+                        'ia',
+                        loteria,
+                        hL,
+                        dataSimples.split('/').reverse().join('-'),
+                        an.rankingTop5 || [],
+                        dezMot
+                    );
+                });
+            }
         } catch(e) { console.error("Erro salvamento:", e); }
 
         if (isSilent) return;
@@ -26041,7 +26170,6 @@ window.reenviarVendidosKit = async function(kitIndex) {
 
     window.kitsSoldStatus.forEach((statusK, kIdx) => {
         if (statusK && statusK.historicoVendas) {
-            // Acha todas as fatias da venda que têm o mesmo ID de recibo
             const vendasComMesmoCodigo = statusK.historicoVendas.filter(v => v.codigo === code);
             
             vendasComMesmoCodigo.forEach(vMatch => {
@@ -26057,7 +26185,6 @@ window.reenviarVendidosKit = async function(kitIndex) {
                         if (!bichoDetailsGlobal[bData.grupo]) {
                             bichoDetailsGlobal[bData.grupo] = { ...bData, milhares: [], kitIndex: kIdx };
                         }
-                        // Puxa a milhar e evita duplicatas na cópia pura
                         if (!bichoDetailsGlobal[bData.grupo].milhares.includes(num)) {
                             bichoDetailsGlobal[bData.grupo].milhares.push(num);
                             milharesJaVendidas.push(num);
@@ -26070,21 +26197,29 @@ window.reenviarVendidosKit = async function(kitIndex) {
 
     const sortedGruposGlobais = Object.keys(bichoDetailsGlobal).sort((a,b) => parseInt(a) - parseInt(b));
 
-    let msg = `*${nomeCliente}*, segue suas milhares da sorte (2ª Via)!\n\n`;
+    // 4. Monta a mensagem do WhatsApp (NOVO FORMATO REENVIO)
+    const horaStr = new Date().getHours();
+    let saudacao = (horaStr >= 12 && horaStr < 18) ? "Boa tarde" : (horaStr >= 18 || horaStr < 5) ? "Boa noite" : "Bom dia";
+
+    let msg = `${saudacao} *${nomeCliente}*, Segue suas milhares da sorte (2ª Via)!\n\n`;
     msg += `✅ RECIBO RECUPERADO COM SUCESSO! ✅\n\n`;
     msg += `━━━━━━━━━━━━━━━\n\n`;
-    msg += `📦 PACOTE: ${isMultiKit ? 'MultiKit' : `Kit #${numKit}`}\n`;
     msg += `🔑 ID: ${code}\n`;
     if (valorCalculado && valorCalculado !== "Casada") {
         msg += `💰 VALOR: ${valorCalculado}\n`;
+    } else {
+        msg += `💰 VALOR: MultiKit\n`;
     }
     msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
     msg += `-----------------------------------\n\n`;
-    msg += `🐾 RESUMO POR BICHO:\n\n`;
+    msg += `🐾 BICHOS SELECIONADOS:\n\n`;
 
     sortedGruposGlobais.forEach(grupo => {
         const data = bichoDetailsGlobal[grupo];
-        msg += `📦 *Kit #${data.kitIndex + 1}* ➔ ${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} (*${data.milhares.length}* und)\n`;
+        // Para manter o visual coeso na Multi/Single
+        const numeroKitAExibir = isMultiKit ? data.kitIndex + 1 : numKit;
+        
+        msg += `📦 *Kit #${numeroKitAExibir}* ➔ ${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()}\n`;
         if (mostrarMilhares) {
             msg += `↳ ${data.milhares.join(' - ')}\n\n`;
         } else {
@@ -26102,167 +26237,12 @@ window.reenviarVendidosKit = async function(kitIndex) {
     msg += `Obrigado e Boa sorte! 🍀\n\n`;
     msg += `📲 VIP - I.A in Real-Time`;
 
-    // Salva na memória global para os botões "Copiar" e "WhatsApp" da janela final
     window.ultimaVendaKit = {
         numerosPuros: milharesJaVendidas.join(' '),
         textoWhats: msg
     };
 
     mostrarSucessoVendaKit(isMultiKit ? "Multi" : numKit, sortedGruposGlobais, bichoDetailsGlobal);
-};
-
-// Auxiliar para converter R$ 10,00 em número real
-function converterValorParaNumero(valorTexto) {
-    if (!valorTexto) return 0;
-    return parseFloat(valorTexto.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
-}
-
-
-// =========================================================
-// MOTOR DE HISTÓRICO DE RECIBOS E KITS (VERSÃO COMPLETA E SEM RESUMOS)
-// =========================================================
-
-window.updateSavedReceiptsContainer = async function() {
-    const container = document.getElementById('savedReceiptsContainer');
-    if (!container) return;
-    
-    container.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner-border" style="color:#007bff;"></div><p style="margin-top:10px; font-weight:bold; color:#6c757d;">Buscando recibos na nuvem...</p></div>';
-
-    try {
-        const querySnapshot = await firestoreDB.collection('receipts').orderBy('createdAt', 'desc').limit(150).get();        
-        
-        if (querySnapshot.empty) {
-            container.innerHTML = '<div class="no-saved-items">Nenhum recibo salvo na nuvem.</div>';
-            return;
-        }
-
-        container.innerHTML = ''; 
-        let countExibidos = 0;
-        
-        querySnapshot.forEach(doc => {
-            const item = doc.data();
-            const id = doc.id;
-
-            // Filtro para mostrar apenas Kits ou apenas MCD dependendo de onde abriu
-            const isKit = item.tipo === 'kit' || (item.content && item.content.includes('Pacote.........: Kit'));
-            if (typeof currentReceiptsFilter !== 'undefined') {
-                if (currentReceiptsFilter === 'kit' && !isKit) return;
-                if (currentReceiptsFilter === 'mcd' && isKit) return; 
-            }
-
-            countExibidos++;
-
-            const itemElement = document.createElement('div');
-            itemElement.className = 'saved-item';
-            // Fundo amarelado para destacar vendas de Kits
-            if (isKit) {
-                itemElement.style.backgroundColor = 'rgba(255, 193, 7, 0.05)';
-                itemElement.style.borderColor = 'rgba(255, 193, 7, 0.4)';
-            }
-            itemElement.dataset.id = id;
-
-            const creationDate = item.createdAt ? item.createdAt.toDate() : new Date();
-            const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(creationDate);
-
-            // --- INÍCIO DA LÓGICA DE EXTRAÇÃO BLINDADA ---
-            const codeMatch = item.content.match(/Código\.*:\s*(\S+)/);
-            const code = codeMatch ? codeMatch[1] : 'S/C';
-
-            const extractionMatch = item.content.match(/Extração\.*:\s*(.*)/);
-            let extraction = 'N/A';
-            
-            if (extractionMatch && extractionMatch[1]) {
-                const fullExtraction = extractionMatch[1].trim();
-                // Usa o hífen para separar cidade e horário
-                const parts = fullExtraction.split('-');
-                
-                const city = parts[0] ? parts[0].trim() : '';
-                let cityAbbr = city;
-                
-                // Abreviação das loterias
-                if (city === 'Rio de Janeiro') cityAbbr = 'RJ';
-                else if (city === 'Nacional') cityAbbr = 'NAC';
-                else if (city === 'Look' || city === 'Look Goiás') cityAbbr = 'LOOK';
-                else if (city === 'Loteria Federal') cityAbbr = 'FED';
-                else if (city === 'PT Bahia' || city === 'Bahia') cityAbbr = 'BA';
-                
-                // Pega só o horário (limpando o (PT) se existir)
-                const time = parts[1] ? parts[1].trim().split(' ')[0] : '';
-                extraction = `${cityAbbr} ${time}`.trim();
-            }
-
-            const valueMatch = item.content.match(/Valor Pago\.*:\s*(R\$\s*[\d,.]+)/);
-            const value = valueMatch ? valueMatch[1] : 'R$ 0,00';
-
-            // Pega o nome do cliente para enriquecer o título
-            const clientMatch = item.content.match(/Cliente\.*:\s*(.*)/);
-            let clientName = clientMatch && clientMatch[1] ? clientMatch[1].trim() : '';
-            if (!clientName || clientName.toLowerCase() === 'balcão') clientName = '';
-            
-            const clientPrefix = clientName ? `👤 ${clientName} | ` : '';
-            
-            // Monta o novo título/resumo da caixinha
-            const titleText = `${clientPrefix}[Cód: ${code}] ${extraction} - ${value}`;
-            // --- FIM DA LÓGICA ---
-
-            itemElement.innerHTML = `
-                <div class="saved-item-header" role="button" tabindex="0" style="padding: 10px;">
-                    <div class="saved-item-title" style="font-size: 0.95rem; font-weight: bold; color: ${isKit ? '#b47b00' : '#007bff'};">${titleText}</div>
-                    <div class="header-actions" style="margin-top: 5px;">
-                        <button class="header-btn" style="font-size: 0.75rem; color: #6c757d; font-weight: bold;" disabled>${formattedDate}</button>
-                        <button class="header-btn copy-btn" title="Copiar Recibo">📋</button>
-                        <button class="header-btn resend-btn" title="Reenviar Link no WhatsApp" style="background-color: #25D366; color: white;">▶️</button>
-                        <button class="header-btn delete-btn" title="Excluir Recibo">🗑️</button>
-                    </div>
-                    <div class="saved-item-toggle" style="transform: rotate(-90deg);">▼</div>
-                </div>
-                <div class="saved-item-content" style="display: none; padding: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
-                    <div class="saved-item-text" style="white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); color: inherit;"></div>
-                </div>
-            `;
-            
-            // Trata o conteúdo (bug dos botões no texto)
-            const rawContent = item.content || '';
-            const cleanedContent = rawContent.replace(/<button[^>]*>.*?<\/button>/g, '');
-            itemElement.querySelector('.saved-item-text').innerHTML = cleanedContent;
-            
-            // Adiciona os eventos dos botões
-            itemElement.querySelector('.copy-btn').addEventListener('click', e => {
-                e.stopPropagation();
-                copyToClipboard(itemElement.querySelector('.saved-item-text').textContent, e.currentTarget);
-            });
-
-            itemElement.querySelector('.resend-btn').addEventListener('click', e => {
-                e.stopPropagation();
-                if(typeof resendReceiptLink === 'function') resendReceiptLink(id);
-            });
-
-            itemElement.querySelector('.delete-btn').addEventListener('click', e => {
-                e.stopPropagation();
-                if(typeof deleteSavedReceipt === 'function') deleteSavedReceipt(id);
-            });
-
-            // Expande/Recolhe o Recibo
-            itemElement.querySelector('.saved-item-header').addEventListener('click', e => {
-                if (e.target.closest('button')) return;
-                const content = itemElement.querySelector('.saved-item-content');
-                const toggle = itemElement.querySelector('.saved-item-toggle');
-                const isExpanded = content.style.display === 'block';
-                content.style.display = isExpanded ? 'none' : 'block';
-                toggle.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
-            });
-
-            container.appendChild(itemElement);
-        });
-
-        if (countExibidos === 0) {
-            container.innerHTML = `<div class="no-saved-items">Nenhum recibo encontrado.</div>`;
-        }
-
-    } catch (error) {
-        console.error("Erro ao buscar recibos:", error);
-        container.innerHTML = '<div class="no-saved-items" style="color: #dc3545;">Erro ao carregar recibos. Verifique sua conexão.</div>';
-    }
 };
 
 // =========================================================
@@ -26302,9 +26282,6 @@ function prepararModalParaVenda(modal) {
     }
 }
 
-/// =========================================================
-// MOTOR DE VENDAS INDIVIDUAL (KIT ÚNICO) - CORRIGIDO
-// =========================================================
 window.abrirVendaKit = async function(kitIndex, grupoPreSelecionado = null) {
     const numKit = kitIndex + 1;
     const kitNumbers = window.currentGeneratedKits[kitIndex];
@@ -26380,27 +26357,36 @@ ${resumoTextoArr.join('\n\n')}
         linkOficial = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
     } catch (e) { console.error("Erro ao salvar recibo:", e); }
 
-    // 4. Monta a mensagem do WhatsApp
+    // 4. Monta a mensagem do WhatsApp (NOVO FORMATO)
     const horaStr = new Date().getHours();
     let saudacao = (horaStr >= 12 && horaStr < 18) ? "Boa tarde" : (horaStr >= 18 || horaStr < 5) ? "Boa noite" : "Bom dia";
     const mostrarMilhares = document.getElementById('chkMostrarMilharesKit')?.checked;
 
-    let msg = `${saudacao} *${nomeComprador}*, segue suas milhares!\n\n`;
-    msg += `✅ REGISTRADO COM SUCESSO! ✅\n\n`;
+    let msg = `${saudacao} *${nomeComprador}*, Segue suas milhares da sorte!\n\n`;
+    msg += `✅ SEU RECIBO FOI REGISTRADO! ✅\n\n`;
     msg += `━━━━━━━━━━━━━━━\n\n`;
     msg += `🔑 ID: ${code}\n`;
     msg += `💰 VALOR: ${valorCobrado}\n`;
     msg += `🎯 EXTRAÇÃO: ${extracao} - ${horario}\n\n`;
-    msg += `🐾 RESUMO POR BICHO:\n\n`;
+    msg += `-----------------------------------\n\n`;
+    msg += `🐾 BICHOS SELECIONADOS:\n\n`;
 
     gruposSelecionados.forEach(grupo => {
         const data = bichoDetails[grupo];
-        msg += `${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()} (*${data.milhares.length}* und)\n`;
+        msg += `📦 *Kit #${numKit}* ➔ ${data.emoji} G${data.grupo} - ${data.animal.toUpperCase()}\n`;
         if (mostrarMilhares) msg += `↳ ${data.milhares.join(' - ')}\n\n`;
+        else msg += `\n`;
     });
 
-    if (linkOficial) msg += `🔗 RECIBO OFICIAL:\n${linkOficial}\n\n`;
-    msg += `🍀 Boa sorte!`;
+    if (linkOficial) {
+        msg += `-----------------------------------\n\n`;
+        msg += `🔗 PARA VER O RECIBO OFICIAL CLIQUE NO LINK ABAIXO:\n${linkOficial}\n\n`;
+        msg += `━━━━━━━━━━━━━━━\n`;
+        msg += `⚠️ O link acima expira após o sorteio.\n\n`;
+    }
+
+    msg += `Obrigado e Boa sorte! 🍀\n\n`;
+    msg += `📲 VIP - I.A in Real-Time`;
 
     window.ultimaVendaKit = { numerosPuros: milharesVendidas.join(' '), textoWhats: msg };
 
@@ -26620,6 +26606,7 @@ ${numerosTextoInternoArr.join('\n\n')}
         linkOficial = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
     } catch (e) { console.error("Erro ao salvar recibo online:", e); }
 
+    // 4. Monta a mensagem do WhatsApp (NOVO FORMATO MULTI)
     const horaStr = new Date().getHours();
     let saudacao = "Bom dia";
     if (horaStr >= 12 && horaStr < 18) saudacao = "Boa tarde";
@@ -26664,7 +26651,7 @@ ${numerosTextoInternoArr.join('\n\n')}
         window.kitsSoldStatus[kIdx].historicoVendas.push({
             cliente: nomeComprador + " (Casada)",
             grupos: kitsEnvolvidos[kIdx],
-            valor: valorCobrado, // <-- CORREÇÃO: Salva o valor real
+            valor: valorCobrado, 
             codigo: code,
             link: linkOficial,
             dataHora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) 
@@ -27353,9 +27340,30 @@ window.calcSelecionarLoteria = function(lot) {
     }
 };
 
+// ── SINAL DA DATA ────────────────────────────────────────────────────────
+// Dia 10 → G10 + dezena "10" + G01 (invertido) + dezena "01"
+function calcSinalDoDia(dataStr) {
+    const dia     = new Date(dataStr + 'T12:00:00').getDate();
+    const diaStr  = String(dia).padStart(2, '0');           // "10"
+    const invStr  = diaStr.split('').reverse().join('');     // "01"
+    const invNum  = parseInt(invStr);                        // 1
+
+    const grupoDia = dia >= 1 && dia <= 25 ? diaStr : null;
+    const grupoInv = invNum >= 1 && invNum <= 25
+                     ? String(invNum).padStart(2, '0')
+                     : null;
+
+    return {
+        grupoDia,           // "10" ou null
+        dezenaDia: diaStr,  // "10"
+        grupoInv,           // "01" ou null
+        dezenaInv: invStr,  // "01"
+    };
+}
+
 // ── SCORE COMPLETO DOS 25 BICHOS ─────────────────────────────────────────
 // Usa calcularPontuacaoBicho (motor real) + saturação + externo + cruz + turno
-function calcScoreCompleto(analise, puxada, externoBichos, cruzDoDia, turno, saturacao) {
+function calcScoreCompleto(analise, puxada, externoBichos, cruzDoDia, turno, saturacao, sinalDoDia) {
     const bichosDiurnos  = ['01','02','03','05','06','07','11','13','21','25'];
     const bichosNoturnos = ['04','09','14','15','16','17','18','22','23','24'];
 
@@ -27415,8 +27423,13 @@ function calcScoreCompleto(analise, puxada, externoBichos, cruzDoDia, turno, sat
         // Validado: G01 Avestruz 3x ontem → saiu 1º às 02h hoje
         if (saturacao.contagem1stOntem) {
             const v1ont = (saturacao.contagem1stOntem[b.grupo] || 0);
+            const vTont = (saturacao.contagemTotalOntem || {})[b.grupo] || 0;
             if (v1ont >= 3 && (contagem1st[b.grupo] || 0) === 0) {
+                score += 50; motivos.unshift(`🔄 Retorno após saturação forte (+50)`);
+            } else if (v1ont >= 2 && (contagem1st[b.grupo] || 0) === 0) {
                 score += 30; motivos.push(`🔄 Retorno após saturação (+30)`);
+            } else if (vTont >= 5 && (contagem1st[b.grupo] || 0) === 0) {
+                score += 15; motivos.push(`🔄 Descansado após dia intenso (+15)`);
             }
         }
 
@@ -27441,124 +27454,376 @@ function calcScoreCompleto(analise, puxada, externoBichos, cruzDoDia, turno, sat
         if (turno === 'dia'   && bichosDiurnos.includes(b.grupo))  { score += 25; motivos.push(`☀️ Forte de Dia (+25)`); }
         if (turno === 'noite' && bichosNoturnos.includes(b.grupo)) { score += 25; motivos.push(`🌙 Forte de Noite (+25)`); }
 
-        return { ...b, forca: Math.max(1, Math.min(300, score)), motivos };
+        // 5. SINAL DA DATA ─────────────────────────────────────────────────
+        // Validado: dia 10 → G10 Coelho e G01 Avestruz saíram hoje na NC
+        const sinal = sinalDoDia || {};
+        if (sinal.grupoDia && b.grupo === sinal.grupoDia) {
+            score += 30; motivos.unshift(`📅 Grupo do Dia G${sinal.grupoDia} (+30)`);
+        }
+        if (sinal.grupoInv && b.grupo === sinal.grupoInv) {
+            score += 20; motivos.push(`🔄 Grupo Invertido G${sinal.grupoInv} (+20)`);
+        }
+
+        return { ...b, forca: Math.max(1, Math.min(130, score)), motivos };
     }).sort((a, b) => b.forca - a.forca);
 }
 
-function calcPaltitao(ranking, analise, nomeSorteio) {
-    const isNoite    = /cor|ptn|18|19|21|22|23|noite/i.test(nomeSorteio);
-    const bichosNot  = ['04','09','14','15','16','17','18','22','23','24'];
-    const bichosDia  = ['01','02','03','05','06','07','11','13','21','25'];
+// ── SCORE INDIVIDUAL DE DEZENAS ─────────────────────────────────────────
+// Avalia todas as 100 dezenas e retorna top 10 para o 1º prêmio
+function calcScoreDezenas(ranking, analise, sinalDoDia) {
+    const cruz      = analise._cruzDoDia || [];
+    const quentes   = analise.dezenaPorBicho1Premio || {};
+    const atrasadas = new Set((analise.dezenasAtrasadas || [])
+        .map(d => typeof d === 'string' ? d : String(d.numero).padStart(2,'0')));
+    const ontem     = new Set(analise.dezenasOntem || []);
+    const soma      = analise._somaMilhar ? [
+        String(analise._somaMilhar).slice(-2),
+        String(analise._somaMilhar).slice(-3,-1),
+        String(analise._somaMilhar).slice(0,2),
+    ] : [];
+    const mestre    = analise._jogadaMestre ? [
+        (analise._jogadaMestre.palpite  || '').slice(-2),
+        (analise._jogadaMestre.invertida|| '').slice(-2),
+    ].filter(Boolean) : [];
 
-    // ── NÚCLEO: 5 bichos por afinidade ───────────────────────────────────
-    const palt5 = [ranking[0]];
-    const candidatos = [...ranking.slice(1)];
-    while (palt5.length < 5 && candidatos.length > 0) {
-        let melhorIdx = 0, melhorVal = -Infinity;
-        candidatos.forEach((cand, i) => {
-            let s = cand.forca;
-            palt5.forEach(sel => {
-                const afR  = (analise.afinidadesRecentes || {})[sel.grupo] || [];
-                const afH  = (analise.afinidades        || {})[sel.grupo] || [];
-                const afFx = (typeof puxadas !== 'undefined' && puxadas[sel.grupo]) ? puxadas[sel.grupo] : [];
-                if      (afR.includes(cand.grupo))  s += 40;
-                else if (afH.includes(cand.grupo))  s += 22;
-                else if (afFx.includes(cand.grupo)) s += 12;
-            });
-            if (isNoite && bichosNot.includes(cand.grupo)) s += 15;
-            if (!isNoite && bichosDia.includes(cand.grupo)) s += 15;
-            if (s > melhorVal) { melhorVal = s; melhorIdx = i; }
-        });
-        palt5.push(candidatos[melhorIdx]);
-        candidatos.splice(melhorIdx, 1);
-    }
+    const todas = [];
+    for (let i = 0; i <= 99; i++) {
+        const dz     = String(i).padStart(2,'0');
+        const d0     = parseInt(dz[0]);
+        const d1     = parseInt(dz[1]);
+        let score    = 0;
+        const motivos = [];
 
-    // ── NÚCLEO: 2 dezenas mais quentes por bicho ─────────────────────────
-    const dezenasNucleo = [];
-    const nucleoUsed = new Set();
-    palt5.forEach(b => {
-        const quentes = (analise.dezenaPorBicho1Premio || {})[b.grupo] || [];
-        const base    = b.dezenas || [];
-        const pool    = [...new Set([...quentes, ...base])];
-        let count = 0;
-        for (const d of pool) {
-            if (!nucleoUsed.has(d) && count < 2) {
-                dezenasNucleo.push(d);
-                nucleoUsed.add(d);
-                count++;
-            }
+        // Grupo do bicho desta dezena
+        const grupoIdx = Math.floor(i / 4);
+        const grupo    = String(grupoIdx + 1).padStart(2,'0');
+        const rankPos  = ranking.findIndex(r => r.grupo === grupo);
+
+        // Pontos pelo ranking do grupo
+        if      (rankPos === 0) { score += 30; motivos.push(`G${grupo}#1`); }
+        else if (rankPos <= 2)  { score += 20; motivos.push(`G${grupo}#${rankPos+1}`); }
+        else if (rankPos <= 5)  { score += 10; motivos.push(`G${grupo}#${rankPos+1}`); }
+
+        // Cruz do Dia
+        const temCruz0 = cruz.includes(d0);
+        const temCruz1 = cruz.includes(d1);
+        if (temCruz0 && temCruz1) { score += 25; motivos.push('🌟Cruz✕'); }
+        else if (temCruz0 || temCruz1) { score += 12; motivos.push('🌟Cruz'); }
+
+        // Sinal da data
+        if (sinalDoDia) {
+            if (dz === sinalDoDia.dezenaDia) { score += 30; motivos.push('📅Dia'); }
+            if (dz === sinalDoDia.dezenaInv) { score += 20; motivos.push('🔄Inv'); }
         }
-        // fallback se não preencheu 2
-        for (const d of base) {
-            if (!nucleoUsed.has(d) && count < 2) {
-                dezenasNucleo.push(d);
-                nucleoUsed.add(d);
-                count++;
-            }
-        }
-    });
 
-    // ── EXTRAS: pool de candidatas ────────────────────────────────────────
-    const extrasPool = [];
-    const extrasUsed = new Set([...nucleoUsed]);
+        // Dezena mais quente no 1º prêmio do grupo
+        const qGroup = quentes[grupo] || [];
+        if (qGroup[0] === dz) { score += 20; motivos.push('🔥Quente#1'); }
+        else if (qGroup[1] === dz) { score += 15; motivos.push('🔥Quente#2'); }
 
-    const addExtra = (d) => {
-        if (d && !extrasUsed.has(d) && /^\d{2}$/.test(d)) {
-            extrasPool.push(d);
-            extrasUsed.add(d);
-        }
-    };
+        // Repetição ontem
+        if (ontem.has(dz)) { score += 15; motivos.push('🔄Ontem'); }
 
-    // 1. Cruz do Dia — dezenas que começam ou terminam com dígito da cruz
-    const cruzDig = analise._cruzDoDia || [];
-    if (cruzDig.length > 0) {
-        tabelaDeGrupos.forEach(b => {
-            b.dezenas.forEach(d => {
-                const temCruz = cruzDig.includes(parseInt(d[0])) || cruzDig.includes(parseInt(d[1]));
-                if (temCruz) addExtra(d);
-            });
-        });
+        // Atrasada global
+        if (atrasadas.has(dz)) { score += 10; motivos.push('⏳Atras'); }
+
+        // Jogada de Mestre
+        if (mestre.includes(dz)) { score += 15; motivos.push('👑Mestre'); }
+
+        // Milhar da Soma
+        if (soma.includes(dz)) { score += 10; motivos.push('➕Soma'); }
+
+        todas.push({ dz, score, motivos, grupo });
     }
 
-    // 2. Jogada de Mestre (palpite + invertida)
-    if (analise._jogadaMestre) {
-        const jm = analise._jogadaMestre;
-        if (jm.palpite)   addExtra(jm.palpite.slice(-2));
-        if (jm.invertida) addExtra(jm.invertida.slice(-2));
-    }
+    // Ordena por score e pega top 10
+    todas.sort((a, b) => b.score - a.score);
+    return todas.slice(0, 10);
+}
 
-    // 3. Dezenas atrasadas globais
-    const atrasadasGlobais = (analise.dezenasAtrasadas || analise.dezenasQuentes1Premio || []);
-    atrasadasGlobais.forEach(d => addExtra(typeof d === 'string' ? d : d.numero));
+function calcPaltitao(ranking, analise, nomeSorteio, sinalDoDia) {
 
-    // 4. Dezenas que saíram ontem (repetição)
-    const ontem = (analise.dezenasOntem || []);
-    ontem.forEach(d => addExtra(d));
+    // Top 10 dezenas por score individual
+    const top10Dez = calcScoreDezenas(ranking, analise, sinalDoDia);
 
-    // Pega as 10 primeiras extras válidas
-    const dezenasExtras = extrasPool.slice(0, 10);
-
-    // Completa com dezenas aleatórias do top10 se faltar
-    if (dezenasExtras.length < 10) {
-        ranking.slice(0, 10).forEach(b => {
-            (b.dezenas || []).forEach(d => {
-                if (dezenasExtras.length < 10 && !extrasUsed.has(d)) {
-                    dezenasExtras.push(d);
-                    extrasUsed.add(d);
-                }
-            });
-        });
-    }
-
-    const dezenasFinal = [...dezenasNucleo, ...dezenasExtras].slice(0, 20);
+    // Top 10 grupos sempre
+    const palt10 = ranking.slice(0, 10);
 
     return {
-        palt5,
-        dezenas: dezenasFinal,
-        nucleoCount: dezenasNucleo.length,
-        extrasCount: dezenasExtras.length,
+        palt5:      palt10,
+        dezenas:    top10Dez.map(x => x.dz),
+        dezMotivos: top10Dez,
     };
 }
+
+// ── SALVAR PALPITE NO HISTÓRICO ──────────────────────────────────────────
+async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMotivos) {
+    try {
+        if (typeof db === 'undefined') return null;
+
+        const id = `${data}_${loteria}_${horario.replace(':','')}_${fonte}`;
+
+        const doc = {
+            fonte,
+            loteria,
+            horario,
+            data,
+            geradoEm: firebase.firestore.FieldValue.serverTimestamp(),
+            top10Grupos: ranking.slice(0, 10).map(b => ({
+                grupo:  b.grupo,
+                animal: b.animal,
+                emoji:  b.emoji,
+                forca:  b.forca,
+            })),
+            top10Dezenas: dezMotivos.map(x => ({
+                dz:      x.dz,
+                score:   x.score,
+                motivos: x.motivos,
+            })),
+            resultado: null,
+            acertos:   null,
+        };
+
+        await db.collection('historicoPalpites').doc(id).set(doc, { merge: true });
+        return id;
+    } catch (e) {
+        console.warn('calcSalvarHistorico erro:', e);
+        return null;
+    }
+}
+
+// ── BUSCAR RESULTADO REAL E CALCULAR ACERTOS ────────────────────────────
+async function calcBuscarEAtualizarResultados() {
+    if (typeof db === 'undefined') return;
+
+    try {
+        // Busca palpites sem resultado dos últimos 3 dias
+        const tresDiasAtras = new Date();
+        tresDiasAtras.setDate(tresDiasAtras.getDate() - 3);
+        const dataMin = tresDiasAtras.toISOString().split('T')[0];
+
+        const snap = await db.collection('historicoPalpites')
+            .where('resultado', '==', null)
+            .where('data', '>=', dataMin)
+            .limit(30)
+            .get();
+
+        if (snap.empty) return;
+
+        const pendentes = [];
+        snap.forEach(doc => pendentes.push({ id: doc.id, ...doc.data() }));
+
+        // Para cada palpite pendente, busca o resultado real
+        for (const palpite of pendentes) {
+            try {
+                // Busca na coleção resultados do Firebase
+                const dataTS = firebase.firestore.Timestamp.fromDate(
+                    new Date(palpite.data + 'T12:00:00')
+                );
+
+                // Mapa de horário → nome do sorteio
+                const horaMapa = {
+                    'rj': { '09:20':'RJ 09:20','11:20':'RJ 11:20','14:20':'RJ 14:20','16:20':'RJ 16:20','18:20':'RJ 18:20','21:30':'RJ 21:30' },
+                    'lk': { '07:20':'LK 07:20','09:20':'LK 09:20','11:20':'LK 11:20','14:20':'LK 14:20','16:20':'LK 16:20','18:20':'LK 18:20','21:20':'LK 21:20','23:20':'LK 23:20' },
+                    'ln': { '02:00':'NC 02:00','08:00':'NC 08:00','10:00':'NC 10:00','12:00':'NC 12:00','15:00':'NC 15:00','17:00':'NC 17:00','19:00':'NC 19:00','21:00':'NC 21:00','23:00':'NC 23:00' },
+                    'ba': { '10:00':'BA 10:00','12:00':'BA 12:00','15:00':'BA 15:00','19:00':'BA 19:00','21:00':'BA 21:00' },
+                };
+
+                const nomeSorteioAlvo = (horaMapa[palpite.loteria] || {})[palpite.horario];
+                if (!nomeSorteioAlvo) continue;
+
+                // Busca o 1º prêmio desse sorteio
+                const resSnap = await db.collection('resultados')
+                    .where('loteria',     '==', palpite.loteria)
+                    .where('nomeSorteio', '==', nomeSorteioAlvo)
+                    .where('posicao',     '==', 1)
+                    .where('data',        '>=', firebase.firestore.Timestamp.fromDate(new Date(palpite.data + 'T00:00:00')))
+                    .where('data',        '<=', firebase.firestore.Timestamp.fromDate(new Date(palpite.data + 'T23:59:59')))
+                    .limit(1)
+                    .get();
+
+                if (resSnap.empty) continue;
+
+                const res        = resSnap.docs[0].data();
+                const grupoReal  = String(res.bichoGrupo).padStart(2,'0');
+                const dezenaReal = String(res.dezena).padStart(2,'0');
+                const milharReal = res.milhar;
+
+                // Calcula acertos
+                const grupos10   = (palpite.top10Grupos || []).map(b =>
+                    typeof b === 'string' ? b : String(b.grupo).padStart(2,'0')
+                );
+                const dezenas10  = (palpite.top10Dezenas || []).map(x =>
+                    typeof x === 'string' ? x : String(x.dz).padStart(2,'0')
+                );
+
+                const acertos = {
+                    grupoTop5:  grupos10.slice(0,5).includes(grupoReal),
+                    grupoTop10: grupos10.includes(grupoReal),
+                    dezena:     dezenas10.includes(dezenaReal),
+                    posicaoGrupo: grupos10.indexOf(grupoReal) + 1 || null,
+                };
+
+                // Atualiza o documento
+                await db.collection('historicoPalpites').doc(palpite.id).update({
+                    resultado: {
+                        grupo:       grupoReal,
+                        dezena:      dezenaReal,
+                        milhar:      milharReal,
+                        animal:      res.bichoNome,
+                        buscadoEm:   firebase.firestore.FieldValue.serverTimestamp(),
+                    },
+                    acertos,
+                });
+
+                console.log(`✅ Resultado atualizado: ${palpite.id} → G${grupoReal} ${dezenaReal} | Top5:${acertos.grupoTop5} Dez:${acertos.dezena}`);
+
+            } catch (e) {
+                console.warn('Erro ao buscar resultado para', palpite.id, e);
+            }
+        }
+    } catch (e) {
+        console.warn('calcBuscarEAtualizarResultados erro:', e);
+    }
+}
+
+// ── ABAS DA CALCULADORA ──────────────────────────────────────────────────
+window.calcMudarAba = function(aba) {
+    ['gerar','analise','historico'].forEach(a => {
+        const div = document.getElementById(`calcAba${a.charAt(0).toUpperCase()+a.slice(1)}`);
+        const btn = document.getElementById(`calcTab${a.charAt(0).toUpperCase()+a.slice(1)}`);
+        if (div) div.style.display = a === aba ? 'block' : 'none';
+        if (btn) {
+            btn.style.background = a === aba ? '#0d6efd' : 'rgba(128,128,128,0.1)';
+            btn.style.color      = a === aba ? '#fff'    : '#888';
+        }
+    });
+    if (aba === 'historico') calcCarregarHistorico();
+};
+
+// ── CARREGAR HISTÓRICO ───────────────────────────────────────────────────
+window.calcCarregarHistorico = async function(filtroLot) {
+    const corpo = document.getElementById('calcHistoricoCorpo');
+    if (!corpo) return;
+    corpo.innerHTML = '<div class="aw-loading">⏳ Buscando resultados...</div>';
+
+    // Atualiza resultados pendentes primeiro
+    await calcBuscarEAtualizarResultados();
+
+    try {
+        let query = db.collection('historicoPalpites')
+            .orderBy('geradoEm', 'desc')
+            .limit(50);
+        if (filtroLot) query = query.where('loteria', '==', filtroLot);
+
+        const snap = await query.get();
+        if (snap.empty) {
+            corpo.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">Nenhum palpite salvo ainda.</div>';
+            return;
+        }
+
+        const docs = [];
+        snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
+
+        // Estatísticas
+        const comResultado = docs.filter(d => d.resultado && d.acertos);
+        const totalAcertos5  = comResultado.filter(d => d.acertos.grupoTop5).length;
+        const totalAcertos10 = comResultado.filter(d => d.acertos.grupoTop10).length;
+        const totalDezena    = comResultado.filter(d => d.acertos.dezena).length;
+        const total          = comResultado.length;
+
+        const pct = (n) => total > 0 ? Math.round(n/total*100) : 0;
+
+        let html = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">
+            <div style="background:rgba(25,135,84,0.1);border:1px solid rgba(25,135,84,0.3);
+                border-radius:8px;padding:8px;text-align:center;">
+                <div style="font-size:1.3rem;font-weight:900;color:#198754;">${pct(totalAcertos5)}%</div>
+                <div style="font-size:0.58rem;color:#888;">Grupo Top5</div>
+                <div style="font-size:0.6rem;color:#666;">${totalAcertos5}/${total}</div>
+            </div>
+            <div style="background:rgba(13,110,253,0.1);border:1px solid rgba(13,110,253,0.3);
+                border-radius:8px;padding:8px;text-align:center;">
+                <div style="font-size:1.3rem;font-weight:900;color:#0d6efd;">${pct(totalAcertos10)}%</div>
+                <div style="font-size:0.58rem;color:#888;">Grupo Top10</div>
+                <div style="font-size:0.6rem;color:#666;">${totalAcertos10}/${total}</div>
+            </div>
+            <div style="background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.4);
+                border-radius:8px;padding:8px;text-align:center;">
+                <div style="font-size:1.3rem;font-weight:900;color:#856404;">${pct(totalDezena)}%</div>
+                <div style="font-size:0.58rem;color:#888;">Dezena</div>
+                <div style="font-size:0.6rem;color:#666;">${totalDezena}/${total}</div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            ${['','rj','lk','ln','ba'].map(l => `
+                <button onclick="calcCarregarHistorico('${l}')"
+                    style="padding:4px 10px;border-radius:6px;border:1px solid rgba(128,128,128,0.3);
+                    font-size:0.65rem;font-weight:700;cursor:pointer;
+                    background:${filtroLot===l?'#0d6efd':'transparent'};
+                    color:${filtroLot===l?'#fff':'#888'};">
+                    ${l===''?'Todas':l.toUpperCase()}
+                </button>`).join('')}
+        </div>`;
+
+        // Lista de palpites
+        docs.forEach(doc => {
+            const temRes  = doc.resultado && doc.acertos;
+            const ac5     = temRes && doc.acertos.grupoTop5;
+            const ac10    = temRes && doc.acertos.grupoTop10;
+            const acDez   = temRes && doc.acertos.dezena;
+            const corBorda = ac5 ? '#198754' : ac10 ? '#0d6efd' : temRes ? '#dc3545' : '#444';
+            const lotNome = {rj:'PT Rio',lk:'Look',ln:'Nacional',ba:'Bahia',fd:'Federal'}[doc.loteria]||doc.loteria;
+            const dataFmt = (doc.data||'').split('-').reverse().join('/');
+
+            html += `
+            <div style="border:1px solid ${corBorda};border-radius:10px;padding:10px 12px;
+                margin-bottom:8px;font-size:0.7rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-weight:800;">${lotNome} ${doc.horario}</span>
+                    <span style="color:#888;">${dataFmt} · ${doc.fonte==='ia'?'🤖 I.A.':'🎯 Calc'}</span>
+                </div>`;
+
+            if (temRes) {
+                const pos = doc.acertos.posicaoGrupo;
+                html += `
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <span style="background:rgba(0,0,0,0.1);padding:3px 8px;border-radius:6px;">
+                        1º G${doc.resultado.grupo} ${doc.resultado.animal} · ${doc.resultado.dezena}
+                    </span>
+                    <span style="color:${ac5?'#198754':ac10?'#0d6efd':'#dc3545'};font-weight:700;">
+                        ${ac5?`✅ Top${pos}`:''}${!ac5&&ac10?`⚠️ Top${pos}`:''}${!ac10?'❌ Fora':''}
+                    </span>
+                    <span style="color:${acDez?'#198754':'#dc3545'};">
+                        ${acDez?'✅ Dez':'❌ Dez'}
+                    </span>
+                </div>`;
+            } else {
+                html += `<div style="color:#888;font-style:italic;">⏳ Aguardando resultado...</div>`;
+            }
+
+            // Top5 grupos
+            const g5 = (doc.top10Grupos||[]).slice(0,5).map(b=>
+                `G${typeof b==='string'?b:b.grupo}`).join(' · ');
+            html += `<div style="color:#666;margin-top:4px;font-size:0.62rem;">🏆 ${g5}</div>`;
+
+            // Top10 dezenas
+            const d10 = (doc.top10Dezenas||[]).slice(0,10).map(x=>
+                typeof x==='string'?x:x.dz).join(' ');
+            html += `<div style="color:#666;font-size:0.62rem;">🔢 ${d10}</div>`;
+
+            html += `</div>`;
+        });
+
+        corpo.innerHTML = html;
+
+    } catch(e) {
+        corpo.innerHTML = `<div style="color:#dc3545;padding:12px;">Erro ao carregar histórico: ${e.message}</div>`;
+        console.error(e);
+    }
+};
 
 // ── ORQUESTRADOR CENTRAL ─────────────────────────────────────────────────
 function calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, saturacao) {
@@ -27574,7 +27839,8 @@ function calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, satura
     const nomeSorteio = (HORA_PARA_SORTEIO[lot] || {})[hora] || 'geral';
 
     // Score dos 25 bichos com todos os sinais
-    const ranking = calcScoreCompleto(an, puxada, (externo || {}).bichos || [], cruzDoDia, turno, saturacao);
+    const sinal   = calcSinalDoDia(data);
+    const ranking = calcScoreCompleto(an, puxada, (externo || {}).bichos || [], cruzDoDia, turno, saturacao, sinal);
     const top5    = ranking.slice(0, 5);
     const top10   = ranking.slice(0, 10);
     const top1    = top5[0];
@@ -27588,15 +27854,18 @@ function calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, satura
         ? getPalpitesMisturadosIA(analiseCompleta, seed, (externo || {}).bichos || [], nomeSorteio)
         : null;
 
-    // Palpitão por afinidade
     // Injeta sinais extras para o Palpitão Misto
+    
     const anComExtras = {
         ...an,
         _cruzDoDia:    cruzDoDia,
+        _sinalDoDia:   sinal,
         _jogadaMestre: motorResult ? motorResult.jogadaDeMestre : null,
+        _somaMilhar:   soma ? soma.milhar : null,
         dezenasOntem:  (externo && externo.dezenasOntem) || [],
     };
-    const paltitao = calcPaltitao(ranking, anComExtras, nomeSorteio);
+    
+    const paltitao = calcPaltitao(ranking, anComExtras, nomeSorteio, sinal);
 
     // Unidades: Firebase > externo
     const unidades = [];
@@ -27619,7 +27888,6 @@ function calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, satura
     };
 }
 
-// ── INTERFACE ────────────────────────────────────────────────────────────
 window.abrirCalculadora = function() {
     const modal = document.getElementById('calcPalpitesModal');
     if (!modal) return;
@@ -27627,27 +27895,55 @@ window.abrirCalculadora = function() {
     if (di && !di.value) di.value = new Date().toISOString().split('T')[0];
     calcAtualizarHorarios();
     modal.classList.add('active');
-    // Carrega análise automaticamente ao abrir
-    calcCarregarAnalise();
-};
+    // Inicia sempre na aba Gerar
+    calcMudarAba('gerar');
+}
 
 window.fecharCalculadora = function() {
     document.getElementById('calcPalpitesModal')?.classList.remove('active');
 };
 
 window.calcAtualizarHorarios = function() {
-    const lot      = document.querySelector('input[name="calcLoteria"]:checked')?.value || 'rj';
+    const lot      = document.querySelector('input[name="calcLoteria"]:checked')?.value;
+    if (!lot) {
+        // Nenhuma loteria selecionada — limpa horários e aviso
+        const cont = document.getElementById('calcHoraRadios');
+        if (cont) cont.innerHTML = '<span style="font-size:0.72rem;color:#888;">← Selecione uma loteria</span>';
+        const av = document.getElementById('calcTimingAviso');
+        if (av) av.style.display = 'none';
+        return;
+    }
+
     const horarios = CALC_LOTERIAS[lot]?.horarios || [];
     const cont     = document.getElementById('calcHoraRadios');
     if (!cont) return;
+
+    // Auto-seleciona o próximo horário (mais próximo de agora)
+    const agora   = new Date();
+    const agoraMin = agora.getHours() * 60 + agora.getMinutes();
+    let proximoIdx = 0;
+    let menorDiff  = Infinity;
+
+    horarios.forEach((h, i) => {
+        const [hh, mm] = h.split(':').map(Number);
+        const sorteioMin = hh * 60 + mm;
+        // Diferença em minutos — prioriza o próximo que ainda não passou
+        const diff = sorteioMin >= agoraMin
+            ? sorteioMin - agoraMin
+            : sorteioMin + 1440 - agoraMin; // dia seguinte
+        if (diff < menorDiff) { menorDiff = diff; proximoIdx = i; }
+    });
+
     cont.innerHTML = horarios.map((h, i) =>
-        `<label><input type="radio" name="calcHora" value="${h}"${i===0?' checked':''}
+        `<label><input type="radio" name="calcHora" value="${h}"${i === proximoIdx ? ' checked' : ''}
          onchange="calcAvisarTiming(this.value)">${h}</label>`
     ).join('');
+
     const res = document.getElementById('calcResultados');
     if (res) res.style.display = 'none';
-    // Avisa para o primeiro horário da lista
-    if (horarios.length > 0) calcAvisarTiming(horarios[0]);
+
+    // Avisa o timing do horário auto-selecionado
+    calcAvisarTiming(horarios[proximoIdx]);
 };
 
 // ── AVISO DE TIMING ─────────────────────────────────────────────────────
@@ -27702,6 +27998,70 @@ window.calcGerarPalpites = async function() {
     const lot    = document.querySelector('input[name="calcLoteria"]:checked')?.value || 'rj';
     const hora   = document.querySelector('input[name="calcHora"]:checked')?.value || '09:20';
     const data   = document.getElementById('calcDataInput')?.value || new Date().toISOString().split('T')[0];
+
+    // Validação — loteria e horário obrigatórios
+    if (!lot || !hora) {
+        const av = document.getElementById('calcTimingAviso');
+        if (av) {
+            av.className = 'muito-cedo';
+            av.innerHTML = '⚠️ <strong>Selecione a loteria e o horário antes de continuar.</strong>';
+            av.style.display = 'block';
+        }
+        return;
+    }
+
+    // Confirmação antes de gerar
+    const nomeLotConf = { rj:'PT Rio', lk:'Look Goiás', ln:'Nacional', ba:'Bahia', fd:'Federal' }[lot] || lot.toUpperCase();
+    const dataFmtConf = data.split('-').reverse().join('/');
+    const confirmado  = await new Promise(resolve => {
+        // Remove confirmação anterior se existir
+        document.getElementById('calcConfirmBox')?.remove();
+
+        const box = document.createElement('div');
+        box.id = 'calcConfirmBox';
+        box.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.6);
+            display:flex; align-items:center; justify-content:center;
+            z-index:99999; animation:fadeIn 0.2s ease;
+        `;
+        box.innerHTML = `
+            <div style="background:var(--card-bg,#1e1e1e); border:1px solid rgba(255,255,255,0.1);
+                        border-radius:16px; padding:28px 24px; max-width:320px; width:90%;
+                        text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                <div style="font-size:2rem; margin-bottom:12px;">🎯</div>
+                <div style="font-size:0.72rem; color:#888; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;">
+                    Confirmar Consulta
+                </div>
+                <div style="font-size:1rem; font-weight:800; margin-bottom:4px;">
+                    ${nomeLotConf}
+                </div>
+                <div style="font-size:1.4rem; font-weight:900; color:#0d6efd; letter-spacing:3px; margin-bottom:4px;">
+                    ${hora}
+                </div>
+                <div style="font-size:0.72rem; color:#888; margin-bottom:20px;">
+                    ${dataFmtConf}
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button id="calcConfNao" style="flex:1; padding:12px; border-radius:10px;
+                        background:transparent; border:1px solid rgba(128,128,128,0.3);
+                        color:#888; font-weight:700; cursor:pointer; font-size:0.9rem;">
+                        Cancelar
+                    </button>
+                    <button id="calcConfSim" style="flex:1; padding:12px; border-radius:10px;
+                        background:#0d6efd; border:none; color:#fff;
+                        font-weight:800; cursor:pointer; font-size:0.9rem;
+                        box-shadow:0 4px 0 #0b5ed7;">
+                        ⚡ Ver Palpites
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(box);
+        document.getElementById('calcConfSim').onclick = () => { box.remove(); resolve(true); };
+        document.getElementById('calcConfNao').onclick = () => { box.remove(); resolve(false); };
+    });
+
+    if (!confirmado) return;
 
     // Atualiza aviso antes de gerar
     calcAvisarTiming(hora);
@@ -27852,23 +28212,44 @@ window.calcGerarPalpites = async function() {
     // ── PALPITÃO ──────────────────────────────────────────────────────────
     const paltitao = r.paltitao; // <-- LINHA ADICIONADA PARA CORRIGIR O ERRO
     const { palt5, dezenas: pDez } = paltitao;
-    const destSet = new Set(palt5[0].dezenasBase || palt5[0].dezenas || []);
     html += `<div class="paltitao-block">`;
-    html += `<div class="paltitao-title">🎯 Palpitão — 20 Dezenas</div>`;
+    html += `<div class="paltitao-title">🎯 Top 10 Dezenas — 1º Prêmio</div>`;
     html += `<div class="paltitao-sub">
-        🔥 Núcleo: ${paltitao.nucleoCount || 10} dezenas quentes (2/bicho) 
-        · ❄️ Extras: ${paltitao.extrasCount || 10} (Cruz + Mestre + Atraso + Ontem)
+        Score individual · Cruz · Grupo · Data · Mestre · Ontem
     </div>`;
-    html += `<div class="paltitao-dezenas">`;
-    const nucleoSet  = new Set((paltitao.dezenas || []).slice(0, paltitao.nucleoCount || 10));
-    paltitao.dezenas.forEach((d, i) => {
-        const isNucleo = i < (paltitao.nucleoCount || 10);
-        html += `<span class="paltitao-dez${isNucleo?' destaque':' frio'}" 
-                       title="${isNucleo?'🔥 Núcleo quente':'❄️ Extra estratégico'}"
-                       style="animation-delay:${i*0.03}s">${d}</span>`;
+    html += `<div class="paltitao-dezenas" style="gap:8px;">`;
+    (r.paltitao.dezMotivos || []).forEach((item, i) => {
+        const temCruzDupla = item.motivos.includes('🌟Cruz✕');
+        const temSinalDia  = item.motivos.includes('📅Dia') || item.motivos.includes('🔄Inv');
+        const cls = temSinalDia ? 'paltitao-dez sinal-dia'
+                  : temCruzDupla ? 'paltitao-dez cruz-dupla'
+                  : 'paltitao-dez';
+        const motivoStr = item.motivos.slice(0,3).join(' ');
+        html += `
+            <div class="${cls}" style="animation:fadeIn 0.3s ease ${i*0.05}s both;"
+                 title="${item.motivos.join(' · ')} · Score: ${item.score}pts">
+                <span class="dez-num">${item.dz}</span>
+                <span class="dez-mot">${motivoStr}</span>
+            </div>`;
     });
-    html += `</div>`;
-    html += `<div class="paltitao-cobertura">📊 ${palt5.map(b=>`${b.emoji} G${b.grupo} ${b.animal}`).join('  ·  ')}</div>`;
+
+    // Top 10 grupos sempre
+    html += `<div class="paltitao-cobertura" style="margin-top:10px;">
+        <div style="font-size:0.62rem;color:#888;letter-spacing:1px;margin-bottom:6px;">
+            📊 TOP 10 GRUPOS — jogue pelo menos 5
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        ${r.ranking.slice(0,10).map((b,i) => {
+            const cor = i < 3 ? '#198754' : i < 6 ? '#0d6efd' : '#6c757d';
+            return `<span style="font-size:0.68rem;font-weight:700;padding:3px 8px;
+                border-radius:6px;border:1px solid ${cor};color:${cor};">
+                #${i+1} ${b.emoji} G${b.grupo} ${b.animal}
+                <span style="font-weight:400;opacity:0.7;">${b.forca}pts</span>
+            </span>`;
+        }).join('')}
+        </div>
+    </div>`;
+
     html += `</div>`;
 
     // ── TEXTO COPIAR / COMPARTILHAR ───────────────────────────────────────
@@ -27880,9 +28261,9 @@ window.calcGerarPalpites = async function() {
         `🐾 *Grupos:*\n${r.top5.map((b,i)=>`${i+1}º ${b.emoji} ${b.animal} G${b.grupo} (${b.forca}pts)${b.motivos&&b.motivos[0]?' — '+b.motivos[0]:''}`).join('\n')}\n\n` +
         (mr&&mr.palpites&&mr.palpites.milhar ? `🎰 *Milhares:* ${mr.palpites.milhar.map(m=>m.palpite+(m.invertida?' /'+m.invertida:'')).join('  ')}\n\n` : '') +
         (mr&&mr.palpites&&mr.palpites.centena ? `💯 *Centenas:* ${mr.palpites.centena.map(c=>c.palpite).join('  ')}\n\n` : '') +
-        (mr&&mr.dezenasFechamento ? `🔢 *Dezenas:* ${mr.dezenasFechamento.join('  ')}\n\n` : '') +
+        `🔢 *Top 10 Dezenas:* ${(r.paltitao.dezMotivos||[]).map(x=>`${x.dz}(${x.motivos.slice(0,2).join('+')})`).join('  ')}\n\n` +
         (r.unidades.length>0 ? `🔭 *Unidades:* ${r.unidades.map(u=>u.numero).join('  ')}\n\n` : '') +
-        `🎯 *Palpitão 5 Prêmios (20dez):*\n${palt5.map(b=>`${b.emoji} G${b.grupo} ${b.animal}: ${(b.dezenasBase||b.dezenas||[]).slice(0,4).join(' ')}`).join('\n')}\n\n` +
+        `🎯 *Top 10 Grupos — 1º Prêmio:*\n${r.ranking.slice(0,10).map((b,i)=>`${i+1}º ${b.emoji} G${b.grupo} ${b.animal} (${b.forca}pts)`).join('\n')}\n\n` +
         `📲 _Gerado pelo VipMojs_`;
 
     html += `<div class="calc-actions">`;
@@ -27894,6 +28275,27 @@ window.calcGerarPalpites = async function() {
     resDiv.style.display = 'flex';
     btn.disabled = false;
     btn.textContent = '⚡ CALCULAR PALPITES';
+
+    // Salva no histórico automaticamente
+    calcSalvarHistorico(
+        'calculadora',
+        lot,
+        hora,
+        data,
+        r.ranking,
+        r.paltitao.dezMotivos || []
+    ).then(id => {
+        if (id) console.log('✅ Palpite salvo:', id);
+    });
+```
+
+---
+
+### Parte 3 — Chamar na I.A. da tela principal
+
+Preciso localizar onde a I.A. finaliza a geração. Faz um Ctrl+F por:
+```
+autoGerarHistoricoIA
 };
 
 window.calcCopiar = function() {
