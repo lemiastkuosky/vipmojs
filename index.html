@@ -7064,6 +7064,39 @@ body.dark-mode #calcAnaliseWidget .aw-sinal-chip { background: rgba(255,255,255,
 }
 body.dark-mode #calcAnaliseWidget .aw-recomendacao { background: rgba(25,135,84,0.13); }
 
+#calcPalpitesModal .paltitao-dez.frio {
+    background: rgba(13,110,253,0.08);
+    border: 1.5px dashed rgba(13,110,253,0.3);
+    color: #0d6efd;
+}
+/* ── AVISO DE TIMING ── */
+#calcTimingAviso {
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    display: none;
+}
+#calcTimingAviso.ideal {
+    background: rgba(25,135,84,0.1);
+    border: 1px solid rgba(25,135,84,0.3);
+    color: #198754;
+}
+#calcTimingAviso.cedo {
+    background: rgba(255,193,7,0.1);
+    border: 1px solid rgba(255,193,7,0.4);
+    color: #856404;
+}
+#calcTimingAviso.muito-cedo {
+    background: rgba(220,53,69,0.08);
+    border: 1px solid rgba(220,53,69,0.25);
+    color: #dc3545;
+}
+body.dark-mode #calcTimingAviso.ideal     { background: rgba(25,135,84,0.12); }
+body.dark-mode #calcTimingAviso.cedo      { background: rgba(255,193,7,0.1); }
+body.dark-mode #calcTimingAviso.muito-cedo { background: rgba(220,53,69,0.1); }
+
 </style>
 </head>
 
@@ -9096,6 +9129,10 @@ body.dark-mode #calcAnaliseWidget .aw-recomendacao { background: rgba(25,135,84,
                 <input type="date" id="calcDataInput" class="calc-date-input">
             </div>
 
+            <!-- Aviso de Timing -->
+            <div id="calcTimingAviso"></div>
+
+            <!-- Botão Gerar -->
             <button id="calcGerarBtn" onclick="calcGerarPalpites()">⚡ CALCULAR PALPITES</button>
 
             <div id="calcResultados" class="calc-results" style="display:none;"></div>
@@ -27354,15 +27391,14 @@ function calcScoreCompleto(analise, puxada, externoBichos, cruzDoDia, turno, sat
     }).sort((a, b) => b.forca - a.forca);
 }
 
-// ── PALPITÃO: 5 bichos por afinidade real + turno + cruz ─────────────────
 function calcPaltitao(ranking, analise, nomeSorteio) {
     const isNoite    = /cor|ptn|18|19|21|22|23|noite/i.test(nomeSorteio);
     const bichosNot  = ['04','09','14','15','16','17','18','22','23','24'];
     const bichosDia  = ['01','02','03','05','06','07','11','13','21','25'];
 
-    const palt5      = [ranking[0]];
+    // ── NÚCLEO: 5 bichos por afinidade ───────────────────────────────────
+    const palt5 = [ranking[0]];
     const candidatos = [...ranking.slice(1)];
-
     while (palt5.length < 5 && candidatos.length > 0) {
         let melhorIdx = 0, melhorVal = -Infinity;
         candidatos.forEach((cand, i) => {
@@ -27383,17 +27419,91 @@ function calcPaltitao(ranking, analise, nomeSorteio) {
         candidatos.splice(melhorIdx, 1);
     }
 
-    // 4 dezenas por bicho priorizando as mais quentes no 1º prêmio
-    const dezenas = palt5.flatMap(b => {
-        const base = b.dezenasBase || b.dezenas || [];
-        if (analise.dezenaPorBicho1Premio && analise.dezenaPorBicho1Premio[b.grupo]) {
-            const quentes = analise.dezenaPorBicho1Premio[b.grupo];
-            return [...new Set([...quentes, ...base])].slice(0, 4);
+    // ── NÚCLEO: 2 dezenas mais quentes por bicho ─────────────────────────
+    const dezenasNucleo = [];
+    const nucleoUsed = new Set();
+    palt5.forEach(b => {
+        const quentes = (analise.dezenaPorBicho1Premio || {})[b.grupo] || [];
+        const base    = b.dezenas || [];
+        const pool    = [...new Set([...quentes, ...base])];
+        let count = 0;
+        for (const d of pool) {
+            if (!nucleoUsed.has(d) && count < 2) {
+                dezenasNucleo.push(d);
+                nucleoUsed.add(d);
+                count++;
+            }
         }
-        return base.slice(0, 4);
+        // fallback se não preencheu 2
+        for (const d of base) {
+            if (!nucleoUsed.has(d) && count < 2) {
+                dezenasNucleo.push(d);
+                nucleoUsed.add(d);
+                count++;
+            }
+        }
     });
 
-    return { palt5, dezenas };
+    // ── EXTRAS: pool de candidatas ────────────────────────────────────────
+    const extrasPool = [];
+    const extrasUsed = new Set([...nucleoUsed]);
+
+    const addExtra = (d) => {
+        if (d && !extrasUsed.has(d) && /^\d{2}$/.test(d)) {
+            extrasPool.push(d);
+            extrasUsed.add(d);
+        }
+    };
+
+    // 1. Cruz do Dia — dezenas que começam ou terminam com dígito da cruz
+    const cruzDig = analise._cruzDoDia || [];
+    if (cruzDig.length > 0) {
+        tabelaDeGrupos.forEach(b => {
+            b.dezenas.forEach(d => {
+                const temCruz = cruzDig.includes(parseInt(d[0])) || cruzDig.includes(parseInt(d[1]));
+                if (temCruz) addExtra(d);
+            });
+        });
+    }
+
+    // 2. Jogada de Mestre (palpite + invertida)
+    if (analise._jogadaMestre) {
+        const jm = analise._jogadaMestre;
+        if (jm.palpite)   addExtra(jm.palpite.slice(-2));
+        if (jm.invertida) addExtra(jm.invertida.slice(-2));
+    }
+
+    // 3. Dezenas atrasadas globais
+    const atrasadasGlobais = (analise.dezenasAtrasadas || analise.dezenasQuentes1Premio || []);
+    atrasadasGlobais.forEach(d => addExtra(typeof d === 'string' ? d : d.numero));
+
+    // 4. Dezenas que saíram ontem (repetição)
+    const ontem = (analise.dezenasOntem || []);
+    ontem.forEach(d => addExtra(d));
+
+    // Pega as 10 primeiras extras válidas
+    const dezenasExtras = extrasPool.slice(0, 10);
+
+    // Completa com dezenas aleatórias do top10 se faltar
+    if (dezenasExtras.length < 10) {
+        ranking.slice(0, 10).forEach(b => {
+            (b.dezenas || []).forEach(d => {
+                if (dezenasExtras.length < 10 && !extrasUsed.has(d)) {
+                    dezenasExtras.push(d);
+                    extrasUsed.add(d);
+                }
+            });
+        });
+    }
+
+    const dezenasFinal = [...dezenasNucleo, ...dezenasExtras].slice(0, 20);
+
+    return {
+        palt5,
+        dezenas: dezenasFinal,
+        nucleoCount: dezenasNucleo.length,
+        extrasCount: dezenasExtras.length,
+    };
 }
 
 // ── ORQUESTRADOR CENTRAL ─────────────────────────────────────────────────
@@ -27425,7 +27535,14 @@ function calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, satura
         : null;
 
     // Palpitão por afinidade
-    const paltitao = calcPaltitao(ranking, an, nomeSorteio);
+    // Injeta sinais extras para o Palpitão Misto
+    const anComExtras = {
+        ...an,
+        _cruzDoDia:    cruzDoDia,
+        _jogadaMestre: motorResult ? motorResult.jogadaDeMestre : null,
+        dezenasOntem:  (externo && externo.dezenasOntem) || [],
+    };
+    const paltitao = calcPaltitao(ranking, anComExtras, nomeSorteio);
 
     // Unidades: Firebase > externo
     const unidades = [];
@@ -27470,11 +27587,60 @@ window.calcAtualizarHorarios = function() {
     const cont     = document.getElementById('calcHoraRadios');
     if (!cont) return;
     cont.innerHTML = horarios.map((h, i) =>
-        `<label><input type="radio" name="calcHora" value="${h}"${i===0?' checked':''}>${h}</label>`
+        `<label><input type="radio" name="calcHora" value="${h}"${i===0?' checked':''}
+         onchange="calcAvisarTiming(this.value)">${h}</label>`
     ).join('');
     const res = document.getElementById('calcResultados');
     if (res) res.style.display = 'none';
+    // Avisa para o primeiro horário da lista
+    if (horarios.length > 0) calcAvisarTiming(horarios[0]);
 };
+
+// ── AVISO DE TIMING ─────────────────────────────────────────────────────
+// Calcula quantos minutos faltam para o sorteio e exibe aviso colorido
+function calcAvisarTiming(hora) {
+    const aviso = document.getElementById('calcTimingAviso');
+    if (!aviso) return;
+
+    const [hStr, mStr] = hora.split(':');
+    const agora = new Date();
+    const sorteio = new Date();
+    sorteio.setHours(parseInt(hStr), parseInt(mStr), 0, 0);
+
+    // Se já passou hoje, assume amanhã
+    if (sorteio <= agora) {
+        sorteio.setDate(sorteio.getDate() + 1);
+    }
+
+    const diffMin = Math.round((sorteio - agora) / 60000);
+
+    if (diffMin <= 0) {
+        // Já passou ou está acontecendo agora
+        aviso.className = 'ideal';
+        aviso.innerHTML = `✅ <strong>Sorteio em andamento ou encerrado.</strong> Sinais do dia completos — resultado mais preciso possível.`;
+    } else if (diffMin <= 20) {
+        // Janela ideal: até 20 min antes
+        aviso.className = 'ideal';
+        aviso.innerHTML = `✅ <strong>Momento ideal!</strong> Faltam <strong>${diffMin} min</strong> para o sorteio das ${hora}. Todos os sinais do dia estão aplicados.`;
+    } else if (diffMin <= 60) {
+        // Aceitável: até 1h antes
+        aviso.className = 'cedo';
+        aviso.innerHTML = `⚠️ <strong>Aceitável.</strong> Faltam <strong>${diffMin} min</strong> para as ${hora}. Alguns sorteios do dia ainda não ocorreram — a saturação pode mudar.<br>
+        <span style="opacity:0.8;">💡 Para maior precisão, consulte novamente às <strong>${String(parseInt(hStr)).padStart(2,'0')}:${String(Math.max(0, parseInt(mStr)-15)).padStart(2,'0')}</strong>.</span>`;
+    } else if (diffMin <= 180) {
+        // Cedo demais: 1h a 3h antes
+        aviso.className = 'muito-cedo';
+        aviso.innerHTML = `🕐 <strong>Cedo demais.</strong> Faltam <strong>${Math.floor(diffMin/60)}h${diffMin%60>0?diffMin%60+'min':''}</strong> para as ${hora}. A saturação do dia ainda está incompleta.<br>
+        <span style="opacity:0.8;">💡 Recomendamos consultar a partir das <strong>${String(parseInt(hStr)).padStart(2,'0')}:${String(Math.max(0, parseInt(mStr)-20)).padStart(2,'0')}</strong>.</span>`;
+    } else {
+        // Muito antecipado: mais de 3h antes
+        aviso.className = 'muito-cedo';
+        aviso.innerHTML = `❌ <strong>Muito antecipado.</strong> Faltam <strong>${Math.floor(diffMin/60)}h</strong> para as ${hora}. Os sinais de hoje ainda não existem.<br>
+        <span style="opacity:0.8;">💡 Consulte <strong>10 a 15 minutos antes</strong> do sorteio para máxima acertividade.</span>`;
+    }
+
+    aviso.style.display = 'block';
+}
 
 window.calcGerarPalpites = async function() {
     const btn    = document.getElementById('calcGerarBtn');
@@ -27483,6 +27649,8 @@ window.calcGerarPalpites = async function() {
     const hora   = document.querySelector('input[name="calcHora"]:checked')?.value || '09:20';
     const data   = document.getElementById('calcDataInput')?.value || new Date().toISOString().split('T')[0];
 
+    // Atualiza aviso antes de gerar
+    calcAvisarTiming(hora);
     btn.disabled = true;
     btn.textContent = '⏳ Consultando Firebase + Site Externo...';
     resDiv.style.display = 'none';
@@ -27629,10 +27797,17 @@ window.calcGerarPalpites = async function() {
     const destSet = new Set(palt5[0].dezenasBase || palt5[0].dezenas || []);
     html += `<div class="paltitao-block">`;
     html += `<div class="paltitao-title">🎯 Palpitão — 20 Dezenas</div>`;
-    html += `<div class="paltitao-sub">Quinteto por afinidade real + turno · 4 dezenas/grupo · cobre 1º ao 5º prêmio</div>`;
+    html += `<div class="paltitao-sub">
+        🔥 Núcleo: ${paltitao.nucleoCount || 10} dezenas quentes (2/bicho) 
+        · ❄️ Extras: ${paltitao.extrasCount || 10} (Cruz + Mestre + Atraso + Ontem)
+    </div>`;
     html += `<div class="paltitao-dezenas">`;
-    pDez.forEach((d, i) => {
-        html += `<span class="paltitao-dez${destSet.has(d)?' destaque':''}" style="animation-delay:${i*0.03}s">${d}</span>`;
+    const nucleoSet  = new Set((paltitao.dezenas || []).slice(0, paltitao.nucleoCount || 10));
+    paltitao.dezenas.forEach((d, i) => {
+        const isNucleo = i < (paltitao.nucleoCount || 10);
+        html += `<span class="paltitao-dez${isNucleo?' destaque':' frio'}" 
+                       title="${isNucleo?'🔥 Núcleo quente':'❄️ Extra estratégico'}"
+                       style="animation-delay:${i*0.03}s">${d}</span>`;
     });
     html += `</div>`;
     html += `<div class="paltitao-cobertura">📊 ${palt5.map(b=>`${b.emoji} G${b.grupo} ${b.animal}`).join('  ·  ')}</div>`;
