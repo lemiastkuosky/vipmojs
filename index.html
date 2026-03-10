@@ -27559,7 +27559,8 @@ function calcPaltitao(ranking, analise, nomeSorteio, sinalDoDia) {
 // ── SALVAR PALPITE NO HISTÓRICO ──────────────────────────────────────────
 async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMotivos) {
     try {
-        if (typeof db === 'undefined') return null;
+        if (typeof firestoreDB === 'undefined') return null;
+        await firestoreDB.collection('historicoPalpites').doc(id).set(doc, { merge: true });
 
         const id = `${data}_${loteria}_${horario.replace(':','')}_${fonte}`;
 
@@ -27584,7 +27585,8 @@ async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMo
             acertos:   null,
         };
 
-        await db.collection('historicoPalpites').doc(id).set(doc, { merge: true });
+        if (typeof firestoreDB === 'undefined') return null;
+        await firestoreDB.collection('historicoPalpites').doc(id).set(doc, { merge: true });
         return id;
     } catch (e) {
         console.warn('calcSalvarHistorico erro:', e);
@@ -27594,15 +27596,14 @@ async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMo
 
 // ── BUSCAR RESULTADO REAL E CALCULAR ACERTOS ────────────────────────────
 async function calcBuscarEAtualizarResultados() {
-    if (typeof db === 'undefined') return;
+    if (typeof firestoreDB === 'undefined') return;
 
     try {
-        // Busca palpites sem resultado dos últimos 3 dias
         const tresDiasAtras = new Date();
         tresDiasAtras.setDate(tresDiasAtras.getDate() - 3);
         const dataMin = tresDiasAtras.toISOString().split('T')[0];
 
-        const snap = await db.collection('historicoPalpites')
+        const snap = await firestoreDB.collection('historicoPalpites')
             .where('resultado', '==', null)
             .where('data', '>=', dataMin)
             .limit(30)
@@ -27633,7 +27634,7 @@ async function calcBuscarEAtualizarResultados() {
                 if (!nomeSorteioAlvo) continue;
 
                 // Busca o 1º prêmio desse sorteio
-                const resSnap = await db.collection('resultados')
+                const resSnap = await firestoreDB.collection('resultados')
                     .where('loteria',     '==', palpite.loteria)
                     .where('nomeSorteio', '==', nomeSorteioAlvo)
                     .where('posicao',     '==', 1)
@@ -27665,7 +27666,7 @@ async function calcBuscarEAtualizarResultados() {
                 };
 
                 // Atualiza o documento
-                await db.collection('historicoPalpites').doc(palpite.id).update({
+                await firestoreDB.collection('historicoPalpites').doc(palpite.id).update({
                     resultado: {
                         grupo:       grupoReal,
                         dezena:      dezenaReal,
@@ -27711,7 +27712,7 @@ window.calcCarregarHistorico = async function(filtroLot) {
     await calcBuscarEAtualizarResultados();
 
     try {
-        let query = db.collection('historicoPalpites')
+        let query = firestoreDB.collection('historicoPalpites')
             .orderBy('geradoEm', 'desc')
             .limit(50);
         if (filtroLot) query = query.where('loteria', '==', filtroLot);
