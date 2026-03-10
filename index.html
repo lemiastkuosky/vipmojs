@@ -7808,7 +7808,7 @@ body.dark-mode #calcTimingAviso.muito-cedo { background: rgba(220,53,69,0.1); }
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V16.15</strong>
+            <strong>V17.15</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -9095,7 +9095,6 @@ body.dark-mode #calcTimingAviso.muito-cedo { background: rgba(220,53,69,0.1); }
 
         <div class="calc-scroll-body">
 
-            <!-- Widget de Análise -->
             <div id="calcAnaliseWidget">
                 <div class="aw-title">
                     📊 Análise — Qual Loteria Jogar?
@@ -27189,22 +27188,54 @@ async function calcAnalisarLoteria(lot) {
 
 window.calcCarregarAnalise = async function() {
     const corpo = document.getElementById('calcAnaliseCorpo');
+    const btnRefresh = document.querySelector('.aw-refresh');
+
     if (!corpo) return;
-    corpo.innerHTML = `<div class="aw-loading">⏳ Analisando todas as loterias...</div>`;
+
+    // --- 1. MUDA O VISUAL DO BOTÃO PARA CARREGANDO ---
+    if (btnRefresh) {
+        btnRefresh.innerHTML = '⏳ Atualizando...';
+        btnRefresh.disabled = true;
+        btnRefresh.style.opacity = '0.6';
+        btnRefresh.style.cursor = 'not-allowed';
+    }
+
+    corpo.innerHTML = `<div class="aw-loading">⏳ Analisando padrões matemáticos...</div>`;
 
     const loterias = ['rj','lk','ln','ba','fd'];
     const nomes    = { rj:'PT Rio', lk:'Look', ln:'Nacional', ba:'Bahia', fd:'Federal' };
     const emojis   = { rj:'🔴', lk:'🟠', ln:'🟢', ba:'🔵', fd:'🟡' };
 
-    const resultados = await Promise.all(loterias.map(l => calcAnalisarLoteria(l)));
-    resultados.sort((a, b) => b.scoreComposto - a.scoreComposto);
+    let resultados = [];
+    try {
+        // --- MÁGICA AQUI: Força a animação durar no mínimo 3 segundos ---
+        const [buscas] = await Promise.all([
+            Promise.all(loterias.map(l => calcAnalisarLoteria(l))),
+            new Promise(resolve => setTimeout(resolve, 3000)) // Trava de 3 segundos
+        ]);
+        resultados = buscas;
+        resultados.sort((a, b) => b.scoreComposto - a.scoreComposto);
+    } catch (e) {
+        console.error("Erro ao analisar loterias na calculadora", e);
+    }
 
     const validos     = resultados.filter(r => !r.semDados);
     const melhor      = validos[0];
     const selecionada = document.querySelector('input[name="calcLoteria"]:checked')?.value || 'rj';
 
-    if (!melhor) {
+    // Função local para restaurar o botão
+    const restaurarBotao = () => {
+        if (btnRefresh) {
+            btnRefresh.innerHTML = '↻ Atualizar';
+            btnRefresh.disabled = false;
+            btnRefresh.style.opacity = '1';
+            btnRefresh.style.cursor = 'pointer';
+        }
+    };
+
+    if (!melhor || validos.length === 0) {
         corpo.innerHTML = `<div class="aw-loading">⚠️ Nenhuma loteria treinada. Treine a I.A. primeiro.</div>`;
+        restaurarBotao(); // Restaura se der erro
         return;
     }
 
@@ -27275,6 +27306,26 @@ window.calcCarregarAnalise = async function() {
         ${melhor.sinais && melhor.sinais.length > 0 ? ' · ' + melhor.sinais.slice(0,2).join(' ') : ''}
     </div>`;
 
+    // --- NOVA CAIXA DE EXPLICAÇÃO (RESUMO DO GRÁFICO) ---
+    html += `
+    <div class="aw-info-box" style="margin-top: 12px; background: rgba(0,0,0,0.03); border: 1px dashed rgba(128,128,128,0.3); border-radius: 8px; padding: 12px; font-size: 0.75rem; color: #6c757d; line-height: 1.4; text-align: left;">
+        <strong class="aw-info-title" style="color: #007bff; display: block; margin-bottom: 6px; font-size: 0.8rem;">💡 Entendendo o Gráfico</strong>
+        O sistema testou os palpites da I.A. contra os <b>últimos sorteios reais</b> do 1º prêmio:<br>
+        <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+            <span><span style="display:inline-block; width:10px; height:10px; background:#198754; border-radius:2px; margin-right:4px;"></span><b>Verde:</b> A I.A acertou (O vencedor estava no Top 5).</span>
+            <span><span style="display:inline-block; width:10px; height:10px; background:#fd7e14; border-radius:2px; margin-right:4px;"></span><b>Laranja:</b> Acerto parcial (O vencedor estava no Top 10).</span>
+            <span><span style="display:inline-block; width:10px; height:10px; background:rgba(220,53,69,0.5); border-radius:2px; margin-right:4px;"></span><b>Vermelho:</b> Erro (A I.A não previu este bicho).</span>
+        </div>
+        <div style="margin-top: 8px; font-style: italic; opacity: 0.8; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 6px;">
+            👉 A loteria com a <b>maior porcentagem (%)</b> é a que está seguindo um padrão matemático mais fácil para a I.A. decifrar hoje.
+        </div>
+    </div>
+    <style>
+        body.dark-mode .aw-info-box { background: rgba(255,255,255,0.03) !important; border-color: rgba(255,255,255,0.15) !important; color: #aaa !important; }
+        body.dark-mode .aw-info-title { color: #4da3ff !important; }
+    </style>
+    `;
+
     corpo.innerHTML = html;
 
     // Auto-seleciona a melhor no radio
@@ -27283,6 +27334,9 @@ window.calcCarregarAnalise = async function() {
         radioMelhor.checked = true;
         calcAtualizarHorarios();
     }
+
+    // --- 2. RESTAURA O BOTÃO AO NORMAL QUANDO TERMINAR ---
+    restaurarBotao();
 };
 
 window.calcSelecionarLoteria = function(lot) {
@@ -27702,11 +27756,14 @@ window.calcGerarPalpites = async function() {
             ${mr.volatilidade.nivel} ${mr.volatilidade.texto}
         </div>`;
     }
-
     // ── CRUZ DO DIA ───────────────────────────────────────────────────────
     html += `<div class="calc-result-block"><div class="calc-result-title">🌟 Cruz do Dia</div>`;
-    html += `<div class="cruz-row">DÍGITOS GUIA ${r.cruzDoDia.map(d=>`<span class="cruz-digit">${d}</span>`).join('')}
+    html += `<div class="cruz-row" style="margin-bottom: 8px;">DÍGITOS GUIA ${r.cruzDoDia.map(d=>`<span class="cruz-digit">${d}</span>`).join('')}
         <span style="font-size:0.63rem;margin-left:8px;color:#888;">dia ${new Date(data+'T12:00:00').getDate()} · acerto validado: 78%</span>
+    </div>`;
+    // --- RESUMO EXPLICATIVO ADICIONADO AQUI ---
+    html += `<div style="font-size: 0.7rem; color: #6c757d; line-height: 1.4; border-top: 1px dashed rgba(128,128,128,0.2); padding-top: 6px;">
+        💡 <strong>Como usar:</strong> Não jogue esses 4 números juntos. Eles são os algarismos mais "quentes" do dia. Escolha dezenas que contenham esses dígitos para aumentar suas chances de acerto.
     </div></div>`;
 
     // ── MILHAR DA SOMA ────────────────────────────────────────────────────
@@ -27793,7 +27850,8 @@ window.calcGerarPalpites = async function() {
     }
 
     // ── PALPITÃO ──────────────────────────────────────────────────────────
-    const { palt5, dezenas: pDez } = r.paltitao;
+    const paltitao = r.paltitao; // <-- LINHA ADICIONADA PARA CORRIGIR O ERRO
+    const { palt5, dezenas: pDez } = paltitao;
     const destSet = new Set(palt5[0].dezenasBase || palt5[0].dezenas || []);
     html += `<div class="paltitao-block">`;
     html += `<div class="paltitao-title">🎯 Palpitão — 20 Dezenas</div>`;
