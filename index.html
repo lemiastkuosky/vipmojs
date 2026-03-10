@@ -10462,10 +10462,12 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
                 console.log("[IA] Recuperando análise estável do banco.");
                 const data = doc.data();
                 window.iaPalpiteShareText = data.conteudo;
-                exibirResultadoSalvoIA(data.conteudo, loteriaNome, extracaoFoco.display);
-                hideLoadingIndicator();
-                return; // Bloqueia novo cálculo para evitar conflito de resultados
-            }
+                // Salva o texto para Copiar/WhatsApp mas NÃO para aqui — continua para renderizar os cards
+                window._iaConteudoSalvo = data.conteudo;
+                window._iaHorarioSalvo = extracaoFoco.display;
+                // NÃO faz return — deixa o código continuar e renderizar com cards
+            } // Bloqueia novo cálculo para evitar conflito de resultados
+            
         } catch(e) { console.warn("Erro histórico:", e); }
     }
 
@@ -10495,37 +10497,89 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
         });
 
         const shareTexts = analisesPorExtracao.map((an) => {
+            const analiseHorario = dataIA ? (dataIA[an.extracao.nome] || dataIA['geral']) : {};
+            const unidadesAtrasadas = (analiseHorario.unidadesAtrasadas || []).slice(0, 2);
+
             let t = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
             t += `${divisor}\n🎯 *FOCO:* ${an.extracao.display}\n`;
-            
-            // --- NOVIDADE: SEÇÃO DE OPINIÃO CERTEIRA ---
-            t += `💎 *INDICAÇÃO MESTRE (CERTEIRA):*\n`;
-            t += `🐾 *${an.rankingTop10[0].animal.toUpperCase()}* [🎯 ${an.rankingTop10[0].confianca}]\n`;
-            t += `💸 *${an.palpites.milhar[0].palpite}* (Milhar Principal)\n`;
-            t += `↳ _Análise de convergência máxima detectada._\n\n`;
+            t += `🚦 *VOLATILIDADE:* ${an.volatilidade.nivel} - ${an.volatilidade.texto}\n${divisor}\n\n`;
 
-            t += `🚦 *VOLATILIDADE:* ${an.volatilidade.nivel}\n${divisor}\n\n`;
-            
+            if (an.alertaDobradinha) t += `🚨 *ALERTA I.A:* Padrão de *DOBRADINHA* com alta probabilidade neste sorteio!\n${divisor}\n\n`;
+
+            if (an.jogadaDeMestre) {
+                t += `👑 *JOGADA DE MESTRE*\n💸 *${an.jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n↳ O ${an.jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
+            }
+
             if (dadosSoma && dadosSoma.bicho) {
                 t += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n`;
                 t += `↳ Base Matemática: ${dadosSoma.sorteioBase}\n`;
                 t += `💸 *${dadosSoma.milhar}* - ${dadosSoma.bicho.emoji} *${dadosSoma.bicho.animal.toUpperCase()}*\n\n`;
             }
 
-            t += `📊 *TERMÔMETRO DE APOIO:*\n`;
-            an.rankingTop5.slice(1, 3).forEach((b, i) => {
-                t += `${i === 0 ? '🥈' : '🥉'} *${b.animal.toUpperCase()}* (${b.confianca})\n`;
-            });
-            
-            t += `\n🚀 *MILHARES SUGERIDAS:* \n`;
-            an.palpites.milhar.slice(1, 4).forEach(m => { 
-                t += `🔹 ${m.palpite}${m.invertida ? ' ↔ '+m.invertida : ''}\n`; 
-            });
+            t += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
+            if (an.rankingTop5 && an.rankingTop5.length > 0) {
+                const medalhas = ['🥇', '🥈', '🥉', '🏅', '🏅'];
+                an.rankingTop5.forEach((b, i) => {
+                    t += `${medalhas[i] || '🏅'} *${i + 1}º LUGAR* - ${b.emoji} *${b.animal.toUpperCase()}* [🎯 ${b.confianca}]\n`;
+                    if (b.motivos && b.motivos.length > 0) {
+                        b.motivos.slice(0, 2).forEach(m => { t += `  ↳ ${m}\n`; });
+                    } else {
+                        t += `  ↳ 🔥 Alta Convergência de Dados\n`;
+                    }
+                    t += `\n`;
+                });
+            }
 
-            t += `\n🛡️ *FECHO DE DEZENAS:* ${an.dezenasFechamento.join(' - ')}\n`;
-            t += `${divisor}\n🗓️ ${dataSimples} às ${horaAgora}\n📲 VIP - I.A in Real Time\n`;
+            t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
+            if (an.rankingTop10 && an.rankingTop10.length >= 10) {
+                for (let i = 0; i < 5; i++) {
+                    let esq = `${String(i+1).padStart(2,'0')}º ${an.rankingTop10[i].emoji} ${an.rankingTop10[i].animal}`;
+                    let dir = `${String(i+6).padStart(2,'0')}º ${an.rankingTop10[i+5].emoji} ${an.rankingTop10[i+5].animal}`;
+                    t += `${esq.padEnd(16, ' ')} ┃  ${dir}\n`;
+                }
+            }
+            t += `${divisor}\n\n`;
+
+            if (an.bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${an.bichoSombra.emoji} *${an.bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
+
+            if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
+
+            t += `🚀 *MILHARES SUGERIDAS:*\n`;
+            if (an.palpites && an.palpites.milhar) {
+                an.palpites.milhar.slice(0, 8).forEach(m => {
+                    t += `🔹 ${m.palpite}${m.invertida ? ' ↔ '+m.invertida : ''}\n`;
+                });
+                t += `\n`;
+            }
+
+            t += `💯 *CENTENAS QUENTES:*\n`;
+            if (an.palpites && an.palpites.centena) {
+                t += an.palpites.centena.slice(0, 10).map(c => c.palpite).join('  ') + `\n\n`;
+            }
+
+            t += `${divisor}\n\n`;
+
+            if (an.dezenasFechamento && an.dezenasFechamento.length === 5) {
+                t += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\nJogue as 5 dezenas combinadas:\n🎯 *${an.dezenasFechamento.join(' - ')}*\n\n`;
+            }
+
+            t += `🤝 *DUQUES DE DEZENA:*\n`;
+            if (an.palpites && an.palpites.duques) {
+                let d = [];
+                an.palpites.duques.forEach(x => d.push(...x.combinacoes));
+                t += d.map(c => `💠 ${c}`).join('  ') + `\n\n`;
+            }
+
+            t += `🤝 *TERNOS DE DEZENA:*\n`;
+            if (an.palpites && an.palpites.ternos) {
+                let r = [];
+                an.palpites.ternos.forEach(x => r.push(...x.combinacoes));
+                t += r.map(c => `🏆 ${c}`).join('  ') + `\n\n`;
+            }
+
+            t += `${divisor}\n🍀 *BOA SORTE!* 🍀\n🗓️ ${dataSimples} às ${horaAgora}\n📲 VIP - I.A in Real Time\n`;
             return t;
-        });
+        })
 
         // Gravação Múltipla para manter o histórico estável
         try {
@@ -10548,6 +10602,12 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
         window.iaPalpiteShareTexts = shareTexts;
         window.iaPalpiteShareExtracoes = proximasExtracoes;
 
+        // Se havia análise salva, usa o texto salvo no botão Copiar mas mostra os cards
+        if (window._iaConteudoSalvo) {
+            window.iaPalpiteShareTexts = window.iaPalpiteShareTexts || shareTexts;
+            window.iaPalpiteShareTexts[0] = window._iaConteudoSalvo;
+            window._iaConteudoSalvo = null;
+        }
         renderizarTabsIA(proximasExtracoes, analisesPorExtracao, shareTexts);
 
     } catch (error) {
@@ -10591,30 +10651,79 @@ function renderizarTabsIA(proximasExtracoes, analisesPorExtracao, shareTexts) {
         const indicacaoMestre = an.rankingTop10[0];
         const milharMestre = an.palpites.milhar[0].palpite;
 
+        // Duques e Ternos como cards sanfona
+        const criarSanfona = (lista, tipo) => lista.map((item, i) => {
+            const divId = `cercado_${tipo}_${idx}_${i}`;
+            const cor = tipo === 'Duque' ? '#fd7e14' : '#17a2b8';
+            const combos = item.combinacoes.map(c => `<span style="white-space:nowrap;font-size:1rem;">${c}</span>`).join('');
+            return `<li style="margin-bottom:10px;background:rgba(0,0,0,0.05);padding:10px 12px;border-radius:8px;list-style:none;border-left:4px solid ${cor};">
+                <div style="font-weight:bold;margin-bottom:8px;font-size:0.9rem;">${item.titulo}</div>
+                <button onclick="document.getElementById('${divId}').style.display=document.getElementById('${divId}').style.display==='none'?'block':'none'" class="view-button" style="width:100%;padding:7px;font-size:0.85rem;border-radius:6px;">👀 Ver ${item.combinacoes.length} Combinações</button>
+                <div id="${divId}" style="display:none;margin-top:8px;font-family:monospace;text-align:center;background:rgba(0,0,0,0.08);padding:8px;border-radius:5px;display:none;flex-wrap:wrap;gap:8px;justify-content:center;">
+                    ${combos}
+                    <div style="display:flex;gap:6px;margin-top:8px;width:100%;">
+                        <button onclick="copyToClipboard('${item.combinacoes.join(' ')}',this)" class="load-button" style="flex:1;padding:8px;font-size:0.85rem;border-radius:6px;">📋 Copiar</button>
+                    </div>
+                </div>
+            </li>`;
+        }).join('');
+
         contentHtml += `
         <div id="content-palpite-${idx}" style="display:${idx === 0 ? 'block' : 'none'}; animation: fadeUpIn 0.4s ease;">
-            
-            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border-left: 5px solid #fbbf24; padding: 18px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); text-align: left;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 0.65rem; font-weight: 800; color: #fbbf24; text-transform: uppercase; letter-spacing: 1.5px;">💎 INDICAÇÃO MESTRE</span>
-                    <span style="font-size: 0.7rem; color: ${corVol}; font-weight: bold;">${an.volatilidade.nivel}</span>
+
+            <!-- INDICAÇÃO MESTRE -->
+            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border-left:5px solid #fbbf24;padding:18px;border-radius:15px;margin-bottom:15px;box-shadow:0 10px 20px rgba(0,0,0,0.3);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:0.65rem;font-weight:800;color:#fbbf24;text-transform:uppercase;letter-spacing:1.5px;">💎 INDICAÇÃO MESTRE</span>
+                    <span style="font-size:0.7rem;color:${corVol};font-weight:bold;">${an.volatilidade.nivel}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="font-size: 2.5rem;">${indicacaoMestre.emoji}</div>
+                <div style="display:flex;align-items:center;gap:15px;">
+                    <div style="font-size:2.5rem;">${indicacaoMestre.emoji}</div>
                     <div>
-                        <div style="font-size: 1.4rem; font-weight: 900; color: white;">${indicacaoMestre.animal.toUpperCase()}</div>
-                        <div style="font-size: 1.8rem; font-weight: 900; color: #fbbf24; font-family: monospace; letter-spacing: 2px;">${milharMestre}</div>
+                        <div style="font-size:1.4rem;font-weight:900;color:white;">${indicacaoMestre.animal.toUpperCase()}</div>
+                        <div style="font-size:1.8rem;font-weight:900;color:#fbbf24;font-family:monospace;letter-spacing:2px;">${milharMestre}</div>
                     </div>
                 </div>
             </div>
 
-            <div style="text-align:left; font-family:'Courier New', monospace; background:rgba(255,255,255,0.03); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); font-size:0.82rem; white-space:pre-wrap; line-height:1.4; max-height:300px; overflow-y:auto; color: #cbd5e1;">
-                ${shareTexts[idx].replace(/\*/g, '')}
+            <!-- TERMÔMETRO TOP 5 -->
+            <div class="ia-result-card" style="border-left-color:#6f42c1;padding:15px;margin-bottom:12px;">
+                <h4 style="margin-bottom:15px;color:#6f42c1;">🔥 Termômetro Detalhado (Top 5)</h4>
+                ${criarTermometroHTML(an.rankingTop5)}
             </div>
 
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button onclick="copyIAPalpitesTab(${idx}, this)" style="flex:1; background:#6f42c1; color:white; padding:15px; font-weight:bold; border-radius:12px; border:none; cursor:pointer; box-shadow:0 4px 0 #5a359b;">📋 Copiar</button>
-                <button onclick="shareIAPalpitesTab(${idx})" style="flex:1; background:#25D366; color:white; padding:15px; font-weight:bold; border-radius:12px; border:none; cursor:pointer; box-shadow:0 4px 0 #128c7e;">📲 Zap</button>
+            <!-- TOP 10 -->
+            <div class="ia-result-card" style="border-left-color:#28a745;padding:15px;margin-bottom:12px;">
+                <h4 style="margin-bottom:15px;color:#28a745;">🐾 Top 10 Grupos Prováveis</h4>
+                ${criarTop10HTML(an.rankingTop10)}
+            </div>
+
+            <!-- DUQUES -->
+            <div class="ia-result-card" style="border-left-color:#fd7e14;margin-bottom:12px;">
+                <h4 style="color:#fd7e14;">🤝 Duques de Grupo (Por Afinidade)</h4>
+                <ul style="padding-left:0;margin:0;">${criarSanfona(an.palpites.duques,'Duque')}</ul>
+            </div>
+
+            <!-- TERNOS -->
+            <div class="ia-result-card" style="border-left-color:#17a2b8;margin-bottom:12px;">
+                <h4 style="color:#17a2b8;">🤝 Ternos de Grupo (Por Afinidade)</h4>
+                <ul style="padding-left:0;margin:0;">${criarSanfona(an.palpites.ternos,'Terno')}</ul>
+            </div>
+
+            <!-- MILHARES E CENTENAS -->
+            <div class="ia-result-card" style="margin-bottom:12px;">
+                <h4>🎰 Milhares</h4>
+                <ul class="ia-palpite-list">${criarListaPalpitesHTML(an.palpites.milhar)}</ul>
+            </div>
+            <div class="ia-result-card" style="margin-bottom:12px;">
+                <h4>💯 Centenas</h4>
+                <ul class="ia-palpite-list">${criarListaPalpitesHTML(an.palpites.centena)}</ul>
+            </div>
+
+            <!-- BOTÕES -->
+            <div style="display:flex;gap:10px;margin-top:15px;">
+                <button onclick="copyIAPalpitesTab(${idx},this)" style="flex:1;background:#6f42c1;color:white;padding:15px;font-weight:bold;border-radius:12px;border:none;cursor:pointer;box-shadow:0 4px 0 #5a359b;">📋 Copiar</button>
+                <button onclick="shareIAPalpitesTab(${idx})" style="flex:1;background:#25D366;color:white;padding:15px;font-weight:bold;border-radius:12px;border:none;cursor:pointer;box-shadow:0 4px 0 #128c7e;">📲 Zap</button>
             </div>
         </div>`;
     });
@@ -18600,6 +18709,82 @@ function processNumbers(numbers) {
     return { milhares, centenas, dezenas, ternos, duques, bichos: bichosForDisplay };
 }
 
+// ── TERMÔMETRO TOP 5 ─────────────────────────────────────────────────────
+function criarTermometroHTML(ranking) {
+    if (!ranking || ranking.length === 0) return '<p style="color:#888;">Sem dados.</p>';
+    const medalhas = ['🥇','🥈','🥉','🏅','🏅'];
+    const corBarra = (i) => i === 0 ? '#6f42c1' : i === 1 ? '#0d6efd' : i === 2 ? '#198754' : '#6c757d';
+
+    return ranking.slice(0, 5).map((b, i) => {
+        const pct    = parseInt(b.confianca) || b.forca || 50;
+        const dez    = (b.dezenasBase || b.dezenas || []).join(' · ');
+        const motivo = (b.motivos || []).slice(0, 2).join(' · ');
+        return `
+        <div style="margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:1.1rem;">${medalhas[i]}</span>
+                <span style="font-size:1.3rem;">${b.emoji}</span>
+                <div style="flex:1;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <strong style="font-size:0.9rem;">${b.animal} <span style="font-size:0.72rem;color:#888;">G${b.grupo}</span></strong>
+                        <span style="font-size:0.82rem;font-weight:800;color:${corBarra(i)};">${b.confianca || pct+'%'}</span>
+                    </div>
+                    <div style="height:7px;background:rgba(128,128,128,0.2);border-radius:4px;overflow:hidden;margin-top:3px;">
+                        <div style="height:100%;width:${pct}%;background:${corBarra(i)};border-radius:4px;transition:width 0.5s;"></div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:#888;padding-left:50px;">
+                <span>🎲 ${dez}</span>
+                ${motivo ? `<span style="color:#aaa;">${motivo}</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── TOP 10 GRUPOS ─────────────────────────────────────────────────────────
+function criarTop10HTML(ranking) {
+    if (!ranking || ranking.length === 0) return '<p style="color:#888;">Sem dados.</p>';
+    const top = ranking.slice(0, 10);
+    const maxForca = top[0]?.forca || 100;
+
+    return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">` +
+    top.map((b, i) => {
+        const pct    = Math.round((b.forca / maxForca) * 100);
+        const cor    = i < 3 ? '#198754' : i < 6 ? '#0d6efd' : '#6c757d';
+        const dez    = (b.dezenasBase || b.dezenas || []).slice(0, 2).join(' ');
+        return `
+        <div style="background:rgba(0,0,0,0.04);border:1px solid rgba(128,128,128,0.15);border-radius:8px;padding:8px 10px;cursor:default;"
+             title="${(b.motivos||[]).slice(0,2).join(' · ')}">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span style="font-size:0.62rem;font-weight:900;color:${cor};min-width:18px;">#${i+1}</span>
+                <span style="font-size:1rem;">${b.emoji}</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:0.72rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.animal}</div>
+                    <div style="font-size:0.6rem;color:#888;">G${b.grupo} · ${dez}</div>
+                </div>
+                <span style="font-size:0.7rem;font-weight:800;color:${cor};">${b.confianca || b.forca}</span>
+            </div>
+            <div style="height:4px;background:rgba(128,128,128,0.15);border-radius:2px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:${cor};border-radius:2px;"></div>
+            </div>
+        </div>`;
+    }).join('') + `</div>`;
+}
+
+// ── RENDERIZA LISTA DE PALPITES (milhar/centena) ─────────────────────────
+function criarListaPalpitesHTML(lista) {
+    if (!lista || lista.length === 0) return '<li style="color:#888;list-style:none;padding:8px;">Sem dados.</li>';
+    return lista.map(item => {
+        const inv = item.invertida ? `<span style="color:#6f42c1;font-size:0.75rem;margin-left:8px;">↔ ${item.invertida}</span>` : '';
+        const tipo = item.tipo ? `<span style="font-size:0.65rem;color:#888;margin-left:6px;">${item.tipo}</span>` : '';
+        return `<li style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(128,128,128,0.1);list-style:none;">
+            <span style="font-size:1.1rem;font-weight:900;font-family:monospace;letter-spacing:2px;">${item.palpite}</span>
+            ${inv}${tipo}
+        </li>`;
+    }).join('');
+}
+
 // --- FUNÇÃO DE DESENHO DA TELA COM BOTÕES CERCADOS ---
 function renderIAResultsUI(palpites, rankingTop5, rankingTop10, analise, loteriaNome, drawDisplay) {
     const resultsOutput = document.getElementById('iaPalpiteResultsOutput');
@@ -22949,7 +23134,7 @@ todosJuntos.forEach(function(b) {
     b.confianca = Math.min(97, Math.max(50, confReal)) + '%';
 });
 
-    let rankingTop5 = todosJuntos.slice(0, 3);
+    let rankingTop5 = todosJuntos.slice(0, 5);
     let rankingTop10 = todosJuntos.slice(0, 10);
     const palpites = { milhar: [], centena: [], duques: [], ternos: [] };
 
@@ -26799,40 +26984,45 @@ async function calcBuscarExterno(lot) {
     } catch(e) { return null; }
 }
 
-// ── BUSCA SATURAÇÃO DE HOJE NO FIRESTORE ─────────────────────────────────
-// Validado nos dados de 10/03: G02 saiu 5x no 1º — sem isso ele apareceria no topo
 async function calcBuscarSaturacaoHoje(lot) {
     try {
-        const hoje     = new Date();
+        const hoje      = new Date();
         const inicioDia = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 0, 0, 0);
         const fimDia    = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59);
+        const ontem     = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+        const inicioOntem = new Date(ontem.getFullYear(), ontem.getMonth(), ontem.getDate(), 0, 0, 0);
+        const fimOntem    = new Date(ontem.getFullYear(), ontem.getMonth(), ontem.getDate(), 23, 59, 59);
 
-        const snap = await firestoreDB.collection('resultados')
-            .where('loteria', '==', lot)
-            .where('data', '>=', firebase.firestore.Timestamp.fromDate(inicioDia))
-            .where('data', '<=', firebase.firestore.Timestamp.fromDate(fimDia))
-            .get();
-
-        if (snap.empty) return { contagem1st: {}, contagemTotal: {} };
+        const [snapHoje, snapOntem] = await Promise.all([
+            firestoreDB.collection('resultados')
+                .where('loteria', '==', lot)
+                .where('data', '>=', firebase.firestore.Timestamp.fromDate(inicioDia))
+                .where('data', '<=', firebase.firestore.Timestamp.fromDate(fimDia))
+                .get(),
+            firestoreDB.collection('resultados')
+                .where('loteria', '==', lot)
+                .where('data', '>=', firebase.firestore.Timestamp.fromDate(inicioOntem))
+                .where('data', '<=', firebase.firestore.Timestamp.fromDate(fimOntem))
+                .get()
+        ]);
 
         const contagem1st = {}, contagemTotal = {};
-        snap.forEach(doc => {
-            const d = doc.data();
-            const g = d.bichoGrupo;
-            if (!g) return;
+        snapHoje.forEach(doc => {
+            const d = doc.data(); const g = d.bichoGrupo; if (!g) return;
             contagemTotal[g] = (contagemTotal[g] || 0) + 1;
             if (d.posicao === 1) contagem1st[g] = (contagem1st[g] || 0) + 1;
         });
 
-        return { contagem1st, contagemTotal };
+        const contagem1stOntem = {}, contagemTotalOntem = {};
+        snapOntem.forEach(doc => {
+            const d = doc.data(); const g = d.bichoGrupo; if (!g) return;
+            contagemTotalOntem[g] = (contagemTotalOntem[g] || 0) + 1;
+            if (d.posicao === 1) contagem1stOntem[g] = (contagem1stOntem[g] || 0) + 1;
+        });
+
+        return { contagem1st, contagemTotal, contagem1stOntem, contagemTotalOntem };
     } catch(e) { return { contagem1st: {}, contagemTotal: {} }; }
 }
-
-// ── WIDGET DE ANÁLISE: QUAL LOTERIA JOGAR ────────────────────────────────
-// Analisa o histórico recente de cada loteria e calcula:
-// - Taxa de acerto do Top5 no 1º prêmio (últimos 30 sorteios)
-// - Score de confiança atual (saturação + cruz + sinais)
-// - Roadmap visual dos últimos 20 sorteios
 
 async function calcAnalisarLoteria(lot) {
     try {
@@ -27127,6 +27317,15 @@ function calcScoreCompleto(analise, puxada, externoBichos, cruzDoDia, turno, sat
             // Bônus: zero no 1º + pouco no total = mais atrasado real do dia
             if (v1 === 0 && vT <= 2) {
                 score += 20; motivos.push(`✨ Descansado hoje (+20)`);
+            }
+        }
+
+        // BÔNUS RETORNO: saturado ontem + descansado hoje = alta chance de voltar
+        // Validado: G01 Avestruz 3x ontem → saiu 1º às 02h hoje
+        if (saturacao.contagem1stOntem) {
+            const v1ont = (saturacao.contagem1stOntem[b.grupo] || 0);
+            if (v1ont >= 3 && (contagem1st[b.grupo] || 0) === 0) {
+                score += 30; motivos.push(`🔄 Retorno após saturação (+30)`);
             }
         }
 
