@@ -9220,7 +9220,12 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
             <!-- Botão Gerar -->
             <button id="calcGerarBtn" onclick="calcGerarPalpites()">⚡ CALCULAR PALPITES</button>
 
+            <!-- Resultados -->
+            <div id="calcResultados" style="display:none;flex-direction:column;gap:8px;margin-top:10px;"></div>
+
             </div><!-- /calcAbaGerar -->
+
+         
 
             <!-- ABA ANÁLISE -->
             <div id="calcAbaAnalise" style="display:none;">
@@ -11501,6 +11506,11 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                         if (!c.bicho1PremioPorDia[diaSem]) c.bicho1PremioPorDia[diaSem] = {};
                         c.bicho1PremioPorDia[diaSem][g] = (c.bicho1PremioPorDia[diaSem][g] || 0) + 1;
                         if (dS >= dataRecente) c.tendenciaRecente[g] = (c.tendenciaRecente[g] || 0) + 1;
+                        // Acumula dezenas do 1º prêmio por bicho
+                        const dz = m.slice(-2);
+                        if (!c.dezenaPorBicho1Premio[g]) c.dezenaPorBicho1Premio[g] = {};
+                        c.dezenaPorBicho1Premio[g][dz] = (c.dezenaPorBicho1Premio[g][dz] || 0) + 1;
+                        if (dS >= dataRecente) c.tendenciaRecente[g] = (c.tendenciaRecente[g] || 0) + 1;
                         
                         // Captura de dígitos para Milhar Carregada
                         if (c.ultimaMilhar1Premio) {
@@ -11525,6 +11535,12 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
                     dezenasQuentes: Object.keys(c.dezenaCounts || {}).sort((a, b) => c.dezenaCounts[b] - c.dezenaCounts[a]).slice(0, 50),
                     tendenciaRecente: c.tendenciaRecente || {},
                     bicho1PremioPorDia: c.bicho1PremioPorDia || {},
+                    dezenaPorBicho1Premio: Object.fromEntries(
+                        Object.entries(c.dezenaPorBicho1Premio || {}).map(([grp, counts]) => [
+                            grp,
+                            Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,5).map(x=>x[0])
+                        ])
+                    ),
                     digitosCarregados: {
                         p0: Object.entries(c.digitosCarregados?.p0 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
                         p1: Object.entries(c.digitosCarregados?.p1 || {}).sort((a,b) => b[1]-a[1]).slice(0,3).map(x=>x[0]),
@@ -27538,7 +27554,7 @@ function calcScoreDezenas(ranking, analise, sinalDoDia) {
 
     // Ordena por score e pega top 10
     todas.sort((a, b) => b.score - a.score);
-    return todas.slice(0, 10);
+    return todas.slice(0, 20);
 }
 
 function calcPaltitao(ranking, analise, nomeSorteio, sinalDoDia) {
@@ -27560,7 +27576,6 @@ function calcPaltitao(ranking, analise, nomeSorteio, sinalDoDia) {
 async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMotivos) {
     try {
         if (typeof firestoreDB === 'undefined') return null;
-        await firestoreDB.collection('historicoPalpites').doc(id).set(doc, { merge: true });
 
         const id = `${data}_${loteria}_${horario.replace(':','')}_${fonte}`;
 
@@ -27585,7 +27600,6 @@ async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMo
             acertos:   null,
         };
 
-        if (typeof firestoreDB === 'undefined') return null;
         await firestoreDB.collection('historicoPalpites').doc(id).set(doc, { merge: true });
         return id;
     } catch (e) {
@@ -27867,6 +27881,9 @@ function calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, satura
     };
     
     const paltitao = calcPaltitao(ranking, anComExtras, nomeSorteio, sinal);
+    console.log('[Paltitao]', paltitao);
+    console.log('[Ranking sample]', ranking.slice(0,3).map(b => b.grupo));
+    console.log('[cruzDoDia]', anComExtras._cruzDoDia);
 
     // Unidades: Firebase > externo
     const unidades = [];
@@ -27995,9 +28012,14 @@ function calcAvisarTiming(hora) {
 
 window.calcGerarPalpites = async function() {
     const btn    = document.getElementById('calcGerarBtn');
-    const resDiv = document.getElementById('calcResultados');
-    const lot    = document.querySelector('input[name="calcLoteria"]:checked')?.value || 'rj';
-    const hora   = document.querySelector('input[name="calcHora"]:checked')?.value || '09:20';
+    const resDiv = document.getElementById('calcResultados') || document.getElementById('calcResultadosGerar');
+    const lot    = document.querySelector('input[name="calcLoteria"]:checked')?.value;
+    const hora   = document.querySelector('input[name="calcHora"]:checked')?.value;
+
+    if (!btn || !resDiv) {
+        console.warn('[Calc] Elementos não encontrados: btn ou resDiv');
+        return;
+    }
     const data   = document.getElementById('calcDataInput')?.value || new Date().toISOString().split('T')[0];
 
     // Validação — loteria e horário obrigatórios
@@ -28214,7 +28236,7 @@ window.calcGerarPalpites = async function() {
     const paltitao = r.paltitao; // <-- LINHA ADICIONADA PARA CORRIGIR O ERRO
     const { palt5, dezenas: pDez } = paltitao;
     html += `<div class="paltitao-block">`;
-    html += `<div class="paltitao-title">🎯 Top 10 Dezenas — 1º Prêmio</div>`;
+    html += `<div class="paltitao-title">🎯 Top 20 Dezenas — 1º Prêmio</div>`;
     html += `<div class="paltitao-sub">
         Score individual · Cruz · Grupo · Data · Mestre · Ontem
     </div>`;
@@ -28233,6 +28255,7 @@ window.calcGerarPalpites = async function() {
                 <span class="dez-mot">${motivoStr}</span>
             </div>`;
     });
+    html += `</div>`; // fecha paltitao-dezenas
 
     // Top 10 grupos sempre
     html += `<div class="paltitao-cobertura" style="margin-top:10px;">
@@ -28287,16 +28310,7 @@ window.calcGerarPalpites = async function() {
         r.paltitao.dezMotivos || []
     ).then(id => {
         if (id) console.log('✅ Palpite salvo:', id);
-    });
-```
-
----
-
-### Parte 3 — Chamar na I.A. da tela principal
-
-Preciso localizar onde a I.A. finaliza a geração. Faz um Ctrl+F por:
-```
-autoGerarHistoricoIA
+        });
 };
 
 window.calcCopiar = function() {
