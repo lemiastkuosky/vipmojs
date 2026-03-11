@@ -23457,7 +23457,8 @@ for (var i = 0; i < 5; i++) {
 
 // 3. CENTENAS DUPLAS
 palpites.centena = [];
-for (var i = 0; i < 5; i++) {
+for (var i = 0; i < 10; i++) {
+    var bc = rankingTop10[i] || rankingTop10[rankingTop10.length-1];
     var bc = rankingTop10[i];
     var prefixoCent = (analise.prefixosPorBicho && analise.prefixosPorBicho[bc.grupo] && analise.prefixosPorBicho[bc.grupo][1])
         || String(getSeededInt(100)).padStart(2, '0');
@@ -23465,6 +23466,42 @@ for (var i = 0; i < 5; i++) {
     var indiceDezenaAlternativa = (bc.dezenasBase.indexOf(dezenasEscolhidas[i]) + 1) % 4;
     var dezenaAlternativa = bc.dezenasBase[indiceDezenaAlternativa];
     palpites.centena.push({ palpite: digitoCentena + dezenaAlternativa, tipo: bc.animal });
+}
+
+// 3b. DUQUES (combinações de 2 grupos)
+palpites.duques = [];
+const top5duq = rankingTop10.slice(0,5);
+for (var i = 0; i < top5duq.length; i++) {
+    for (var j = i+1; j < top5duq.length; j++) {
+        const dA = dezenasEscolhidas[i] || top5duq[i].dezenasBase[0];
+        const dB = dezenasEscolhidas[j] || top5duq[j].dezenasBase[0];
+        palpites.duques.push({
+            palpite: `${dA}-${dB}`,
+            tipo: `${top5duq[i].animal} + ${top5duq[j].animal}`
+        });
+        if (palpites.duques.length >= 10) break;
+    }
+    if (palpites.duques.length >= 10) break;
+}
+
+// 3c. TERNOS (combinações de 3 grupos)
+palpites.ternos = [];
+const top4ter = rankingTop10.slice(0,4);
+for (var i = 0; i < top4ter.length; i++) {
+    for (var j = i+1; j < top4ter.length; j++) {
+        for (var k = j+1; k < top4ter.length; k++) {
+            const dA = dezenasEscolhidas[i] || top4ter[i].dezenasBase[0];
+            const dB = dezenasEscolhidas[j] || top4ter[j].dezenasBase[0];
+            const dC = dezenasEscolhidas[k] || top4ter[k].dezenasBase[0];
+            palpites.ternos.push({
+                palpite: `${dA}-${dB}-${dC}`,
+                tipo: `${top4ter[i].animal}+${top4ter[j].animal}+${top4ter[k].animal}`
+            });
+            if (palpites.ternos.length >= 10) break;
+        }
+        if (palpites.ternos.length >= 10) break;
+    }
+    if (palpites.ternos.length >= 10) break;
 }
 
     // 4. JOGADA DE MESTRE (A primeira milhar gerada)
@@ -23516,6 +23553,8 @@ for (var i = 0; i < 5; i++) {
 
     return { palpites, rankingTop5, rankingTop10, cruzStr, alertaDobradinha, jogadaDeMestre, bichoSombra, volatilidade, dezenasFechamento };
 }
+
+
 
 // Variável global para guardar o texto da mensagem formatada
 let pendingAtrasadosMessage = "";
@@ -27693,8 +27732,7 @@ function calcPaltitao(ranking, analise, nomeSorteio, sinalDoDia) {
     };
 }
 
-// ── SALVAR PALPITE NO HISTÓRICO ──────────────────────────────────────────
-async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMotivos) {
+async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMotivos, extras) {
     try {
         if (typeof firestoreDB === 'undefined') return null;
 
@@ -27717,6 +27755,13 @@ async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMo
                 score:   x.score,
                 motivos: x.motivos,
             })),
+            cruzDoDia:    extras?.cruzDoDia    || null,
+            soma:         extras?.soma         || null,
+            jogadaMestre: extras?.jogadaMestre || null,
+            milhares:     extras?.milhares     || [],
+            centenas:     extras?.centenas     || [],
+            duques:       extras?.duques       || [],
+            ternos:       extras?.ternos       || [],
             resultado: null,
             acertos:   null,
         };
@@ -27860,6 +27905,22 @@ window.calcCarregarHistorico = async function(filtroLot) {
         const docs = [];
         snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
 
+        // Ordena por data desc + horário desc
+        docs.sort((a, b) => {
+            const dtA = `${a.data||''}${(a.horario||'').replace(':','')}`;
+            const dtB = `${b.data||''}${(b.horario||'').replace(':','')}`;
+            return dtB.localeCompare(dtA);
+        });
+
+        // Estatísticas
+
+        // Ordena por data desc + horário desc
+        docs.sort((a, b) => {
+            const dtA = `${a.data||''}${a.horario||''}`;
+            const dtB = `${b.data||''}${b.horario||''}`;
+            return dtB.localeCompare(dtA);
+        });
+
         // Estatísticas
         const comResultado = docs.filter(d => d.resultado && d.acertos);
         const totalAcertos5  = comResultado.filter(d => d.acertos.grupoTop5).length;
@@ -27915,10 +27976,11 @@ window.calcCarregarHistorico = async function(filtroLot) {
 
             html += `
             <div style="border:1px solid ${corBorda};border-radius:10px;padding:10px 12px;
-                margin-bottom:8px;font-size:0.7rem;">
+                margin-bottom:8px;font-size:0.7rem;cursor:pointer;"
+                onclick="calcAbrirDetalhe('${doc.id}')">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <span style="font-weight:800;">${lotNome} ${doc.horario}</span>
-                    <span style="color:#888;">${dataFmt} · ${doc.fonte==='ia'?'🤖 I.A.':'🎯 Calc'}</span>
+                    <span style="color:#888;">${dataFmt} · ${doc.fonte==='ia'?'🤖 I.A.':'🎯 Calc'} 👆</span>
                 </div>`;
 
             if (temRes) {
@@ -27941,13 +28003,25 @@ window.calcCarregarHistorico = async function(filtroLot) {
                     <div style="color:#888;font-style:italic;font-size:0.68rem;margin-bottom:6px;">⏳ Aguardando resultado...</div>
                     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;">
                         ${[1,2,3,4,5].map(p => `
-                        <div style="text-align:center;">
-                            <div style="font-size:0.55rem;color:#666;margin-bottom:2px;">${p}º</div>
-                            <input id="milhar${p}_${doc.id}" type="text" maxlength="4" placeholder="0000"
-                                style="width:100%;padding:3px 4px;border-radius:6px;border:1px solid #444;
-                                background:#1a1a2e;color:#fff;font-size:0.72rem;text-align:center;"
-                                onkeydown="if(event.key==='Enter') document.getElementById('milhar${p+1}_${doc.id}')?.focus()">
-                        </div>`).join('')}
+<div style="text-align:center;">
+    <div style="font-size:0.55rem;color:#666;margin-bottom:2px;">${p}º</div>
+    <input id="milhar${p}_${doc.id}" 
+        type="tel"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="4" 
+        placeholder="0000"
+        style="width:100%;padding:3px 4px;border-radius:6px;border:1px solid #444;
+        background:#1a1a2e;color:#fff;font-size:0.72rem;text-align:center;"
+        oninput="
+            this.value=this.value.replace(/\\D/g,'').slice(0,4);
+            if(this.value.length===4){
+                var next=document.getElementById('milhar${p+1}_${doc.id}');
+                if(next) next.focus();
+                else document.getElementById('milhar${p}_${doc.id}').blur();
+            }
+        ">
+</div>`).join('')}
                     </div>
                     <button onclick="calcSalvarResultadoManual('${doc.id}', [1,2,3,4,5].map(p => document.getElementById('milhar'+p+'_${doc.id}')?.value||'').filter(v=>v.length===4))"
                         style="width:100%;margin-top:6px;padding:5px;border-radius:6px;border:none;
@@ -27978,6 +28052,146 @@ window.calcCarregarHistorico = async function(filtroLot) {
         corpo.innerHTML = `<div style="color:#dc3545;padding:12px;">Erro ao carregar histórico: ${e.message}</div>`;
         console.error(e);
     }
+};
+
+window.calcAbrirDetalhe = async function(docId) {
+    const snap = await firestoreDB.collection('historicoPalpites').doc(docId).get();
+    if (!snap.exists) return;
+    const d = snap.data();
+
+    const lotNome = {rj:'PT Rio',lk:'Look',ln:'Nacional',ba:'Bahia',fd:'Federal'}[d.loteria]||d.loteria;
+    const dataFmt = (d.data||'').split('-').reverse().join('/');
+    const temRes  = d.resultado && d.acertos;
+    const ac5     = temRes && d.acertos.grupoTop5;
+    const ac10    = temRes && d.acertos.grupoTop10;
+    const acDez   = temRes && d.acertos.dezena;
+    const pos     = temRes && d.acertos.posicaoGrupo;
+
+    const existing = document.getElementById('calcDetalheModal');
+    if (existing) existing.remove();
+
+    const S = {
+        modal:    `position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;overflow-y:auto;padding:16px 10px;`,
+        box:      `background:#1a1a2e;border-radius:16px;max-width:480px;margin:0 auto;padding:20px;border:1px solid rgba(255,255,255,0.1);position:relative;`,
+        block:    `background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;margin-bottom:10px;`,
+        title:    `font-size:0.6rem;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:8px;`,
+        chip:     `display:inline-block;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#ccc;font-size:0.8rem;font-weight:700;margin:3px;`,
+        chipHot:  `display:inline-block;padding:5px 10px;border-radius:8px;background:rgba(13,110,253,0.15);border:1px solid rgba(13,110,253,0.4);color:#6ea8fe;font-size:0.8rem;font-weight:700;margin:3px;`,
+        row:      `display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;margin-bottom:4px;`,
+    };
+
+    const chip = (txt, hot=false) => `<span style="${hot?S.chipHot:S.chip}">${txt}</span>`;
+    const block = (title, content) => `<div style="${S.block}"><div style="${S.title}">${title}</div>${content}</div>`;
+
+    let html = `<div style="${S.box}">
+        <button onclick="document.getElementById('calcDetalheModal').remove()"
+            style="position:absolute;top:10px;right:14px;background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;">×</button>
+
+        <div style="text-align:center;margin-bottom:16px;">
+            <div style="font-size:0.62rem;color:#888;letter-spacing:2px;margin-bottom:4px;">${d.fonte==='ia'?'🤖 I.A.':'🎯 Calculadora'}</div>
+            <div style="font-size:1.1rem;font-weight:900;">${lotNome} · ${d.horario}</div>
+            <div style="font-size:0.72rem;color:#666;">${dataFmt}</div>
+        </div>`;
+
+    // Resultado
+    if (temRes) {
+        const cor = ac5?'#198754':ac10?'#0d6efd':'#dc3545';
+        html += block('🏆 Resultado 1º Prêmio', `
+            <div style="text-align:center;">
+                <div style="font-size:1.8rem;font-weight:900;letter-spacing:6px;color:#fff;margin:6px 0;">${d.resultado.milhar||'????'}</div>
+                <div style="font-size:0.78rem;color:#aaa;margin-bottom:8px;">G${d.resultado.grupo} ${d.resultado.animal} · Dezena ${d.resultado.dezena}</div>
+                <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                    <span style="color:${cor};font-weight:800;">${ac5?`✅ Top5 (#${pos})`:ac10?`⚠️ Top10 (#${pos})`:'❌ Fora do Top10'}</span>
+                    <span style="color:${acDez?'#198754':'#dc3545'};font-weight:800;">${acDez?'✅ Dezena':'❌ Dezena Fora'}</span>
+                </div>
+            </div>`);
+    } else {
+        html += `<div style="text-align:center;color:#888;font-style:italic;margin-bottom:10px;">⏳ Aguardando resultado</div>`;
+    }
+
+    // Cruz do Dia
+    if (d.cruzDoDia?.length) {
+        html += block('🌟 Cruz do Dia',
+            `<div style="display:flex;gap:10px;">${d.cruzDoDia.map(n=>
+                `<span style="width:36px;height:36px;border-radius:8px;background:rgba(255,193,7,0.15);
+                border:1px solid rgba(255,193,7,0.4);color:#ffc107;font-size:1.1rem;font-weight:900;
+                display:flex;align-items:center;justify-content:center;">${n}</span>`
+            ).join('')}</div>`);
+    }
+
+    // Soma + Mestre lado a lado
+    let somaHtml = '';
+    if (d.soma?.milhar) somaHtml += `<div style="flex:1;">${block('➕ Milhar da Soma',
+        `<div style="font-size:1.3rem;font-weight:900;color:#0d6efd;letter-spacing:4px;">${d.soma.milhar}</div>`)}</div>`;
+    if (d.jogadaMestre?.palpite) somaHtml += `<div style="flex:1;">${block('👑 Mestre',
+        `<div style="font-size:1.1rem;font-weight:900;color:#6f42c1;letter-spacing:3px;">${d.jogadaMestre.palpite}${d.jogadaMestre.invertida?' /'+d.jogadaMestre.invertida:''}</div>`)}</div>`;
+    if (somaHtml) html += `<div style="display:flex;gap:8px;">${somaHtml}</div>`;
+
+    // Top 10 Grupos
+    if (d.top10Grupos?.length) {
+        let gruposHtml = '';
+        d.top10Grupos.forEach((b,i) => {
+            const g   = String(typeof b==='string'?b:b.grupo).padStart(2,'0');
+            const a   = typeof b==='object'?b.animal:'G'+g;
+            const e   = typeof b==='object'?(b.emoji||''):'';
+            const f   = typeof b==='object'?b.forca:'';
+            const isRes = temRes && String(d.resultado.grupo).padStart(2,'0') === g;
+            const cor = i<3?'#198754':i<6?'#0d6efd':'#6c757d';
+            gruposHtml += `
+            <div style="${S.row}background:${isRes?'rgba(25,135,84,0.15)':'rgba(255,255,255,0.03)'};
+                border:1px solid ${isRes?'rgba(25,135,84,0.4)':'transparent'};">
+                <span style="color:${cor};font-weight:800;font-size:0.72rem;width:24px;">#${i+1}</span>
+                <span style="font-size:1rem;">${e}</span>
+                <span style="font-weight:700;font-size:0.82rem;flex:1;">${a}</span>
+                <span style="color:#666;font-size:0.68rem;">G${g}${f?' · '+f+'pts':''}</span>
+                ${isRes?'<span style="color:#198754;font-size:0.68rem;">← saiu</span>':''}
+            </div>`;
+        });
+        html += block('🐾 Top 10 Grupos', gruposHtml);
+    }
+
+    // Milhares
+    if (d.milhares?.length) html += block('🎰 Milhares',
+        `<div>${d.milhares.map((m,i)=>chip(m,i<2)).join('')}</div>`);
+
+    // Centenas
+    if (d.centenas?.length) html += block('💯 Centenas',
+        `<div>${d.centenas.map((c,i)=>chip(c,i<2)).join('')}</div>`);
+
+    // Duques
+    if (d.duques?.length) html += block('🎲 Duques',
+        `<div>${d.duques.map((dq,i)=>chip(dq,i<3)).join('')}</div>`);
+
+    // Ternos
+    if (d.ternos?.length) html += block('🎯 Ternos',
+        `<div>${d.ternos.map((t,i)=>chip(t,i<3)).join('')}</div>`);
+
+    // Top 20 Dezenas
+    if (d.top10Dezenas?.length) {
+        html += block('🔢 Top 20 Dezenas', `<div>${d.top10Dezenas.map(x => {
+            const dz = typeof x==='string'?x:x.dz;
+            const mot = typeof x==='object'?(x.motivos||[]).slice(0,2).join('+'):'';
+            const isRes = temRes && d.resultado.dezena === dz;
+            return `<span style="${isRes?
+                'display:inline-block;padding:5px 10px;border-radius:8px;background:rgba(25,135,84,0.2);border:2px solid #198754;color:#198754;font-size:0.8rem;font-weight:900;margin:3px;':
+                S.chip}" title="${mot}">${dz}${isRes?' ✅':''}</span>`;
+        }).join('')}</div>`);
+    }
+
+    html += `
+        <button onclick="document.getElementById('calcDetalheModal').remove()"
+            style="width:100%;margin-top:14px;padding:14px;border-radius:12px;border:none;
+            background:#0d6efd;color:#fff;font-weight:800;font-size:1rem;cursor:pointer;">
+            Fechar
+        </button>
+    </div>`;
+
+    const modal = document.createElement('div');
+    modal.id = 'calcDetalheModal';
+    modal.style.cssText = S.modal;
+    modal.innerHTML = html;
+    modal.onclick = e => { if(e.target===modal) modal.remove(); };
+    document.body.appendChild(modal);
 };
 
 // ── ORQUESTRADOR CENTRAL ─────────────────────────────────────────────────
@@ -28361,6 +28575,22 @@ window.calcGerarPalpites = async function() {
         html += `<div class="calc-chip-grid">${mr.palpites.centena.map((c,i)=>chip(c.palpite,i<2,` title="${c.tipo||''}"`)).join('')}</div></div>`;
     }
 
+    // ── DUQUES ───────────────────────────────────────────────────────────
+    if (mr && mr.palpites && mr.palpites.duques && mr.palpites.duques.length > 0) {
+        html += `<div class="calc-result-block"><div class="calc-result-title">🎲 Duques</div>`;
+        html += `<div class="calc-chip-grid">${mr.palpites.duques.map((d,i) =>
+            `<span class="calc-chip${i<3?' hot':''}" title="${d.tipo}">${d.palpite}</span>`
+        ).join('')}</div></div>`;
+    }
+
+    // ── TERNOS ───────────────────────────────────────────────────────────
+    if (mr && mr.palpites && mr.palpites.ternos && mr.palpites.ternos.length > 0) {
+        html += `<div class="calc-result-block"><div class="calc-result-title">🎯 Ternos</div>`;
+        html += `<div class="calc-chip-grid">${mr.palpites.ternos.map((t,i) =>
+            `<span class="calc-chip${i<3?' hot':''}" title="${t.tipo}">${t.palpite}</span>`
+        ).join('')}</div></div>`;
+    }
+
     // ── FECHO DE DEZENAS ──────────────────────────────────────────────────
     if (mr && mr.dezenasFechamento && mr.dezenasFechamento.length > 0) {
         html += `<div class="calc-result-block"><div class="calc-result-title">🔢 Fecho de Dezenas</div>`;
@@ -28433,6 +28663,8 @@ window.calcGerarPalpites = async function() {
         `🐾 *Grupos:*\n${r.top5.map((b,i)=>`${i+1}º ${b.emoji} ${b.animal} G${b.grupo} (${b.forca}pts)${b.motivos&&b.motivos[0]?' — '+b.motivos[0]:''}`).join('\n')}\n\n` +
         (mr&&mr.palpites&&mr.palpites.milhar ? `🎰 *Milhares:* ${mr.palpites.milhar.map(m=>m.palpite+(m.invertida?' /'+m.invertida:'')).join('  ')}\n\n` : '') +
         (mr&&mr.palpites&&mr.palpites.centena ? `💯 *Centenas:* ${mr.palpites.centena.map(c=>c.palpite).join('  ')}\n\n` : '') +
+(mr&&mr.palpites&&mr.palpites.duques?.length ? `🎲 *Duques:* ${mr.palpites.duques.map(d=>d.palpite).join('  ')}\n\n` : '') +
+(mr&&mr.palpites&&mr.palpites.ternos?.length ? `🎯 *Ternos:* ${mr.palpites.ternos.map(t=>t.palpite).join('  ')}\n\n` : '') +
         `🔢 *Top 20 Dezenas:* ${(r.paltitao.dezMotivos||[]).map(x=>`${x.dz}(${x.motivos.slice(0,2).join('+')})`).join('  ')}\n\n` +
         (r.unidades.length>0 ? `🔭 *Unidades:* ${r.unidades.map(u=>u.numero).join('  ')}\n\n` : '') +
         `🎯 *Top 10 Grupos — 1º Prêmio:*\n${r.ranking.slice(0,10).map((b,i)=>`${i+1}º ${b.emoji} G${b.grupo} ${b.animal} (${b.forca}pts)`).join('\n')}\n\n` +
@@ -28451,11 +28683,18 @@ window.calcGerarPalpites = async function() {
     // Salva no histórico automaticamente
     calcSalvarHistorico(
         'calculadora',
-        lot,
-        hora,
-        data,
+        lot, hora, data,
         r.ranking,
-        r.paltitao.dezMotivos || []
+        r.paltitao.dezMotivos || [],
+        {
+            cruzDoDia:    r.cruzDoDia,
+            soma:         r.soma,
+            jogadaMestre: mr?.jogadaDeMestre || null,
+            milhares:     (mr?.palpites?.milhar  || []).map(m => m.palpite+(m.invertida?' /'+m.invertida:'')),
+            centenas:     (mr?.palpites?.centena || []).map(c => c.palpite),
+            duques:       (mr?.palpites?.duques  || []).map(d => d.palpite),
+            ternos:       (mr?.palpites?.ternos  || []).map(t => t.palpite),
+        }
     ).then(id => {
         if (id) console.log('✅ Palpite salvo:', id);
         });
