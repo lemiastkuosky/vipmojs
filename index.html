@@ -17239,6 +17239,15 @@ setInterval(checkNewResultsAvailability, 60000);
 // Roda uma vez assim que o app carregar
 setTimeout(checkNewResultsAvailability, 5000);
 
+// Auto-gera histórico de palpites IA para extrações que já passaram
+// Roda 2 minutos após o app carregar e depois a cada 15 minutos
+setTimeout(() => {
+    if (firebase.auth().currentUser) autoGerarHistoricoIA();
+}, 120000);
+setInterval(() => {
+    if (firebase.auth().currentUser) autoGerarHistoricoIA();
+}, 900000);
+
     async function carregarNomesSalvos() {
         console.log("Iniciando carregamento de nomes (Modo Híbrido)...");
         
@@ -23774,111 +23783,67 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
 // === MOTOR DE AUTO-PREENCHIMENTO (GERAÇÃO RETROATIVA DA I.A) ===
 // ========================================================================
 async function autoGerarHistoricoIA() {
-    console.log("[Auto-IA] Sincronizando palpites perdidos do dia...");
-    const loterias = { 'rj': 'PT Rio', 'lk': 'Look Goiás', 'ln': 'Nacional', 'ba': 'PT Bahia', 'fd': 'Federal' };
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+
     const agora = new Date();
     const dataSimples = agora.toLocaleDateString('pt-BR');
     const dataID = dataSimples.replace(/\//g, '');
-    const divisor = "───────────────────";
 
-    const formatarEmColunas = (lista, itensPorLinha) => {
-            let linhas = [];
-            for (let i = 0; i < lista.length; i += itensPorLinha) {
-                linhas.push(lista.slice(i, i + itensPorLinha).join('  •  '));
-            }
-            return linhas.join('\n');
-        };
+    const CHAVE_COOLDOWN = `autoIA_${dataID}`;
+    try {
+        const ultimo = await getData(CHAVE_COOLDOWN);
+        if (ultimo) {
+            console.log('[Auto-IA] Já rodou hoje, pulando.');
+            return;
+        }
+    } catch(e) {}
 
-        const shareTexts = analisesPorExtracao.map((an) => {
-            const analiseHorario = dataIA ? (dataIA[an.extracao.nome] || dataIA['geral']) : {};
-            const unidadesAtrasadas = (analiseHorario.unidadesAtrasadas || []).slice(0, 2);
+    const loterias = {
+        'rj': 'PT Rio',
+        'lk': 'Look Goiás',
+        'ln': 'Nacional',
+        'ba': 'PT Bahia',
+        'fd': 'Federal'
+    };
 
-            let t = `🔮 *I.A. VIP PREMIUM - ${loteriaNome.toUpperCase()}*\n`;
-            t += `${divisor}\n🎯 *FOCO:* ${an.extracao.display}\n`;
-            t += `🚦 *VOLATILIDADE:* ${an.volatilidade.nivel} - ${an.volatilidade.texto}\n${divisor}\n\n`;
-            
-            if (an.alertaDobradinha) t += `🚨 *ALERTA I.A:* Padrão de *DOBRADINHA* com alta probabilidade neste sorteio!\n${divisor}\n\n`;
+    let gerou = false;
 
-            if (an.jogadaDeMestre) {
-                t += `👑 *JOGADA DE MESTRE*\n💸 *${an.jogadaDeMestre.palpite}* (Jogue Invertida 1º ao 5º)\n↳ O ${an.jogadaDeMestre.tipo} está com máxima convergência.\n\n`;
-            }
+    for (const [loteria, loteriaNome] of Object.entries(loterias)) {
+        try {
+            const horarios = horariosLoterias[loteria];
+            if (!horarios) continue;
 
-            if (dadosSoma && dadosSoma.bicho) {
-                t += `🧮 *MILHAR DA SOMA (1º ao 5º)*\n`;
-                t += `↳ Base Matemática: ${dadosSoma.sorteioBase}\n`;
-                t += `💸 *${dadosSoma.milhar}* - ${dadosSoma.bicho.emoji} *${dadosSoma.bicho.animal.toUpperCase()}*\n\n`;
-            }
+            for (const h of horarios) {
+                const momentoSorteio = new Date();
+                momentoSorteio.setHours(h.hora, h.minuto + 6, 0, 0);
 
-            t += `📊 *TERMÔMETRO DETALHADO:*\n\n`;
-            if (an.rankingTop5 && an.rankingTop5.length > 0) {
-                const medalhas = ['🥇', '🥈', '🥉', '🏅', '🏅'];
-                an.rankingTop5.forEach((b, i) => {
-                    t += `${medalhas[i] || '🏅'} *${i + 1}º LUGAR* - ${b.emoji} *${b.animal.toUpperCase()}* [🎯 ${b.confianca}]\n`;
-                    if (b.motivos && b.motivos.length > 0) {
-                        b.motivos.forEach(m => { t += `  ↳ ${m}\n`; });
-                    } else {
-                        t += `  ↳ 🔥 Alta Convergência de Dados\n`;
-                    }
-                    t += `\n`;
-                });
+                if (agora < momentoSorteio) continue;
+
+                const hL = h.display.replace(/[\s:]/g, '_');
+                const docIdUnico = `${loteria}_${dataID}_${hL}`;
+                try {
+                    const docRef = await firestoreDB.collection('historico_palpites_ia').doc(docIdUnico).get();
+                    if (docRef.exists) continue;
+                } catch(e) {}
+
+                console.log(`[Auto-IA] Gerando palpite para ${loteria} - ${h.display}`);
+                await generateIAPalpites(loteria, loteriaNome, true);
+                gerou = true;
+
+                await new Promise(r => setTimeout(r, 1500));
+                break;
             }
-            
-            t += `${divisor}\n🐾 *TOP 10 (Ranking Geral):*\n`;
-            if (an.rankingTop10 && an.rankingTop10.length >= 10) {
-                for (let i = 0; i < 5; i++) {
-                    let esq = `${String(i+1).padStart(2,'0')}º ${an.rankingTop10[i].emoji} ${an.rankingTop10[i].animal}`;
-                    let dir = `${String(i+6).padStart(2,'0')}º ${an.rankingTop10[i+5].emoji} ${an.rankingTop10[i+5].animal}`;
-                    t += `${esq.padEnd(16, ' ')} ┃  ${dir}\n`;
-                }
-            }
-            t += `${divisor}\n\n`;
-            
-            if (an.bichoSombra) t += `👻 *BICHO ESQUECIDO:*\nO ${an.bichoSombra.emoji} *${an.bichoSombra.animal}* está totalmente esquecido pelo sistema.\n\n`;
-            
-            if (unidadesAtrasadas && unidadesAtrasadas.length > 0) t += `🎯 *UNIDADES ATRASADAS (M):*\n*${unidadesAtrasadas.map(u => `[ ${u.numero} ]`).join('  •  ')}*\n\n`;
-            
-            t += `🚀 *MILHARES SUGERIDAS:*\n`;
-            if (an.palpites && an.palpites.milhar) {
-                // Alterado de slice(0, 5) para slice(0, 8) para mostrar mais milhares como no original
-                const linhasMilhar = an.palpites.milhar.slice(0, 8).map(m => m.invertida ? `🔹 ${m.palpite} ↔ ${m.invertida}` : `🔹 ${m.palpite}`);
-                t += formatarEmColunas(linhasMilhar, 1) + "\n\n";
-            }
-            
-            t += `💯 *CENTENAS QUENTES:*\n`;
-            if (an.palpites && an.palpites.centena) {
-                t += formatarEmColunas(an.palpites.centena.slice(0,10).map(c => c.palpite), 5) + `\n\n`;
-            }
-            
-            t += `${divisor}\n\n`;
-            
-            if (an.dezenasFechamento && an.dezenasFechamento.length === 5) {
-                t += `🛡️ *FECHO DE DEZENAS (Terno/Duque):*\nJogue as 5 dezenas combinadas:\n🎯 *${an.dezenasFechamento.join(' - ')}*\n\n`;
-            }
-            
-            t += `🤝 *DUQUES DE DEZENA:*\n`;
-            if (an.palpites && an.palpites.duques) { 
-                let d = []; 
-                an.palpites.duques.forEach(x => {
-                    if (x.combinacoes) d.push(...x.combinacoes);
-                    else if (x.palpite) d.push(x.palpite);
-                });
-                t += formatarEmColunas(d.map(c => `💠 ${c}`), 3) + `\n\n`; 
-            }
-            
-            t += `🤝 *TERNOS DE DEZENA:*\n`;
-            if (an.palpites && an.palpites.ternos) { 
-                let r = []; 
-                an.palpites.ternos.forEach(x => {
-                    if (x.combinacoes) r.push(...x.combinacoes);
-                    else if (x.palpite) r.push(x.palpite);
-                });
-                t += formatarEmColunas(r.map(c => `🏆 ${c}`), 2) + `\n\n`; 
-            }
-            
-            t += `${divisor}\n🍀 *BOA SORTE!* 🍀\n🗓️ Gerado: ${dataSimples} às ${horaAgora}\n📲 VIP - I.A in Real Time\n`;
-            return t;
-        });
+        } catch(e) {
+            console.warn(`[Auto-IA] Erro em ${loteria}:`, e);
+        }
     }
+
+    if (gerou) {
+        await saveData(CHAVE_COOLDOWN, new Date().toISOString());
+        console.log('[Auto-IA] Histórico gerado com sucesso.');
+    }
+}
 
 // --- FUNÇÃO DEFINITIVA: AUTO-SYNC ANTES DA I.A. ---
 async function syncLotteryBeforeIA(loteria) {
@@ -26581,6 +26546,15 @@ window.calcSalvarResultadoManual = async function(docId, milhares) {
             posicaoGrupo: (grupos10.indexOf(grupo)+1) || null,
         },
     });
+
+    // Retreina a I.A. silenciosamente para atualizar os gráficos e estatísticas
+    try {
+        showToast('✅ Resultado salvo! Atualizando I.A...', 'success');
+        await runFullIAAnalysisUpdate(true, palpite.loteria);
+        verificarStatusRoboIA();
+    } catch(e) {
+        console.warn('[Manual] Falha ao retreinar I.A. após resultado manual:', e);
+    }
 
     calcCarregarHistorico();
 };
