@@ -17241,12 +17241,14 @@ setTimeout(checkNewResultsAvailability, 5000);
 
 // Auto-gera histórico de palpites IA para extrações que já passaram
 // Roda 2 minutos após o app carregar e depois a cada 15 minutos
-setTimeout(() => {
-    if (firebase.auth().currentUser) autoGerarHistoricoIA();
-}, 120000);
 setInterval(() => {
-    if (firebase.auth().currentUser) autoGerarHistoricoIA();
-}, 900000);
+    if (firebase.auth().currentUser) calcBuscarEAtualizarResultados();
+}, 600000);
+
+// Roda uma vez 30 segundos após carregar
+setTimeout(() => {
+    if (firebase.auth().currentUser) calcBuscarEAtualizarResultados();
+}, 30000);
 
     async function carregarNomesSalvos() {
         console.log("Iniciando carregamento de nomes (Modo Híbrido)...");
@@ -27816,7 +27818,24 @@ async function calcBuscarEAtualizarResultados() {
                     'ba': { '10:00':'BAHIA 10:00','12:00':'BAHIA 12:00','15:00':'BAHIA 15:00','19:00':'BAHIA 19:00','21:00':'BAHIA 21:00' },
                 };
 
-                const nomeSorteioAlvo = (horaMapa[palpite.loteria] || {})[palpite.horario];
+                // Normaliza o horario salvo (pode ser "09:20", "LOOK_09_20", "LOOK 09:20", etc.)
+                const horarioRaw = palpite.horario || '';
+                const matchHora = horarioRaw.match(/(\d{2})[_:\s](\d{2})$/);
+                const horarioChave = matchHora ? `${matchHora[1]}:${matchHora[2]}` : horarioRaw;
+
+                // Tenta pelo mapa primeiro
+                let nomeSorteioAlvo = (horaMapa[palpite.loteria] || {})[horarioChave];
+
+                // Fallback: formato "LOOK 09:20" direto
+                if (!nomeSorteioAlvo && horarioRaw.includes(' ')) {
+                    nomeSorteioAlvo = horarioRaw;
+                }
+
+                // Fallback 2: formato "LOOK_09_20" -> "LOOK 09:20"
+                if (!nomeSorteioAlvo && horarioRaw.includes('_')) {
+                    nomeSorteioAlvo = horarioRaw.replace(/_(\d{2})_(\d{2})$/, ' $1:$2').replace(/_/g, ' ');
+                }
+
                 if (!nomeSorteioAlvo) continue;
 
                 // Busca o 1º prêmio desse sorteio
