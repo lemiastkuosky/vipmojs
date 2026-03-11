@@ -26451,6 +26451,68 @@ ${resumoTextoArr.join('\n\n')}
     mostrarSucessoVendaKit(numKit, gruposSelecionados, bichoDetails);
 };
 
+window.calcSalvarResultadoManual = async function(docId, milhares) {
+    // Aceita string (só 1º) ou array (1º ao 5º)
+    if (typeof milhares === 'string') milhares = [milhares];
+    milhares = milhares.map(m => m.replace(/\D/g,'').padStart(4,'0').slice(-4))
+                       .filter(m => m.length === 4);
+    if (milhares.length === 0) { alert('Digite pelo menos o 1º prêmio'); return; }
+
+    const docRef = firestoreDB.collection('historicoPalpites').doc(docId);
+    const snap   = await docRef.get();
+    if (!snap.exists) return;
+    const palpite = snap.data();
+
+    // Salva cada prêmio na coleção resultados
+    const dataSorteio = new Date(palpite.data + 'T12:00:00');
+    for (let i = 0; i < milhares.length; i++) {
+        const milhar    = milhares[i];
+        const bichoData = typeof getBichoDataFromNumber === 'function'
+            ? getBichoDataFromNumber(milhar) : null;
+        if (!bichoData) continue;
+
+        const item = {
+            milhar,
+            posicao: `${i+1}º`,
+            nomeLoteria: palpite.loteria.toUpperCase(),
+        };
+        // Reutiliza a função existente de salvar resultado
+        if (typeof salvarResultadoNoHistoricoIA === 'function') {
+            await salvarResultadoNoHistoricoIA(
+                palpite.loteria, dataSorteio,
+                palpite.nomeSorteio || '', item
+            );
+        }
+    }
+
+    // Calcula acertos pelo 1º prêmio
+    const milhar1  = milhares[0];
+    const bicho1   = getBichoDataFromNumber(milhar1);
+    const grupo    = String(bicho1.grupo).padStart(2,'0');
+    const dezena   = milhar1.slice(-2);
+    const grupos10 = (palpite.top10Grupos||[]).map(b =>
+        String(typeof b==='string'?b:b.grupo).padStart(2,'0'));
+    const dezenas  = (palpite.top10Dezenas||[]).map(x =>
+        typeof x==='string'?x:String(x.dz).padStart(2,'0'));
+
+    await docRef.update({
+        resultado: {
+            grupo, dezena, milhar: milhar1,
+            animal:    bicho1.animal,
+            buscadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+            manual:    true,
+        },
+        acertos: {
+            grupoTop5:    grupos10.slice(0,5).includes(grupo),
+            grupoTop10:   grupos10.includes(grupo),
+            dezena:       dezenas.includes(dezena),
+            posicaoGrupo: (grupos10.indexOf(grupo)+1) || null,
+        },
+    });
+
+    calcCarregarHistorico();
+};
+
 // JANELA DE SELEÇÃO DE BICHOS DO KIT (PROMPT)
 window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSelecionado) {
     return new Promise(resolve => {
@@ -27874,7 +27936,27 @@ window.calcCarregarHistorico = async function(filtroLot) {
                     </span>
                 </div>`;
             } else {
-                html += `<div style="color:#888;font-style:italic;">⏳ Aguardando resultado...</div>`;
+                html += `
+                <div style="margin-top:6px;">
+                    <div style="color:#888;font-style:italic;font-size:0.68rem;margin-bottom:6px;">⏳ Aguardando resultado...</div>
+                    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;">
+                        ${[1,2,3,4,5].map(p => `
+                        <div style="text-align:center;">
+                            <div style="font-size:0.55rem;color:#666;margin-bottom:2px;">${p}º</div>
+                            <input id="milhar${p}_${doc.id}" type="text" maxlength="4" placeholder="0000"
+                                style="width:100%;padding:3px 4px;border-radius:6px;border:1px solid #444;
+                                background:#1a1a2e;color:#fff;font-size:0.72rem;text-align:center;"
+                                onkeydown="if(event.key==='Enter') document.getElementById('milhar${p+1}_${doc.id}')?.focus()">
+                        </div>`).join('')}
+                    </div>
+                    <button onclick="calcSalvarResultadoManual('${doc.id}', [1,2,3,4,5].map(p => document.getElementById('milhar'+p+'_${doc.id}')?.value||'').filter(v=>v.length===4))"
+                        style="width:100%;margin-top:6px;padding:5px;border-radius:6px;border:none;
+                        background:#0d6efd;color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;">
+                        ✓ Salvar Resultado
+                    </button>
+                </div>
+                    </div>
+                </div>`;
             }
 
             // Top5 grupos
