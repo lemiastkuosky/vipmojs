@@ -81,7 +81,7 @@ async function treinarLoteria(db, loteria) {
     const snapshot = await db.collection('resultados')
         .where('loteria', '==', loteria)
         .orderBy('data', 'desc')
-        .limit(5000)
+        .limit(500)
         .get();
 
     if (snapshot.empty) {
@@ -217,6 +217,8 @@ async function main() {
     for (const loteria of LOTERIAS) {
         try {
             await treinarLoteria(db, loteria);
+            // Pausa 3s entre loterias para não estourar cota
+            await new Promise(r => setTimeout(r, 3000));
         } catch (e) {
             console.error(`   ❌ Erro ao treinar ${loteria}:`, e.message);
             erros++;
