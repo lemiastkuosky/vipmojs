@@ -6720,13 +6720,14 @@ body.dark-mode #calcPalpitesModal .calc-result-block { background: rgba(13,110,2
 }
 #calcPalpitesModal .calc-chip-grid { display: flex; flex-wrap: wrap; gap: 7px; }
 #calcPalpitesModal .calc-chip {
-    padding: 6px 13px;
+    padding: 6px 10px;
     border: 1.5px solid rgba(13,110,253,0.3);
     border-radius: 7px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     color: #0d6efd;
+    text-align: center;
     background: rgba(13,110,253,0.06);
     animation: calcChipIn 0.2s ease both;
 }
@@ -23459,7 +23460,6 @@ for (var i = 0; i < 5; i++) {
 palpites.centena = [];
 for (var i = 0; i < 10; i++) {
     var bc = rankingTop10[i] || rankingTop10[rankingTop10.length-1];
-    var bc = rankingTop10[i];
     var prefixoCent = (analise.prefixosPorBicho && analise.prefixosPorBicho[bc.grupo] && analise.prefixosPorBicho[bc.grupo][1])
         || String(getSeededInt(100)).padStart(2, '0');
     var digitoCentena = centenasTop.length > 1 ? centenasTop[getSeededInt(2)] : prefixoCent.slice(-1);
@@ -23473,8 +23473,8 @@ palpites.duques = [];
 const top5duq = rankingTop10.slice(0,5);
 for (var i = 0; i < top5duq.length; i++) {
     for (var j = i+1; j < top5duq.length; j++) {
-        const dA = dezenasEscolhidas[i] || top5duq[i].dezenasBase[0];
-        const dB = dezenasEscolhidas[j] || top5duq[j].dezenasBase[0];
+        const dA = dezenasEscolhidas[i] || (top5duq[i].dezenasBase||[])[0] || '00';
+        const dB = dezenasEscolhidas[j] || (top5duq[j].dezenasBase||[])[0] || '00';
         palpites.duques.push({
             palpite: `${dA}-${dB}`,
             tipo: `${top5duq[i].animal} + ${top5duq[j].animal}`
@@ -23490,9 +23490,9 @@ const top4ter = rankingTop10.slice(0,4);
 for (var i = 0; i < top4ter.length; i++) {
     for (var j = i+1; j < top4ter.length; j++) {
         for (var k = j+1; k < top4ter.length; k++) {
-            const dA = dezenasEscolhidas[i] || top4ter[i].dezenasBase[0];
-            const dB = dezenasEscolhidas[j] || top4ter[j].dezenasBase[0];
-            const dC = dezenasEscolhidas[k] || top4ter[k].dezenasBase[0];
+            const dA = dezenasEscolhidas[i] || (top4ter[i].dezenasBase||[])[0] || '00';
+        const dB = dezenasEscolhidas[j] || (top4ter[j].dezenasBase||[])[0] || '00';
+        const dC = dezenasEscolhidas[k] || (top4ter[k].dezenasBase||[])[0] || '00';
             palpites.ternos.push({
                 palpite: `${dA}-${dB}-${dC}`,
                 tipo: `${top4ter[i].animal}+${top4ter[j].animal}+${top4ter[k].animal}`
@@ -27902,24 +27902,19 @@ window.calcCarregarHistorico = async function(filtroLot) {
             return;
         }
 
-        const docs = [];
-        snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
-
-        // Ordena por data desc + horário desc
+        // Ordena por data desc + ordem do ciclo diário
+        const ordemCiclo = {
+            '23:00':0,'23:20':1,'21:30':2,'21:20':3,'21:00':4,
+            '19:00':5,'18:20':6,'17:00':7,'16:20':8,'15:00':9,
+            '14:20':10,'12:00':11,'11:20':12,'10:00':13,'09:20':14,
+            '08:00':15,'07:20':16,'02:00':17,
+        };
         docs.sort((a, b) => {
-            const dtA = `${a.data||''}${(a.horario||'').replace(':','')}`;
-            const dtB = `${b.data||''}${(b.horario||'').replace(':','')}`;
-            return dtB.localeCompare(dtA);
+            if ((b.data||'') !== (a.data||'')) return (b.data||'').localeCompare(a.data||'');
+            return (ordemCiclo[a.horario]??99) - (ordemCiclo[b.horario]??99);
         });
 
         // Estatísticas
-
-        // Ordena por data desc + horário desc
-        docs.sort((a, b) => {
-            const dtA = `${a.data||''}${a.horario||''}`;
-            const dtB = `${b.data||''}${b.horario||''}`;
-            return dtB.localeCompare(dtA);
-        });
 
         // Estatísticas
         const comResultado = docs.filter(d => d.resultado && d.acertos);
@@ -28572,13 +28567,13 @@ window.calcGerarPalpites = async function() {
     // ── CENTENAS ─────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.centena && mr.palpites.centena.length > 0) {
         html += `<div class="calc-result-block"><div class="calc-result-title">💯 Centenas</div>`;
-        html += `<div class="calc-chip-grid">${mr.palpites.centena.map((c,i)=>chip(c.palpite,i<2,` title="${c.tipo||''}"`)).join('')}</div></div>`;
+        html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${mr.palpites.centena.map((c,i)=>chip(c.palpite,i<2,` title="${c.tipo||''}"`)).join('')}</div></div>`;
     }
 
     // ── DUQUES ───────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.duques && mr.palpites.duques.length > 0) {
         html += `<div class="calc-result-block"><div class="calc-result-title">🎲 Duques</div>`;
-        html += `<div class="calc-chip-grid">${mr.palpites.duques.map((d,i) =>
+        html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${mr.palpites.duques.map((d,i) =>
             `<span class="calc-chip${i<3?' hot':''}" title="${d.tipo}">${d.palpite}</span>`
         ).join('')}</div></div>`;
     }
@@ -28586,7 +28581,7 @@ window.calcGerarPalpites = async function() {
     // ── TERNOS ───────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.ternos && mr.palpites.ternos.length > 0) {
         html += `<div class="calc-result-block"><div class="calc-result-title">🎯 Ternos</div>`;
-        html += `<div class="calc-chip-grid">${mr.palpites.ternos.map((t,i) =>
+        html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${mr.palpites.ternos.map((t,i) =>
             `<span class="calc-chip${i<3?' hot':''}" title="${t.tipo}">${t.palpite}</span>`
         ).join('')}</div></div>`;
     }
