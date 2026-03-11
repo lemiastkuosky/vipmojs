@@ -1,0 +1,44 @@
+name: 🤖 Treinar I.A. Diário
+
+on:
+  schedule:
+    # Todo dia às 03:00 horário de Brasília (06:00 UTC)
+    - cron: '0 6 * * *'
+  
+  # Permite rodar manualmente pelo GitHub
+  workflow_dispatch:
+    inputs:
+      loteria:
+        description: 'Loteria específica (deixe vazio para todas)'
+        required: false
+        default: ''
+
+jobs:
+  treinar:
+    name: Treinar I.A. VipMojs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Instalar dependências
+        run: |
+          mkdir -p scripts
+          cd scripts
+          npm init -y
+          npm install firebase-admin
+
+      - name: 🤖 Rodar treinamento
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: node scripts/treinar.js
+
+      - name: ✅ Concluído
+        run: echo "Treinamento finalizado em $(date +'%d/%m/%Y %H:%M') UTC"
