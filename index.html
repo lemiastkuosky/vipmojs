@@ -27881,13 +27881,35 @@ window.calcMudarAba = function(aba) {
     if (aba === 'historico') calcCarregarHistorico();
 };
 
+window.calcEditarResultadoManual = async function(docId) {
+    // Pede confirmação usando a sua própria janela modal personalizada
+    const confirmed = await showCustomConfirm('Deseja apagar este resultado para digitar novamente?', 'Sim, Editar', 'Cancelar');
+    
+    if (!confirmed) return;
+
+    try {
+        // Remove os resultados salvos do Firebase para forçar as caixinhas a reaparecerem
+        await firestoreDB.collection('historicoPalpites').doc(docId).update({
+            resultado: null,
+            acertos: null
+        });
+        showToast('Campos reabertos para edição!', 'info');
+        
+        // Recarrega o histórico
+        calcCarregarHistorico();
+    } catch(e) {
+        console.error("Erro ao editar resultado:", e);
+        showToast('Erro ao abrir edição.', 'error');
+    }
+};
+
+// ── CARREGAR HISTÓRICO ───────────────────────────────────────────────────
 // ── CARREGAR HISTÓRICO ───────────────────────────────────────────────────
 window.calcCarregarHistorico = async function(filtroLot) {
     const corpo = document.getElementById('calcHistoricoCorpo');
     if (!corpo) return;
     corpo.innerHTML = '<div class="aw-loading">⏳ Buscando resultados...</div>';
 
-    // Atualiza resultados pendentes primeiro
     await calcBuscarEAtualizarResultados();
 
     try {
@@ -27902,52 +27924,50 @@ window.calcCarregarHistorico = async function(filtroLot) {
             return;
         }
 
-        // Ordena por data desc + ordem do ciclo diário
-        const ordemCiclo = {
-            '23:00':0,'23:20':1,'21:30':2,'21:20':3,'21:00':4,
-            '19:00':5,'18:20':6,'17:00':7,'16:20':8,'15:00':9,
-            '14:20':10,'12:00':11,'11:20':12,'10:00':13,'09:20':14,
-            '08:00':15,'07:20':16,'02:00':17,
-        };
-        docs.sort((a, b) => {
-            if ((b.data||'') !== (a.data||'')) return (b.data||'').localeCompare(a.data||'');
-            return (ordemCiclo[a.horario]??99) - (ordemCiclo[b.horario]??99);
+        const docs = [];
+        snap.forEach(doc => {
+            docs.push({ id: doc.id, ...doc.data() });
         });
 
-        // Estatísticas
+        const ordemCiclo = {
+            '23:00': 0, '23:20': 1, '02:00': 2, '07:20': 3, '08:00': 4,
+            '09:20': 5, '10:00': 6, '11:20': 7, '12:00': 8, '14:20': 9,
+            '15:00': 10, '16:20': 11, '17:00': 12, '18:20': 13, '19:00': 14,
+            '20:00': 15, '21:00': 16, '21:20': 17, '21:30': 18
+        };
+        
+        docs.sort((a, b) => {
+            if ((b.data||'') !== (a.data||'')) {
+                return (b.data||'').localeCompare(a.data||'');
+            }
+            return (ordemCiclo[b.horario] ?? -1) - (ordemCiclo[a.horario] ?? -1);
+        });
 
-        // Estatísticas
         const comResultado = docs.filter(d => d.resultado && d.acertos);
         const totalAcertos5  = comResultado.filter(d => d.acertos.grupoTop5).length;
         const totalAcertos10 = comResultado.filter(d => d.acertos.grupoTop10).length;
         const totalDezena    = comResultado.filter(d => d.acertos.dezena).length;
         const total          = comResultado.length;
-
         const pct = (n) => total > 0 ? Math.round(n/total*100) : 0;
 
         let html = `
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">
-            <div style="background:rgba(25,135,84,0.1);border:1px solid rgba(25,135,84,0.3);
-                border-radius:8px;padding:8px;text-align:center;">
+            <div style="background:rgba(25,135,84,0.1);border:1px solid rgba(25,135,84,0.3);border-radius:8px;padding:8px;text-align:center;">
                 <div style="font-size:1.3rem;font-weight:900;color:#198754;">${pct(totalAcertos5)}%</div>
                 <div style="font-size:0.58rem;color:#888;">Grupo Top5</div>
                 <div style="font-size:0.6rem;color:#666;">${totalAcertos5}/${total}</div>
             </div>
-            <div style="background:rgba(13,110,253,0.1);border:1px solid rgba(13,110,253,0.3);
-                border-radius:8px;padding:8px;text-align:center;">
+            <div style="background:rgba(13,110,253,0.1);border:1px solid rgba(13,110,253,0.3);border-radius:8px;padding:8px;text-align:center;">
                 <div style="font-size:1.3rem;font-weight:900;color:#0d6efd;">${pct(totalAcertos10)}%</div>
                 <div style="font-size:0.58rem;color:#888;">Grupo Top10</div>
                 <div style="font-size:0.6rem;color:#666;">${totalAcertos10}/${total}</div>
             </div>
-            <div style="background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.4);
-                border-radius:8px;padding:8px;text-align:center;">
+            <div style="background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.4);border-radius:8px;padding:8px;text-align:center;">
                 <div style="font-size:1.3rem;font-weight:900;color:#856404;">${pct(totalDezena)}%</div>
                 <div style="font-size:0.58rem;color:#888;">Dezena</div>
                 <div style="font-size:0.6rem;color:#666;">${totalDezena}/${total}</div>
             </div>
         </div>
-
-        <!-- Filtros -->
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
             ${['','rj','lk','ln','ba'].map(l => `
                 <button onclick="calcCarregarHistorico('${l}')"
@@ -27959,7 +27979,6 @@ window.calcCarregarHistorico = async function(filtroLot) {
                 </button>`).join('')}
         </div>`;
 
-        // Lista de palpites
         docs.forEach(doc => {
             const temRes  = doc.resultado && doc.acertos;
             const ac5     = temRes && doc.acertos.grupoTop5;
@@ -27981,16 +28000,21 @@ window.calcCarregarHistorico = async function(filtroLot) {
             if (temRes) {
                 const pos = doc.acertos.posicaoGrupo;
                 html += `
-                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                    <span style="background:rgba(0,0,0,0.1);padding:3px 8px;border-radius:6px;">
-                        1º G${doc.resultado.grupo} ${doc.resultado.animal} · ${doc.resultado.dezena}
-                    </span>
-                    <span style="color:${ac5?'#198754':ac10?'#0d6efd':'#dc3545'};font-weight:700;">
-                        ${ac5?`✅ Top${pos}`:''}${!ac5&&ac10?`⚠️ Top${pos}`:''}${!ac10?'❌ Fora':''}
-                    </span>
-                    <span style="color:${acDez?'#198754':'#dc3545'};">
-                        ${acDez?'✅ Dez':'❌ Dez'}
-                    </span>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1;">
+                        <span style="background:rgba(0,0,0,0.1);padding:3px 8px;border-radius:6px;">
+                            1º G${doc.resultado.grupo} ${doc.resultado.animal} · ${doc.resultado.dezena}
+                        </span>
+                        <span style="color:${ac5?'#198754':ac10?'#0d6efd':'#dc3545'};font-weight:700;">
+                            ${ac5?`✅ Top${pos}`:''}${!ac5&&ac10?`⚠️ Top${pos}`:''}${!ac10?'❌ Fora':''}
+                        </span>
+                        <span style="color:${acDez?'#198754':'#dc3545'};">
+                            ${acDez?'✅ Dez':'❌ Dez'}
+                        </span>
+                    </div>
+                    <button onclick="event.stopPropagation(); calcEditarResultadoManual('${doc.id}')"
+                        style="background:none; border:none; font-size:1.1rem; cursor:pointer; padding:4px;"
+                        title="Editar / Corrigir Resultado">✏️</button>
                 </div>`;
             } else {
                 html += `
@@ -28001,13 +28025,10 @@ window.calcCarregarHistorico = async function(filtroLot) {
 <div style="text-align:center;">
     <div style="font-size:0.55rem;color:#666;margin-bottom:2px;">${p}º</div>
     <input id="milhar${p}_${doc.id}" 
-        type="tel"
-        inputmode="numeric"
-        pattern="[0-9]*"
-        maxlength="4" 
-        placeholder="0000"
+        type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000"
         style="width:100%;padding:3px 4px;border-radius:6px;border:1px solid #444;
-        background:#1a1a2e;color:#fff;font-size:0.72rem;text-align:center;"
+        background:#1a1a2e;color:#fff;font-size:0.72rem;text-align:center; -webkit-user-select:text !important; user-select:text !important; pointer-events:auto;"
+        onclick="event.stopPropagation();" onmousedown="event.stopPropagation();" ontouchstart="event.stopPropagation();"
         oninput="
             this.value=this.value.replace(/\\D/g,'').slice(0,4);
             if(this.value.length===4){
@@ -28018,37 +28039,44 @@ window.calcCarregarHistorico = async function(filtroLot) {
         ">
 </div>`).join('')}
                     </div>
-                    <button onclick="calcSalvarResultadoManual('${doc.id}', [1,2,3,4,5].map(p => document.getElementById('milhar'+p+'_${doc.id}')?.value||'').filter(v=>v.length===4))"
+                    <button onclick="event.stopPropagation(); calcSalvarResultadoManual('${doc.id}', [1,2,3,4,5].map(p => document.getElementById('milhar'+p+'_${doc.id}')?.value||'').filter(v=>v.length===4))"
                         style="width:100%;margin-top:6px;padding:5px;border-radius:6px;border:none;
                         background:#0d6efd;color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;">
                         ✓ Salvar Resultado
                     </button>
-                </div>
-                    </div>
                 </div>`;
             }
 
-            // Top5 grupos
-            const g5 = (doc.top10Grupos||[]).slice(0,5).map(b=>
-                `G${typeof b==='string'?b:b.grupo}`).join(' · ');
+            const g5 = (doc.top10Grupos||[]).slice(0,5).map(b=>`G${typeof b==='string'?b:b.grupo}`).join(' · ');
             html += `<div style="color:#666;margin-top:4px;font-size:0.62rem;">🏆 ${g5}</div>`;
-
-            // Top10 dezenas
-            const d10 = (doc.top10Dezenas||[]).slice(0,10).map(x=>
-                typeof x==='string'?x:x.dz).join(' ');
-            html += `<div style="color:#666;font-size:0.62rem;">🔢 ${d10}</div>`;
-
-            html += `</div>`;
+            const d10 = (doc.top10Dezenas||[]).slice(0,10).map(x=>typeof x==='string'?x:x.dz).join(' ');
+            html += `<div style="color:#666;font-size:0.62rem;">🔢 ${d10}</div></div>`;
         });
-
         corpo.innerHTML = html;
-
     } catch(e) {
         corpo.innerHTML = `<div style="color:#dc3545;padding:12px;">Erro ao carregar histórico: ${e.message}</div>`;
         console.error(e);
     }
 };
 
+// ── FUNÇÃO DE EDITAR MANUAL ──────────────────────────────────────────────
+window.calcEditarResultadoManual = async function(docId) {
+    const confirmed = await showCustomConfirm('Deseja apagar este resultado para digitar novamente?', 'Sim, Editar', 'Cancelar');
+    if (!confirmed) return;
+    try {
+        await firestoreDB.collection('historicoPalpites').doc(docId).update({
+            resultado: null,
+            acertos: null
+        });
+        showToast('Campos reabertos para edição!', 'info');
+        calcCarregarHistorico();
+    } catch(e) {
+        console.error("Erro ao editar resultado:", e);
+        showToast('Erro ao abrir edição.', 'error');
+    }
+};
+
+// ── ABRIR DETALHE (CORRIGIDO) ────────────────────────────────────────────
 window.calcAbrirDetalhe = async function(docId) {
     const snap = await firestoreDB.collection('historicoPalpites').doc(docId).get();
     if (!snap.exists) return;
@@ -28088,7 +28116,6 @@ window.calcAbrirDetalhe = async function(docId) {
             <div style="font-size:0.72rem;color:#666;">${dataFmt}</div>
         </div>`;
 
-    // Resultado
     if (temRes) {
         const cor = ac5?'#198754':ac10?'#0d6efd':'#dc3545';
         html += block('🏆 Resultado 1º Prêmio', `
@@ -28104,7 +28131,6 @@ window.calcAbrirDetalhe = async function(docId) {
         html += `<div style="text-align:center;color:#888;font-style:italic;margin-bottom:10px;">⏳ Aguardando resultado</div>`;
     }
 
-    // Cruz do Dia
     if (d.cruzDoDia?.length) {
         html += block('🌟 Cruz do Dia',
             `<div style="display:flex;gap:10px;">${d.cruzDoDia.map(n=>
@@ -28114,7 +28140,6 @@ window.calcAbrirDetalhe = async function(docId) {
             ).join('')}</div>`);
     }
 
-    // Soma + Mestre lado a lado
     let somaHtml = '';
     if (d.soma?.milhar) somaHtml += `<div style="flex:1;">${block('➕ Milhar da Soma',
         `<div style="font-size:1.3rem;font-weight:900;color:#0d6efd;letter-spacing:4px;">${d.soma.milhar}</div>`)}</div>`;
@@ -28122,7 +28147,6 @@ window.calcAbrirDetalhe = async function(docId) {
         `<div style="font-size:1.1rem;font-weight:900;color:#6f42c1;letter-spacing:3px;">${d.jogadaMestre.palpite}${d.jogadaMestre.invertida?' /'+d.jogadaMestre.invertida:''}</div>`)}</div>`;
     if (somaHtml) html += `<div style="display:flex;gap:8px;">${somaHtml}</div>`;
 
-    // Top 10 Grupos
     if (d.top10Grupos?.length) {
         let gruposHtml = '';
         d.top10Grupos.forEach((b,i) => {
@@ -28145,23 +28169,11 @@ window.calcAbrirDetalhe = async function(docId) {
         html += block('🐾 Top 10 Grupos', gruposHtml);
     }
 
-    // Milhares
-    if (d.milhares?.length) html += block('🎰 Milhares',
-        `<div>${d.milhares.map((m,i)=>chip(m,i<2)).join('')}</div>`);
+    if (d.milhares?.length) html += block('🎰 Milhares', `<div>${d.milhares.map((m,i)=>chip(m,i<2)).join('')}</div>`);
+    if (d.centenas?.length) html += block('💯 Centenas', `<div>${d.centenas.map((c,i)=>chip(c,i<2)).join('')}</div>`);
+    if (d.duques?.length) html += block('🎲 Duques', `<div>${d.duques.map((dq,i)=>chip(dq,i<3)).join('')}</div>`);
+    if (d.ternos?.length) html += block('🎯 Ternos', `<div>${d.ternos.map((t,i)=>chip(t,i<3)).join('')}</div>`);
 
-    // Centenas
-    if (d.centenas?.length) html += block('💯 Centenas',
-        `<div>${d.centenas.map((c,i)=>chip(c,i<2)).join('')}</div>`);
-
-    // Duques
-    if (d.duques?.length) html += block('🎲 Duques',
-        `<div>${d.duques.map((dq,i)=>chip(dq,i<3)).join('')}</div>`);
-
-    // Ternos
-    if (d.ternos?.length) html += block('🎯 Ternos',
-        `<div>${d.ternos.map((t,i)=>chip(t,i<3)).join('')}</div>`);
-
-    // Top 20 Dezenas
     if (d.top10Dezenas?.length) {
         html += block('🔢 Top 20 Dezenas', `<div>${d.top10Dezenas.map(x => {
             const dz = typeof x==='string'?x:x.dz;
