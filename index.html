@@ -7097,7 +7097,7 @@ body.dark-mode #calcTimingAviso.ideal     { background: rgba(25,135,84,0.12); }
 body.dark-mode #calcTimingAviso.cedo      { background: rgba(255,193,7,0.1); }
 body.dark-mode #calcTimingAviso.muito-cedo { background: rgba(220,53,69,0.1); }
 
-/* ── TOP 10 DEZENAS COM MOTIVO ── */
+/* ── TOP 20 DEZENAS COM MOTIVO ── */
 .paltitao-dezenas {
     display: flex;
     flex-wrap: wrap;
@@ -9157,6 +9157,26 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
     <div class="modal-content">
         <span class="close-modal" onclick="fecharCalculadora()">×</span>
         <h3 class="modal-title">🎯 Calculadora de Palpites</h3>
+
+        <!-- LEDs de Status -->
+        <div id="calcStatusLeds" style="display:flex;gap:6px;justify-content:center;
+            padding:4px 0 8px;flex-wrap:wrap;">
+            <div id="ledFirebase" title="Firebase" style="display:flex;align-items:center;
+                gap:4px;font-size:0.6rem;color:#888;">
+                <span style="width:8px;height:8px;border-radius:50%;background:#444;
+                    display:inline-block;" id="ledFirebaseDot"></span>Firebase
+            </div>
+            <div id="ledExterno" title="Dados Externos" style="display:flex;align-items:center;
+                gap:4px;font-size:0.6rem;color:#888;">
+                <span style="width:8px;height:8px;border-radius:50%;background:#444;
+                    display:inline-block;" id="ledExternoDot"></span>Externo
+            </div>
+            <div id="ledIA" title="I.A. Atualizada" style="display:flex;align-items:center;
+                gap:4px;font-size:0.6rem;color:#888;">
+                <span style="width:8px;height:8px;border-radius:50%;background:#444;
+                    display:inline-block;" id="ledIADot"></span><span id="ledIALabel">I.A.</span>
+            </div>
+        </div>
 
         <!-- Abas -->
         <div style="display:flex;gap:6px;padding:0 4px 10px;">
@@ -21491,7 +21511,16 @@ async function resetAttemptCount() {
 
     async function salvarResultadoNoHistoricoIA(loteria, dataSorteio, nomeSorteio, item) {
             
-            // --- 1. CORREÇÃO DA MILHAR (Limpa pontos) ---
+            // --- NORMALIZAÇÃO DO NOME DO SORTEIO ---
+            const normalizarNome = {
+                'BAHIA 10': 'BAHIA 10:00', 'BA 10:00': 'BAHIA 10:00', 'BA 10': 'BAHIA 10:00',
+                'BAHIA 19': 'BAHIA 19:00', 'BA 19:00': 'BAHIA 19:00', 'BA 19': 'BAHIA 19:00',
+                'BAHIA 12': 'BAHIA 12:00', 'BA 12:00': 'BAHIA 12:00',
+                'BAHIA 15': 'BAHIA 15:00', 'BA 15:00': 'BAHIA 15:00',
+                'BAHIA 21': 'BAHIA 21:00', 'BA 21:00': 'BAHIA 21:00',
+            };
+            nomeSorteio = normalizarNome[nomeSorteio] || nomeSorteio;
+       
             const milharSujar = item.milhar ? item.milhar.trim() : '';
             const milharLimpa = milharSujar.replace(/\D/g, '');
             const milharFinal = milharLimpa.slice(-4);
@@ -21506,7 +21535,7 @@ async function resetAttemptCount() {
             const dia = String(dataSorteio.getDate()).padStart(2, '0');
             const mes = String(dataSorteio.getMonth() + 1).padStart(2, '0');
             const ano = dataSorteio.getFullYear();
-            const posicao = item.posicao.replace('º', ''); 
+            const posicao = String(item.posicao).replace('º', '').trim(); 
             const idUnico = `${loteria}-${ano}${mes}${dia}-${nomeSorteio}-${posicao}`;
 
             // 2. Obtém os dados do bicho a partir da milhar
@@ -27115,12 +27144,12 @@ async function calcAnalisarLoteria(lot) {
             const posicao = ranking.findIndex(b => b.grupo === grupoReal);
             if (posicao !== -1 && posicao < 5) {
                 acertos++;
-                roadmap.push({ tipo: 'hit', label: `#${posicao+1}`, grupo: grupoReal });
+                roadmap.push({ tipo: 'hit', label: `#${posicao+1}`, grupo: grupoReal, horario: res.nomeSorteio });
             } else if (posicao !== -1 && posicao < 10) {
                 parciais++;
-                roadmap.push({ tipo: 'par', label: `#${posicao+1}`, grupo: grupoReal });
+                roadmap.push({ tipo: 'par', label: `#${posicao+1}`, grupo: grupoReal, horario: res.nomeSorteio });
             } else {
-                roadmap.push({ tipo: 'miss', label: '✗', grupo: grupoReal });
+                roadmap.push({ tipo: 'miss', label: '✗', grupo: grupoReal, horario: res.nomeSorteio });
             }
         }
 
@@ -27284,7 +27313,21 @@ window.calcCarregarAnalise = async function() {
         html += `<div class="aw-roadmap">
             ${r.roadmap.map(p => {
                 const titulo = p.tipo==='hit' ? `Top5 — G${p.grupo||'?'}` : p.tipo==='par' ? `Top10 — G${p.grupo||'?'}` : `Fora — G${p.grupo||'?'}`;
-                return `<div class="aw-rm-dot ${p.tipo}" title="${titulo}"></div>`;
+                
+                const hrLabel = p.horario ? p.horario.replace(/\D/g,'').slice(-4).replace(/(\d{2})(\d{2})/,'$1') : '';
+return `<div class="aw-rm-dot ${p.tipo}" title="${titulo}"
+    style="font-size:0.42rem;display:flex;align-items:center;justify-content:center;
+    color:rgba(255,255,255,0.85);font-weight:800;line-height:1;">${hrLabel}</div>`;
+                // Legenda
+        html += `<div class="aw-roadmap-leg">
+            <span><span class="aw-leg-dot" style="background:#198754;"></span>Top5 ✅</span>
+            <span><span class="aw-leg-dot" style="background:#fd7e14;"></span>Top10 ⚠️</span>
+            <span><span class="aw-leg-dot" style="background:rgba(220,53,69,0.35);"></span>Fora ❌</span>
+            <span style="margin-left:auto;">últimos ${r.roadmap.length} sorteios</span>
+        </div>
+        <div style="font-size:0.55rem;color:#666;margin-top:4px;text-align:right;">
+            ← mais antigo · mais recente →
+        </div>`;
             }).join('')}
         </div>`;
 
@@ -27515,14 +27558,15 @@ function calcScoreDezenas(ranking, analise, sinalDoDia) {
 
         // Pontos pelo ranking do grupo
         if      (rankPos === 0) { score += 30; motivos.push(`G${grupo}#1`); }
-        else if (rankPos <= 2)  { score += 20; motivos.push(`G${grupo}#${rankPos+1}`); }
-        else if (rankPos <= 5)  { score += 10; motivos.push(`G${grupo}#${rankPos+1}`); }
+else if (rankPos <= 2)  { score += 20; motivos.push(`G${grupo}#${rankPos+1}`); }
+else if (rankPos <= 5)  { score += 10; motivos.push(`G${grupo}#${rankPos+1}`); }
+else if (rankPos <= 9)  { score +=  5; motivos.push(`G${grupo}#${rankPos+1}`); }
 
         // Cruz do Dia
         const temCruz0 = cruz.includes(d0);
         const temCruz1 = cruz.includes(d1);
-        if (temCruz0 && temCruz1) { score += 25; motivos.push('🌟Cruz✕'); }
-        else if (temCruz0 || temCruz1) { score += 12; motivos.push('🌟Cruz'); }
+        if (temCruz0 && temCruz1) { score += 35; motivos.push('🌟Cruz✕'); }
+else if (temCruz0 || temCruz1) { score += 15; motivos.push('🌟Cruz'); }
 
         // Sinal da data
         if (sinalDoDia) {
@@ -27552,6 +27596,23 @@ function calcScoreDezenas(ranking, analise, sinalDoDia) {
 
     // Ordena por score e pega top 10
     todas.sort((a, b) => b.score - a.score);
+
+// Garante diversidade: pelo menos 1 dezena dos top 8 grupos
+    const top20 = todas.slice(0, 20);
+    const gruposPresentes = new Set(top20.map(x => x.grupo));
+    const gruposTop8 = ranking.slice(0, 8).map(r => r.grupo);
+    
+    for (const g of gruposTop8) {
+        if (!gruposPresentes.has(g)) {
+            const melhor = todas.find(x => x.grupo === g && !top20.includes(x));
+            if (melhor) {
+                top20.pop(); // remove a pior
+                top20.push(melhor);
+                gruposPresentes.add(g);
+            }
+        }
+    }
+    return top20;
     return todas.slice(0, 20);
 }
 
@@ -27634,12 +27695,11 @@ async function calcBuscarEAtualizarResultados() {
                     new Date(palpite.data + 'T12:00:00')
                 );
 
-                // Mapa de horário → nome do sorteio
                 const horaMapa = {
-                    'rj': { '09:20':'RJ 09:20','11:20':'RJ 11:20','14:20':'RJ 14:20','16:20':'RJ 16:20','18:20':'RJ 18:20','21:30':'RJ 21:30' },
-                    'lk': { '07:20':'LK 07:20','09:20':'LK 09:20','11:20':'LK 11:20','14:20':'LK 14:20','16:20':'LK 16:20','18:20':'LK 18:20','21:20':'LK 21:20','23:20':'LK 23:20' },
-                    'ln': { '02:00':'NC 02:00','08:00':'NC 08:00','10:00':'NC 10:00','12:00':'NC 12:00','15:00':'NC 15:00','17:00':'NC 17:00','19:00':'NC 19:00','21:00':'NC 21:00','23:00':'NC 23:00' },
-                    'ba': { '10:00':'BA 10:00','12:00':'BA 12:00','15:00':'BA 15:00','19:00':'BA 19:00','21:00':'BA 21:00' },
+                    'rj': { '09:20':'RIO 09:20','11:20':'RIO 11:20','14:20':'RIO 14:20','16:20':'RIO 16:20','18:20':'RIO 18:20','21:30':'CORUJA 21:30' },
+                    'lk': { '07:20':'LOOK 07:20','09:20':'LOOK 09:20','11:20':'LOOK 11:20','14:20':'LOOK 14:20','16:20':'LOOK 16:20','18:20':'LOOK 18:20','21:20':'LOOK 21:20','23:20':'LOOK 23:20' },
+                    'ln': { '02:00':'NACIONAL 02:00','08:00':'NACIONAL 08:00','10:00':'NACIONAL 10:00','12:00':'NACIONAL 12:00','15:00':'NACIONAL 15:00','17:00':'NACIONAL 17:00','19:00':'NACIONAL 19:00','21:00':'NACIONAL 21:00','23:00':'NACIONAL 23:00' },
+                    'ba': { '10:00':'BAHIA 10:00','12:00':'BAHIA 12:00','15:00':'BAHIA 15:00','19:00':'BAHIA 19:00','21:00':'BAHIA 21:00' },
                 };
 
                 const nomeSorteioAlvo = (horaMapa[palpite.loteria] || {})[palpite.horario];
@@ -27909,13 +27969,19 @@ window.abrirCalculadora = function() {
     if (!modal) return;
     const di = document.getElementById('calcDataInput');
     if (di && !di.value) di.value = new Date().toISOString().split('T')[0];
+    // Limpa seleção anterior
+    document.querySelectorAll('input[name="calcLoteria"]').forEach(r => r.checked = false);
+    document.querySelectorAll('input[name="calcHora"]').forEach(r => r.checked = false);
     calcAtualizarHorarios();
     modal.classList.add('active');
     // Inicia sempre na aba Gerar
     calcMudarAba('gerar');
     // Carrega análise automaticamente ao abrir
     calcCarregarAnalise();
+     calcAtualizarLeds();
+
 }
+
 
 window.fecharCalculadora = function() {
     document.getElementById('calcPalpitesModal')?.classList.remove('active');
@@ -28285,7 +28351,7 @@ window.calcGerarPalpites = async function() {
         `🐾 *Grupos:*\n${r.top5.map((b,i)=>`${i+1}º ${b.emoji} ${b.animal} G${b.grupo} (${b.forca}pts)${b.motivos&&b.motivos[0]?' — '+b.motivos[0]:''}`).join('\n')}\n\n` +
         (mr&&mr.palpites&&mr.palpites.milhar ? `🎰 *Milhares:* ${mr.palpites.milhar.map(m=>m.palpite+(m.invertida?' /'+m.invertida:'')).join('  ')}\n\n` : '') +
         (mr&&mr.palpites&&mr.palpites.centena ? `💯 *Centenas:* ${mr.palpites.centena.map(c=>c.palpite).join('  ')}\n\n` : '') +
-        `🔢 *Top 10 Dezenas:* ${(r.paltitao.dezMotivos||[]).map(x=>`${x.dz}(${x.motivos.slice(0,2).join('+')})`).join('  ')}\n\n` +
+        `🔢 *Top 20 Dezenas:* ${(r.paltitao.dezMotivos||[]).map(x=>`${x.dz}(${x.motivos.slice(0,2).join('+')})`).join('  ')}\n\n` +
         (r.unidades.length>0 ? `🔭 *Unidades:* ${r.unidades.map(u=>u.numero).join('  ')}\n\n` : '') +
         `🎯 *Top 10 Grupos — 1º Prêmio:*\n${r.ranking.slice(0,10).map((b,i)=>`${i+1}º ${b.emoji} G${b.grupo} ${b.animal} (${b.forca}pts)`).join('\n')}\n\n` +
         `📲 _Gerado pelo VipMojs_`;
@@ -28312,6 +28378,57 @@ window.calcGerarPalpites = async function() {
         if (id) console.log('✅ Palpite salvo:', id);
         });
 };
+
+async function calcAtualizarLeds() {
+    const setLed = (dotId, status) => {
+        const dot = document.getElementById(dotId);
+        if (!dot) return;
+        const cores = { ok: '#28a745', erro: '#dc3545', aviso: '#ffc107', inativo: '#444' };
+        dot.style.background = cores[status] || cores.inativo;
+        dot.style.boxShadow = status === 'ok' ? '0 0 6px #28a745' 
+                            : status === 'aviso' ? '0 0 6px #ffc107'
+                            : status === 'erro' ? '0 0 6px #dc3545' : 'none';
+    };
+
+    // LED Firebase
+    try {
+        const snap = await firestoreDB.collection('analises_ia').doc('ln').get();
+        if (snap.exists) {
+            setLed('ledFirebaseDot', 'ok');
+            // Verifica se I.A. foi atualizada nas últimas 25h (pelo GitHub)
+            const lastUpdated = snap.data()?.lastUpdated?.toDate();
+            if (lastUpdated) {
+                const horas = (Date.now() - lastUpdated.getTime()) / 3600000;
+                const ledIa = document.getElementById('ledIADot');
+                const ledIaLabel = document.getElementById('ledIALabel');
+                if (horas < 25) {
+                    setLed('ledIADot', 'ok');
+                    if (ledIaLabel) ledIaLabel.textContent = `I.A. ✓ ${Math.floor(horas)}h atrás`;
+                } else if (horas < 48) {
+                    setLed('ledIADot', 'aviso');
+                    if (ledIaLabel) ledIaLabel.textContent = `I.A. ~${Math.floor(horas)}h atrás`;
+                } else {
+                    setLed('ledIADot', 'erro');
+                    if (ledIaLabel) ledIaLabel.textContent = `I.A. desatualizada`;
+                }
+            }
+        } else {
+            setLed('ledFirebaseDot', 'aviso');
+            setLed('ledIADot', 'inativo');
+        }
+    } catch(e) {
+        setLed('ledFirebaseDot', 'erro');
+        setLed('ledIADot', 'inativo');
+    }
+
+    // LED Externo (testa o proxy)
+    try {
+        const res = await fetch('/api/proxy?tipo=atrasados&loteria=ln');
+        setLed('ledExternoDot', res.ok ? 'ok' : 'aviso');
+    } catch(e) {
+        setLed('ledExternoDot', 'erro');
+    }
+}
 
 window.calcCopiar = function() {
     const txt = window._calcTextoAtual || '';
