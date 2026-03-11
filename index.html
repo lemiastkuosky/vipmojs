@@ -10732,14 +10732,22 @@ async function generateIAPalpites(loteria, loteriaNome, isSilent = false) {
             t += `🤝 *DUQUES DE DEZENA:*\n`;
             if (an.palpites && an.palpites.duques) {
                 let d = [];
-                an.palpites.duques.forEach(x => d.push(...x.combinacoes));
+                an.palpites.duques.forEach(x => {
+                    // Trata os dois formatos de objeto em segurança
+                    if (x.combinacoes) d.push(...x.combinacoes);
+                    else if (x.palpite) d.push(x.palpite);
+                });
                 t += d.map(c => `💠 ${c}`).join('  ') + `\n\n`;
             }
 
             t += `🤝 *TERNOS DE DEZENA:*\n`;
             if (an.palpites && an.palpites.ternos) {
                 let r = [];
-                an.palpites.ternos.forEach(x => r.push(...x.combinacoes));
+                an.palpites.ternos.forEach(x => {
+                    // Trata os dois formatos de objeto em segurança
+                    if (x.combinacoes) r.push(...x.combinacoes);
+                    else if (x.palpite) r.push(x.palpite);
+                });
                 t += r.map(c => `🏆 ${c}`).join('  ') + `\n\n`;
             }
 
@@ -10841,21 +10849,34 @@ function renderizarTabsIA(proximasExtracoes, analisesPorExtracao, shareTexts) {
         const milharMestre = an.palpites.milhar[0].palpite;
 
         // Duques e Ternos como cards sanfona
-        const criarSanfona = (lista, tipo) => lista.map((item, i) => {
-            const divId = `cercado_${tipo}_${idx}_${i}`;
-            const cor = tipo === 'Duque' ? '#fd7e14' : '#17a2b8';
-            const combos = item.combinacoes.map(c => `<span style="white-space:nowrap;font-size:1rem;">${c}</span>`).join('');
-            return `<li style="margin-bottom:10px;background:rgba(0,0,0,0.05);padding:10px 12px;border-radius:8px;list-style:none;border-left:4px solid ${cor};">
-                <div style="font-weight:bold;margin-bottom:8px;font-size:0.9rem;">${item.titulo}</div>
-                <button onclick="document.getElementById('${divId}').style.display=document.getElementById('${divId}').style.display==='none'?'block':'none'" class="view-button" style="width:100%;padding:7px;font-size:0.85rem;border-radius:6px;">👀 Ver ${item.combinacoes.length} Combinações</button>
-                <div id="${divId}" style="display:none;margin-top:8px;font-family:monospace;text-align:center;background:rgba(0,0,0,0.08);padding:8px;border-radius:5px;display:none;flex-wrap:wrap;gap:8px;justify-content:center;">
-                    ${combos}
-                    <div style="display:flex;gap:6px;margin-top:8px;width:100%;">
-                        <button onclick="copyToClipboard('${item.combinacoes.join(' ')}',this)" class="load-button" style="flex:1;padding:8px;font-size:0.85rem;border-radius:6px;">📋 Copiar</button>
+        // Duques e Ternos como cards sanfona com normalização anti-crash
+        const criarSanfona = (lista, tipo) => {
+            const listasNormalizadas = [];
+            const palpitesSoltos = [];
+            lista.forEach(item => {
+                if (item.combinacoes) listasNormalizadas.push(item);
+                else if (item.palpite) palpitesSoltos.push(item.palpite);
+            });
+            if (palpitesSoltos.length > 0) {
+                listasNormalizadas.unshift({ titulo: 'Principais Sugestões', combinacoes: palpitesSoltos });
+            }
+
+            return listasNormalizadas.map((item, i) => {
+                const divId = `cercado_${tipo}_${idx}_${i}`;
+                const cor = tipo === 'Duque' ? '#fd7e14' : '#17a2b8';
+                const combos = item.combinacoes.map(c => `<span style="white-space:nowrap;font-size:1rem;">${c}</span>`).join('');
+                return `<li style="margin-bottom:10px;background:rgba(0,0,0,0.05);padding:10px 12px;border-radius:8px;list-style:none;border-left:4px solid ${cor};">
+                    <div style="font-weight:bold;margin-bottom:8px;font-size:0.9rem;">${item.titulo}</div>
+                    <button onclick="document.getElementById('${divId}').style.display=document.getElementById('${divId}').style.display==='none'?'block':'none'" class="view-button" style="width:100%;padding:7px;font-size:0.85rem;border-radius:6px;">👀 Ver ${item.combinacoes.length} Combinações</button>
+                    <div id="${divId}" style="display:none;margin-top:8px;font-family:monospace;text-align:center;background:rgba(0,0,0,0.08);padding:8px;border-radius:5px;flex-wrap:wrap;gap:8px;justify-content:center;">
+                        ${combos}
+                        <div style="display:flex;gap:6px;margin-top:8px;width:100%;">
+                            <button onclick="copyToClipboard('${item.combinacoes.join(' ')}',this)" class="load-button" style="flex:1;padding:8px;font-size:0.85rem;border-radius:6px;">📋 Copiar</button>
+                        </div>
                     </div>
-                </div>
-            </li>`;
-        }).join('');
+                </li>`;
+            }).join('');
+        };
 
         contentHtml += `
         <div id="content-palpite-${idx}" style="display:${idx === 0 ? 'block' : 'none'}; animation: fadeUpIn 0.4s ease;">
@@ -19001,23 +19022,29 @@ function renderIAResultsUI(palpites, rankingTop5, rankingTop10, analise, loteria
     window.currentIALoteriaNome = loteriaNome;
     window.currentIADrawDisplay = drawDisplay;
 
-    // --- CRIADOR DA LISTA SANFONA COM CERCADO E BOTÕES ---
+    // --- CRIADOR DA LISTA SANFONA COM CERCADO E BOTÕES (BLINDADO) ---
     const criarListaComCercadoHTML = (lista, tipo) => {
-        return lista.map((item, index) => {
+        const listasNormalizadas = [];
+        const palpitesSoltos = [];
+        lista.forEach(item => {
+            if (item.combinacoes) listasNormalizadas.push(item);
+            else if (item.palpite) palpitesSoltos.push(item.palpite);
+        });
+        if (palpitesSoltos.length > 0) {
+            listasNormalizadas.unshift({ titulo: 'Principais Sugestões', combinacoes: palpitesSoltos });
+        }
+
+        return listasNormalizadas.map((item, index) => {
             const divId = `cercado_${tipo}_${index}`;
             
-            // NOVO FORMATO RESPONSIVO (Não quebra os números no hífen)
             let formattedCombos = `<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">`;
             formattedCombos += item.combinacoes.map(c => `<span style="white-space: nowrap; font-size: 1.05rem;">${c}</span>`).join('');
             formattedCombos += `</div>`;
             
-            // Retorna o Card HTML com o botão seguro apontando para a nova função
             return `
             <li style="margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; list-style: none; border-left: 4px solid ${tipo === 'Duque' ? '#fd7e14' : '#17a2b8'};">
                 <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.05rem;">${item.titulo}</div>
-                
                 <button onclick="document.getElementById('${divId}').style.display = document.getElementById('${divId}').style.display === 'none' ? 'block' : 'none'" class="view-button" style="width: 100%; padding: 8px; font-size: 0.9rem; border-radius: 6px;">👀 Ver Todas as ${item.combinacoes.length} Combinações</button>
-                
                 <div id="${divId}" style="display: none; margin-top: 10px;">
                     <div style="font-family: monospace; text-align: center; background: rgba(0,0,0,0.08); padding: 10px; border-radius: 5px; border: 1px solid rgba(128,128,128,0.3); margin-bottom: 8px;">
                         ${formattedCombos}
@@ -23831,14 +23858,20 @@ async function autoGerarHistoricoIA() {
             t += `🤝 *DUQUES DE DEZENA:*\n`;
             if (an.palpites && an.palpites.duques) { 
                 let d = []; 
-                an.palpites.duques.forEach(x => d.push(...x.combinacoes)); 
+                an.palpites.duques.forEach(x => {
+                    if (x.combinacoes) d.push(...x.combinacoes);
+                    else if (x.palpite) d.push(x.palpite);
+                });
                 t += formatarEmColunas(d.map(c => `💠 ${c}`), 3) + `\n\n`; 
             }
             
             t += `🤝 *TERNOS DE DEZENA:*\n`;
             if (an.palpites && an.palpites.ternos) { 
                 let r = []; 
-                an.palpites.ternos.forEach(x => r.push(...x.combinacoes)); 
+                an.palpites.ternos.forEach(x => {
+                    if (x.combinacoes) r.push(...x.combinacoes);
+                    else if (x.palpite) r.push(x.palpite);
+                });
                 t += formatarEmColunas(r.map(c => `🏆 ${c}`), 2) + `\n\n`; 
             }
             
@@ -25194,16 +25227,16 @@ window.resetKitsVendas = async function() {
     removeData('kitsStockData');
     removeData('kitsGeneratedData');
     removeData('kitsCopiedData');
-    removeData('kitsSoldStatusData'); // <-- Apaga a memória de vendas antigas
+    removeData('kitsSoldStatusData'); 
     removeData('kitsExtracaoData'); 
     removeData('kitsHorarioData');  
 
-    const selectorContainer = document.getElem
+    // APAGUE A LINHA QUE ESTAVA AQUI (const selectorContainer = document.getElem)
 
     const selectExtracao = document.getElementById('kitsExtracaoSelect');
     const selectHorario = document.getElementById('kitsHorarioSelect');
     if (selectExtracao) selectExtracao.value = ''; 
-    if (selectHorario) selectHorario.innerHTML = ''; 
+    if (selectHorario) selectHorario.innerHTML = '';
 
     if (typeof atualizarVisualEstoqueKits === 'function') atualizarVisualEstoqueKits();
 
@@ -28582,21 +28615,34 @@ window.calcGerarPalpites = async function() {
         html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${mr.palpites.centena.map((c,i)=>chip(c.palpite,i<2,` title="${c.tipo||''}"`)).join('')}</div></div>`;
     }
 
+    // Helper para normalizar os arrays na Calculadora
+    const flattenGroup = (groups) => {
+        let flat = [];
+        (groups || []).forEach(g => {
+            if (g.combinacoes) g.combinacoes.forEach(c => flat.push({ palpite: c, tipo: g.titulo }));
+            else if (g.palpite) flat.push(g);
+        });
+        return flat;
+    };
+
     // ── DUQUES ───────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.duques && mr.palpites.duques.length > 0) {
+        const flatDuques = flattenGroup(mr.palpites.duques);
         html += `<div class="calc-result-block"><div class="calc-result-title">🎲 Duques</div>`;
-        html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${mr.palpites.duques.map((d,i) =>
-            `<span class="calc-chip${i<3?' hot':''}" title="${d.tipo}">${d.palpite}</span>`
+        html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${flatDuques.map((d,i) =>
+            `<span class="calc-chip${i<3?' hot':''}" title="${d.tipo||''}">${d.palpite}</span>`
         ).join('')}</div></div>`;
     }
 
     // ── TERNOS ───────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.ternos && mr.palpites.ternos.length > 0) {
+        const flatTernos = flattenGroup(mr.palpites.ternos);
         html += `<div class="calc-result-block"><div class="calc-result-title">🎯 Ternos</div>`;
-        html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${mr.palpites.ternos.map((t,i) =>
-            `<span class="calc-chip${i<3?' hot':''}" title="${t.tipo}">${t.palpite}</span>`
+        html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${flatTernos.map((t,i) =>
+            `<span class="calc-chip${i<3?' hot':''}" title="${t.tipo||''}">${t.palpite}</span>`
         ).join('')}</div></div>`;
     }
+
 
     // ── FECHO DE DEZENAS ──────────────────────────────────────────────────
     if (mr && mr.dezenasFechamento && mr.dezenasFechamento.length > 0) {
@@ -28670,8 +28716,9 @@ window.calcGerarPalpites = async function() {
         `🐾 *Grupos:*\n${r.top5.map((b,i)=>`${i+1}º ${b.emoji} ${b.animal} G${b.grupo} (${b.forca}pts)${b.motivos&&b.motivos[0]?' — '+b.motivos[0]:''}`).join('\n')}\n\n` +
         (mr&&mr.palpites&&mr.palpites.milhar ? `🎰 *Milhares:* ${mr.palpites.milhar.map(m=>m.palpite+(m.invertida?' /'+m.invertida:'')).join('  ')}\n\n` : '') +
         (mr&&mr.palpites&&mr.palpites.centena ? `💯 *Centenas:* ${mr.palpites.centena.map(c=>c.palpite).join('  ')}\n\n` : '') +
-(mr&&mr.palpites&&mr.palpites.duques?.length ? `🎲 *Duques:* ${mr.palpites.duques.map(d=>d.palpite).join('  ')}\n\n` : '') +
-(mr&&mr.palpites&&mr.palpites.ternos?.length ? `🎯 *Ternos:* ${mr.palpites.ternos.map(t=>t.palpite).join('  ')}\n\n` : '') +
+// Substitua as linhas que leem mr.palpites.duques/ternos
+        (mr&&mr.palpites&&mr.palpites.duques?.length ? `🎲 *Duques:* ${flattenGroup(mr.palpites.duques).map(d=>d.palpite).join('  ')}\n\n` : '') +
+        (mr&&mr.palpites&&mr.palpites.ternos?.length ? `🎯 *Ternos:* ${flattenGroup(mr.palpites.ternos).map(t=>t.palpite).join('  ')}\n\n` : '') +
         `🔢 *Top 20 Dezenas:* ${(r.paltitao.dezMotivos||[]).map(x=>`${x.dz}(${x.motivos.slice(0,2).join('+')})`).join('  ')}\n\n` +
         (r.unidades.length>0 ? `🔭 *Unidades:* ${r.unidades.map(u=>u.numero).join('  ')}\n\n` : '') +
         `🎯 *Top 10 Grupos — 1º Prêmio:*\n${r.ranking.slice(0,10).map((b,i)=>`${i+1}º ${b.emoji} G${b.grupo} ${b.animal} (${b.forca}pts)`).join('\n')}\n\n` +
@@ -28699,8 +28746,9 @@ window.calcGerarPalpites = async function() {
             jogadaMestre: mr?.jogadaDeMestre || null,
             milhares:     (mr?.palpites?.milhar  || []).map(m => m.palpite+(m.invertida?' /'+m.invertida:'')),
             centenas:     (mr?.palpites?.centena || []).map(c => c.palpite),
-            duques:       (mr?.palpites?.duques  || []).map(d => d.palpite),
-            ternos:       (mr?.palpites?.ternos  || []).map(t => t.palpite),
+            // Substitua no calcSalvarHistorico logo abaixo
+            duques:       flattenGroup(mr?.palpites?.duques).map(d => d.palpite),
+            ternos:       flattenGroup(mr?.palpites?.ternos).map(t => t.palpite),
         }
     ).then(id => {
         if (id) console.log('✅ Palpite salvo:', id);
