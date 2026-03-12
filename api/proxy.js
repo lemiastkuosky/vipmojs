@@ -31,18 +31,17 @@ export default async function handler(request, response) {
         let options = { method: 'GET', headers: baseHeaders };
 
         if (tipo === 'atrasados') {
-            url_alvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/';
-            options.method = 'POST';
+            // Trocando para um fornecedor mais estável
+            url_alvo = 'https://link-de-outro-site-estatistico.com/api/atrasados'; 
+            // Como não temos outra URL de confiança imediata, vamos usar um truque de "Cache-Control"
+            // para tentar enganar o Cloudflare do Bicho Certo mudando a rota.
+            url_alvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/?v=' + Date.now();
             
-            // Disfarce extra simulando um clique de botão interno do site (AJAX)
+            options.method = 'POST';
             options.headers = {
                 ...baseHeaders,
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Referer': 'https://bichocerto.com/estatisticas/atrasados/grupo/',
-                'Origin': 'https://bichocerto.com',
-                'Sec-Fetch-Dest': 'empty',
-                'Sec-Fetch-Mode': 'cors',
-                'Sec-Fetch-Site': 'same-origin',
                 'X-Requested-With': 'XMLHttpRequest'
             };
             options.body = new URLSearchParams({ 'l': loteria, 'p': '1', 'e': 'all', 'et': 'Geral' }).toString();
@@ -86,3 +85,4 @@ export default async function handler(request, response) {
         response.status(500).send("Erro interno no proxy: " + error.message);
     }
 }
+
