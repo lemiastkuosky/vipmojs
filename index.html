@@ -13994,131 +13994,120 @@ function editBolaoParticipant(group, index) {
     document.getElementById('bolaoBicho').focus();
 }
 
-/**
- * --- FUNÇÃO DE EXTRAIR RESULTADOS ---
- */
-function extrairDadosResultados(htmlString, nomeSorteio) {
-    const dadosExtraidos = [];
+function extrairDadosResultados(html, nomeSorteio) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const nomeSorteioUP = nomeSorteio.toUpperCase();
+    const resultados = [];
+
+    // --- 1. DETECÇÃO DE FONTE ---
+    const isPortalBrasil = html.includes('portalbrasil.net');
+    const isInvesteloto = html.includes('investeloto.com.br');
+
+    // --- 2. LÓGICA: PORTAL BRASIL (Geralmente LOOK GOIÁS) ---
+    if (isPortalBrasil) {
+        const matchTime = nomeSorteio.match(/(\d{2}):/);
+        const horaBusca = matchTime ? matchTime[1] + "h" : "";
+        const textoPuro = doc.body.innerText.replace(/\s+/g, ' ');
+        const inicioBloco = textoPuro.indexOf(horaBusca);
+        
+        if (inicioBloco === -1) return [];
+
+        const textoInteresse = textoPuro.substring(inicioBloco, inicioBloco + 2000);
+        // Regex para o padrão: 1º ► 0884-21 — TOURO
+        const regexLinha = /(\d+)º\s*►\s*(\d{3,4})-(\d{1,2})\s*—\s*([A-ZÁÉÍÓÚÇ]+)/gi;
+        
+        let m;
+        while ((m = regexLinha.exec(textoInteresse)) !== null) {
+            const grupoNum = m[3];
+            resultados.push({
+                posicao: m[1] + "º",
+                milhar: m[2].padStart(4, '0'),
+                grupo: `${grupoNum} - ${m[4]}`,
+                emoji: typeof getEmojiForGroup === 'function' ? getEmojiForGroup(parseInt(grupoNum)) : ""
+            });
+            if (resultados.length >= 7 && !nomeSorteio.includes("10º")) break;
+            if (resultados.length >= 10) break;
+        }
+    } 
     
-    // 👇 CORREÇÃO: Trava de segurança! Se o HTML for null ou vazio, para aqui e retorna vazio.
-    if (!htmlString) {
-        console.warn(`HTML vazio ou nulo recebido para ${nomeSorteio}. O proxy falhou ou demorou muito.`);
-        return [];
-    }
+    // --- 3. LÓGICA: INVESTELOTO (Geralmente NACIONAL) ---
+    else if (isInvesteloto) {
+        const matchTime = nomeSorteio.match(/(\d{2}):/);
+        const horaBusca = matchTime ? matchTime[1] + ":00" : "";
+        
+        const tabelas = Array.from(doc.querySelectorAll('table'));
+        const tabelaAlvo = tabelas.find(t => t.innerText.includes(horaBusca));
 
-    try {
-        if (htmlString.includes("Sem Sorteio") || htmlString.includes("Nenhum sorteio programado")) {
-            return [];
-        }
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlString, 'text/html');
-        
-        // 1. Mapeamento Inteligente de Buscas
-        
-        let termoBusca = "";
-        
-        if (nomeSorteio.includes('RIO')) {
-            if (nomeSorteio.includes('09:')) termoBusca = 'PPT-RJ';
-            else if (nomeSorteio.includes('11:')) termoBusca = 'PTM-RJ';
-            else if (nomeSorteio.includes('14:')) termoBusca = 'PT-RJ';
-            else if (nomeSorteio.includes('16:')) termoBusca = 'PTV-RJ';
-            else if (nomeSorteio.includes('18:')) termoBusca = 'PTN-RJ';
-        } else if (nomeSorteio.includes('CORUJA')) {
-            termoBusca = 'CORUJA';
-        } else if (nomeSorteio.includes('LOOK')) {
-             // A Look no site BichoCerto usa o formato "14:20", "16:20", etc.
-             const match = nomeSorteio.match(/(\d{2}:\d{2})/);
-             if (match) termoBusca = match[1]; // Procura pelo horário completo (ex: "14:20")
-        } else if (nomeSorteio.includes('NACIONAL')) {
-             // A Nacional no site BichoCerto usa o formato "15h" ou "02h"
-             const match = nomeSorteio.match(/(\d{2}):/);
-             if (match) termoBusca = match[1] + "h"; 
-        } else if (nomeSorteio.includes('BAHIA')) {
-             // A Bahia geralmente segue "15h"
-             const match = nomeSorteio.match(/(\d{2}):/);
-             if (match) termoBusca = match[1] + "h";
-        } else if (nomeSorteio.includes('FEDERAL')) {
-             termoBusca = 'FEDERAL';
-        
-        }
-
-        if (!termoBusca) {
-            console.warn(`Não foi possível definir termo de busca para ${nomeSorteio}`);
-            return [];
-        }
-
-        // 2. Encontra a Tabela Correta no HTML
-        let tabelaAlvo = null;
-        const titulos = Array.from(doc.querySelectorAll('h4, h5, h6, strong')); 
-        
-        for (const titulo of titulos) {
-            if (titulo.textContent.toUpperCase().includes(termoBusca.toUpperCase())) {
-                let elementoAtual = titulo.nextElementSibling;
-                for (let i = 0; i < 5; i++) {
-                    if (!elementoAtual) break;
-                    if (elementoAtual.tagName === 'TABLE' || elementoAtual.querySelector('table')) {
-                        tabelaAlvo = elementoAtual.tagName === 'TABLE' ? elementoAtual : elementoAtual.querySelector('table');
-                        break;
-                    }
-                    elementoAtual = elementoAtual.nextElementSibling;
+        if (tabelaAlvo) {
+            const linhas = tabelaAlvo.querySelectorAll('tr');
+            linhas.forEach(linha => {
+                const cols = linha.querySelectorAll('td');
+                if (cols.length >= 3 && cols[0].innerText.includes('º')) {
+                    const grupoInfo = cols[2].innerText.trim().split(' ');
+                    resultados.push({
+                        posicao: cols[0].innerText.trim(),
+                        milhar: cols[1].innerText.trim().padStart(4, '0'),
+                        grupo: cols[2].innerText.trim(),
+                        emoji: typeof getEmojiForGroup === 'function' ? getEmojiForGroup(parseInt(grupoInfo[0])) : ""
+                    });
                 }
-                if (tabelaAlvo) break;
-            }
+            });
         }
-
-        if (!tabelaAlvo) {
-            console.warn(`Tabela não encontrada para o sorteio: ${nomeSorteio} (Buscando por: ${termoBusca})`);
-            return [];
-        }
-
-        // 3. Extrai as Linhas
-        const linhas = tabelaAlvo.querySelectorAll('tbody tr');
-        if (linhas.length === 0) return [];
-
-        linhas.forEach(linha => {
-            const celulas = linha.querySelectorAll('td');
-            let item = null;
-
-            if (celulas.length < 4 || !celulas[0].innerText.trim().match(/^\d+º$/)) {
-                return; 
-            }
-
-            if (celulas.length >= 5) {
-                item = {
-                    posicao: celulas[0].innerText.trim(),
-                    emoji: celulas[1].innerText.trim(),
-                    milhar: celulas[2].innerText.trim(),
-                    grupo: `${celulas[3].innerText.trim()} - ${celulas[4].innerText.trim()}` 
-                };
-            } 
-            else {
-                const posicao = celulas[0].innerText.trim();
-                const milhar = celulas[1].innerText.trim();
-                const grupoNum = celulas[2].innerText.trim().padStart(2, '0');
-                const grupoNome = celulas[3] ? celulas[3].innerText.trim() : '';
-                
-                const bichoData = tabelaDeGrupos.find(b => b.grupo === grupoNum);
-
-                item = {
-                    posicao: posicao,
-                    emoji: bichoData ? bichoData.emoji : '❔',
-                    milhar: milhar,
-                    grupo: `${grupoNum} - ${grupoNome}`
-                };
-            }
-
-            if (item && item.milhar) {
-                dadosExtraidos.push(item);
-            }
-        });
-
-    } catch (error) {
-        console.error(`Erro ao processar HTML para "${nomeSorteio}":`, error);
-        return [];
     }
 
-    return dadosExtraidos;
+    // --- 4. LÓGICA: BICHO CERTO (RIO DE JANEIRO / FEDERAL / BAHIA) ---
+    else {
+        let termoBusca = "";
+        if (nomeSorteioUP.includes('RIO')) {
+            if (nomeSorteio.includes('09:')) termoBusca = 'PPT';
+            else if (nomeSorteio.includes('11:')) termoBusca = 'PTM';
+            else if (nomeSorteio.includes('14:')) termoBusca = 'PT';
+            else if (nomeSorteio.includes('16:')) termoBusca = 'PTV';
+            else if (nomeSorteio.includes('18:')) termoBusca = 'PTN';
+            else if (nomeSorteioUP.includes('CORUJA')) termoBusca = 'COR';
+        } else if (nomeSorteioUP.includes('LOOK')) {
+            const match = nomeSorteio.match(/(\d{2}:\d{2})/);
+            termoBusca = match ? match[1] : "";
+        } else if (nomeSorteioUP.includes('FEDERAL')) {
+            termoBusca = 'FEDERAL';
+        }
+
+        const headers = Array.from(doc.querySelectorAll('h4, h5, h6, strong, b, td'));
+        const alvo = headers.find(h => h.innerText.toUpperCase().includes(termoBusca) && h.innerText.length < 20);
+
+        if (alvo) {
+            let tabela = alvo.closest('table') || alvo.parentElement.querySelector('table');
+            if (!tabela) {
+                let p = alvo.parentElement;
+                for(let i=0; i<3; i++) { 
+                    if(!p) break;
+                    tabela = p.querySelector('table');
+                    if(tabela) break;
+                    p = p.parentElement;
+                }
+            }
+
+            if (tabela) {
+                const rows = tabela.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const tds = row.querySelectorAll('td');
+                    if (tds.length >= 3 && tds[0].innerText.includes('º')) {
+                        const m = tds[2].innerText.trim();
+                        const g = tds[4] ? tds[4].innerText.trim() : (tds[3] ? tds[3].innerText.trim() : "");
+                        resultados.push({
+                            posicao: tds[0].innerText.trim(),
+                            milhar: m,
+                            grupo: g,
+                            emoji: typeof getEmojiForGroup === 'function' ? getEmojiForGroup(parseInt(g)) : ""
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    return resultados;
 }
 
 async function deleteBolaoParticipant(group, index) {
