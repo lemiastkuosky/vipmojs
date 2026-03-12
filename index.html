@@ -9261,6 +9261,11 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
 
             <!-- ABA HISTÓRICO -->
             <div id="calcAbaHistorico" style="display:none;">
+                <div style="padding: 0 4px 14px; display:flex; align-items:center; gap:10px;">
+                    <label style="font-size:0.75rem; font-weight:bold; color:#888; letter-spacing:1px; text-transform:uppercase;">📅 Data:</label>
+                    <input type="date" id="calcFiltroDataHistorico" class="calc-date-input" style="margin:0; flex:1; padding:8px 12px; font-weight:bold;" onchange="calcCarregarHistorico(window.calcFiltroLotAtual)">
+                </div>
+                
                 <div id="calcHistoricoCorpo">
                     <div class="aw-loading">⏳ Carregando histórico...</div>
                 </div>
@@ -23674,22 +23679,58 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     botao.innerHTML = 'Buscando...';
 
     try {
-        const urlProxy = `/api/proxy?tipo=atrasados&loteria=${loteria}`;
-        const response = await fetch(urlProxy);
-        if (!response.ok) throw new Error(`Erro: ${response.status}`);
+        let dados = [];
 
-        const htmlTabela = await response.text();
-        const dadosCompletos = extrairDadosDoHTML(htmlTabela);
-        
-        const dados = dadosCompletos.bichos;
+        // 1. TENTA BUSCAR DO SITE EXTERNO (VIA PROXY)
+        try {
+            // Adiciona um limitador de tempo para não ficar travado
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); // Espera 6s no máximo
+            
+            const urlProxy = `/api/proxy?tipo=atrasados&loteria=${loteria}`;
+            const response = await fetch(urlProxy, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                const htmlTabela = await response.text();
+                const dadosCompletos = extrairDadosDoHTML(htmlTabela);
+                if (dadosCompletos && dadosCompletos.bichos && dadosCompletos.bichos.length > 0) {
+                    dados = dadosCompletos.bichos;
+                }
+            }
+        } catch (proxyErro) {
+            console.warn("Proxy indisponível, ativando inteligência local...", proxyErro);
+        }
 
+        // 2. FALLBACK: SE O PROXY FALHAR, BUSCA DA MEMÓRIA DA I.A NO FIREBASE
         if (!dados || dados.length === 0) {
-            showToast("Dados não disponíveis no momento.", "error");
+            const docIA = await firestoreDB.collection('analises_ia').doc(loteria).get();
+            if (docIA.exists) {
+                const analiseGeral = docIA.data().geral || {};
+                const atrasadosFirebase = analiseGeral.bichosAtrasados1Premio || analiseGeral.atrasados || [];
+                
+                if (atrasadosFirebase.length > 0) {
+                    dados = atrasadosFirebase.map(b => {
+                        const bichoRef = tabelaDeGrupos.find(tg => tg.grupo === b.grupo);
+                        return {
+                            nome: bichoRef ? bichoRef.animal : 'Desconhecido',
+                            grupo: b.grupo,
+                            emoji: bichoRef ? bichoRef.emoji : '❔',
+                            dias: b.dias || 1
+                        };
+                    });
+                    showToast("Mostrando dados salvos na memória da I.A.", "info");
+                }
+            }
+        }
+
+        // 3. SE REALMENTE NÃO TIVER NADA, CANCELA
+        if (!dados || dados.length === 0) {
+            showToast("Dados não disponíveis no momento (Proxy e Firebase offline).", "error");
             return;
         }
 
         // --- PREPARAÇÃO MÁGICA: Garante os 25 bichos na lista ---
-        // Se o bicho não tiver dias de atraso (0 dias), ele vai para a lista de "Saiu Hoje"
         const dadosCompletosParaTela = [];
         tabelaDeGrupos.forEach(bichoMatriz => {
             const bichoEncontrado = dados.find(d => d.grupo === bichoMatriz.grupo);
@@ -23779,7 +23820,7 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
 
     } catch (error) { 
         console.error("Falha ao buscar atrasados:", error);
-        showToast(`Erro de conexão com o servidor.`, "error"); 
+        showToast(`Erro de processamento. Tente novamente.`, "error"); 
     } finally {
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
@@ -27776,7 +27817,7 @@ async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMo
     }
 }
 
-async function calcBuscarEAtualizarResultados() {
+window.calcBuscarEAtualizarResultados = async function() {
     if (typeof firestoreDB === 'undefined') return;
 
     try {
@@ -27922,31 +27963,46 @@ window.calcEditarResultadoManual = async function(docId) {
     }
 };
 
-// ── CARREGAR HISTÓRICO ───────────────────────────────────────────────────
-// ── CARREGAR HISTÓRICO ───────────────────────────────────────────────────
 window.calcCarregarHistorico = async function(filtroLot) {
+    window.calcFiltroLotAtual = filtroLot || ''; // Salva o filtro de loteria ativo
+
     const corpo = document.getElementById('calcHistoricoCorpo');
     if (!corpo) return;
-    corpo.innerHTML = '<div class="aw-loading">⏳ Buscando resultados...</div>';
+
+    // Gerencia a Data (Pega a de hoje se não tiver nenhuma selecionada)
+    const dateInput = document.getElementById('calcFiltroDataHistorico');
+    let dataFiltro = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+    if (dateInput) {
+        if (!dateInput.value) dateInput.value = dataFiltro;
+        dataFiltro = dateInput.value;
+    }
+
+    corpo.innerHTML = '<div class="aw-loading">⏳ Buscando resultados do dia...</div>';
 
     await calcBuscarEAtualizarResultados();
 
     try {
-        let query = firestoreDB.collection('historicoPalpites')
-            .orderBy('geradoEm', 'desc')
-            .limit(50);
-        if (filtroLot) query = query.where('loteria', '==', filtroLot);
-
-        const snap = await query.get();
-        if (snap.empty) {
-            corpo.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">Nenhum palpite salvo ainda.</div>';
-            return;
-        }
+        // Busca no banco SOMENTE a data escolhida no calendário
+        const snap = await firestoreDB.collection('historicoPalpites')
+            .where('data', '==', dataFiltro)
+            .get();
 
         const docs = [];
         snap.forEach(doc => {
-            docs.push({ id: doc.id, ...doc.data() });
+            const d = doc.data();
+            // Aplica o filtro da loteria (botões RJ, LK, etc)
+            if (window.calcFiltroLotAtual && d.loteria !== window.calcFiltroLotAtual) return;
+            docs.push({ id: doc.id, ...d });
         });
+
+        // Se a tela estiver vazia no dia, mostra uma mensagem bonita
+        if (docs.length === 0) {
+            corpo.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#888;line-height:1.5;">
+                <div style="font-size:3rem;margin-bottom:15px;opacity:0.5;">📭</div>
+                Nenhum palpite gerado para<br><strong style="color:#0d6efd;font-size:1.1rem;">${dataFiltro.split('-').reverse().join('/')}</strong>
+            </div>`;
+            return;
+        }
 
         const ordemCiclo = {
             '23:00': 0, '23:20': 1, '02:00': 2, '07:20': 3, '08:00': 4,
@@ -28014,11 +28070,11 @@ window.calcCarregarHistorico = async function(filtroLot) {
                 capsulaBotoes = `
                     <div style="display:flex;background:rgba(128,128,128,0.15);border-radius:8px;padding:2px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
                         <button onclick="event.stopPropagation(); calcEditarResultadoManual('${doc.id}')"
-                            style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
+                            style="background:none;border:none;font-size:0.7rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
                             title="Editar Resultado">✏️</button>
                         <div style="width:1px;background:rgba(128,128,128,0.3);margin:6px 0;"></div>
                         <button onclick="event.stopPropagation(); calcApagarPalpite('${doc.id}')"
-                            style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
+                            style="background:none;border:none;font-size:0.7rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
                             title="Apagar Palpite">🗑️</button>
                     </div>`;
             } else {
@@ -28026,7 +28082,7 @@ window.calcCarregarHistorico = async function(filtroLot) {
                 capsulaBotoes = `
                     <div style="display:flex;background:rgba(128,128,128,0.15);border-radius:8px;padding:2px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
                         <button onclick="event.stopPropagation(); calcApagarPalpite('${doc.id}')"
-                            style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
+                            style="background:none;border:none;font-size:0.7rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
                             title="Apagar Palpite">🗑️</button>
                     </div>`;
             }
