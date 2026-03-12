@@ -4,7 +4,6 @@
 // antes de buscar resultados passados da Federal.
 //
 
-import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
 
 // --- ADICIONE ESTA LINHA ---
@@ -181,4 +180,5 @@ export default async function handler(request, response) {
         console.error(`[Proxy ${PROXY_VERSION}] Erro GERAL no proxy Vercel:`, error);
         response.status(500).send(`[Proxy ${PROXY_VERSION}] Erro interno no servidor proxy: ${error.message}`);
     }
+
 }
