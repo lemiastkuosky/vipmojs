@@ -39,7 +39,7 @@ export default async function handler(request, response) {
                 'rj': 'https://bichocerto.com/resultados/rj/para-todos',
                 'lk': 'https://bichocerto.com/resultados/lk/look',
                 'fd': 'https://bichocerto.com/resultados/fd/loteria-federal',
-                'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional',
+                'ln': 'https://www.resultadofacil.com.br/resultados-da-banca-loteria-nacional', // <-- MUDE ESTA LINHA
                 'ba': 'https://bichocerto.com/resultados/ba/para-todos'
             };
 
@@ -73,4 +73,5 @@ export default async function handler(request, response) {
         response.status(500).send("Erro interno no proxy: " + error.message);
     }
 }
+
 
