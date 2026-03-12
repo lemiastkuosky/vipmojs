@@ -7874,7 +7874,7 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V17.15</strong>
+            <strong>V18.15</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -14002,67 +14002,100 @@ function editBolaoParticipant(group, index) {
  */
 function extrairDadosResultados(htmlString, nomeSorteio) {
     const dadosExtraidos = [];
-    const idSorteio = mapaSorteios[nomeSorteio];
-
-    // 1. Verifica se temos o ID mapeado
-    if (!idSorteio) {
-        // console.warn(`Mapeamento de ID não encontrado para ${nomeSorteio}.`);
+    
+    // 👇 CORREÇÃO: Trava de segurança! Se o HTML for null ou vazio, para aqui e retorna vazio.
+    if (!htmlString) {
+        console.warn(`HTML vazio ou nulo recebido para ${nomeSorteio}. O proxy falhou ou demorou muito.`);
         return [];
     }
 
     try {
-        // 2. Verifica se o HTML indica que não houve sorteio (Correção para Federal/Feriados)
         if (htmlString.includes("Sem Sorteio") || htmlString.includes("Nenhum sorteio programado")) {
-            return []; // Retorna vazio silenciosamente, pois é esperado.
+            return [];
         }
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlString, 'text/html');
-        const divSorteio = doc.getElementById(idSorteio);
+        
+        // 1. Mapeamento Inteligente de Buscas
+        let termoBusca = "";
+        
+        if (nomeSorteio.includes('RIO')) {
+            if (nomeSorteio.includes('09:')) termoBusca = 'PPT-RJ';
+            else if (nomeSorteio.includes('11:')) termoBusca = 'PTM-RJ';
+            else if (nomeSorteio.includes('14:')) termoBusca = 'PT-RJ';
+            else if (nomeSorteio.includes('16:')) termoBusca = 'PTV-RJ';
+            else if (nomeSorteio.includes('18:')) termoBusca = 'PTN-RJ';
+        } else if (nomeSorteio.includes('CORUJA')) {
+            termoBusca = 'CORUJA';
+        } else if (nomeSorteio.includes('LOOK')) {
+             const match = nomeSorteio.match(/(\d{2}):/);
+             if (match) termoBusca = match[1] + "h";
+        } else if (nomeSorteio.includes('NACIONAL')) {
+             const match = nomeSorteio.match(/(\d{2}):/);
+             if (match) termoBusca = match[1] + "h";
+        } else if (nomeSorteio.includes('BAHIA')) {
+             const match = nomeSorteio.match(/(\d{2}):/);
+             if (match) termoBusca = match[1] + "h";
+        } else if (nomeSorteio.includes('FEDERAL')) {
+             termoBusca = 'FEDERAL';
+        }
 
-        // 3. CORREÇÃO PRINCIPAL: Se não achar a div, retorna vazio sem dar ERRO vermelho
-        if (!divSorteio) {
-            // Se quiser ver um aviso amarelo (opcional), descomente a linha abaixo:
-            // console.warn(`Aguardando: Tabela "${idSorteio}" (${nomeSorteio}) ainda não disponível.`);
+        if (!termoBusca) {
+            console.warn(`Não foi possível definir termo de busca para ${nomeSorteio}`);
             return [];
         }
 
-        const tabelaResultados = divSorteio.querySelector('table');
-        if (!tabelaResultados) {
+        // 2. Encontra a Tabela Correta no HTML
+        let tabelaAlvo = null;
+        const titulos = Array.from(doc.querySelectorAll('h4, h5, h6, strong')); 
+        
+        for (const titulo of titulos) {
+            if (titulo.textContent.toUpperCase().includes(termoBusca)) {
+                let elementoAtual = titulo.nextElementSibling;
+                for (let i = 0; i < 5; i++) {
+                    if (!elementoAtual) break;
+                    if (elementoAtual.tagName === 'TABLE' || elementoAtual.querySelector('table')) {
+                        tabelaAlvo = elementoAtual.tagName === 'TABLE' ? elementoAtual : elementoAtual.querySelector('table');
+                        break;
+                    }
+                    elementoAtual = elementoAtual.nextElementSibling;
+                }
+                if (tabelaAlvo) break;
+            }
+        }
+
+        if (!tabelaAlvo) {
+            console.warn(`Tabela não encontrada para o sorteio: ${nomeSorteio} (Buscando por: ${termoBusca})`);
             return [];
         }
 
-        const linhas = tabelaResultados.querySelectorAll('tbody tr');
-        if (linhas.length === 0) {
-            return [];
-        }
+        // 3. Extrai as Linhas
+        const linhas = tabelaAlvo.querySelectorAll('tbody tr');
+        if (linhas.length === 0) return [];
 
         linhas.forEach(linha => {
             const celulas = linha.querySelectorAll('td');
             let item = null;
 
-            // Pula linhas que não são de prémio
-            if (celulas.length < 4 || (celulas[0] && !celulas[0].innerText.trim().match(/^\d+º$/))) {
+            if (celulas.length < 4 || !celulas[0].innerText.trim().match(/^\d+º$/)) {
                 return; 
             }
 
-            // Lógica de 4 ou 5 colunas
             if (celulas.length >= 5) {
-                // Padrão (RJ, LK, LN...)
                 item = {
                     posicao: celulas[0].innerText.trim(),
                     emoji: celulas[1].innerText.trim(),
                     milhar: celulas[2].innerText.trim(),
-                    grupo: `${celulas[3].innerText.trim()} - ${celulas[4].innerText.trim()}`
+                    grupo: `${celulas[3].innerText.trim()} - ${celulas[4].innerText.trim()}` 
                 };
-            } else {
-                // Alternativo (Federal 4 colunas)
+            } 
+            else {
                 const posicao = celulas[0].innerText.trim();
                 const milhar = celulas[1].innerText.trim();
                 const grupoNum = celulas[2].innerText.trim().padStart(2, '0');
-                const grupoNome = celulas[3].innerText.trim();
+                const grupoNome = celulas[3] ? celulas[3].innerText.trim() : '';
                 
-                // Busca emoji manual
                 const bichoData = tabelaDeGrupos.find(b => b.grupo === grupoNum);
 
                 item = {
@@ -14073,13 +14106,12 @@ function extrairDadosResultados(htmlString, nomeSorteio) {
                 };
             }
 
-            if (item) {
+            if (item && item.milhar) {
                 dadosExtraidos.push(item);
             }
         });
 
     } catch (error) {
-        // Mantém apenas erros reais de processamento
         console.error(`Erro ao processar HTML para "${nomeSorteio}":`, error);
         return [];
     }
