@@ -1,88 +1,52 @@
-// PROXY V6.3 - Disfarce Avançado Anti-Cloudflare
+// PROXY V6.4 - Novo Alvo: O Jogo do Bicho
 const baseHeaders = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-    'Sec-Ch-Ua-Mobile': '?0',
-    'Sec-Ch-Ua-Platform': '"Windows"',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-    'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1',
-    'Cache-Control': 'max-age=0'
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'pt-BR,pt;q=0.9',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache'
 };
 
 export default async function handler(request, response) {
-    // Configuração de CORS
     response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (request.method === 'OPTIONS') return response.status(200).end();
 
     try {
-        const { tipo, loteria, data } = request.query;
+        const { tipo, loteria } = request.query;
 
-        if (tipo === 'versao') return response.status(200).send("PROXY_V6.3_DISFARCE");
+        if (tipo === 'versao') return response.status(200).send("PROXY_V6.4_OJOGODOBICHO");
 
         let url_alvo = '';
-        let options = { method: 'GET', headers: baseHeaders };
 
         if (tipo === 'atrasados') {
-            // Trocando para um fornecedor mais estável
-            url_alvo = 'https://link-de-outro-site-estatistico.com/api/atrasados'; 
-            // Como não temos outra URL de confiança imediata, vamos usar um truque de "Cache-Control"
-            // para tentar enganar o Cloudflare do Bicho Certo mudando a rota.
-            url_alvo = 'https://bichocerto.com/estatisticas/atrasados/grupo/load/?v=' + Date.now();
-            
-            options.method = 'POST';
-            options.headers = {
-                ...baseHeaders,
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Referer': 'https://bichocerto.com/estatisticas/atrasados/grupo/',
-                'X-Requested-With': 'XMLHttpRequest'
-            };
-            options.body = new URLSearchParams({ 'l': loteria, 'p': '1', 'e': 'all', 'et': 'Geral' }).toString();
-
-        } else if (tipo === 'resultados') {
-            const mapa = {
-                'rj': 'https://bichocerto.com/resultados/rj/para-todos',
-                'lk': 'https://bichocerto.com/resultados/lk/look',
-                'fd': 'https://bichocerto.com/resultados/fd/loteria-federal',
-                'ln': 'https://bichocerto.com/resultados/ln/loteria-nacional',
-                'ba': 'https://bichocerto.com/resultados/ba/para-todos'
-            };
-
-            if (!mapa[loteria]) return response.status(400).send('Loteria inválida');
-            url_alvo = mapa[loteria];
-
-            if (data && /^\d{4}-\d{2}-\d{2}$/.test(data)) {
-                if (loteria === 'fd') {
-                    const [y, m, d] = data.split('-').map(Number);
-                    const diaSemana = new Date(y, m - 1, d).getDay();
-                    if (diaSemana !== 3 && diaSemana !== 6) {
-                        return response.status(200).send('<html><body>Sem sorteio programado.</body></html>');
-                    }
-                    url_alvo += `/${data}/`;
-                } else {
-                    url_alvo += '/'; 
-                }
-            } else {
-                url_alvo += loteria === 'fd' ? '/de-hoje/' : '/';
-            }
+            // Tentando o link direto de estatísticas do site oficial tradicional
+            // loteria rj = rj, lk = look, etc.
+            url_alvo = `https://www.ojogodobicho.com/estatisticas.asp?loteria=${loteria}`;
+        } else {
+            // Fallback para resultados se necessário
+            url_alvo = `https://www.ojogodobicho.com/resultados.asp`;
         }
 
-        const fetchResponse = await fetch(url_alvo, options);
+        const fetchResponse = await fetch(url_alvo, { 
+            method: 'GET', 
+            headers: baseHeaders,
+            redirect: 'follow'
+        });
+
         const html = await fetchResponse.text();
         
-        response.setHeader('Content-Type', 'text/html; charset=utf-8');
+        // Se ainda assim o Cloudflare pegar, vamos avisar no log
+        if (html.includes("Just a moment") || html.includes("cloudflare")) {
+            console.error("🚫 Bloqueio Cloudflare detectado no novo alvo.");
+        }
+
+        response.setHeader('Content-Type', 'text/html; charset=iso-8859-1'); // O site antigo costuma usar esse charset
         response.status(200).send(html);
 
     } catch (error) {
-        console.error("Erro no Proxy:", error);
-        response.status(500).send("Erro interno no proxy: " + error.message);
+        response.status(500).send("Erro no Proxy: " + error.message);
     }
 }
-
