@@ -17239,6 +17239,10 @@ setInterval(checkNewResultsAvailability, 60000);
 // Roda uma vez assim que o app carregar
 setTimeout(checkNewResultsAvailability, 5000);
 
+// Preenche resultados pendentes automaticamente
+setTimeout(() => { if (firebase.auth().currentUser) calcBuscarEAtualizarResultados(); }, 30000);
+setInterval(() => { if (firebase.auth().currentUser) calcBuscarEAtualizarResultados(); }, 600000);
+
 // Auto-gera histórico de palpites IA para extrações que já passaram
 // Roda 2 minutos após o app carregar e depois a cada 15 minutos
 setInterval(() => {
@@ -27783,7 +27787,6 @@ async function calcSalvarHistorico(fonte, loteria, horario, data, ranking, dezMo
     }
 }
 
-// ── BUSCAR RESULTADO REAL E CALCULAR ACERTOS ────────────────────────────
 async function calcBuscarEAtualizarResultados() {
     if (typeof firestoreDB === 'undefined') return;
 
@@ -27792,53 +27795,53 @@ async function calcBuscarEAtualizarResultados() {
         tresDiasAtras.setDate(tresDiasAtras.getDate() - 3);
         const dataMin = tresDiasAtras.toISOString().split('T')[0];
 
+        // Query simples sem índice composto: só filtra por data, filtra resultado==null no JS
         const snap = await firestoreDB.collection('historicoPalpites')
-            .where('resultado', '==', null)
             .where('data', '>=', dataMin)
-            .limit(30)
+            .orderBy('data', 'desc')
+            .limit(50)
             .get();
 
         if (snap.empty) return;
 
         const pendentes = [];
-        snap.forEach(doc => pendentes.push({ id: doc.id, ...doc.data() }));
+        snap.forEach(doc => {
+            const d = doc.data();
+            // Filtra em JS os que ainda não têm resultado
+            if (!d.resultado) pendentes.push({ id: doc.id, ...d });
+        });
 
-        // Para cada palpite pendente, busca o resultado real
+        if (pendentes.length === 0) return;
+
+        const horaMapa = {
+            'rj': { '09:20':'RIO 09:20','11:20':'RIO 11:20','14:20':'RIO 14:20','16:20':'RIO 16:20','18:20':'RIO 18:20','21:30':'CORUJA 21:30' },
+            'lk': { '07:20':'LOOK 07:20','09:20':'LOOK 09:20','11:20':'LOOK 11:20','14:20':'LOOK 14:20','16:20':'LOOK 16:20','18:20':'LOOK 18:20','21:20':'LOOK 21:20','23:20':'LOOK 23:20' },
+            'ln': { '02:00':'NACIONAL 02:00','08:00':'NACIONAL 08:00','10:00':'NACIONAL 10:00','12:00':'NACIONAL 12:00','15:00':'NACIONAL 15:00','17:00':'NACIONAL 17:00','19:00':'NACIONAL 19:00','21:00':'NACIONAL 21:00','23:00':'NACIONAL 23:00' },
+            'ba': { '10:00':'BAHIA 10:00','12:00':'BAHIA 12:00','15:00':'BAHIA 15:00','19:00':'BAHIA 19:00','21:00':'BAHIA 21:00' },
+        };
+
         for (const palpite of pendentes) {
             try {
-                // Busca na coleção resultados do Firebase
-                const dataTS = firebase.firestore.Timestamp.fromDate(
-                    new Date(palpite.data + 'T12:00:00')
-                );
-
-                const horaMapa = {
-                    'rj': { '09:20':'RIO 09:20','11:20':'RIO 11:20','14:20':'RIO 14:20','16:20':'RIO 16:20','18:20':'RIO 18:20','21:30':'CORUJA 21:30' },
-                    'lk': { '07:20':'LOOK 07:20','09:20':'LOOK 09:20','11:20':'LOOK 11:20','14:20':'LOOK 14:20','16:20':'LOOK 16:20','18:20':'LOOK 18:20','21:20':'LOOK 21:20','23:20':'LOOK 23:20' },
-                    'ln': { '02:00':'NACIONAL 02:00','08:00':'NACIONAL 08:00','10:00':'NACIONAL 10:00','12:00':'NACIONAL 12:00','15:00':'NACIONAL 15:00','17:00':'NACIONAL 17:00','19:00':'NACIONAL 19:00','21:00':'NACIONAL 21:00','23:00':'NACIONAL 23:00' },
-                    'ba': { '10:00':'BAHIA 10:00','12:00':'BAHIA 12:00','15:00':'BAHIA 15:00','19:00':'BAHIA 19:00','21:00':'BAHIA 21:00' },
-                };
-
-                // Normaliza o horario salvo (pode ser "09:20", "LOOK_09_20", "LOOK 09:20", etc.)
                 const horarioRaw = palpite.horario || '';
+
+                // Normaliza o horario (aceita "09:20", "LOOK_09_20", "LOOK 09:20")
                 const matchHora = horarioRaw.match(/(\d{2})[_:\s](\d{2})$/);
                 const horarioChave = matchHora ? `${matchHora[1]}:${matchHora[2]}` : horarioRaw;
 
-                // Tenta pelo mapa primeiro
                 let nomeSorteioAlvo = (horaMapa[palpite.loteria] || {})[horarioChave];
 
-                // Fallback: formato "LOOK 09:20" direto
                 if (!nomeSorteioAlvo && horarioRaw.includes(' ')) {
                     nomeSorteioAlvo = horarioRaw;
                 }
-
-                // Fallback 2: formato "LOOK_09_20" -> "LOOK 09:20"
                 if (!nomeSorteioAlvo && horarioRaw.includes('_')) {
                     nomeSorteioAlvo = horarioRaw.replace(/_(\d{2})_(\d{2})$/, ' $1:$2').replace(/_/g, ' ');
                 }
 
-                if (!nomeSorteioAlvo) continue;
+                if (!nomeSorteioAlvo) {
+                    console.warn('[Histórico] nomeSorteio não encontrado para:', palpite.loteria, horarioRaw);
+                    continue;
+                }
 
-                // Busca o 1º prêmio desse sorteio
                 const resSnap = await firestoreDB.collection('resultados')
                     .where('loteria',     '==', palpite.loteria)
                     .where('nomeSorteio', '==', nomeSorteioAlvo)
@@ -27848,48 +27851,49 @@ async function calcBuscarEAtualizarResultados() {
                     .limit(1)
                     .get();
 
-                if (resSnap.empty) continue;
+                if (resSnap.empty) {
+                    console.log('[Histórico] Resultado ainda não disponível para:', nomeSorteioAlvo, palpite.data);
+                    continue;
+                }
 
                 const res        = resSnap.docs[0].data();
                 const grupoReal  = String(res.bichoGrupo).padStart(2,'0');
                 const dezenaReal = String(res.dezena).padStart(2,'0');
                 const milharReal = res.milhar;
 
-                // Calcula acertos
-                const grupos10   = (palpite.top10Grupos || []).map(b =>
+                const grupos10 = (palpite.top10Grupos || []).map(b =>
                     typeof b === 'string' ? b : String(b.grupo).padStart(2,'0')
                 );
-                const dezenas10  = (palpite.top10Dezenas || []).map(x =>
+                const dezenas10 = (palpite.top10Dezenas || []).map(x =>
                     typeof x === 'string' ? x : String(x.dz).padStart(2,'0')
                 );
 
                 const acertos = {
-                    grupoTop5:  grupos10.slice(0,5).includes(grupoReal),
-                    grupoTop10: grupos10.includes(grupoReal),
-                    dezena:     dezenas10.includes(dezenaReal),
+                    grupoTop5:    grupos10.slice(0,5).includes(grupoReal),
+                    grupoTop10:   grupos10.includes(grupoReal),
+                    dezena:       dezenas10.includes(dezenaReal),
                     posicaoGrupo: grupos10.indexOf(grupoReal) + 1 || null,
                 };
 
-                // Atualiza o documento
                 await firestoreDB.collection('historicoPalpites').doc(palpite.id).update({
                     resultado: {
-                        grupo:       grupoReal,
-                        dezena:      dezenaReal,
-                        milhar:      milharReal,
-                        animal:      res.bichoNome,
-                        buscadoEm:   firebase.firestore.FieldValue.serverTimestamp(),
+                        grupo:     grupoReal,
+                        dezena:    dezenaReal,
+                        milhar:    milharReal,
+                        animal:    res.bichoNome,
+                        buscadoEm: firebase.firestore.FieldValue.serverTimestamp(),
                     },
                     acertos,
                 });
 
-                console.log(`✅ Resultado atualizado: ${palpite.id} → G${grupoReal} ${dezenaReal} | Top5:${acertos.grupoTop5} Dez:${acertos.dezena}`);
+                console.log(`✅ Resultado preenchido: ${palpite.id} → G${grupoReal} ${dezenaReal} | Top5:${acertos.grupoTop5}`);
 
             } catch (e) {
-                console.warn('Erro ao buscar resultado para', palpite.id, e);
+                console.warn('[Histórico] Erro ao buscar resultado para', palpite.id, e);
             }
         }
     } catch (e) {
-        console.warn('calcBuscarEAtualizarResultados erro:', e);
+        console.warn('[Histórico] calcBuscarEAtualizarResultados erro:', e);
     }
 }
 
