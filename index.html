@@ -7874,7 +7874,7 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V19.15</strong>
+            <strong>V29.15</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -12278,32 +12278,34 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
     // --- Fim da Verificação de Horário ---
 
     try {
-        // --- Busca e Extração (código existente) ---
+        // --- Busca e Extração ---
         const htmlResultados = await fetchLotteryResults(loteria);
         const dadosExtraidos = extrairDadosResultados(htmlResultados, nomeSorteio);
 
+        // 1. SE NÃO ENCONTRAR RESULTADO (A trava do botão)
         if (!dadosExtraidos || dadosExtraidos.length === 0) {
             await showCustomConfirm(`O resultado para <strong>${nomeHorarioDisplay}</strong> não foi encontrado no site fonte neste momento.\n\nPode ser que ainda não tenha sido publicado ou a estrutura do site mudou.`, "Entendi", null, 'shareResultsModal');
-             // Não precisa fechar o modal aqui, só reabilitar o botão
-            // closeShareResultsModal(); // REMOVER esta linha
-            buttonElement.disabled = false; // Reabilita
-            buttonElement.innerHTML = originalButtonText; // Restaura
-            return;
-
-            const dataSorteio = new Date(); // Assume que os resultados são de hoje
-        dadosExtraidos.forEach(item => {
-            // Chama a função para salvar CADA item (1º ao 5º prêmio)
-            if (item.milhar && item.milhar.length === 4 && item.posicao) { // Garante que temos os dados
-                 salvarResultadoNoHistoricoIA(loteria, dataSorteio, nomeSorteio, item); // <-- MODIFICADO: Passa o 'item' completo
-            }
-        });
+            
+            buttonElement.disabled = false; // Reabilita o botão
+            buttonElement.innerHTML = originalButtonText; // Restaura o texto original
+            return; // 🛑 PARA A EXECUÇÃO AQUI! Não tenta criar mensagem.
         }
         // --- Fim da Busca e Extração ---
 
-        // --- Formatação da Mensagem (código existente) ---
+        // 2. SE ENCONTROU RESULTADO (Salva no Histórico da I.A)
+        // Note que tirei isso de dentro do IF de cima!
+        const dataSorteio = new Date(); 
+        dadosExtraidos.forEach(item => {
+            if (item.milhar && item.milhar.length === 4 && item.posicao) { 
+                 salvarResultadoNoHistoricoIA(loteria, dataSorteio, nomeSorteio, item); 
+            }
+        });
+
+        // --- Formatação da Mensagem (Restante do seu código) ---
         const hoje = new Date();
         const dataFormatada = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'long' });
         const horaFormatada = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
         let horarioCurto = '';
         const timeMatch = nomeHorarioDisplay.match(/(\d{2}):(\d{2})/);
         if (timeMatch) {
@@ -12317,58 +12319,53 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
                  horarioCurto = timeParts[1].replace(':','h');
              }
         }
+        
         textoMensagem = `🌟 *Resultado ${nomeLoteriaDisplay.toUpperCase()} ${horarioCurto ? horarioCurto + ' ' : ''}- 1º ao 5º* 🌟\n\n`;
         
-        // --- LINHAS ADICIONADAS ---
         textoMensagem += `*VIP I.A REAL TIME*\n`;
         textoMensagem += `━━━━━━━━━━━━━━━\n\n`;
-        // --- FIM DAS LINHAS ADICIONADAS ---
 
         textoMensagem += `*Extração:* ${nomeHorarioDisplay}\n`;
         const capitalizedDataFormatada = dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
         textoMensagem += `*Data:* ${capitalizedDataFormatada}\n`;
         textoMensagem += `-----------------------------------\n\n`;
+        
         dadosExtraidos.slice(0, 5).forEach(item => {
             const grupoSplit = item.grupo.split(' - ');
             const numeroGrupo = grupoSplit[0] ? grupoSplit[0].trim() : '';
             const nomeGrupo = grupoSplit[1] ? grupoSplit[1].trim() : item.grupo;
             textoMensagem += `*${item.posicao}* ${item.emoji}: *${item.milhar}* - (${numeroGrupo}) ${nomeGrupo}\n`;
         });
+        
         textoMensagem += `\n-----------------------------------\n`;
         textoMensagem += `📲 _Consultado em: ${capitalizedDataFormatada} às ${horaFormatada}_\n\n`;
         
         // --- PREVIEW E CONFIRMAÇÃO ---
-        linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`; // Gera o link aqui
+        linkWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMensagem)}`; 
         const userConfirmed = await showCustomConfirm(
-            `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`, // Usa <pre> para melhor formatação e <br> para quebras de linha
-            "✅ Enviar no WhatsApp", // Texto do botão OK
-            "❌ Cancelar", // Texto do botão Cancelar
-            'shareResultsModal' // ID do modal que está chamando
+            `<strong>Pré-visualização da Mensagem:</strong>\n\n<pre style="white-space: pre-wrap; word-wrap: break-word; text-align: left; font-size: 0.9em; max-height: 300px; overflow-y: auto; background-color: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px;">${textoMensagem.replace(/\n/g, '<br>')}</pre>\n\nDeseja enviar esta mensagem para o WhatsApp?`, 
+            "✅ Enviar no WhatsApp", 
+            "❌ Cancelar", 
+            'shareResultsModal' 
         );
 
         if (userConfirmed) {
-            // Se o usuário confirmou, abre o WhatsApp e fecha o modal
             window.open(linkWhats, '_blank');
-            closeShareResultsModal(); // Fecha o modal principal APÓS confirmação
+            closeShareResultsModal(); 
             showToast('Abrindo WhatsApp...', 'success');
         } else {
-            // Se o usuário cancelou, apenas mostra um aviso
             showToast('Envio cancelado.', 'info');
-            // Não fecha o modal, reabilita o botão para tentar outro horário
+            // Reabilita o botão se cancelar
             buttonElement.disabled = false;
             buttonElement.innerHTML = originalButtonText;
         }
-        // --- FIM DO PREVIEW E CONFIRMAÇÃO ---
 
     } catch (error) {
-        // --- Tratamento de Erro (código existente, mas reabilita o botão) ---
+        // --- Tratamento de Erro GERAL ---
         await showCustomConfirm(`Ocorreu um erro ao buscar ou processar o resultado:\n\n<em>${error.message}</em>`, "Entendi", null, 'shareResultsModal');
-        buttonElement.disabled = false; // Reabilita em caso de erro
-        buttonElement.innerHTML = originalButtonText; // Restaura
-        // Não fecha o modal principal automaticamente em caso de erro
-    }
-    // O finally não é mais necessário aqui, pois o botão é reabilitado nos fluxos de cancelamento/erro
-}
+        buttonElement.disabled = false; 
+        buttonElement.innerHTML = originalButtonText; 
+    }}
 
 // Função para substituir o prompt() de texto do navegador
 function showCustomTextPrompt(title, message, defaultValue = '') {
