@@ -7475,7 +7475,7 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
         <span class="logo-vip">VIP</span><span class="logo-mojs">MOJS</span>
     </h1>
 
-    <div id="iaScoreboardBanner" class="ia-scoreboard-banner" onclick="showPalpitesIAModal()">
+    <div id="iaScoreboardBanner" class="ia-scoreboard-banner">
     <div class="ia-scoreboard-icon"></div>
     <div style="flex-grow: 1; margin-left: 10px;">
         <div id="iaScoreboardText" class="ia-scoreboard-text">Sincronizando padrões...</div>
@@ -9213,12 +9213,12 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
             <div class="calc-section">
                 <div class="calc-label">▸ Extração</div>
                 <div class="calc-radio-group" id="calcLotRadios">
-                    <label><input type="radio" name="calcLoteria" value="rj" onchange="calcAtualizarHorarios()">RJ</label>
-                    <label><input type="radio" name="calcLoteria" value="lk" onchange="calcAtualizarHorarios()">LK</label>
-                    <label><input type="radio" name="calcLoteria" value="ln" onchange="calcAtualizarHorarios()">NC</label>
-                    <label><input type="radio" name="calcLoteria" value="ba" onchange="calcAtualizarHorarios()">BA</label>
-                    <label><input type="radio" name="calcLoteria" value="fd" onchange="calcAtualizarHorarios()">FD</label>
-                </div>
+                <label><input type="radio" name="calcLoteria" value="rj" onchange="calcAtualizarHorarios(); calcGerarPalpites();">RJ</label>
+                <label><input type="radio" name="calcLoteria" value="lk" onchange="calcAtualizarHorarios(); calcGerarPalpites();">LK</label>
+                <label><input type="radio" name="calcLoteria" value="ln" onchange="calcAtualizarHorarios(); calcGerarPalpites();">NC</label>
+                <label><input type="radio" name="calcLoteria" value="ba" onchange="calcAtualizarHorarios(); calcGerarPalpites();">BA</label>
+                <label><input type="radio" name="calcLoteria" value="fd" onchange="calcAtualizarHorarios(); calcGerarPalpites();">FD</label>
+            </div>
             </div>
 
             <div class="calc-section">
@@ -10327,7 +10327,8 @@ function openResultadosLiveFromHub() {
 function openPalpitesIAFromHub() {
     closeAnalysisHubModal();
     setTimeout(() => {
-        showPalpitesIAModal(); // Chama a nova função
+        // Redireciona diretamente para a super calculadora
+        abrirCalculadora(); 
     }, 300);
 }
 
@@ -20164,7 +20165,7 @@ async function generateSelectedNumbers() {
 
     // 3. VERIFICAÇÃO DE COTA
     if (!isPrivileged) {
-        const hoje = new Date().toISOString().split('T')[0];
+        new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-')
         const contagemAtual = userData.geracoesHoje || 0;
         const dataUltimaGeracao = userData.dataUltimaGeracao || "";
         let contagemEfetiva = (dataUltimaGeracao === hoje) ? contagemAtual : 0;
@@ -26553,13 +26554,18 @@ window.calcSalvarResultadoManual = async function(docId, milhares) {
         },
     });
 
-    // Retreina a I.A. silenciosamente para atualizar os gráficos e estatísticas
+    showToast('✅ Resultado salvo! Atualizando I.A e gráficos...', 'success');
+
+    // Retreina a I.A. e atualiza o painel de análise
     try {
-        showToast('✅ Resultado salvo! Atualizando I.A...', 'success');
         await runFullIAAnalysisUpdate(true, palpite.loteria);
         verificarStatusRoboIA();
+        // Atualiza o painel "Qual Loteria Jogar?" automaticamente
+        if (typeof calcCarregarAnalise === 'function') {
+            await calcCarregarAnalise();
+        }
     } catch(e) {
-        console.warn('[Manual] Falha ao retreinar I.A. após resultado manual:', e);
+        console.warn('[Manual] Erro ao atualizar após resultado manual:', e);
     }
 
     calcCarregarHistorico();
@@ -27206,34 +27212,59 @@ async function calcBuscarSaturacaoHoje(lot) {
 
 async function calcAnalisarLoteria(lot) {
     try {
-        // Busca análise da I.A.
-        const summary = await getIaSummaryDocument(lot);
-        const analise = (summary && summary['geral']) ? summary['geral'] : null;
+        // Busca os últimos 30 palpites REAIS salvos no histórico (com acertos calculados)
+        const trintaDiasAtras = new Date();
+        trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+        const dataMin = trintaDiasAtras.toISOString().split('T')[0];
 
-        // Busca últimos 30 resultados do 1º prêmio
-        const snap = await firestoreDB.collection('resultados')
+        const snap = await firestoreDB.collection('historicoPalpites')
             .where('loteria', '==', lot)
-            .where('posicao', '==', 1)
+            .where('data', '>=', dataMin)
             .orderBy('data', 'desc')
             .limit(30)
             .get();
 
-        if (snap.empty) return { lot, acerto: 0, roadmap: [], score: 0, sinais: [], semDados: true };
+        if (snap.empty) return { lot, acerto: 0, roadmap: [], scoreComposto: 0, sinais: [], semDados: true };
 
-        const resultados = [];
-        snap.forEach(doc => resultados.push(doc.data()));
+        const docs = [];
+        snap.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
 
-        // Para cada resultado, reconstrói o ranking que teria sido gerado
-        // e verifica se o bicho vencedor estava no Top5
+        // Só conta os que já têm resultado confirmado
+        const comResultado = docs.filter(d => d.resultado && d.acertos);
+
         let acertos = 0, parciais = 0;
         const roadmap = [];
 
-        for (const res of resultados.slice(0, 20)) {
-            const grupoReal = res.bichoGrupo;
-            if (!grupoReal || !analise) { roadmap.push({ tipo: 'sem', label: '?' }); continue; }
+        for (const d of docs.slice(0, 20)) {
+            if (!d.resultado || !d.acertos) {
+                roadmap.push({ tipo: 'sem', label: '⏳', grupo: null, horario: d.horario });
+                continue;
+            }
+            const grupoReal = d.resultado.grupo;
+            if (d.acertos.grupoTop5) {
+                acertos++;
+                roadmap.push({ tipo: 'hit', label: `#${d.acertos.posicaoGrupo||'?'}`, grupo: grupoReal, horario: d.horario });
+            } else if (d.acertos.grupoTop10) {
+                parciais++;
+                roadmap.push({ tipo: 'par', label: `Top10`, grupo: grupoReal, horario: d.horario });
+            } else {
+                roadmap.push({ tipo: 'miss', label: '✗', grupo: grupoReal, horario: d.horario });
+            }
+        }
 
-            // Score simplificado: usa calcularPontuacaoBicho para cada bicho
-            const analiseSnap = {
+        const total   = comResultado.length;
+        const taxaHit = total > 0 ? Math.round((acertos / total) * 100) : 0;
+        const taxaPar = total > 0 ? Math.round((parciais / total) * 100) : 0;
+
+        // Sinais ativos: usa modelo atual da IA apenas para indicar confiança AGORA
+        const summary = await getIaSummaryDocument(lot);
+        const analise = (summary && summary['geral']) ? summary['geral'] : null;
+        const sinais  = [];
+
+        let scoreComposto = taxaHit;
+
+        if (analise) {
+            const analiseAtual = {
                 ...analise,
                 atrasados: analise.bichosAtrasados1Premio || [],
                 bichosAtrasados: analise.bichosAtrasados1Premio || [],
@@ -27248,81 +27279,36 @@ async function calcAnalisarLoteria(lot) {
                 puxada: [],
             };
 
-            const ranking = tabelaDeGrupos.map(b => {
+            const rankingAtual = tabelaDeGrupos.map(b => {
                 const r = (typeof calcularPontuacaoBicho === 'function')
-                    ? calcularPontuacaoBicho(b.grupo, analiseSnap)
-                    : { forca: 50 };
-                return { grupo: b.grupo, forca: r.forca };
+                    ? calcularPontuacaoBicho(b.grupo, analiseAtual)
+                    : { forca: 50, motivos: [] };
+                return { ...b, forca: r.forca, motivos: r.motivos || [] };
             }).sort((a, b) => b.forca - a.forca);
 
-            const posicao = ranking.findIndex(b => b.grupo === grupoReal);
-            if (posicao !== -1 && posicao < 5) {
-                acertos++;
-                roadmap.push({ tipo: 'hit', label: `#${posicao+1}`, grupo: grupoReal, horario: res.nomeSorteio });
-            } else if (posicao !== -1 && posicao < 10) {
-                parciais++;
-                roadmap.push({ tipo: 'par', label: `#${posicao+1}`, grupo: grupoReal, horario: res.nomeSorteio });
-            } else {
-                roadmap.push({ tipo: 'miss', label: '✗', grupo: grupoReal, horario: res.nomeSorteio });
-            }
+            const top1 = rankingAtual[0];
+            const scores = rankingAtual.map(b => b.forca);
+            const media  = scores.reduce((a,v)=>a+v,0) / scores.length;
+            const desvio = Math.sqrt(scores.map(s=>(s-media)**2).reduce((a,v)=>a+v,0)/scores.length);
+
+            if (top1.motivos.some(m => m.includes('CONFLUÊNCIA')))  sinais.push('⚡ Confluência');
+            if (top1.motivos.some(m => m.includes('TRIPLO')))       sinais.push('🔱 Triplo Sinal');
+            if (top1.motivos.some(m => m.includes('Cruz')))         sinais.push('🌟 Cruz');
+            if (top1.motivos.some(m => m.includes('Ciclo')))        sinais.push('🚨 Ciclo');
+            if (top1.motivos.some(m => m.includes('Ascendente')))   sinais.push('📈 Ascendente');
+            if (top1.motivos.some(m => m.includes('Convergência'))) sinais.push('🎯 Convergência');
+
+            scoreComposto = Math.round(taxaHit * 0.7 + Math.min(desvio, 50) * 0.3);
         }
-
-        const total   = Math.min(resultados.length, 20);
-        const taxaHit = total > 0 ? Math.round((acertos / total) * 100) : 0;
-        const taxaPar = total > 0 ? Math.round((parciais / total) * 100) : 0;
-
-        // Score atual: quanto o sistema está confiante agora
-        // Usa os top3 do ranking atual e verifica convergência de sinais
-        const analiseAtual = {
-            ...analise,
-            atrasados: analise.bichosAtrasados1Premio || [],
-            bichosAtrasados: analise.bichosAtrasados1Premio || [],
-            frequentes: analise.bichosFrequentes || [],
-            bichosFrequentes: analise.bichosFrequentes || [],
-            ciclos: analise.ciclos || {},
-            tendenciaRecente: analise.tendenciaRecente || {},
-            bicho1PremioPorDia: analise.bicho1PremioPorDia || {},
-            posicaoHistorico: analise.posicaoHistorico || {},
-            afinidades: analise.afinidades || {},
-            afinidadesRecentes: analise.afinidadesRecentes || {},
-            puxada: [],
-        };
-
-        const rankingAtual = tabelaDeGrupos.map(b => {
-            const r = (typeof calcularPontuacaoBicho === 'function')
-                ? calcularPontuacaoBicho(b.grupo, analiseAtual)
-                : { forca: 50, motivos: [] };
-            return { ...b, forca: r.forca, motivos: r.motivos || [] };
-        }).sort((a, b) => b.forca - a.forca);
-
-        const top1Atual = rankingAtual[0];
-        const scores    = rankingAtual.map(b => b.forca);
-        const media     = scores.reduce((a,v)=>a+v,0) / scores.length;
-        const desvio    = Math.sqrt(scores.map(s=>(s-media)**2).reduce((a,v)=>a+v,0)/scores.length);
-
-        // Sinais ativos no top1
-        const sinais = [];
-        if (top1Atual.motivos.some(m => m.includes('CONFLUÊNCIA')))  sinais.push('⚡ Confluência');
-        if (top1Atual.motivos.some(m => m.includes('TRIPLO')))       sinais.push('🔱 Triplo Sinal');
-        if (top1Atual.motivos.some(m => m.includes('Cruz')))         sinais.push('🌟 Cruz');
-        if (top1Atual.motivos.some(m => m.includes('Ciclo')))        sinais.push('🚨 Ciclo');
-        if (top1Atual.motivos.some(m => m.includes('Ascendente')))   sinais.push('📈 Ascendente');
-        if (top1Atual.motivos.some(m => m.includes('Convergência'))) sinais.push('🎯 Convergência');
-
-        // Score composto: taxa de acerto histórica + confiança atual
-        const scoreConfianca = desvio > 30 ? 'alta' : desvio > 15 ? 'média' : 'baixa';
-        const scoreComposto  = Math.round(taxaHit * 0.6 + Math.min(desvio, 50) * 0.4);
 
         return {
             lot,
-            acerto: taxaHit,
+            acerto:  taxaHit,
             parcial: taxaPar,
             roadmap,
             scoreComposto,
-            scoreConfianca,
             sinais,
-            top1: top1Atual,
-            semDados: false,
+            semDados: total === 0,
         };
     } catch(e) {
         console.error('[AnaliseWidget]', lot, e);
@@ -27508,6 +27494,9 @@ window.calcSelecionarLoteria = function(lot) {
         });
         // Marca a linha clicada
         event.currentTarget.classList.add('selecionada');
+        
+        // AUTO GERAR!
+        calcGerarPalpites();
     }
 };
 
@@ -27793,7 +27782,7 @@ async function calcBuscarEAtualizarResultados() {
     try {
         const tresDiasAtras = new Date();
         tresDiasAtras.setDate(tresDiasAtras.getDate() - 3);
-        const dataMin = tresDiasAtras.toISOString().split('T')[0];
+        const dataMin = tresDiasAtras.toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
 
         // Query simples sem índice composto: só filtra por data, filtra resultado==null no JS
         const snap = await firestoreDB.collection('historicoPalpites')
@@ -28018,33 +28007,57 @@ window.calcCarregarHistorico = async function(filtroLot) {
             const lotNome = {rj:'PT Rio',lk:'Look',ln:'Nacional',ba:'Bahia',fd:'Federal'}[doc.loteria]||doc.loteria;
             const dataFmt = (doc.data||'').split('-').reverse().join('/');
 
+            // --- NOVA LÓGICA DA CÁPSULA DE BOTÕES ---
+            let capsulaBotoes = '';
+            if (temRes) {
+                // Se já tem resultado, mostra Editar e Apagar
+                capsulaBotoes = `
+                    <div style="display:flex;background:rgba(128,128,128,0.15);border-radius:8px;padding:2px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+                        <button onclick="event.stopPropagation(); calcEditarResultadoManual('${doc.id}')"
+                            style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
+                            title="Editar Resultado">✏️</button>
+                        <div style="width:1px;background:rgba(128,128,128,0.3);margin:6px 0;"></div>
+                        <button onclick="event.stopPropagation(); calcApagarPalpite('${doc.id}')"
+                            style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
+                            title="Apagar Palpite">🗑️</button>
+                    </div>`;
+            } else {
+                // Se está aguardando, mostra SÓ o botão Apagar
+                capsulaBotoes = `
+                    <div style="display:flex;background:rgba(128,128,128,0.15);border-radius:8px;padding:2px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+                        <button onclick="event.stopPropagation(); calcApagarPalpite('${doc.id}')"
+                            style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:6px 12px;transition:0.2s;"
+                            title="Apagar Palpite">🗑️</button>
+                    </div>`;
+            }
+
             html += `
-            <div style="border:1px solid ${corBorda};border-radius:10px;padding:10px 12px;
-                margin-bottom:8px;font-size:0.7rem;cursor:pointer;"
-                onclick="calcAbrirDetalhe('${doc.id}')">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <span style="font-weight:800;">${lotNome} ${doc.horario}</span>
-                    <span style="color:#888;">${dataFmt} · ${doc.fonte==='ia'?'🤖 I.A.':'🎯 Calc'} 👆</span>
+            <div style="border:1px solid ${corBorda};border-radius:12px;padding:14px;
+                margin-bottom:12px;font-size:0.75rem;cursor:pointer;background:rgba(128,128,128,0.04);transition:transform 0.2s;"
+                onclick="calcAbrirDetalhe('${doc.id}')"
+                onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
+                
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        <span style="font-weight:900;font-size:1.05rem;">${lotNome} ${doc.horario}</span>
+                        <span style="color:#888;font-size:0.7rem;font-weight:600;">${dataFmt} · ${doc.fonte==='ia'?'🤖 I.A.':'🎯 Calc'} 👆</span>
+                    </div>
+                    ${capsulaBotoes}
                 </div>`;
 
             if (temRes) {
                 const pos = doc.acertos.posicaoGrupo;
                 html += `
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1;">
-                        <span style="background:rgba(0,0,0,0.1);padding:3px 8px;border-radius:6px;">
-                            1º G${doc.resultado.grupo} ${doc.resultado.animal} · ${doc.resultado.dezena}
-                        </span>
-                        <span style="color:${ac5?'#198754':ac10?'#0d6efd':'#dc3545'};font-weight:700;">
-                            ${ac5?`✅ Top${pos}`:''}${!ac5&&ac10?`⚠️ Top${pos}`:''}${!ac10?'❌ Fora':''}
-                        </span>
-                        <span style="color:${acDez?'#198754':'#dc3545'};">
-                            ${acDez?'✅ Dez':'❌ Dez'}
-                        </span>
-                    </div>
-                    <button onclick="event.stopPropagation(); calcEditarResultadoManual('${doc.id}')"
-                        style="background:none; border:none; font-size:1.1rem; cursor:pointer; padding:4px;"
-                        title="Editar / Corrigir Resultado">✏️</button>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <span style="background:rgba(128,128,128,0.15);padding:5px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;border:1px solid rgba(128,128,128,0.2);">
+                        1º G${doc.resultado.grupo} ${doc.resultado.animal} · ${doc.resultado.dezena}
+                    </span>
+                    <span style="color:${ac5?'#198754':ac10?'#0d6efd':'#dc3545'};font-weight:800;font-size:0.75rem;padding:5px 8px;border-radius:6px;background:${ac5?'rgba(25,135,84,0.1)':ac10?'rgba(13,110,253,0.1)':'rgba(220,53,69,0.1)'};">
+                        ${ac5?`✅ Top${pos}`:''}${!ac5&&ac10?`⚠️ Top${pos}`:''}${!ac10?'❌ Fora':''}
+                    </span>
+                    <span style="color:${acDez?'#198754':'#dc3545'};font-weight:800;font-size:0.75rem;padding:5px 8px;border-radius:6px;background:${acDez?'rgba(25,135,84,0.1)':'rgba(220,53,69,0.1)'};">
+                        ${acDez?'✅ Dez':'❌ Dez'}
+                    </span>
                 </div>`;
             } else {
                 html += `
@@ -28103,6 +28116,19 @@ window.calcEditarResultadoManual = async function(docId) {
     } catch(e) {
         console.error("Erro ao editar resultado:", e);
         showToast('Erro ao abrir edição.', 'error');
+    }
+};
+
+window.calcApagarPalpite = async function(docId) {
+    const confirmed = await showCustomConfirm('Apagar este palpite permanentemente?', 'Sim, Apagar', 'Cancelar');
+    if (!confirmed) return;
+    try {
+        await firestoreDB.collection('historicoPalpites').doc(docId).delete();
+        showToast('Palpite apagado.', 'success');
+        calcCarregarHistorico();
+    } catch(e) {
+        console.error('Erro ao apagar palpite:', e);
+        showToast('Erro ao apagar.', 'error');
     }
 };
 
@@ -28301,7 +28327,7 @@ window.abrirCalculadora = function() {
     const modal = document.getElementById('calcPalpitesModal');
     if (!modal) return;
     const di = document.getElementById('calcDataInput');
-    if (di && !di.value) di.value = new Date().toISOString().split('T')[0];
+    if (di && !di.value) di.value = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
     // Limpa seleção anterior
     document.querySelectorAll('input[name="calcLoteria"]').forEach(r => r.checked = false);
     document.querySelectorAll('input[name="calcHora"]').forEach(r => r.checked = false);
@@ -28353,7 +28379,7 @@ window.calcAtualizarHorarios = function() {
 
     cont.innerHTML = horarios.map((h, i) =>
         `<label><input type="radio" name="calcHora" value="${h}"${i === proximoIdx ? ' checked' : ''}
-         onchange="calcAvisarTiming(this.value)">${h}</label>`
+         onchange="calcAvisarTiming(this.value); calcGerarPalpites();">${h}</label>`
     ).join('');
 
     const res = document.getElementById('calcResultados');
@@ -28419,7 +28445,7 @@ window.calcGerarPalpites = async function() {
         console.warn('[Calc] Elementos não encontrados: btn ou resDiv');
         return;
     }
-    const data   = document.getElementById('calcDataInput')?.value || new Date().toISOString().split('T')[0];
+    const data = document.getElementById('calcDataInput')?.value || new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
 
     // Validação — loteria e horário obrigatórios
     if (!lot || !hora) {
@@ -28432,64 +28458,21 @@ window.calcGerarPalpites = async function() {
         return;
     }
 
-    // Confirmação antes de gerar
-    const nomeLotConf = { rj:'PT Rio', lk:'Look Goiás', ln:'Nacional', ba:'Bahia', fd:'Federal' }[lot] || lot.toUpperCase();
-    const dataFmtConf = data.split('-').reverse().join('/');
-    const confirmado  = await new Promise(resolve => {
-        // Remove confirmação anterior se existir
-        document.getElementById('calcConfirmBox')?.remove();
-
-        const box = document.createElement('div');
-        box.id = 'calcConfirmBox';
-        box.style.cssText = `
-            position:fixed; inset:0; background:rgba(0,0,0,0.6);
-            display:flex; align-items:center; justify-content:center;
-            z-index:99999; animation:fadeIn 0.2s ease;
-        `;
-        box.innerHTML = `
-            <div style="background:var(--card-bg,#1e1e1e); border:1px solid rgba(255,255,255,0.1);
-                        border-radius:16px; padding:28px 24px; max-width:320px; width:90%;
-                        text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
-                <div style="font-size:2rem; margin-bottom:12px;">🎯</div>
-                <div style="font-size:0.72rem; color:#888; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;">
-                    Confirmar Consulta
-                </div>
-                <div style="font-size:1rem; font-weight:800; margin-bottom:4px;">
-                    ${nomeLotConf}
-                </div>
-                <div style="font-size:1.4rem; font-weight:900; color:#0d6efd; letter-spacing:3px; margin-bottom:4px;">
-                    ${hora}
-                </div>
-                <div style="font-size:0.72rem; color:#888; margin-bottom:20px;">
-                    ${dataFmtConf}
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button id="calcConfNao" style="flex:1; padding:12px; border-radius:10px;
-                        background:transparent; border:1px solid rgba(128,128,128,0.3);
-                        color:#888; font-weight:700; cursor:pointer; font-size:0.9rem;">
-                        Cancelar
-                    </button>
-                    <button id="calcConfSim" style="flex:1; padding:12px; border-radius:10px;
-                        background:#0d6efd; border:none; color:#fff;
-                        font-weight:800; cursor:pointer; font-size:0.9rem;
-                        box-shadow:0 4px 0 #0b5ed7;">
-                        ⚡ Ver Palpites
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(box);
-        document.getElementById('calcConfSim').onclick = () => { box.remove(); resolve(true); };
-        document.getElementById('calcConfNao').onclick = () => { box.remove(); resolve(false); };
-    });
-
-    if (!confirmado) return;
-
     // Atualiza aviso antes de gerar
     calcAvisarTiming(hora);
     btn.disabled = true;
-    btn.textContent = '⏳ Consultando Firebase + Site Externo...';
     resDiv.style.display = 'none';
+
+    // --- MÁGICA 1: AUTO-SYNC INVISÍVEL ---
+    // Sincroniza a loteria selecionada ANTES de fazer os cálculos matemáticos
+    btn.textContent = '⏳ Sincronizando resultados recentes (I.A.)...';
+    try {
+        await syncLotteryBeforeIA(lot);
+    } catch(e) {
+        console.warn("Erro no auto-sync:", e);
+    }
+
+    btn.textContent = '⏳ Processando I.A. Matemática...';
 
     // Busca tudo em paralelo: Firebase + puxada + soma + externo + saturação
     let analise = null, puxada = null, soma = null, externo = null;
@@ -28504,10 +28487,8 @@ window.calcGerarPalpites = async function() {
         ]);
     } catch(e) { console.error('[Calc]', e); }
 
-    btn.textContent = '⏳ Processando I.A...';
-
     const r = calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, saturacao);
-    const mr = r.motorResult; // resultado do motor real (pode ser null se I.A. não treinada)
+    const mr = r.motorResult; // resultado do motor real
 
     const nomeLot = { rj:'RJ', lk:'LK', ln:'NC', ba:'BA', fd:'FD' }[lot] || lot.toUpperCase();
     const dataFmt = data.split('-').reverse().join('/');
@@ -28531,24 +28512,21 @@ window.calcGerarPalpites = async function() {
 
     html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;justify-content:center;">${bFB}${bExt}${bSat}${bTurno}</div>`;
 
-    // ── VOLATILIDADE (do motor real) ──────────────────────────────────────
     if (mr && mr.volatilidade) {
         const volCor = mr.volatilidade.nivel.includes('🟢') ? '#198754' : mr.volatilidade.nivel.includes('🟡') ? '#856404' : '#dc3545';
         html += `<div style="text-align:center;font-size:0.7rem;color:${volCor};margin-bottom:8px;letter-spacing:1px;">
             ${mr.volatilidade.nivel} ${mr.volatilidade.texto}
         </div>`;
     }
-    // ── CRUZ DO DIA ───────────────────────────────────────────────────────
+
     html += `<div class="calc-result-block"><div class="calc-result-title">🌟 Cruz do Dia</div>`;
     html += `<div class="cruz-row" style="margin-bottom: 8px;">DÍGITOS GUIA ${r.cruzDoDia.map(d=>`<span class="cruz-digit">${d}</span>`).join('')}
         <span style="font-size:0.63rem;margin-left:8px;color:#888;">dia ${new Date(data+'T12:00:00').getDate()} · acerto validado: 78%</span>
     </div>`;
-    // --- RESUMO EXPLICATIVO ADICIONADO AQUI ---
     html += `<div style="font-size: 0.7rem; color: #6c757d; line-height: 1.4; border-top: 1px dashed rgba(128,128,128,0.2); padding-top: 6px;">
-        💡 <strong>Como usar:</strong> Não jogue esses 4 números juntos. Eles são os algarismos mais "quentes" do dia. Escolha dezenas que contenham esses dígitos para aumentar suas chances de acerto.
+        💡 <strong>Como usar:</strong> Não jogue esses 4 números juntos. Eles são os algarismos mais "quentes" do dia. Escolha dezenas que contenham esses dígitos.
     </div></div>`;
 
-    // ── MILHAR DA SOMA ────────────────────────────────────────────────────
     if (r.soma) {
         html += `<div class="calc-result-block"><div class="calc-result-title">➕ Milhar da Soma — Último Sorteio</div>`;
         html += `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
@@ -28558,14 +28536,12 @@ window.calcGerarPalpites = async function() {
         </div></div>`;
     }
 
-    // ── ALERTA DOBRADINHA ─────────────────────────────────────────────────
     if (mr && mr.alertaDobradinha) {
         html += `<div style="background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.4);border-radius:8px;padding:8px 12px;font-size:0.72rem;color:#856404;margin-bottom:4px;">
             🎲 <strong>ALERTA DOBRADINHA</strong> — Dezena gêmea detectada no Top 1. Atenção ao jogar centena.
         </div>`;
     }
 
-    // ── TOP 5 GRUPOS ──────────────────────────────────────────────────────
     html += `<div class="calc-result-block"><div class="calc-result-title">🐾 Top 5 Grupos — ${r.turno==='noite'?'🌙':'☀️'} ${r.turno==='noite'?'Noite':'Dia'}</div>`;
     r.top5.forEach((b, i) => {
         const mvs = (b.motivos || []).slice(0, 3).join(' · ');
@@ -28583,7 +28559,6 @@ window.calcGerarPalpites = async function() {
     });
     html += `</div>`;
 
-    // ── JOGADA DE MESTRE ──────────────────────────────────────────────────
     if (mr && mr.jogadaDeMestre) {
         html += `<div class="calc-result-block"><div class="calc-result-title">👑 Jogada de Mestre</div>
             <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
@@ -28596,7 +28571,6 @@ window.calcGerarPalpites = async function() {
         </div>`;
     }
 
-    // ── MILHARES ──────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.milhar && mr.palpites.milhar.length > 0) {
         html += `<div class="calc-result-block"><div class="calc-result-title">🎰 Milhares</div><div class="calc-chip-grid">`;
         mr.palpites.milhar.forEach((m, i) => {
@@ -28606,13 +28580,11 @@ window.calcGerarPalpites = async function() {
         html += `</div></div>`;
     }
 
-    // ── CENTENAS ─────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.centena && mr.palpites.centena.length > 0) {
         html += `<div class="calc-result-block"><div class="calc-result-title">💯 Centenas</div>`;
         html += `<div class="calc-chip-grid" style="display:flex;flex-wrap:wrap;gap:6px;">${mr.palpites.centena.map((c,i)=>chip(c.palpite,i<2,` title="${c.tipo||''}"`)).join('')}</div></div>`;
     }
 
-    // Helper para normalizar os arrays na Calculadora
     const flattenGroup = (groups) => {
         let flat = [];
         (groups || []).forEach(g => {
@@ -28622,7 +28594,6 @@ window.calcGerarPalpites = async function() {
         return flat;
     };
 
-    // ── DUQUES ───────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.duques && mr.palpites.duques.length > 0) {
         const flatDuques = flattenGroup(mr.palpites.duques);
         html += `<div class="calc-result-block"><div class="calc-result-title">🎲 Duques</div>`;
@@ -28631,7 +28602,6 @@ window.calcGerarPalpites = async function() {
         ).join('')}</div></div>`;
     }
 
-    // ── TERNOS ───────────────────────────────────────────────────────────
     if (mr && mr.palpites && mr.palpites.ternos && mr.palpites.ternos.length > 0) {
         const flatTernos = flattenGroup(mr.palpites.ternos);
         html += `<div class="calc-result-block"><div class="calc-result-title">🎯 Ternos</div>`;
@@ -28640,34 +28610,27 @@ window.calcGerarPalpites = async function() {
         ).join('')}</div></div>`;
     }
 
-
-    // ── FECHO DE DEZENAS ──────────────────────────────────────────────────
     if (mr && mr.dezenasFechamento && mr.dezenasFechamento.length > 0) {
         html += `<div class="calc-result-block"><div class="calc-result-title">🔢 Fecho de Dezenas</div>`;
         html += `<div class="calc-chip-grid">${mr.dezenasFechamento.map((d,i)=>chip(d,i<2)).join('')}</div></div>`;
     }
 
-    // ── UNIDADES ─────────────────────────────────────────────────────────
     if (r.unidades.length > 0) {
         html += `<div class="calc-result-block"><div class="calc-result-title">🔭 Unidades em Atraso</div>`;
         html += `<div class="uni-big-grid">${r.unidades.map(u=>`<div class="uni-big">${u.numero}</div>`).join('')}</div></div>`;
     }
 
-    // ── BICHO DA SOMBRA ───────────────────────────────────────────────────
     if (mr && mr.bichoSombra) {
         html += `<div style="background:rgba(108,117,125,0.06);border:1px solid rgba(108,117,125,0.18);border-radius:8px;padding:8px 12px;font-size:0.7rem;color:#6c757d;margin-bottom:4px;">
             👻 <strong>Bicho da Sombra:</strong> ${mr.bichoSombra.emoji||''} ${mr.bichoSombra.animal} G${mr.bichoSombra.grupo} — menor chance hoje, evitar.
         </div>`;
     }
 
-    // ── PALPITÃO ──────────────────────────────────────────────────────────
-    const paltitao = r.paltitao; // <-- LINHA ADICIONADA PARA CORRIGIR O ERRO
+    const paltitao = r.paltitao; 
     const { palt5, dezenas: pDez } = paltitao;
     html += `<div class="paltitao-block">`;
     html += `<div class="paltitao-title">🎯 Top 20 Dezenas — 1º Prêmio</div>`;
-    html += `<div class="paltitao-sub">
-        Score individual · Cruz · Grupo · Data · Mestre · Ontem
-    </div>`;
+    html += `<div class="paltitao-sub">Score individual · Cruz · Grupo · Data · Mestre · Ontem</div>`;
     html += `<div class="paltitao-dezenas" style="gap:8px;">`;
     (r.paltitao.dezMotivos || []).forEach((item, i) => {
         const temCruzDupla = item.motivos.includes('🌟Cruz✕');
@@ -28683,9 +28646,8 @@ window.calcGerarPalpites = async function() {
                 <span class="dez-mot">${motivoStr}</span>
             </div>`;
     });
-    html += `</div>`; // fecha paltitao-dezenas
+    html += `</div>`; 
 
-    // Top 10 grupos sempre
     html += `<div class="paltitao-cobertura" style="margin-top:10px;">
         <div style="font-size:0.62rem;color:#888;letter-spacing:1px;margin-bottom:6px;">
             📊 TOP 10 GRUPOS — jogue pelo menos 5
@@ -28704,7 +28666,6 @@ window.calcGerarPalpites = async function() {
 
     html += `</div>`;
 
-    // ── TEXTO COPIAR / COMPARTILHAR ───────────────────────────────────────
     window._calcTextoAtual =
         `🎯 *PALPITES ${nomeLot} — ${hora} (${dataFmt})*\n\n` +
         `🌟 *Cruz do Dia:* ${r.cruzDoDia.join(' · ')} (${r.turno==='noite'?'🌙 Noite':'☀️ Dia'})\n\n` +
@@ -28713,7 +28674,6 @@ window.calcGerarPalpites = async function() {
         `🐾 *Grupos:*\n${r.top5.map((b,i)=>`${i+1}º ${b.emoji} ${b.animal} G${b.grupo} (${b.forca}pts)${b.motivos&&b.motivos[0]?' — '+b.motivos[0]:''}`).join('\n')}\n\n` +
         (mr&&mr.palpites&&mr.palpites.milhar ? `🎰 *Milhares:* ${mr.palpites.milhar.map(m=>m.palpite+(m.invertida?' /'+m.invertida:'')).join('  ')}\n\n` : '') +
         (mr&&mr.palpites&&mr.palpites.centena ? `💯 *Centenas:* ${mr.palpites.centena.map(c=>c.palpite).join('  ')}\n\n` : '') +
-// Substitua as linhas que leem mr.palpites.duques/ternos
         (mr&&mr.palpites&&mr.palpites.duques?.length ? `🎲 *Duques:* ${flattenGroup(mr.palpites.duques).map(d=>d.palpite).join('  ')}\n\n` : '') +
         (mr&&mr.palpites&&mr.palpites.ternos?.length ? `🎯 *Ternos:* ${flattenGroup(mr.palpites.ternos).map(t=>t.palpite).join('  ')}\n\n` : '') +
         `🔢 *Top 20 Dezenas:* ${(r.paltitao.dezMotivos||[]).map(x=>`${x.dz}(${x.motivos.slice(0,2).join('+')})`).join('  ')}\n\n` +
@@ -28731,7 +28691,6 @@ window.calcGerarPalpites = async function() {
     btn.disabled = false;
     btn.textContent = '⚡ CALCULAR PALPITES';
 
-    // Salva no histórico automaticamente
     calcSalvarHistorico(
         'calculadora',
         lot, hora, data,
@@ -28743,13 +28702,12 @@ window.calcGerarPalpites = async function() {
             jogadaMestre: mr?.jogadaDeMestre || null,
             milhares:     (mr?.palpites?.milhar  || []).map(m => m.palpite+(m.invertida?' /'+m.invertida:'')),
             centenas:     (mr?.palpites?.centena || []).map(c => c.palpite),
-            // Substitua no calcSalvarHistorico logo abaixo
             duques:       flattenGroup(mr?.palpites?.duques).map(d => d.palpite),
             ternos:       flattenGroup(mr?.palpites?.ternos).map(t => t.palpite),
         }
     ).then(id => {
         if (id) console.log('✅ Palpite salvo:', id);
-        });
+    });
 };
 
 async function calcAtualizarLeds() {
@@ -28826,7 +28784,7 @@ window.calcCompartilhar = function() {
 document.addEventListener('DOMContentLoaded', function() {
     calcAtualizarHorarios();
     const di = document.getElementById('calcDataInput');
-    if (di) di.value = new Date().toISOString().split('T')[0];
+    if (di) di.value = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
 });
 
 })();
