@@ -262,7 +262,7 @@ header{border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-i
 
         <div class="extr-label">LOTERIA E TURNO</div>
         <div class="extr-row">
-          <select class="extr-select" id="extr-loteria">
+          <select class="extr-select" id="extr-loteria" onchange="updateTurnoSelects(parseInt(this.value))">
             <option value="0">Rio de Janeiro</option>
             <option value="1">Loteria Nacional</option>
             <option value="2">Look Goiás</option>
@@ -442,11 +442,31 @@ const LOTERIA_KEYWORDS=[
   ['federal','loteria federal',' lf ','(lf)']
 ];
 const LOTTERY_TURNOS={
-  0:[{id:'PPT',display:'09:20 (PPT)'},{id:'PTM',display:'11:20 (PTM)'},{id:'PT',display:'14:20 (PT)'},{id:'PTV',display:'16:20 (PTV)'},{id:'PTN',display:'18:20 (PTN)'},{id:'COR',display:'21:30 (COR)'}],
-  1:[{id:'T02',display:'02:00'},{id:'T08',display:'08:00'},{id:'T10',display:'10:00'},{id:'T12',display:'12:00'},{id:'T15',display:'15:00'},{id:'T17',display:'17:00'},{id:'T19',display:'19:00'},{id:'T21',display:'21:00'},{id:'T23',display:'23:00'}],
-  2:[{id:'T07',display:'07:20'},{id:'T09',display:'09:20'},{id:'T11',display:'11:20'},{id:'T14',display:'14:20'},{id:'T16',display:'16:20'},{id:'T18',display:'18:20'},{id:'T21',display:'21:20'},{id:'T23',display:'23:20'}],
-  3:[{id:'T10',display:'10:00'},{id:'T12',display:'12:00'},{id:'T15',display:'15:00'},{id:'T19',display:'19:00'},{id:'T21',display:'21:00'}],
-  4:[{id:'T20',display:'20:00'}]
+  0:[ // Rio de Janeiro
+    {id:'PPT',display:'09:20 (PPT)'},{id:'PTM',display:'11:20 (PTM)'},
+    {id:'PT', display:'14:20 (PT)'}, {id:'PTV',display:'16:20 (PTV)'},
+    {id:'PTN',display:'18:20 (PTN)'},{id:'COR',display:'21:30 (COR)'}
+  ],
+  1:[ // Nacional
+    {id:'T02',display:'02:00'},{id:'T08',display:'08:00'},
+    {id:'T10',display:'10:00'},{id:'T12',display:'12:00'},
+    {id:'T15',display:'15:00'},{id:'T17',display:'17:00'},
+    {id:'T21',display:'21:00'},{id:'T23',display:'23:00'}
+  ],
+  2:[ // Look Goiás
+    {id:'T07',display:'07:00'},{id:'T09',display:'09:20'},
+    {id:'T11',display:'11:20'},{id:'T14',display:'14:20'},
+    {id:'T16',display:'16:20'},{id:'T18',display:'18:20'},
+    {id:'T21',display:'21:30'},{id:'T23',display:'23:20'}
+  ],
+  3:[ // Bahia
+    {id:'T10',display:'10:00'},{id:'T12',display:'12:00'},
+    {id:'T15',display:'15:00'},{id:'T17',display:'17:00'},
+    {id:'T21',display:'21:00'}
+  ],
+  4:[ // Loteria Federal
+    {id:'T20',display:'20:00 (Qua/Sáb)'}
+  ]
 };
 const TURNO_MAP={
   PPT:['ppt','09:20','09h20'], PTM:['ptm','11:20','11h20','manhã','manha'],
@@ -547,6 +567,8 @@ function updateTurnoSelects(idx){
   const optsHtml=turnos.map(t=>`<option value="${t.id}">${t.display}</option>`).join('');
   document.getElementById('extr-turno').innerHTML=optsHtml;
   document.getElementById('import-turno').innerHTML='<option value="todos">Todos os turnos</option>'+optsHtml;
+  document.getElementById('extr-loteria').value=idx;
+  document.getElementById('import-loteria').value=idx;
 }
 function setTab(e,tab){
   document.querySelectorAll('.tab-nav-btn').forEach(b=>b.classList.remove('active'));
@@ -591,6 +613,12 @@ function clearExtracoes(){
   extracoes=[];clearFirebase();renderExtList();resetAI();render();
 }
 
+function getTurnoDisplay(lIdx, turnoId){
+  const turnos=LOTTERY_TURNOS[lIdx]||[];
+  const found=turnos.find(t=>t.id===turnoId);
+  return found?found.display:turnoId;
+}
+
 function renderExtList(){
   const body=document.getElementById('extr-list-body');
   if(!extracoes.length){
@@ -599,7 +627,8 @@ function renderExtList(){
   body.innerHTML=extracoes.map(e=>{
     const b1=BICHOS[dezToBicho(e.dezenas[0])];
     const dezsHtml=e.dezenas.map(d=>`<div class="extr-dez">${d}</div>`).join('');
-    return`<div class="extr-item"><div class="extr-meta">${e.data}<br><span style="color:var(--accent);font-weight:500;">${TAGS[e.loteria]}</span> · ${e.turno}<br><span style="color:var(--text3);">${b1.e} ${b1.n}</span></div><div class="extr-dezenas">${dezsHtml}</div><button class="extr-remove" onclick="removeExtracao(${e.id})">✕</button></div>`;
+    const turnoLabel=getTurnoDisplay(e.loteria,e.turno);
+    return`<div class="extr-item"><div class="extr-meta">${e.data}<br><span style="color:var(--accent);font-weight:500;">${TAGS[e.loteria]}</span> · <span style="color:var(--text);">${turnoLabel}</span><br><span style="color:var(--text3);">${b1.e} ${b1.n}</span></div><div class="extr-dezenas">${dezsHtml}</div><button class="extr-remove" onclick="removeExtracao(${e.id})">✕</button></div>`;
   }).join('');
 }
 
@@ -607,67 +636,46 @@ function renderExtList(){
 // PORTAL BRASIL IMPORT
 // ============================================================
 const PORTAL_URL='https://portalbrasil.net/jogodobicho/resultado-por-estado/';
-const PROXIES=[
-  u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
-  u=>`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-  u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
-];
+const PROXY='https://api.allorigins.win/get?url=';
 
 async function importarPortalBrasil(){
   const btn=document.getElementById('import-btn');
   const lIdx=parseInt(document.getElementById('import-loteria').value);
   const turnoFilter=document.getElementById('import-turno').value;
   btn.disabled=true;
-  setImportLog('Conectando ao Portal Brasil...','var(--text3)',true);
-
-  let html=null;
-  for(let i=0;i<PROXIES.length;i++){
-    try{
-      setImportLog(`Tentando proxy ${i+1}/${PROXIES.length}...`,'var(--text3)',true);
-      const url=PROXIES[i](PORTAL_URL);
-      const resp=await fetch(url);
-      if(!resp.ok) throw new Error('status '+resp.status);
-      // corsproxy.io devolve texto direto; allorigins devolve JSON {contents}
-      const ct=resp.headers.get('content-type')||'';
-      if(ct.includes('application/json')){
-        const json=await resp.json();
-        html=json.contents||json.body||null;
-      } else {
-        html=await resp.text();
-      }
-      if(html&&html.length>500) break;
-      html=null;
-    }catch(e){ html=null; }
-  }
-
-  if(!html){
-    setImportLog('❌ Todos os proxies falharam. Tente hospedar o arquivo em um servidor (não abrir como file://).','var(--hot)');
-    btn.disabled=false; return;
-  }
-
-  setImportLog('Analisando resultados...','var(--text3)',true);
-  const parsed=parsePortalBrasil(html,lIdx,turnoFilter);
-  if(parsed.length===0){
-    setImportLog('⚠ Nenhum resultado encontrado. Tente "Todos os turnos" ou outra loteria.','var(--hot)');
-    btn.disabled=false; return;
-  }
-  let add=0,dup=0; const saveP=[];
-  parsed.forEach(item=>{
-    const existe=extracoes.some(e=>
-      e.loteria===item.loteria&&e.data===item.data&&
-      e.turno===item.turno&&e.dezenas.join()===item.dezenas.join()
+  setImportLog('Conectando ao Portal Brasil via proxy...','var(--text3)',true);
+  try{
+    const resp=await fetch(PROXY+encodeURIComponent(PORTAL_URL));
+    if(!resp.ok)throw new Error('Proxy retornou '+resp.status);
+    const json=await resp.json();
+    const html=json.contents;
+    if(!html||html.length<500)throw new Error('Conteúdo vazio ou bloqueado pelo proxy');
+    setImportLog('Analisando resultados...','var(--text3)',true);
+    const parsed=parsePortalBrasil(html,lIdx,turnoFilter);
+    if(parsed.length===0){
+      setImportLog('⚠ Nenhum resultado encontrado. Tente "Todos os turnos" ou outra loteria.','var(--hot)');
+      btn.disabled=false;return;
+    }
+    let add=0,dup=0;const saveP=[];
+    parsed.forEach(item=>{
+      const existe=extracoes.some(e=>
+        e.loteria===item.loteria&&e.data===item.data&&
+        e.turno===item.turno&&e.dezenas.join()===item.dezenas.join()
+      );
+      if(!existe){extracoes.push(item);saveP.push(saveToFirebase(item));add++;}else dup++;
+    });
+    await Promise.all(saveP);
+    extracoes.sort((a,b)=>new Date(b.data)-new Date(a.data));
+    const total=extracoes.filter(e=>e.loteria===lIdx).length;
+    setImportLog(
+      '✓ '+add+' novo'+(add!==1?'s':'')+' importado'+(add!==1?'s':'')+
+      (dup?' · '+dup+' já existiam':'')+' · '+LOTTERIES[lIdx]+': '+total+' sorteios · salvo no Firebase',
+      'var(--mid)'
     );
-    if(!existe){extracoes.push(item);saveP.push(saveToFirebase(item));add++;}else dup++;
-  });
-  await Promise.all(saveP);
-  extracoes.sort((a,b)=>new Date(b.data)-new Date(a.data));
-  const total=extracoes.filter(e=>e.loteria===lIdx).length;
-  setImportLog(
-    '✓ '+add+' novo'+(add!==1?'s':'')+' importado'+(add!==1?'s':'')+
-    (dup?' · '+dup+' já existiam':'')+' · '+LOTTERIES[lIdx]+': '+total+' sorteios · salvo no Firebase',
-    'var(--mid)'
-  );
-  renderExtList(); if(lIdx===currentLottery){resetAI();render();}
+    renderExtList();if(lIdx===currentLottery){resetAI();render();}
+  }catch(e){
+    setImportLog('❌ '+e.message+'. Tente novamente ou adicione manualmente.','var(--hot)');
+  }
   btn.disabled=false;
 }
 
@@ -675,6 +683,44 @@ function detectTurno(text){
   const t=(text||'').toLowerCase();
   for(const[turno,kws] of Object.entries(TURNO_MAP)){if(kws.some(kw=>t.includes(kw)))return turno;}
   return null;
+}
+
+// Retorna o contexto de texto ao redor de um elemento (anteriores + pai)
+function getContext(el,depth=4){
+  let ctx='';
+  let cur=el;
+  for(let i=0;i<depth;i++){
+    if(cur.previousElementSibling){cur=cur.previousElementSibling;ctx=cur.textContent+' '+ctx;}
+    else if(cur.parentElement){cur=cur.parentElement;ctx=cur.textContent.slice(0,500)+' '+ctx;break;}
+    else break;
+  }
+  return ctx;
+}
+
+// Extrai hora no formato HH:MM de um texto
+function extractHour(text){
+  const m=text.match(/\b(\d{1,2}):(\d{2})\b/);
+  if(!m)return null;
+  return m[1].padStart(2,'0')+':'+m[2];
+}
+
+// Dado o índice da loteria e uma hora "HH:MM", retorna o id do turno mais próximo
+function matchTurnoByHour(lIdx, hourStr){
+  if(!hourStr)return null;
+  const [hh,mm]=hourStr.split(':').map(Number);
+  const totalMin=hh*60+mm;
+  const turnos=LOTTERY_TURNOS[lIdx]||[];
+  let best=null, bestDiff=999;
+  for(const t of turnos){
+    // extrai hora do display "HH:MM ..." ou "HH:MM (XXX)"
+    const m=t.display.match(/^(\d{1,2}):(\d{2})/);
+    if(!m)continue;
+    const tMin=parseInt(m[1])*60+parseInt(m[2]);
+    const diff=Math.abs(totalMin-tMin);
+    if(diff<bestDiff){bestDiff=diff;best=t.id;}
+  }
+  // só aceita se dentro de 45 min
+  return bestDiff<=45?best:null;
 }
 
 function parsePortalBrasil(html,lIdx,turnoFilter){
@@ -686,57 +732,132 @@ function parsePortalBrasil(html,lIdx,turnoFilter){
   doc.querySelectorAll('script,style,noscript').forEach(el=>el.remove());
 
   // 1. Tenta isolar seção da loteria desejada via headings
-  let targetHTML=null;
-  const headings=[...doc.querySelectorAll('h1,h2,h3,h4,h5,strong,b,caption,th')];
+  let targetEl=null;
+  const headings=[...doc.querySelectorAll('h1,h2,h3,h4,h5,strong,b,caption,th,td,div,p,span')];
   for(const h of headings){
     const txt=h.textContent.trim().toLowerCase();
-    if(txt.length>80)continue;
-    if(kwList.some(kw=>txt.includes(kw))){
-      let content=h.outerHTML;
-      let sib=h.nextElementSibling;
-      let cnt=0;
-      while(sib&&cnt<15){
-        const sText=sib.textContent.toLowerCase().trim().slice(0,60);
-        if(LOTERIA_KEYWORDS.some(kws=>kws.some(kw=>sText.includes(kw)))&&cnt>1)break;
-        content+=sib.outerHTML;sib=sib.nextElementSibling;cnt++;
-      }
-      targetHTML=content;break;
-    }
+    if(txt.length>120)continue;
+    if(kwList.some(kw=>txt.includes(kw))){targetEl=h;break;}
   }
-  const searchHTML=targetHTML||doc.body?.innerHTML||html;
-  const searchDoc=parser.parseFromString(searchHTML,'text/html');
 
-  // 2. Extrai data do HTML
-  const dm=searchHTML.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/);
-  const firstDate=dm?dm[3]+'-'+dm[2]+'-'+dm[1]:today;
+  // Monta HTML de busca: seção isolada ou documento inteiro
+  let searchEl=doc.body;
+  if(targetEl){
+    // Sobe até um container razoável
+    let container=targetEl.parentElement||targetEl;
+    for(let i=0;i<3;i++){
+      if(container.parentElement&&container.parentElement!==doc.body)container=container.parentElement;
+      else break;
+    }
+    searchEl=container;
+  }
 
-  // 3. Varre tabelas
-  searchDoc.querySelectorAll('table').forEach(table=>{
-    let tDate=firstDate;
-    const ctx=(table.previousElementSibling?.textContent||'')+(table.caption?.textContent||'')+(table.tHead?.textContent||'');
-    const dm2=ctx.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/);
+  // Extrai data global do bloco
+  const globalText=searchEl.textContent;
+  const dm=globalText.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/);
+  const globalDate=dm?dm[3]+'-'+dm[2]+'-'+dm[1]:today;
+
+  // 2. Estratégia principal: varre TODOS os elementos que têm exatamente 5 números de 4 dígitos próximos
+  // Procura por linhas/rows com os milhares
+  const allRows=[...searchEl.querySelectorAll('tr,li,div,p')];
+  
+  // Agrupa milhares por "bloco" — cada bloco é um grupo de 5 dezenas consecutivas
+  const usedSets=new Set();
+  
+  // Percorre o DOM em ordem, coletando contexto + dezenas
+  const allTables=[...searchEl.querySelectorAll('table')];
+  
+  allTables.forEach(table=>{
+    // Contexto ao redor da tabela para detectar horário e data
+    const ctx=getContext(table,5);
+    const ctxFull=ctx+(table.caption?.textContent||'')+(table.tHead?.textContent||'');
+    
+    // Data da extração
+    let tDate=globalDate;
+    const dm2=ctxFull.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/);
     if(dm2)tDate=dm2[3]+'-'+dm2[2]+'-'+dm2[1];
-    const turno=detectTurno(ctx)||'PT';
-    if(turnoFilter!=='todos'&&turno!==turnoFilter)return;
-    const dezenas=[];
+
+    // Detecta turno: primeiro por hora exata, depois por palavras-chave
+    const hourStr=extractHour(ctxFull);
+    let turno=matchTurnoByHour(lIdx,hourStr)||detectTurno(ctxFull);
+
+    if(turnoFilter!=='todos'&&turno&&turno!==turnoFilter)return;
+    if(!turno&&turnoFilter!=='todos')return;
+    if(!turno)turno=(LOTTERY_TURNOS[lIdx]||[])[0]?.id||'PT';
+
+    // Coleta todos os números de 4 dígitos da tabela
+    const nums=[];
     table.querySelectorAll('td,th').forEach(cell=>{
-      const t=cell.textContent.replace(/\s+/g,'').replace(/\./g,'');
-      if(/^\d{4}$/.test(t)){const dz=t.slice(-2);if(!dezenas.includes(dz)&&dezenas.length<5)dezenas.push(dz);}
+      const t=cell.textContent.replace(/\s+/g,'').replace(/\./g,'').replace(/,/g,'');
+      if(/^\d{4}$/.test(t))nums.push(t);
     });
-    if(dezenas.length===5){
-      results.push({loteria:lIdx,turno,data:tDate,dezenas,id:Date.now()+Math.random()*1e5});
+
+    // Agrupa em grupos de 5 (cada prêmio)
+    // O Portal Brasil pode ter 5 prêmios x N extrações na mesma tabela
+    // Cada linha = uma extração do dia
+    // Tenta primeiro extrair por LINHA (tr)
+    let found=false;
+    table.querySelectorAll('tr').forEach(row=>{
+      const rowNums=[];
+      row.querySelectorAll('td,th').forEach(cell=>{
+        const t=cell.textContent.replace(/\s+/g,'').replace(/\./g,'');
+        if(/^\d{4}$/.test(t))rowNums.push(t);
+      });
+      if(rowNums.length>=5){
+        const dezenas=rowNums.slice(0,5).map(n=>n.slice(-2));
+        const key=tDate+'|'+dezenas.join(',');
+        if(!usedSets.has(key)){
+          usedSets.add(key);
+          // Tenta detectar horário específico da linha
+          const rowCtx=row.textContent;
+          const rowHour=extractHour(rowCtx);
+          const rowTurno=matchTurnoByHour(lIdx,rowHour)||turno;
+          if(turnoFilter==='todos'||rowTurno===turnoFilter){
+            results.push({loteria:lIdx,turno:rowTurno,data:tDate,dezenas,id:Date.now()+Math.random()*1e6});
+            found=true;
+          }
+        }
+      }
+    });
+
+    // Se não achou por linha, usa os 5 primeiros da tabela inteira
+    if(!found&&nums.length>=5){
+      const dezenas=nums.slice(0,5).map(n=>n.slice(-2));
+      const key=tDate+'|'+dezenas.join(',');
+      if(!usedSets.has(key)){
+        usedSets.add(key);
+        results.push({loteria:lIdx,turno,data:tDate,dezenas,id:Date.now()+Math.random()*1e6});
+      }
     }
   });
 
-  // 4. Fallback: regex bruto por grupos de 4 dígitos
+  // 3. Fallback: varredura por regex no HTML bruto se não achou nada via tabelas
   if(results.length===0){
-    const turno=detectTurno(searchHTML)||'PT';
-    if(turnoFilter==='todos'||turno===turnoFilter){
-      const nums=[...searchHTML.matchAll(/\b(\d{4})\b/g)].map(m=>m[1]);
-      const dezenas=[...new Set(nums.map(m=>m.slice(-2)))].slice(0,5);
-      if(dezenas.length===5)results.push({loteria:lIdx,turno,data:firstDate,dezenas,id:Date.now()+Math.random()*1e5});
-    }
+    // Tenta encontrar padrões "HH:MM ... NNNN NNNN NNNN NNNN NNNN" no texto
+    const rawText=searchEl.textContent;
+    const lines=rawText.split(/\n|<br/);
+    let curDate=globalDate;
+    lines.forEach(line=>{
+      const dm3=line.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/);
+      if(dm3)curDate=dm3[3]+'-'+dm3[2]+'-'+dm3[1];
+      const hourStr=extractHour(line);
+      const turno=matchTurnoByHour(lIdx,hourStr)||detectTurno(line);
+      if(turnoFilter!=='todos'&&turno&&turno!==turnoFilter)return;
+      const nums=[...line.matchAll(/\b(\d{4})\b/g)].map(m=>m[1]);
+      if(nums.length>=5){
+        const dezenas=[...new Set(nums.map(n=>n.slice(-2)))].slice(0,5);
+        if(dezenas.length===5){
+          const key=curDate+'|'+dezenas.join(',');
+          if(!usedSets.has(key)){
+            usedSets.add(key);
+            const t=turno||(LOTTERY_TURNOS[lIdx]||[])[0]?.id||'PT';
+            results.push({loteria:lIdx,turno:t,data:curDate,dezenas,id:Date.now()+Math.random()*1e6});
+          }
+        }
+      }
+    });
   }
+
   return results;
 }
 
