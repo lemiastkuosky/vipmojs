@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoteStat — Análise de Jogo do Bicho</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#0a0a0f;--bg2:#111118;--bg3:#18181f;--bg4:#1e1e28;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#f0eee8;--text2:#9896a0;--text3:#5a5860;--accent:#e8c84a;--hot:#e8614a;--cold:#4a8fe8;--mid:#4ae8a0;--font-display:'Syne',sans-serif;--font-mono:'DM Mono',monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-display);min-height:100vh;overflow-x:hidden;}
+header{border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;background:rgba(10,10,15,0.95);backdrop-filter:blur(12px);z-index:100;}
+.logo{font-size:18px;font-weight:800;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px;}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;}
+.header-info{font-family:var(--font-mono);font-size:11px;color:var(--text3);}
+.live-badge{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--mid);}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--mid);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 60px);}
+.sidebar{border-right:1px solid var(--border);padding:1.5rem 1rem;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;}
+.sidebar-label{font-family:var(--font-mono);font-size:10px;color:var(--text3);letter-spacing:0.1em;margin-bottom:8px;padding-left:8px;}
+.lottery-btn{width:100%;text-align:left;padding:10px 12px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-family:var(--font-display);font-size:13px;cursor:pointer;margin-bottom:2px;transition:all 0.15s;display:flex;align-items:center;justify-content:space-between;}
+.lottery-btn:hover{background:var(--bg3);color:var(--text);}
+.lottery-btn.active{background:var(--bg4);color:var(--text);border-left:2px solid var(--accent);padding-left:10px;}
+.lottery-btn .tag{font-family:var(--font-mono);font-size:10px;color:var(--text3);}
+.sidebar-divider{height:1px;background:var(--border);margin:1rem 0;}
+.sidebar-section{padding:0 8px;}
+.banca-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+.banca-title{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:8px;}
+.banca-value{font-size:22px;font-weight:700;color:var(--accent);letter-spacing:-0.02em;}
+.banca-sub{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:2px;}
+.banca-input{width:100%;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:6px 8px;margin-top:6px;}
+.banca-input:focus{outline:none;border-color:var(--accent);}
+.banca-btn{width:100%;padding:7px;margin-top:6px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all 0.15s;}
+.banca-btn:hover{background:var(--bg4);color:var(--text);}
+.banca-btn.primary{border-color:var(--accent);color:var(--accent);}
+.banca-btn.primary:hover{background:var(--accent);color:var(--bg);}
+.main{padding:2rem;overflow-x:hidden;}
+.page-title{font-size:26px;font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;}
+.page-subtitle{font-family:var(--font-mono);font-size:12px;color:var(--text3);margin-bottom:1.5rem;}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:2rem;}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.metric-label{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:8px;letter-spacing:0.05em;}
+.metric-value{font-size:24px;font-weight:700;letter-spacing:-0.02em;}
+.metric-value.hot{color:var(--hot);}
+.metric-value.cold{color:var(--cold);}
+.metric-value.mid{color:var(--mid);}
+.metric-value.accent{color:var(--accent);}
+.metric-detail{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:4px;}
+.tab-nav{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.5rem;}
+.tab-nav-btn{padding:8px 14px;border:none;background:transparent;color:var(--text3);font-family:var(--font-display);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;}
+.tab-nav-btn:hover{color:var(--text2);}
+.tab-nav-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.section-title{font-size:14px;font-weight:700;}
+.section-tag{font-family:var(--font-mono);font-size:10px;color:var(--text3);}
+.bicho-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:2rem;}
+.bicho-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
+.bicho-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 10px 10px;}
+.bicho-card.hot{border-color:rgba(232,97,74,0.3);}
+.bicho-card.hot::after{background:var(--hot);}
+.bicho-card.cold{border-color:rgba(74,143,232,0.3);}
+.bicho-card.cold::after{background:var(--cold);}
+.bicho-card.mid::after{background:var(--bg4);}
+.bicho-card:hover{background:var(--bg3);transform:translateY(-1px);}
+.bicho-emoji{font-size:18px;margin-bottom:2px;}
+.bicho-name{font-size:9px;color:var(--text3);margin-bottom:4px;}
+.bicho-count{font-family:var(--font-mono);font-size:14px;font-weight:500;}
+.bicho-dezenas{font-family:var(--font-mono);font-size:9px;color:var(--text3);}
+.bicho-bar-wrap{height:2px;background:var(--bg4);border-radius:1px;margin-top:5px;}
+.bicho-bar-fill{height:100%;border-radius:1px;}
+.dezena-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:2rem;}
+.dezena-legend{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:10px;}
+.dezena-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;}
+.dez-cell{aspect-ratio:1;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;font-weight:500;cursor:default;}
+.dez-cell:hover{transform:scale(1.2);z-index:10;position:relative;}
+.suggest-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:2rem;}
+.suggest-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+.suggest-card-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+.suggest-card-sub{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:12px;}
+.badge-row{display:flex;flex-wrap:wrap;gap:6px;}
+.badge{padding:4px 10px;border-radius:20px;font-family:var(--font-mono);font-size:11px;font-weight:500;}
+.badge-hot{background:rgba(232,97,74,0.15);color:#e8614a;border:1px solid rgba(232,97,74,0.3);}
+.badge-cold{background:rgba(74,143,232,0.15);color:#4a8fe8;border:1px solid rgba(74,143,232,0.3);}
+.badge-mid{background:rgba(74,232,160,0.1);color:#4ae8a0;border:1px solid rgba(74,232,160,0.25);}
+.badge-accent{background:rgba(232,200,74,0.1);color:var(--accent);border:1px solid rgba(232,200,74,0.25);}
+.strategy-box{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:1.5rem;margin-bottom:2rem;}
+.strategy-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:1rem;}
+.strategy-item{background:var(--bg4);border-radius:8px;padding:12px;}
+.strategy-item-title{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:6px;}
+.history-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:12px;}
+.history-table th{text-align:left;color:var(--text3);font-size:10px;padding:8px 12px;border-bottom:1px solid var(--border);letter-spacing:0.05em;}
+.history-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text2);}
+.history-table tr:hover td{background:var(--bg3);}
+.result-win{color:var(--mid);}
+.result-loss{color:var(--hot);}
+.disclaimer{background:rgba(232,200,74,0.05);border:1px solid rgba(232,200,74,0.2);border-radius:10px;padding:12px 16px;font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:2rem;display:flex;gap:10px;}
+.disclaimer-icon{color:var(--accent);}
+.data-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:20px;margin-left:8px;vertical-align:middle;}
+.data-real{background:rgba(74,232,160,0.1);color:var(--mid);border:1px solid rgba(74,232,160,0.25);}
+.data-sim{background:rgba(90,88,96,0.2);color:var(--text3);border:1px solid var(--border);}
+
+/* EXTRACAO */
+.extr-form{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;}
+.extr-label{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:4px;margin-top:10px;}
+.extr-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:4px;}
+.extr-select{background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:8px 10px;}
+.extr-select:focus{outline:none;border-color:var(--accent);}
+.extr-inputs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:10px 0;}
+.extr-input{background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:20px;font-weight:500;padding:10px;text-align:center;width:100%;}
+.extr-input:focus{outline:none;border-color:var(--accent);background:var(--bg3);}
+.extr-input::placeholder{font-size:12px;color:var(--text3);}
+.extr-btn{padding:9px 20px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-family:var(--font-mono);font-size:12px;cursor:pointer;transition:all 0.15s;}
+.extr-btn:hover{background:var(--accent);color:var(--bg);}
+.import-btn{padding:9px 20px;border-radius:8px;border:1px solid var(--cold);background:rgba(74,143,232,0.08);color:var(--cold);font-family:var(--font-mono);font-size:12px;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.import-btn:hover:not(:disabled){background:rgba(74,143,232,0.18);}
+.import-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.import-box{background:var(--bg3);border:1px solid rgba(74,143,232,0.2);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem;}
+.import-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+.import-sub{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:10px;}
+.import-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.import-select{background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:7px 10px;}
+.import-log{font-family:var(--font-mono);font-size:11px;margin-top:8px;min-height:16px;line-height:1.6;}
+.extr-msg{font-family:var(--font-mono);font-size:11px;margin-top:8px;min-height:18px;}
+.extr-list{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+.extr-list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.extr-clear{font-family:var(--font-mono);font-size:10px;color:var(--hot);cursor:pointer;background:none;border:none;}
+.extr-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.extr-item:last-child{border-bottom:none;}
+.extr-meta{font-family:var(--font-mono);font-size:10px;color:var(--text3);min-width:110px;line-height:1.6;}
+.extr-dezenas{display:flex;gap:5px;flex-wrap:wrap;}
+.extr-dez{width:32px;height:32px;border-radius:6px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:500;}
+.extr-remove{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text3);cursor:pointer;background:none;border:none;padding:4px 8px;border-radius:4px;}
+.extr-remove:hover{color:var(--hot);background:rgba(232,97,74,0.1);}
+.extr-empty{font-family:var(--font-mono);font-size:12px;color:var(--text3);text-align:center;padding:2rem;}
+
+/* AI BOX */
+.ai-box{background:var(--bg2);border:1px solid rgba(232,200,74,0.25);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
+.ai-header{display:flex;align-items:center;gap:12px;margin-bottom:1rem;}
+.ai-icon{width:34px;height:34px;border-radius:8px;background:rgba(232,200,74,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.ai-title{font-size:14px;font-weight:700;}
+.ai-sub{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:2px;}
+.ai-output{font-family:var(--font-mono);font-size:12px;line-height:1.9;white-space:pre-wrap;min-height:50px;}
+.ai-loading{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:12px;color:var(--text3);}
+.ai-spinner{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:1px solid rgba(232,200,74,0.4);background:rgba(232,200,74,0.06);color:var(--accent);font-family:var(--font-mono);font-size:12px;cursor:pointer;transition:all 0.2s;margin-top:14px;}
+.ai-btn:hover:not(:disabled){background:rgba(232,200,74,0.14);}
+.ai-btn:disabled{opacity:0.4;cursor:not-allowed;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}.sidebar{display:none;}.metrics-grid{grid-template-columns:repeat(2,1fr);}.suggest-grid{grid-template-columns:1fr;}.strategy-row{grid-template-columns:1fr;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp 0.3s ease forwards;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-dot"></span>LoteStat</div>
+  <div class="live-badge"><span class="live-dot"></span>análise em tempo real</div>
+  <div class="header-info" id="header-date"></div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-label">LOTERIAS</div>
+    <button class="lottery-btn active" onclick="selectLottery(0)">Rio de Janeiro <span class="tag">RJ</span></button>
+    <button class="lottery-btn" onclick="selectLottery(1)">Loteria Nacional <span class="tag">NAC</span></button>
+    <button class="lottery-btn" onclick="selectLottery(2)">Look Goiás <span class="tag">GO</span></button>
+    <button class="lottery-btn" onclick="selectLottery(3)">Loteria da Bahia <span class="tag">BA</span></button>
+    <button class="lottery-btn" onclick="selectLottery(4)">Loteria Federal <span class="tag">FED</span></button>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-label">CONTROLE DE BANCA</div>
+    <div class="sidebar-section">
+      <div class="banca-card">
+        <div class="banca-title">SALDO ATUAL</div>
+        <div class="banca-value" id="saldo-display">R$ 0,00</div>
+        <div class="banca-sub">limite diário: <span id="limite-display">—</span></div>
+      </div>
+      <input class="banca-input" type="number" id="saldo-input" placeholder="Saldo inicial (R$)"/>
+      <input class="banca-input" type="number" id="limite-input" placeholder="Limite diário (R$)" style="margin-top:6px;"/>
+      <button class="banca-btn primary" onclick="setBanca()">Definir banca</button>
+      <button class="banca-btn" onclick="registrarAposta()">+ Registrar aposta</button>
+      <button class="banca-btn" onclick="registrarGanho()">+ Registrar ganho</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+      <div class="page-title" id="page-title">Rio de Janeiro</div>
+      <span class="data-badge data-sim" id="data-badge">dados simulados</span>
+    </div>
+    <div class="page-subtitle" id="page-sub">60 sorteios simulados · adicione extrações reais na aba Extrações</div>
+
+    <div class="disclaimer">
+      <span class="disclaimer-icon">⚠</span>
+      <span>Ferramenta de análise estatística. Jogos de azar são aleatórios — use como referência, nunca como certeza. Jogue com responsabilidade.</span>
+    </div>
+
+    <div class="metrics-grid" id="metrics-grid"></div>
+
+    <div class="tab-nav">
+      <button class="tab-nav-btn active" onclick="setTab(event,'bichos')">Bichos</button>
+      <button class="tab-nav-btn" onclick="setTab(event,'dezenas')">Dezenas</button>
+      <button class="tab-nav-btn" onclick="setTab(event,'extracoes')">➕ Extrações</button>
+      <button class="tab-nav-btn" onclick="setTab(event,'sugestao')">✦ Sugestão IA</button>
+      <button class="tab-nav-btn" onclick="setTab(event,'banca')">Banca</button>
+    </div>
+
+    <!-- BICHOS -->
+    <div class="tab-content active" id="tab-bichos">
+      <div class="section-header">
+        <span class="section-title">Frequência por bicho</span>
+        <span class="section-tag">🔴 quente · 🔵 frio</span>
+      </div>
+      <div class="bicho-grid" id="bicho-grid"></div>
+    </div>
+
+    <!-- DEZENAS -->
+    <div class="tab-content" id="tab-dezenas">
+      <div class="dezena-wrap">
+        <div class="section-header">
+          <span class="section-title">Mapa de calor — dezenas 00 a 99</span>
+          <span class="section-tag">passe o mouse para ver detalhes</span>
+        </div>
+        <div class="dezena-legend"><span>● fria</span><span>● quente</span></div>
+        <div class="dezena-grid" id="dezena-grid"></div>
+      </div>
+      <div class="strategy-box">
+        <div class="section-title">Top 20 dezenas mais frequentes</div>
+        <div class="badge-row" id="top-dezenas" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- EXTRAÇÕES -->
+    <div class="tab-content" id="tab-extracoes">
+      <!-- IMPORT BOX -->
+      <div class="import-box">
+        <div class="import-title">⬇ Importar do Portal Brasil automaticamente</div>
+        <div class="import-sub">Busca resultados em tempo real de portalbrasil.net · dados sincronizados com Firebase</div>
+        <div class="import-row">
+          <select class="import-select" id="import-loteria">
+            <option value="0">Rio de Janeiro</option>
+            <option value="1" selected>Loteria Nacional</option>
+            <option value="2">Look Goiás</option>
+            <option value="3">Loteria da Bahia</option>
+            <option value="4">Loteria Federal</option>
+          </select>
+          <select class="import-select" id="import-turno"><option value="todos">Todos os turnos</option></select>
+          <button class="import-btn" id="import-btn" onclick="importarPortalBrasil()">⬇ Importar resultados</button>
+        </div>
+        <div class="import-log" id="import-log" style="display:flex;align-items:center;gap:6px;"></div>
+      </div>
+
+      <div class="extr-form">
+        <div class="section-title" style="margin-bottom:4px;">Adicionar resultado manualmente</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:12px;">Digite as 5 dezenas sorteadas (00–99). O cursor avança automaticamente.</div>
+
+        <div class="extr-label">LOTERIA E TURNO</div>
+        <div class="extr-row">
+          <select class="extr-select" id="extr-loteria">
+            <option value="0">Rio de Janeiro</option>
+            <option value="1">Loteria Nacional</option>
+            <option value="2">Look Goiás</option>
+            <option value="3">Loteria da Bahia</option>
+            <option value="4">Loteria Federal</option>
+          </select>
+          <select class="extr-select" id="extr-turno"></select>
+          <input class="extr-select" type="date" id="extr-data" style="min-width:120px;"/>
+        </div>
+
+        <div class="extr-label" style="margin-top:14px;">5 DEZENAS SORTEADAS</div>
+        <div class="extr-inputs">
+          <div style="text-align:center;">
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:4px;">1º PRÊMIO</div>
+            <input class="extr-input" id="d1" maxlength="2" placeholder="--" oninput="autoTab(this,'d2')"/>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:4px;">2º PRÊMIO</div>
+            <input class="extr-input" id="d2" maxlength="2" placeholder="--" oninput="autoTab(this,'d3')"/>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:4px;">3º PRÊMIO</div>
+            <input class="extr-input" id="d3" maxlength="2" placeholder="--" oninput="autoTab(this,'d4')"/>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:4px;">4º PRÊMIO</div>
+            <input class="extr-input" id="d4" maxlength="2" placeholder="--" oninput="autoTab(this,'d5')"/>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:4px;">5º PRÊMIO</div>
+            <input class="extr-input" id="d5" maxlength="2" placeholder="--"/>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="extr-btn" onclick="addExtracao()">+ Adicionar extração</button>
+          <div class="extr-msg" id="extr-msg"></div>
+        </div>
+      </div>
+
+      <div class="extr-list">
+        <div class="extr-list-header">
+          <span class="section-title">Histórico de extrações reais</span>
+          <button class="extr-clear" onclick="clearExtracoes()">limpar tudo</button>
+        </div>
+        <div id="extr-list-body">
+          <div class="extr-empty">Nenhuma extração adicionada ainda.<br>Adicione resultados reais acima — a análise de bichos e dezenas será atualizada automaticamente.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUGESTÃO IA -->
+    <div class="tab-content" id="tab-sugestao">
+      <div class="ai-box">
+        <div class="ai-header">
+          <div class="ai-icon">✦</div>
+          <div>
+            <div class="ai-title">Análise da IA — Claude</div>
+            <div class="ai-sub">análise personalizada baseada nos dados estatísticos desta loteria</div>
+          </div>
+        </div>
+        <div id="ai-output" class="ai-output" style="color:var(--text3);">Clique em "Gerar análise" para receber uma sugestão personalizada com base nos padrões detectados nesta loteria.</div>
+        <button class="ai-btn" id="ai-btn" onclick="gerarAnaliseIA()">✦ Gerar análise</button>
+      </div>
+
+      <div class="suggest-grid">
+        <div class="suggest-card">
+          <div class="suggest-card-title">🔴 Bichos quentes</div>
+          <div class="suggest-card-sub">saíram acima da média histórica</div>
+          <div class="badge-row" id="hot-bichos"></div>
+        </div>
+        <div class="suggest-card">
+          <div class="suggest-card-title">🔵 Bichos frios / atrasados</div>
+          <div class="suggest-card-sub">abaixo da média — dívida estatística</div>
+          <div class="badge-row" id="cold-bichos"></div>
+        </div>
+        <div class="suggest-card">
+          <div class="suggest-card-title">🟡 Dezenas quentes</div>
+          <div class="suggest-card-sub">top 5 mais frequentes</div>
+          <div class="badge-row" id="hot-dezenas"></div>
+        </div>
+        <div class="suggest-card">
+          <div class="suggest-card-title">⚪ Dezenas frias</div>
+          <div class="suggest-card-sub">mais atrasadas — candidatas a sair</div>
+          <div class="badge-row" id="cold-dezenas"></div>
+        </div>
+      </div>
+
+      <div class="strategy-box">
+        <div class="section-title">Sugestão automática — próxima aposta</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-top:4px;">estratégia balanceada · 60% quentes + 40% frios</div>
+        <div class="strategy-row">
+          <div class="strategy-item">
+            <div class="strategy-item-title">BICHOS INDICADOS</div>
+            <div class="badge-row" id="sug-bichos" style="margin-top:6px;"></div>
+          </div>
+          <div class="strategy-item">
+            <div class="strategy-item-title">DEZENAS INDICADAS</div>
+            <div class="badge-row" id="sug-dezenas" style="margin-top:6px;"></div>
+          </div>
+          <div class="strategy-item">
+            <div class="strategy-item-title">ALOCAÇÃO SUGERIDA</div>
+            <div style="margin-top:6px;">
+              <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-bottom:3px;">bichos quentes (60%)</div>
+              <div style="font-size:16px;font-weight:700;color:var(--hot);" id="sug-valor-hot">—</div>
+              <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin:8px 0 3px;">dezenas mistas (40%)</div>
+              <div style="font-size:16px;font-weight:700;color:var(--cold);" id="sug-valor-cold">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANCA -->
+    <div class="tab-content" id="tab-banca">
+      <div class="suggest-grid" style="margin-bottom:1.5rem;">
+        <div class="suggest-card">
+          <div class="suggest-card-title">Resumo da banca</div>
+          <div style="margin-top:12px;">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:2px;">SALDO ATUAL</div>
+            <div style="font-size:28px;font-weight:800;color:var(--accent);" id="banca-saldo-big">R$ 0,00</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:12px;margin-bottom:2px;">RESULTADO HOJE</div>
+            <div style="font-size:18px;font-weight:700;" id="banca-resultado-hoje">R$ 0,00</div>
+          </div>
+        </div>
+        <div class="suggest-card">
+          <div class="suggest-card-title">Alertas de banca</div>
+          <div id="banca-alertas" style="margin-top:10px;font-family:var(--font-mono);font-size:11px;color:var(--text3);">Defina sua banca no painel lateral para ativar alertas.</div>
+        </div>
+      </div>
+      <div class="strategy-box">
+        <div class="section-title">Histórico de apostas</div>
+        <table class="history-table" style="margin-top:1rem;">
+          <thead><tr><th>HORA</th><th>LOTERIA</th><th>TIPO</th><th>VALOR</th><th>RESULTADO</th><th>SALDO</th></tr></thead>
+          <tbody id="historico-body"><tr><td colspan="6" style="color:var(--text3);text-align:center;padding:24px;">Nenhuma aposta registrada ainda.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+<script>
+// ============================================================
+// FIREBASE INIT
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
+  authDomain: "meus-recibos-vip.firebaseapp.com",
+  projectId: "meus-recibos-vip",
+  storageBucket: "meus-recibos-vip.firebasestorage.app",
+  messagingSenderId: "254959368683",
+  appId: "1:254959368683:web:80676a26f614040df6c1ae"
+};
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+const firestoreDB = firebase.firestore();
+const FS_COLLECTION = 'lotestat_extracoes';
+
+// ============================================================
+// CONSTANTES
+// ============================================================
+const BICHOS=[
+  {n:'Avestruz',e:'🦤'},{n:'Águia',e:'🦅'},{n:'Burro',e:'🫏'},{n:'Borboleta',e:'🦋'},
+  {n:'Cachorro',e:'🐶'},{n:'Cabra',e:'🐐'},{n:'Carneiro',e:'🐑'},{n:'Camelo',e:'🐪'},
+  {n:'Cobra',e:'🐍'},{n:'Coelho',e:'🐰'},{n:'Cavalo',e:'🐴'},{n:'Elefante',e:'🐘'},
+  {n:'Galo',e:'🐓'},{n:'Ganso',e:'🪿'},{n:'Gato',e:'🐱'},{n:'Jacaré',e:'🐊'},
+  {n:'Leão',e:'🦁'},{n:'Macaco',e:'🐒'},{n:'Porco',e:'🐷'},{n:'Pavão',e:'🦚'},
+  {n:'Peru',e:'🦃'},{n:'Touro',e:'🐂'},{n:'Tigre',e:'🐯'},{n:'Urso',e:'🐻'},
+  {n:'Veado',e:'🦌'}
+];
+const LOTTERIES=['Rio de Janeiro','Loteria Nacional','Look Goiás','Loteria da Bahia','Loteria Federal'];
+const TAGS=['RJ','NAC','GO','BA','FED'];
+const LOTERIA_KEYWORDS=[
+  ['rio de janeiro','rio-de-janeiro',' rj ','(rj)'],
+  ['nacional','loteria nacional','ln ','(ln)'],
+  ['goiás','goias','look goiás','look goias',' go ','(go)'],
+  ['bahia','loteria bahia',' ba ','(ba)'],
+  ['federal','loteria federal',' lf ','(lf)']
+];
+const LOTTERY_TURNOS={
+  0:[{id:'PPT',display:'09:20 (PPT)'},{id:'PTM',display:'11:20 (PTM)'},{id:'PT',display:'14:20 (PT)'},{id:'PTV',display:'16:20 (PTV)'},{id:'PTN',display:'18:20 (PTN)'},{id:'COR',display:'21:30 (COR)'}],
+  1:[{id:'T02',display:'02:00'},{id:'T08',display:'08:00'},{id:'T10',display:'10:00'},{id:'T12',display:'12:00'},{id:'T15',display:'15:00'},{id:'T17',display:'17:00'},{id:'T19',display:'19:00'},{id:'T21',display:'21:00'},{id:'T23',display:'23:00'}],
+  2:[{id:'T07',display:'07:20'},{id:'T09',display:'09:20'},{id:'T11',display:'11:20'},{id:'T14',display:'14:20'},{id:'T16',display:'16:20'},{id:'T18',display:'18:20'},{id:'T21',display:'21:20'},{id:'T23',display:'23:20'}],
+  3:[{id:'T10',display:'10:00'},{id:'T12',display:'12:00'},{id:'T15',display:'15:00'},{id:'T19',display:'19:00'},{id:'T21',display:'21:00'}],
+  4:[{id:'T20',display:'20:00'}]
+};
+const TURNO_MAP={
+  PPT:['ppt','09:20','09h20'], PTM:['ptm','11:20','11h20','manhã','manha'],
+  PT:['pt ','14:20','14h20','tarde'], PTV:['ptv','16:20','16h20'],
+  PTN:['ptn','18:20','18h20','noite'], COR:['cor','corujão','corujao','21:30','21h30'],
+  T02:['02:00','02h'], T08:['08:00','08h'], T10:['10:00','10h'],
+  T12:['12:00','12h'], T15:['15:00','15h'], T17:['17:00','17h'],
+  T19:['19:00','19h'], T21:['21:00','21h'], T23:['23:00','23h'],
+  T07:['07:20','07h'], T09:['09:20','09h'], T11:['11:20','11h'],
+  T14:['14:20','14h'], T16:['16:20','16h'], T18:['18:20','18h'],
+  T20:['20:00','20h']
+};
+
+// ============================================================
+// ESTADO
+// ============================================================
+function seededRand(seed){let s=seed;return()=>{s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/0xffffffff;};}
+function genDraws(seed,n){const r=seededRand(seed);const d=[];for(let i=0;i<n;i++){const rnd=[];while(rnd.length<5){const v=Math.floor(r()*100).toString().padStart(2,'0');if(!rnd.includes(v))rnd.push(v);}d.push(rnd);}return d;}
+function dezToBicho(dez){const n=parseInt(dez);if(n===0)return 24;return Math.floor((n-1)/4);}
+function getFreqs(draws){const bF=new Array(25).fill(0);const dF={};for(let i=0;i<100;i++)dF[i.toString().padStart(2,'0')]=0;draws.forEach(r=>r.forEach(d=>{bF[dezToBicho(d)]++;dF[d]++;}));return{bF,dF};}
+
+const simDraws=[42,137,256,891,521].map(s=>genDraws(s,60));
+let extracoes=[], extracaoDocIds={};
+let currentLottery=0,bancaSaldo=0,bancaLimite=0,bancaInicial=0,historico=[];
+
+function getDraws(idx){const r=extracoes.filter(e=>e.loteria===idx).map(e=>e.dezenas);return r.length>0?r:simDraws[idx];}
+function isReal(idx){return extracoes.filter(e=>e.loteria===idx).length>0;}
+function fmt(n){return'R$ '+n.toFixed(2).replace('.',',');}
+
+// ============================================================
+// FIREBASE CRUD
+// ============================================================
+function setImportLog(msg,color,spinner){
+  color=color||'var(--text3)';spinner=spinner||false;
+  const el=document.getElementById('import-log');if(!el)return;
+  el.style.color=color;
+  el.innerHTML=spinner?'<div class="ai-spinner" style="width:12px;height:12px;border-width:2px;flex-shrink:0;"></div>'+msg:msg;
+}
+
+async function loadFromFirebase(){
+  setImportLog('🔄 Conectando ao Firebase...','var(--text3)',true);
+  try{
+    const snap=await firestoreDB.collection(FS_COLLECTION).orderBy('data','desc').get();
+    extracoes=[];extracaoDocIds={};
+    snap.forEach(doc=>{
+      const d=doc.data();
+      const item={loteria:d.loteria,turno:d.turno,data:d.data,dezenas:d.dezenas,id:d.id};
+      extracoes.push(item);extracaoDocIds[d.id]=doc.id;
+    });
+    extracoes.sort((a,b)=>new Date(b.data)-new Date(a.data));
+    const total=extracoes.length;
+    setImportLog(total>0?'✓ Firebase: '+total+' extrações carregadas':'Firebase conectado · nenhuma extração salva ainda','var(--mid)');
+    renderExtList();render();
+  }catch(e){
+    setImportLog('⚠ Erro Firebase: '+e.message+'. Modo offline ativo.','var(--hot)');
+    render();
+  }
+}
+
+async function saveToFirebase(item){
+  try{
+    const docRef=await firestoreDB.collection(FS_COLLECTION).add({
+      loteria:item.loteria,turno:item.turno,data:item.data,
+      dezenas:item.dezenas,id:item.id,
+      timestamp:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    extracaoDocIds[item.id]=docRef.id;
+  }catch(e){console.warn('Firebase save:',e.message);}
+}
+
+async function deleteFromFirebase(localId){
+  const docId=extracaoDocIds[localId];if(!docId)return;
+  try{await firestoreDB.collection(FS_COLLECTION).doc(docId).delete();delete extracaoDocIds[localId];}
+  catch(e){console.warn('Firebase delete:',e.message);}
+}
+
+async function clearFirebase(){
+  try{
+    const snap=await firestoreDB.collection(FS_COLLECTION).get();
+    const batch=firestoreDB.batch();
+    snap.forEach(doc=>batch.delete(doc.ref));
+    await batch.commit();extracaoDocIds={};
+  }catch(e){console.warn('Firebase clear:',e.message);}
+}
+
+// ============================================================
+// NAVEGAÇÃO
+// ============================================================
+function selectLottery(idx){
+  currentLottery=idx;
+  document.querySelectorAll('.lottery-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  document.getElementById('extr-loteria').value=idx;
+  updateTurnoSelects(idx);
+  resetAI();render();
+}
+function updateTurnoSelects(idx){
+  const turnos=LOTTERY_TURNOS[idx]||[];
+  const optsHtml=turnos.map(t=>`<option value="${t.id}">${t.display}</option>`).join('');
+  document.getElementById('extr-turno').innerHTML=optsHtml;
+  document.getElementById('import-turno').innerHTML='<option value="todos">Todos os turnos</option>'+optsHtml;
+}
+function setTab(e,tab){
+  document.querySelectorAll('.tab-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+function autoTab(el,nextId){if(el.value.length>=2)document.getElementById(nextId).focus();}
+
+// ============================================================
+// EXTRAÇÕES
+// ============================================================
+function addExtracao(){
+  const msg=document.getElementById('extr-msg');
+  const lIdx=parseInt(document.getElementById('extr-loteria').value);
+  const turno=document.getElementById('extr-turno').value;
+  const data=document.getElementById('extr-data').value||new Date().toISOString().split('T')[0];
+  const dezenas=['d1','d2','d3','d4','d5'].map(id=>document.getElementById(id).value.trim().padStart(2,'0'));
+  for(const d of dezenas){
+    const n=parseInt(d);
+    if(isNaN(n)||n<0||n>99||d.length!==2){msg.textContent='❌ Dezena inválida: "'+d+'". Use 00 a 99.';msg.style.color='var(--hot)';return;}
+  }
+  if(new Set(dezenas).size<5){msg.textContent='❌ As 5 dezenas devem ser diferentes.';msg.style.color='var(--hot)';return;}
+  const item={loteria:lIdx,turno,data,dezenas,id:Date.now()};
+  extracoes.push(item);extracoes.sort((a,b)=>new Date(b.data)-new Date(a.data));
+  saveToFirebase(item);
+  ['d1','d2','d3','d4','d5'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('d1').focus();
+  const count=extracoes.filter(e=>e.loteria===lIdx).length;
+  msg.textContent='✓ Adicionado e salvo! '+LOTTERIES[lIdx]+': '+count+' sorteios reais.';
+  msg.style.color='var(--mid)';
+  renderExtList();if(lIdx===currentLottery){resetAI();render();}
+}
+
+function removeExtracao(id){
+  extracoes=extracoes.filter(e=>e.id!==id);
+  deleteFromFirebase(id);renderExtList();resetAI();render();
+}
+
+function clearExtracoes(){
+  if(!confirm('Apagar todas as extrações? (também remove do Firebase)'))return;
+  extracoes=[];clearFirebase();renderExtList();resetAI();render();
+}
+
+function renderExtList(){
+  const body=document.getElementById('extr-list-body');
+  if(!extracoes.length){
+    body.innerHTML='<div class="extr-empty">Nenhuma extração adicionada ainda.<br>Importe do Portal Brasil ou adicione manualmente abaixo.</div>';return;
+  }
+  body.innerHTML=extracoes.map(e=>{
+    const b1=BICHOS[dezToBicho(e.dezenas[0])];
+    const dezsHtml=e.dezenas.map(d=>`<div class="extr-dez">${d}</div>`).join('');
+    return`<div class="extr-item"><div class="extr-meta">${e.data}<br><span style="color:var(--accent);font-weight:500;">${TAGS[e.loteria]}</span> · ${e.turno}<br><span style="color:var(--text3);">${b1.e} ${b1.n}</span></div><div class="extr-dezenas">${dezsHtml}</div><button class="extr-remove" onclick="removeExtracao(${e.id})">✕</button></div>`;
+  }).join('');
+}
+
+// ============================================================
+// PORTAL BRASIL IMPORT
+// ============================================================
+const PORTAL_URL='https://portalbrasil.net/jogodobicho/resultado-por-estado/';
+const PROXIES=[
+  u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u=>`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+  u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+];
+
+async function importarPortalBrasil(){
+  const btn=document.getElementById('import-btn');
+  const lIdx=parseInt(document.getElementById('import-loteria').value);
+  const turnoFilter=document.getElementById('import-turno').value;
+  btn.disabled=true;
+  setImportLog('Conectando ao Portal Brasil...','var(--text3)',true);
+
+  let html=null;
+  for(let i=0;i<PROXIES.length;i++){
+    try{
+      setImportLog(`Tentando proxy ${i+1}/${PROXIES.length}...`,'var(--text3)',true);
+      const url=PROXIES[i](PORTAL_URL);
+      const resp=await fetch(url);
+      if(!resp.ok) throw new Error('status '+resp.status);
+      // corsproxy.io devolve texto direto; allorigins devolve JSON {contents}
+      const ct=resp.headers.get('content-type')||'';
+      if(ct.includes('application/json')){
+        const json=await resp.json();
+        html=json.contents||json.body||null;
+      } else {
+        html=await resp.text();
+      }
+      if(html&&html.length>500) break;
+      html=null;
+    }catch(e){ html=null; }
+  }
+
+  if(!html){
+    setImportLog('❌ Todos os proxies falharam. Tente hospedar o arquivo em um servidor (não abrir como file://).','var(--hot)');
+    btn.disabled=false; return;
+  }
+
+  setImportLog('Analisando resultados...','var(--text3)',true);
+  const parsed=parsePortalBrasil(html,lIdx,turnoFilter);
+  if(parsed.length===0){
+    setImportLog('⚠ Nenhum resultado encontrado. Tente "Todos os turnos" ou outra loteria.','var(--hot)');
+    btn.disabled=false; return;
+  }
+  let add=0,dup=0; const saveP=[];
+  parsed.forEach(item=>{
+    const existe=extracoes.some(e=>
+      e.loteria===item.loteria&&e.data===item.data&&
+      e.turno===item.turno&&e.dezenas.join()===item.dezenas.join()
+    );
+    if(!existe){extracoes.push(item);saveP.push(saveToFirebase(item));add++;}else dup++;
+  });
+  await Promise.all(saveP);
+  extracoes.sort((a,b)=>new Date(b.data)-new Date(a.data));
+  const total=extracoes.filter(e=>e.loteria===lIdx).length;
+  setImportLog(
+    '✓ '+add+' novo'+(add!==1?'s':'')+' importado'+(add!==1?'s':'')+
+    (dup?' · '+dup+' já existiam':'')+' · '+LOTTERIES[lIdx]+': '+total+' sorteios · salvo no Firebase',
+    'var(--mid)'
+  );
+  renderExtList(); if(lIdx===currentLottery){resetAI();render();}
+  btn.disabled=false;
+}
+
+function detectTurno(text){
+  const t=(text||'').toLowerCase();
+  for(const[turno,kws] of Object.entries(TURNO_MAP)){if(kws.some(kw=>t.includes(kw)))return turno;}
+  return null;
+}
+
+function parsePortalBrasil(html,lIdx,turnoFilter){
+  const results=[];
+  const today=new Date().toISOString().split('T')[0];
+  const kwList=LOTERIA_KEYWORDS[lIdx];
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(html,'text/html');
+  doc.querySelectorAll('script,style,noscript').forEach(el=>el.remove());
+
+  // 1. Tenta isolar seção da loteria desejada via headings
+  let targetHTML=null;
+  const headings=[...doc.querySelectorAll('h1,h2,h3,h4,h5,strong,b,caption,th')];
+  for(const h of headings){
+    const txt=h.textContent.trim().toLowerCase();
+    if(txt.length>80)continue;
+    if(kwList.some(kw=>txt.includes(kw))){
+      let content=h.outerHTML;
+      let sib=h.nextElementSibling;
+      let cnt=0;
+      while(sib&&cnt<15){
+        const sText=sib.textContent.toLowerCase().trim().slice(0,60);
+        if(LOTERIA_KEYWORDS.some(kws=>kws.some(kw=>sText.includes(kw)))&&cnt>1)break;
+        content+=sib.outerHTML;sib=sib.nextElementSibling;cnt++;
+      }
+      targetHTML=content;break;
+    }
+  }
+  const searchHTML=targetHTML||doc.body?.innerHTML||html;
+  const searchDoc=parser.parseFromString(searchHTML,'text/html');
+
+  // 2. Extrai data do HTML
+  const dm=searchHTML.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/);
+  const firstDate=dm?dm[3]+'-'+dm[2]+'-'+dm[1]:today;
+
+  // 3. Varre tabelas
+  searchDoc.querySelectorAll('table').forEach(table=>{
+    let tDate=firstDate;
+    const ctx=(table.previousElementSibling?.textContent||'')+(table.caption?.textContent||'')+(table.tHead?.textContent||'');
+    const dm2=ctx.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/);
+    if(dm2)tDate=dm2[3]+'-'+dm2[2]+'-'+dm2[1];
+    const turno=detectTurno(ctx)||'PT';
+    if(turnoFilter!=='todos'&&turno!==turnoFilter)return;
+    const dezenas=[];
+    table.querySelectorAll('td,th').forEach(cell=>{
+      const t=cell.textContent.replace(/\s+/g,'').replace(/\./g,'');
+      if(/^\d{4}$/.test(t)){const dz=t.slice(-2);if(!dezenas.includes(dz)&&dezenas.length<5)dezenas.push(dz);}
+    });
+    if(dezenas.length===5){
+      results.push({loteria:lIdx,turno,data:tDate,dezenas,id:Date.now()+Math.random()*1e5});
+    }
+  });
+
+  // 4. Fallback: regex bruto por grupos de 4 dígitos
+  if(results.length===0){
+    const turno=detectTurno(searchHTML)||'PT';
+    if(turnoFilter==='todos'||turno===turnoFilter){
+      const nums=[...searchHTML.matchAll(/\b(\d{4})\b/g)].map(m=>m[1]);
+      const dezenas=[...new Set(nums.map(m=>m.slice(-2)))].slice(0,5);
+      if(dezenas.length===5)results.push({loteria:lIdx,turno,data:firstDate,dezenas,id:Date.now()+Math.random()*1e5});
+    }
+  }
+  return results;
+}
+
+// ============================================================
+// IA
+// ============================================================
+function resetAI(){
+  document.getElementById('ai-output').textContent='Clique em "Gerar análise" para receber uma sugestão personalizada com base nos padrões detectados nesta loteria.';
+  document.getElementById('ai-output').style.color='var(--text3)';
+  document.getElementById('ai-btn').disabled=false;
+}
+
+async function gerarAnaliseIA(){
+  const btn=document.getElementById('ai-btn');
+  const out=document.getElementById('ai-output');
+  btn.disabled=true;
+  out.innerHTML='<div class="ai-loading"><div class="ai-spinner"></div>Analisando padrões estatísticos desta loteria...</div>';
+  const draws=getDraws(currentLottery);
+  const real=isReal(currentLottery);
+  const{bF,dF}=getFreqs(draws);
+  const sortedB=bF.map((f,i)=>({i,f})).sort((a,b)=>b.f-a.f);
+  const dezArr=Object.entries(dF).sort((a,b)=>b[1]-a[1]);
+  const avg=(draws.length*5/25).toFixed(1);
+  const hot3=sortedB.slice(0,3).map(({i,f})=>BICHOS[i].n+'('+f+'x)').join(', ');
+  const cold3=sortedB.slice(-3).map(({i,f})=>BICHOS[i].n+'('+f+'x)').join(', ');
+  const hotDez=dezArr.slice(0,5).map(([d,f])=>d+'('+f+'x)').join(', ');
+  const coldDez=dezArr.slice(-5).map(([d,f])=>d+'('+f+'x)').join(', ');
+  const prompt=`Você é um especialista em análise estatística de jogo do bicho no Brasil.
+Analise os dados abaixo e gere uma sugestão de aposta prática e fundamentada em português brasileiro.
+
+Loteria: ${LOTTERIES[currentLottery]}
+Dados: ${real?'EXTRAÇÕES REAIS':'dados simulados'}
+Sorteios analisados: ${draws.length} (${draws.length*5} resultados)
+Média esperada por bicho: ${avg} aparições
+
+BICHOS MAIS QUENTES: ${hot3}
+BICHOS MAIS FRIOS: ${cold3}
+DEZENAS MAIS FREQUENTES: ${hotDez}
+DEZENAS MAIS FRIAS: ${coldDez}
+
+Forneça em no máximo 200 palavras:
+1. Análise rápida do padrão identificado (2 linhas)
+2. Sugestão concreta: quais bichos e dezenas jogar
+3. Como distribuir a banca (% quentes vs frios)
+4. Um alerta de risco
+
+Seja direto, prático, linguagem de apostador experiente. Sem asteriscos ou markdown.`;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    const text=data.content?.find(c=>c.type==='text')?.text||'Não foi possível gerar análise.';
+    out.textContent=text;out.style.color='var(--text2)';
+  }catch(e){out.textContent='Erro ao conectar com a IA. Verifique sua conexão.';out.style.color='var(--hot)';}
+  btn.disabled=false;
+}
+
+// ============================================================
+// BANCA
+// ============================================================
+function setBanca(){
+  const s=parseFloat(document.getElementById('saldo-input').value);
+  const l=parseFloat(document.getElementById('limite-input').value);
+  if(!isNaN(s)){bancaSaldo=s;bancaInicial=s;}
+  if(!isNaN(l))bancaLimite=l;
+  updateBanca();
+}
+function updateBanca(){
+  document.getElementById('saldo-display').textContent='R$ '+bancaSaldo.toFixed(2).replace('.',',');
+  document.getElementById('limite-display').textContent=bancaLimite>0?fmt(bancaLimite):'—';
+  document.getElementById('banca-saldo-big').textContent=fmt(bancaSaldo);
+  const hoje=bancaSaldo-bancaInicial;
+  const el=document.getElementById('banca-resultado-hoje');
+  el.textContent=(hoje>=0?'+':'')+fmt(hoje);el.style.color=hoje>=0?'var(--mid)':'var(--hot)';
+  const alertas=document.getElementById('banca-alertas');let msgs=[];
+  if(bancaLimite>0){
+    const g=bancaInicial-bancaSaldo;const p=(g/bancaLimite*100).toFixed(0);
+    if(g>=bancaLimite)msgs.push('🔴 Limite diário atingido! Pare por hoje.');
+    else if(g>=bancaLimite*0.8)msgs.push('🟡 80% do limite utilizado. Atenção!');
+    else msgs.push('🟢 '+p+'% do limite diário utilizado.');
+  }
+  if(bancaSaldo>=bancaInicial*1.5)msgs.push('🏆 Stop gain recomendado — lucrou +50% hoje!');
+  alertas.innerHTML=msgs.length?msgs.map(m=>`<div style="margin-bottom:8px;">${m}</div>`).join(''):'Banca saudável. Continue com disciplina.';
+  document.getElementById('sug-valor-hot').textContent=bancaLimite>0?fmt(bancaLimite*0.6):'60% da banca';
+  document.getElementById('sug-valor-cold').textContent=bancaLimite>0?fmt(bancaLimite*0.4):'40% da banca';
+}
+function registrarAposta(){const v=parseFloat(prompt('Valor apostado (R$):'));if(isNaN(v)||v<=0)return;bancaSaldo-=v;addHist('aposta',-v);updateBanca();}
+function registrarGanho(){const v=parseFloat(prompt('Valor ganho (R$):'));if(isNaN(v)||v<=0)return;bancaSaldo+=v;addHist('ganho',v);updateBanca();}
+function addHist(tipo,valor){
+  const now=new Date();
+  const hora=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  historico.unshift({hora,loteria:TAGS[currentLottery],tipo,valor,saldo:bancaSaldo});
+  const tbody=document.getElementById('historico-body');
+  tbody.innerHTML=historico.map(h=>{
+    const cls=h.valor>0?'result-win':'result-loss';
+    return`<tr><td>${h.hora}</td><td>${h.loteria}</td><td>${h.tipo}</td><td class="${cls}">${h.valor>0?'+':''}${fmt(h.valor)}</td><td class="${cls}">${h.valor>0?'GANHO':'PERDA'}</td><td>${fmt(h.saldo)}</td></tr>`;
+  }).join('');
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render(){
+  const draws=getDraws(currentLottery);
+  const real=isReal(currentLottery);
+  const{bF,dF}=getFreqs(draws);
+  const totalR=draws.length*5;
+  const avg=(totalR/25).toFixed(1);
+  const maxB=Math.max(...bF);
+  const sortedB=bF.map((f,i)=>({i,f})).sort((a,b)=>b.f-a.f);
+  const maxD=Math.max(...Object.values(dF));
+  const minD=Math.min(...Object.values(dF));
+  const dezArr=Object.entries(dF).sort((a,b)=>b[1]-a[1]);
+  const badge=document.getElementById('data-badge');
+  if(real){badge.textContent=extracoes.filter(e=>e.loteria===currentLottery).length+' extrações reais';badge.className='data-badge data-real';}
+  else{badge.textContent='dados simulados';badge.className='data-badge data-sim';}
+  document.getElementById('page-title').textContent=LOTTERIES[currentLottery];
+  document.getElementById('page-sub').textContent=draws.length+' sorteios · '+TAGS[currentLottery]+(real?' · dados reais':' · dados simulados');
+  document.getElementById('metrics-grid').innerHTML=`
+    <div class="metric-card fade-up"><div class="metric-label">SORTEIOS ANALISADOS</div><div class="metric-value accent">${draws.length}</div><div class="metric-detail">${real?'reais':'simulados'} · ${totalR} resultados</div></div>
+    <div class="metric-card fade-up"><div class="metric-label">BICHO MAIS QUENTE</div><div class="metric-value hot">${BICHOS[sortedB[0].i].n}</div><div class="metric-detail">saiu ${sortedB[0].f}× (esp: ${avg})</div></div>
+    <div class="metric-card fade-up"><div class="metric-label">BICHO MAIS FRIO</div><div class="metric-value cold">${BICHOS[sortedB[24].i].n}</div><div class="metric-detail">saiu ${sortedB[24].f}× (atrasado)</div></div>
+    <div class="metric-card fade-up"><div class="metric-label">DEZENA MAIS FREQ.</div><div class="metric-value mid">${dezArr[0][0]}</div><div class="metric-detail">saiu ${dezArr[0][1]}× nesta loteria</div></div>
+  `;
+  const hotIdx=sortedB.slice(0,5).map(x=>x.i);
+  const coldIdx=sortedB.slice(-5).map(x=>x.i);
+  document.getElementById('bicho-grid').innerHTML=BICHOS.map((b,i)=>{
+    const f=bF[i],pct=Math.round((f/maxB)*100);
+    const cls=hotIdx.includes(i)?'hot':coldIdx.includes(i)?'cold':'mid';
+    const clr=cls==='hot'?'#e8614a':cls==='cold'?'#4a8fe8':'#5a5860';
+    const d1=(i*4+1).toString().padStart(2,'0'),d4=(i*4+4).toString().padStart(2,'0');
+    return`<div class="bicho-card ${cls}"><div class="bicho-emoji">${b.e}</div><div class="bicho-name">${b.n}</div><div class="bicho-count" style="color:${clr}">${f}×</div><div class="bicho-dezenas">${i===0?'01-04':d1+'-'+d4}</div><div class="bicho-bar-wrap"><div class="bicho-bar-fill" style="width:${pct}%;background:${clr};"></div></div></div>`;
+  }).join('');
+  document.getElementById('dezena-grid').innerHTML=Object.entries(dF).map(([d,f])=>{
+    const t=(f-minD)/(maxD-minD||1);
+    const r2=Math.round(10+t*222),g2=Math.round(10+t*87),b2=Math.round(15+t*59);
+    const bg=t>0.7?`rgb(${r2},${g2},${b2})`:t>0.4?`rgba(74,143,232,${(0.08+t*0.4).toFixed(2)})`:'rgba(255,255,255,0.04)';
+    const tc=t>0.6?'#fff':'rgba(255,255,255,0.45)';
+    return`<div class="dez-cell" style="background:${bg};color:${tc};" title="${d}: saiu ${f}×">${d}</div>`;
+  }).join('');
+  document.getElementById('top-dezenas').innerHTML=dezArr.slice(0,20).map(([d,f])=>`<span class="badge badge-hot">${d} <span style="opacity:.5;font-size:9px;">${f}×</span></span>`).join('');
+  const hot5=sortedB.slice(0,5),cold5=sortedB.slice(-5);
+  document.getElementById('hot-bichos').innerHTML=hot5.map(({i,f})=>`<span class="badge badge-hot">${BICHOS[i].e} ${BICHOS[i].n} <span style="opacity:.6">${f}×</span></span>`).join('');
+  document.getElementById('cold-bichos').innerHTML=[...cold5].reverse().map(({i,f})=>`<span class="badge badge-cold">${BICHOS[i].e} ${BICHOS[i].n} <span style="opacity:.6">${f}×</span></span>`).join('');
+  document.getElementById('hot-dezenas').innerHTML=dezArr.slice(0,5).map(([d,f])=>`<span class="badge badge-hot">${d} <span style="opacity:.6">${f}×</span></span>`).join('');
+  document.getElementById('cold-dezenas').innerHTML=dezArr.slice(-5).reverse().map(([d,f])=>`<span class="badge badge-cold">${d} <span style="opacity:.6">${f}×</span></span>`).join('');
+  const sugB=[sortedB[0],sortedB[1],sortedB[24],sortedB[23]];
+  document.getElementById('sug-bichos').innerHTML=sugB.map(({i})=>`<span class="badge badge-accent">${BICHOS[i].e} ${BICHOS[i].n}</span>`).join('');
+  const sugDez=[dezArr[0][0],dezArr[1][0],dezArr[2][0],dezArr[dezArr.length-1][0],dezArr[dezArr.length-2][0]];
+  document.getElementById('sug-dezenas').innerHTML=sugDez.map(d=>`<span class="badge badge-mid">${d}</span>`).join('');
+  document.getElementById('sug-valor-hot').textContent=bancaLimite>0?fmt(bancaLimite*0.6):'60% da banca';
+  document.getElementById('sug-valor-cold').textContent=bancaLimite>0?fmt(bancaLimite*0.4):'40% da banca';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.getElementById('header-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'}).toUpperCase();
+document.getElementById('extr-data').value=new Date().toISOString().split('T')[0];
+render();
+updateTurnoSelects(0);
+loadFromFirebase();
+</script>
+</body>
+</html>
