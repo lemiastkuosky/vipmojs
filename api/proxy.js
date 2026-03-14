@@ -1,8 +1,30 @@
-// api/proxy.js - V7.3 FINAL MULTI-SITE
+// api/proxy.js - V8.0 UNIVERSAL (Resultados + Atrasados)
 export default async function handler(request, response) {
+    // Libera o acesso para o seu site
     response.setHeader('Access-Control-Allow-Origin', '*');
-    const { tipo, loteria, data } = request.query;
-    if (tipo === 'versao') return response.status(200).send("PROXY_V7.3_FINAL");
+    
+    const { url, tipo, loteria, data } = request.query;
+
+    // MÁGICA: Se o seu site enviar o parâmetro ?url=... (como fazemos para os atrasados)
+    // o proxy agora obedece e vai buscar exatamente o que foi pedido!
+    if (url) {
+        try {
+            const res = await fetch(decodeURIComponent(url), {
+                headers: { 
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Referer': 'https://hojenobicho.com/' 
+                }
+            });
+            const html = await res.text();
+            response.setHeader('Content-Type', 'text/html; charset=utf-8');
+            return response.status(200).send(html);
+        } catch (error) {
+            return response.status(500).send("Erro no fetch direto: " + error.message);
+        }
+    }
+
+    // --- MANTÉM SUA LÓGICA ANTIGA PARA NÃO QUEBRAR OS RESULTADOS ---
+    if (tipo === 'versao') return response.status(200).send("PROXY_V8.0_UNIVERSAL");
 
     const mapaPortalBrasil = {
         'rj': 'resultado-do-jogo-do-bicho',
@@ -13,15 +35,12 @@ export default async function handler(request, response) {
 
     let url_alvo = '';
 
-    // LÓGICA PARA NACIONAL (RESULTADO FÁCIL)
     if (loteria === 'ln') {
         url_alvo = 'https://www.resultadofacil.com.br/resultados-da-banca-loteria-nacional';
         if (data && /^\d{4}-\d{2}-\d{2}$/.test(data)) {
             url_alvo = `https://www.resultadofacil.com.br/resultado-do-jogo-do-bicho/nacional/do-dia/${data}`;
         }
-    } 
-    // LÓGICA PARA AS OUTRAS (PORTAL BRASIL)
-    else {
+    } else {
         const slug = mapaPortalBrasil[loteria] || 'resultado-do-jogo-do-bicho';
         url_alvo = `https://portalbrasil.net/jogodobicho/${slug}/`;
         if (data && /^\d{4}-\d{2}-\d{2}$/.test(data)) {
