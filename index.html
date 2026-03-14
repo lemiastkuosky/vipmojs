@@ -8478,15 +8478,26 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
             <br>🟢 <b>Seta para cima (⬆️):</b> I.A. possui muitos dados para este bicho.
             <br>🔴 <b>Seta para baixo (⬇️):</b> Pouco histórico (palpite mais aleatório).
             <br>🔥 <b>Fogo:</b> Destaque exclusivo para o bicho com maior volume de padrões na loteria.
-        </p>
-        
-        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(0, 123, 255, 0.3); font-size: 0.72rem; color: #6c757d; line-height: 1.4; text-align: left;">
-            <strong style="color: #007bff; display: block; margin-bottom: 4px;">🎯 Roadmap de Precisão I.A:</strong>
-            <div style="display: flex; justify-content: space-between;"><span><b>90%+</b> Bicho certo no Top 5</span> <i style="opacity: 0.8;">(Já atingido)</i></div>
-            <div style="display: flex; justify-content: space-between;"><span><b>80%+</b> Dezena certa no Top 10</span> <i style="opacity: 0.8;">(Viável em breve)</i></div>
-            <div style="display: flex; justify-content: space-between;"><span><b>50%+</b> Milhar no 1º prêmio (entre 10)</span> <i style="opacity: 0.8;">(Ambicioso)</i></div>
-        </div>
+        </p><br></div>
+
+<div id="roadmapIaContainer" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(0, 123, 255, 0.3); font-size: 0.75rem; color: #6c757d; line-height: 1.6; text-align: left;">
+    <strong style="color: #007bff; display: block; margin-bottom: 6px; font-size: 0.8rem;">🎯 Roadmap Real de Precisão:</strong>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span><b id="rdmBicho" style="transition: all 0.3s;">--%</b> Bicho no Top 5</span> 
+        <span id="rdmBichoStatus" style="font-size: 0.65rem; font-weight: bold; opacity: 0.8;">(Aguardando...)</span>
     </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span><b id="rdmDezena" style="transition: all 0.3s;">--%</b> Dezena no Top 10</span> 
+        <span id="rdmDezenaStatus" style="font-size: 0.65rem; font-weight: bold; opacity: 0.8;">--</span>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span><b id="rdmMilhar" style="transition: all 0.3s;">--%</b> Milhar no 1º prêmio</span> 
+        <span id="rdmMilharStatus" style="font-size: 0.65rem; font-weight: bold; opacity: 0.8;">--</span>
+    </div>
+</div><div></div><br>
 
     <div class="button-style-radios" id="iaLotteryRadios" style="flex-wrap: wrap;">
         <label style="flex: 1 1 30%;"><input type="radio" name="iaLotteryOption" value="rj" checked onchange="updateIaLotterySelection(this.value)"> RJ</label>
@@ -11188,8 +11199,10 @@ async function fetchLotteryResults(loteria, dataISO = null) {
         urlProxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
         isAllOrigins = true;
     } 
+
     // ROTA PADRÃO (SEU VERCEL PROXY) PARA AS OUTRAS (RJ, LK, FD)
     else {
+        // Garante o uso da URL absoluta para evitar o erro "Failed to fetch"
         urlProxy = `https://vipmojs.vercel.app/api/proxy?loteria=${loteria}&tipo=resultados`;
         if (dataISO) {
             urlProxy += `&data=${dataISO}`;
@@ -13063,6 +13076,64 @@ function applyAdvancedFilters(numberStr, numberType) {
     }
 
     return true;
+}
+
+async function updateRealTimeRoadmap(loteria) {
+    const elBicho = document.getElementById('rdmBicho');
+    const elDezena = document.getElementById('rdmDezena');
+    const elMilhar = document.getElementById('rdmMilhar');
+    
+    // Função interna para aplicar cores e valores
+    const applyStyle = (el, pct) => {
+        el.innerText = `${pct}%`;
+        if (pct >= 80) el.style.color = '#28a745'; // Verde Sucesso
+        else if (pct >= 50) el.style.color = '#f39c12'; // Amarelo Atenção
+        else el.style.color = '#e74c3c'; // Vermelho Baixo
+    };
+
+    try {
+        // Busca os últimos 30 palpites comparados com resultados no Firebase
+        const snap = await firestoreDB.collection('historicoPalpites')
+            .where('loteria', '==', loteria)
+            .orderBy('data', 'desc')
+            .limit(30)
+            .get();
+
+        if (snap.empty) {
+            [elBicho, elDezena, elMilhar].forEach(el => { el.innerText = "0%"; el.style.color = "#999"; });
+            document.getElementById('rdmBichoStatus').innerText = "(Sem dados)";
+            return;
+        }
+
+        let totalValidado = 0, acB = 0, acD = 0, acM = 0;
+
+        snap.forEach(doc => {
+            const d = doc.data();
+            if (d.resultado && d.acertos) {
+                totalValidado++;
+                if (d.acertos.grupoTop5) acB++;
+                if (d.acertos.dezena) acD++;
+                if (d.resultado.milhar && d.milhares && d.milhares.includes(d.resultado.milhar)) acM++;
+            }
+        });
+
+        if (totalValidado > 0) {
+            const pB = Math.round((acB / totalValidado) * 100);
+            const pD = Math.round((acD / totalValidado) * 100);
+            const pM = Math.round((acM / totalValidado) * 100);
+
+            applyStyle(elBicho, pB);
+            applyStyle(elDezena, pD);
+            applyStyle(elMilhar, pM);
+
+            // Atualiza os textos de status baseados na performance
+            document.getElementById('rdmBichoStatus').innerText = pB >= 80 ? "🔥 ESTÁVEL" : "⚖️ OSCILANDO";
+            document.getElementById('rdmDezenaStatus').innerText = pD >= 40 ? "📈 ALTA" : "⏳ AGUARDANDO";
+            document.getElementById('rdmMilharStatus').innerText = acM > 0 ? "🏆 CRAVOU!" : "💎 RARO";
+        }
+    } catch (e) {
+        console.error("Erro no Roadmap:", e);
+    }
 }
 
 
@@ -17323,19 +17394,15 @@ setTimeout(() => {
         console.log(`Total final carregado: ${nomesSalvos.length} nomes.`);
     }
 
-    // Função para lidar com a troca de loteria via botões
 function updateIaLotterySelection(value) {
-    // Sincroniza com o select oculto (caso ainda seja usado por outras funções)
     const hiddenSelect = document.getElementById('iaLotterySelect');
-    if (hiddenSelect) {
-        hiddenSelect.value = value;
-    }
+    if (hiddenSelect) hiddenSelect.value = value;
     
-    // Dispara a busca de prefixos históricos para a I.A.
     console.log(">>> Loteria I.A. alterada para:", value);
-    if (typeof fetchAndCacheIaPrefixes === 'function') {
-        fetchAndCacheIaPrefixes(value);
-    }
+    
+    // ATUALIZAÇÃO EM TEMPO REAL:
+    if (typeof fetchAndCacheIaPrefixes === 'function') fetchAndCacheIaPrefixes(value);
+    updateRealTimeRoadmap(value); // <-- Nova função adicionada aqui!
 }
 
 async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
@@ -20745,6 +20812,71 @@ function renderPermToggles(uid, userPerms) {
             </div>
         </div>
     `).join('');
+}
+
+async function updateRealTimeRoadmap(loteria) {
+    const elBicho = document.getElementById('rdmBicho');
+    const elDezena = document.getElementById('rdmDezena');
+    const elMilhar = document.getElementById('rdmMilhar');
+    const statusBicho = document.getElementById('rdmBichoStatus');
+    const statusDezena = document.getElementById('rdmDezenaStatus');
+    const statusMilhar = document.getElementById('rdmMilharStatus');
+
+    // Função auxiliar para aplicar cores baseadas na porcentagem
+    const applyStyle = (el, pct) => {
+        el.innerText = `${pct}%`;
+        if (pct >= 80) el.style.color = '#28a745'; // Verde (Sucesso)
+        else if (pct >= 50) el.style.color = '#f39c12'; // Amarelo (Médio)
+        else el.style.color = '#e74c3c'; // Vermelho (Baixo)
+    };
+
+    try {
+        // Busca os últimos 30 palpites da loteria selecionada que já possuem resultado
+        const snap = await firestoreDB.collection('historicoPalpites')
+            .where('loteria', '==', loteria)
+            .orderBy('data', 'desc')
+            .limit(30)
+            .get();
+
+        if (snap.empty) {
+            [elBicho, elDezena, elMilhar].forEach(el => { el.innerText = "0%"; el.style.color = "#999"; });
+            statusBicho.innerText = "(Sem dados)";
+            return;
+        }
+
+        let totalValidado = 0, acB = 0, acD = 0, acM = 0;
+
+        snap.forEach(doc => {
+            const d = doc.data();
+            // Só calcula se o sorteio já tiver ocorrido (se houver o campo resultado)
+            if (d.resultado && d.acertos) {
+                totalValidado++;
+                if (d.acertos.grupoTop5) acB++;
+                if (d.acertos.dezena) acD++;
+                // Milhar exata: verifica se a milhar sorteada estava na lista sugerida
+                if (d.resultado.milhar && d.milhares && d.milhares.includes(d.resultado.milhar)) {
+                    acM++;
+                }
+            }
+        });
+
+        if (totalValidado > 0) {
+            const pB = Math.round((acB / totalValidado) * 100);
+            const pD = Math.round((acD / totalValidado) * 100);
+            const pM = Math.round((acM / totalValidado) * 100);
+
+            applyStyle(elBicho, pB);
+            applyStyle(elDezena, pD);
+            applyStyle(elMilhar, pM);
+
+            // Atualiza os textos de status
+            statusBicho.innerText = pB >= 80 ? "🔥 ESTÁVEL" : "⚖️ OSCILANDO";
+            statusDezena.innerText = pD >= 40 ? "📈 ALTA" : "⏳ AGUARDANDO";
+            statusMilhar.innerText = acM > 0 ? "🏆 CRAVOU!" : "💎 RARO";
+        }
+    } catch (e) {
+        console.error("Erro ao atualizar Roadmap:", e);
+    }
 }
 
 // =========================================================
@@ -27153,11 +27285,20 @@ async function calcBuscarSoma(lot) {
 // ── BUSCA SITE EXTERNO ───────────────────────────────────────────────────
 async function calcBuscarExterno(lot) {
     try {
-        const res = await fetch(`/api/proxy?tipo=atrasados&loteria=${lot}`);
+        // CORREÇÃO: Usando URL absoluta do Vercel e o parâmetro 'url' para o Hoje no Bicho
+        const targetUrl = `https://hojenobicho.com/atrasados/${lot}/`;
+        const urlProxy = `https://vipmojs.vercel.app/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+        
+        const res = await fetch(urlProxy);
         if (!res.ok) return null;
         const html = await res.text();
+        
+        // Usa o extrator híbrido que já configuramos
         return typeof extrairDadosDoHTML === 'function' ? extrairDadosDoHTML(html) : null;
-    } catch(e) { return null; }
+    } catch(e) { 
+        console.error("Erro ao buscar dados externos para calculadora:", e);
+        return null; 
+    }
 }
 
 async function calcBuscarSaturacaoHoje(lot) {
@@ -28758,6 +28899,7 @@ async function calcAtualizarLeds() {
     }
 
     // LED Externo (testa o proxy)
+    // LED Externo (testa o proxy e o site de atrasados)
     try {
         // Pega a loteria selecionada ou usa 'rj' como padrão para o teste
         const lotParaTeste = document.querySelector('input[name="calcLoteria"]:checked')?.value || 'rj';
