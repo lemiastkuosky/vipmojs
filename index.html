@@ -13082,17 +13082,18 @@ async function updateRealTimeRoadmap(loteria) {
     const elBicho = document.getElementById('rdmBicho');
     const elDezena = document.getElementById('rdmDezena');
     const elMilhar = document.getElementById('rdmMilhar');
-    
-    // Função interna para aplicar cores e valores
+    const statusBicho = document.getElementById('rdmBichoStatus');
+
+    // Função interna para aplicar cores baseadas na performance
     const applyStyle = (el, pct) => {
         el.innerText = `${pct}%`;
-        if (pct >= 80) el.style.color = '#28a745'; // Verde Sucesso
-        else if (pct >= 50) el.style.color = '#f39c12'; // Amarelo Atenção
-        else el.style.color = '#e74c3c'; // Vermelho Baixo
+        if (pct >= 80) el.style.color = '#28a745';      // Verde (Sucesso)
+        else if (pct >= 50) el.style.color = '#f39c12'; // Amarelo (Atenção)
+        else el.style.color = '#e74c3c';                // Vermelho (Baixo)
     };
 
     try {
-        // Busca os últimos 30 palpites comparados com resultados no Firebase
+        // Busca os últimos 30 palpites da loteria selecionada
         const snap = await firestoreDB.collection('historicoPalpites')
             .where('loteria', '==', loteria)
             .orderBy('data', 'desc')
@@ -13101,7 +13102,7 @@ async function updateRealTimeRoadmap(loteria) {
 
         if (snap.empty) {
             [elBicho, elDezena, elMilhar].forEach(el => { el.innerText = "0%"; el.style.color = "#999"; });
-            document.getElementById('rdmBichoStatus').innerText = "(Sem dados)";
+            if (statusBicho) statusBicho.innerText = "(Sem dados)";
             return;
         }
 
@@ -13109,11 +13110,15 @@ async function updateRealTimeRoadmap(loteria) {
 
         snap.forEach(doc => {
             const d = doc.data();
+            // Só calcula se o sorteio já tiver resultado processado no banco
             if (d.resultado && d.acertos) {
                 totalValidado++;
                 if (d.acertos.grupoTop5) acB++;
                 if (d.acertos.dezena) acD++;
-                if (d.resultado.milhar && d.milhares && d.milhares.includes(d.resultado.milhar)) acM++;
+                // Milhar exata: verifica se a milhar sorteada estava na lista sugerida
+                if (d.resultado.milhar && d.milhares && d.milhares.includes(d.resultado.milhar)) {
+                    acM++;
+                }
             }
         });
 
@@ -13126,13 +13131,10 @@ async function updateRealTimeRoadmap(loteria) {
             applyStyle(elDezena, pD);
             applyStyle(elMilhar, pM);
 
-            // Atualiza os textos de status baseados na performance
-            document.getElementById('rdmBichoStatus').innerText = pB >= 80 ? "🔥 ESTÁVEL" : "⚖️ OSCILANDO";
-            document.getElementById('rdmDezenaStatus').innerText = pD >= 40 ? "📈 ALTA" : "⏳ AGUARDANDO";
-            document.getElementById('rdmMilharStatus').innerText = acM > 0 ? "🏆 CRAVOU!" : "💎 RARO";
+            if (statusBicho) statusBicho.innerText = pB >= 80 ? "🔥 ESTÁVEL" : "⚖️ OSCILANDO";
         }
     } catch (e) {
-        console.error("Erro no Roadmap:", e);
+        console.error("Erro ao atualizar Roadmap:", e);
     }
 }
 
@@ -17396,13 +17398,17 @@ setTimeout(() => {
 
 function updateIaLotterySelection(value) {
     const hiddenSelect = document.getElementById('iaLotterySelect');
-    if (hiddenSelect) hiddenSelect.value = value;
+    if (hiddenSelect) {
+        hiddenSelect.value = value;
+    }
     
     console.log(">>> Loteria I.A. alterada para:", value);
-    
-    // ATUALIZAÇÃO EM TEMPO REAL:
-    if (typeof fetchAndCacheIaPrefixes === 'function') fetchAndCacheIaPrefixes(value);
-    updateRealTimeRoadmap(value); // <-- Nova função adicionada aqui!
+    if (typeof fetchAndCacheIaPrefixes === 'function') {
+        fetchAndCacheIaPrefixes(value);
+    }
+
+    // --- ADICIONE ESTA LINHA AQUI ---
+    updateRealTimeRoadmap(value); 
 }
 
 async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
