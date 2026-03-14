@@ -9449,6 +9449,24 @@ const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
     let messageTemplates = [];
     let nomesSalvos = [];
     let savedLists = [];
+
+    // === MEMÓRIA DINÂMICA DA I.A. (PESOS ADAPTATIVOS) ===
+    window.iaDynamicWeights = {
+        atraso: 1.0,
+        calor: 1.0,
+        puxada: 1.0,
+        cruz: 1.0,
+        ciclo: 1.0
+    };
+    // === MEMÓRIA DINÂMICA DA I.A. (PESOS ADAPTATIVOS) ===
+    window.iaDynamicWeights = {
+        atraso: 1.0,
+        calor: 1.0,
+        puxada: 1.0,
+        cruz: 1.0,
+        ciclo: 1.0,
+        correlacao: 1.0 // <-- NOVO PESO ADICIONADO
+    };
     let savedReceipts = [];
     let receiptGames = []; 
     let activeModalStack = [];
@@ -9590,6 +9608,13 @@ const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
         checkAuth();
     }
 });
+
+function getBichosVizinhos(grupo) {
+    const g = parseInt(grupo, 10);
+    const anterior = g === 1 ? '25' : String(g - 1).padStart(2, '0');
+    const proximo = g === 25 ? '01' : String(g + 1).padStart(2, '0');
+    return [anterior, proximo];
+}
 
 async function handleFechamentoToggle(checkbox) {
     // Só executa a lógica se o checkbox foi MARCADO
@@ -11408,62 +11433,95 @@ async function analisarHistoricoIA(selectedBichos, loteria) {
 }
 
 function calcularPontuacaoBicho(bichoGrupo, analise) {
-    let score = 25;
+    let score = 25; // Pontuação base inicial
     let motivos = [];
     let fontesBonusCount = 0;
+    
+    // 0. CARREGA PESOS DINÂMICOS (Ou usa 1.0 como padrão se a memória estiver vazia)
+    const pesos = window.iaDynamicWeights || { atraso: 1.0, calor: 1.0, puxada: 1.0, cruz: 1.0, ciclo: 1.0, correlacao: 1.0 };
 
     const listaAtrasados = analise.atrasados || analise.bichosAtrasados || [];
     const listaFrequentes = analise.frequentes || analise.bichosFrequentes || [];
 
-    // 1. ATRASO (Até 40 pts)
+    // 1. ATRASO (Multiplicado pelo peso dinâmico)
     const idxAtrasado = listaAtrasados.findIndex(b => b.grupo === bichoGrupo);
     let pontuacaoAtraso = 0;
     if (idxAtrasado !== -1) {
-        pontuacaoAtraso = 40 - (idxAtrasado * 5);
+        pontuacaoAtraso = Math.round((40 - (idxAtrasado * 5)) * pesos.atraso);
         score += pontuacaoAtraso;
-        motivos.push('⏰ Ranking Atraso (+' + pontuacaoAtraso + ')');
+        motivos.push(`⏰ Atraso [W:${pesos.atraso.toFixed(1)}] (+${pontuacaoAtraso})`);
         fontesBonusCount++;
     }
 
-    // 2. CALOR (FREQUENTES)
+    // 2. CALOR / FREQUÊNCIA (Multiplicado pelo peso dinâmico)
     const idxFreq = listaFrequentes.findIndex(b => b.grupo === bichoGrupo);
     if (idxFreq !== -1) {
-        let ptsFreq = 20 - (idxFreq * 4);
+        let ptsFreq = Math.round((20 - (idxFreq * 4)) * pesos.calor);
+        // Se o bicho for um dos mais atrasados, reduz bônus de calor para evitar conflito de tendência
         if (pontuacaoAtraso > 20) ptsFreq = Math.round(ptsFreq * 0.5);
         score += ptsFreq;
-        motivos.push('🔥 Tendência Quente (+' + ptsFreq + ')');
+        motivos.push(`🔥 Calor [W:${pesos.calor.toFixed(1)}] (+${ptsFreq})`);
         fontesBonusCount++;
     }
 
-    // 3. RESFRIAMENTO / CICLO
-    if (analise.ciclos && analise.ciclos[bichoGrupo]) {
-            const c = analise.ciclos[bichoGrupo];
-            if (c.atual < 1) {
-                score -= 80; // Aumentamos a punição para ele cair no ranking
-                motivos.push('❄️ Resfriando: Já saiu hoje (-80)');
-            } else if (c.estourado) {
-            score += 20;
-motivos.push('🚨 Ciclo Estourado (+20)');
+    // 3. PUXADA (Multiplicado pelo peso dinâmico)
+    if (analise.puxada && analise.puxada.includes(bichoGrupo)) {
+        let ptsPuxada = Math.round(35 * pesos.puxada);
+        score += ptsPuxada;
+        motivos.push(`🔗 Puxada [W:${pesos.puxada.toFixed(1)}] (+${ptsPuxada})`);
+        fontesBonusCount++;
+    }
+
+    // 4. CORRELAÇÃO E VIZINHOS (Proteção contra o "Quase")
+    const top3Atrasados = listaAtrasados.slice(0, 3).map(b => b.grupo);
+    const vizinhosAlvo = [];
+    top3Atrasados.forEach(g => {
+        const gNum = parseInt(g, 10);
+        const anterior = gNum === 1 ? '25' : String(gNum - 1).padStart(2, '0');
+        const proximo = gNum === 25 ? '01' : String(gNum + 1).padStart(2, '0');
+        vizinhosAlvo.push(anterior, proximo);
+    });
+
+    if (vizinhosAlvo.includes(bichoGrupo)) {
+        let ptsCorr = Math.round(15 * pesos.correlacao);
+        score += ptsCorr;
+        motivos.push(`👥 Vizinho de Atrasado [W:${pesos.correlacao.toFixed(1)}] (+${ptsCorr})`);
+        fontesBonusCount++;
+    }
+
+    // 5. AFINIDADE DE PARES (Famílias de bichos)
+    if (top3Atrasados.length > 0) {
+        const top1 = top3Atrasados[0];
+        const afins = (analise.afinidades && analise.afinidades[top1]) || [];
+        if (afins.includes(bichoGrupo)) {
+            let ptsPar = Math.round(25 * pesos.correlacao);
+            score += ptsPar;
+            motivos.push(`🔗 Par Forte de G${top1} [W:${pesos.correlacao.toFixed(1)}] (+${ptsPar})`);
             fontesBonusCount++;
         }
     }
 
-    // 4. PUXADA
-    if (analise.puxada && analise.puxada.includes(bichoGrupo)) {
-        score += 20;
-        motivos.push('🔗 Puxada de Resultado (+20)');
-        fontesBonusCount++;
+    // 6. RESFRIAMENTO / CICLO (Punição para bichos que já saíram)
+    if (analise.ciclos && analise.ciclos[bichoGrupo]) {
+        const c = analise.ciclos[bichoGrupo];
+        if (c.atual < 1) {
+            score -= 80; // Bicho "frio" por ter saído recentemente no 1º prêmio
+            motivos.push('❄️ Resfriando: Já saiu hoje (-80)');
+        } else if (c.estourado) {
+            let ptsCiclo = Math.round(20 * pesos.ciclo);
+            score += ptsCiclo;
+            motivos.push(`🚨 Ciclo Estourado [W:${pesos.ciclo.toFixed(1)}] (+${ptsCiclo})`);
+            fontesBonusCount++;
+        }
     }
 
-    // POR ISTO:
-    // 5. PADRÃO DO DIA DA SEMANA (com guarda de amostra mínima)
+    // 7. PADRÃO DO DIA DA SEMANA (Estatística histórica do dia)
     const diaSemanaHoje = new Date().getDay();
     const chavesDia = ['Domingos', 'Segundas', 'Terças', 'Quartas', 'Quintas', 'Sextas', 'Sábados'];
     const diaStr = String(diaSemanaHoje);
     if (analise.bicho1PremioPorDia && analise.bicho1PremioPorDia[diaStr]) {
         const countsDia = analise.bicho1PremioPorDia[diaStr];
-        const totalDia = Object.values(countsDia).reduce(function(a, v) { return a + v; }, 0) || 1;
-        // Guarda: ignora se há menos de 15 amostras (dados insuficientes)
+        const totalDia = Object.values(countsDia).reduce((a, v) => a + v, 0) || 1;
         if (totalDia >= 15) {
             const countBicho = countsDia[bichoGrupo] || 0;
             const freqEsperada = totalDia / 25;
@@ -11479,7 +11537,7 @@ motivos.push('🚨 Ciclo Estourado (+20)');
         }
     }
 
-    // 6. TENDÊNCIA RECENTE (7 dias) — ANTES da confluência para contar o sinal
+    // 8. TENDÊNCIA RECENTE (Frequência nos últimos 7 dias)
     if (analise.tendenciaRecente && analise.tendenciaRecente[bichoGrupo]) {
         const aparicoes7d = analise.tendenciaRecente[bichoGrupo];
         if (aparicoes7d >= 3) {
@@ -11489,44 +11547,17 @@ motivos.push('🚨 Ciclo Estourado (+20)');
         } else if (aparicoes7d === 2) {
             score += 12;
             motivos.push('♨️ Aquecendo: 2x em 7 dias (+12)');
+            fontesBonusCount++;
         }
     }
 
-    // 6b. CONVERGÊNCIA DUPLA: Atrasado + Quente recente (sinal mais forte)
-    if (idxAtrasado !== -1 && analise.tendenciaRecente && (analise.tendenciaRecente[bichoGrupo] || 0) >= 2) {
-        score += 22;
-        motivos.push('🎯 Convergência Dupla: Atrasado + Quente (+22)');
-        fontesBonusCount++;
-    }
-
-    // 7. CONFLUÊNCIA — calculada POR ÚLTIMO para capturar todos os sinais acima
-    // 7. POSIÇÃO ASCENDENTE — bicho subindo nos últimos sorteios
-    if (analise.posicaoHistorico && analise.posicaoHistorico[bichoGrupo]) {
-        const hist = analise.posicaoHistorico[bichoGrupo];
-        if (hist.length >= 3) {
-            // Verifica se cada posição recente é <= à anterior (descendo o número = subindo no ranking)
-            const subindo = hist.slice(-4).every((pos, i, arr) => i === 0 || pos <= arr[i - 1]);
-            const chegouTop3 = hist[hist.length - 1] <= 3;
-            if (subindo && chegouTop3) {
-                score += 40;
-                motivos.push('📈 Subindo para o 1º (+40)');
-                fontesBonusCount++;
-            } else if (subindo) {
-                score += 20;
-                motivos.push('📈 Tendência Ascendente (+20)');
-                fontesBonusCount++;
-            }
-        }
-    }
-
-    // 8. CONFLUÊNCIA — calculada POR ÚLTIMO para capturar todos os sinais acima
+    // 9. BÔNUS DE CONFLUÊNCIA (Quando muitos sinais concordam)
     if (fontesBonusCount >= 3) {
         const bonusConf = fontesBonusCount * 8;
         score += bonusConf;
         motivos.unshift('⚡ CONFLUÊNCIA ' + fontesBonusCount + ' sinais (+' + bonusConf + ')');
     }
 
-    // Cap elevado para 200 — evita truncar bichos com alta convergência
     return { forca: Math.max(1, Math.min(200, score)), motivos: motivos };
 }
 
@@ -19754,7 +19785,7 @@ function getNextDrawName(loteria) {
     await loadCercarPools();
     const modal = document.getElementById('randomGeneratorModal');
     await updateQuickQuantityButtons();
-    
+    await refreshDynamicWeights(loteriaAtiva)
     loadMcdSearchTerm();
     modal.classList.add('active');
 
@@ -19770,6 +19801,7 @@ function getNextDrawName(loteria) {
     hideWhatsAppPanel(); 
     document.getElementById('integratedHistoryPanel').style.display = 'none';
     hasAutoGeneratedBichos = false;
+    
 }
 
 /**
@@ -27669,12 +27701,28 @@ function calcScoreCompleto(analise, puxada, externoBichos, cruzDoDia, turno, sat
             }
         }
 
-        // 2. SITE EXTERNO (dias exatos de atraso) ─────────────────────────
+        // 2. SITE EXTERNO (PESO PRIORITÁRIO PARA O TOP 5) ─────────────────────────
         if (mapaExterno[b.grupo] !== undefined) {
             const dias = mapaExterno[b.grupo];
-            if (dias >= 14)     { score += 20; motivos.push(`🌐 Externo: ${dias}d atraso (+20)`); }
-            else if (dias >= 7) { score += 10; motivos.push(`🌐 Externo: ${dias}d atraso (+10)`); }
-            else if (dias === 0){ score -= 20; motivos.push(`🌐 Saiu hoje no externo (-20)`); }
+            
+            // Se o bicho está muito atrasado, ganha pontuação para saltar para o Topo
+            if (dias >= 20) { 
+                score += 80; 
+                motivos.unshift(`🚨 PRIORIDADE: Atraso Crítico ${dias}d (+80)`); 
+            }
+            else if (dias >= 10) { 
+                score += 50; 
+                motivos.push(`🌐 Atraso Relevante: ${dias}d (+50)`); 
+            }
+            else if (dias >= 5) { 
+                score += 25; 
+                motivos.push(`🌐 Atraso Leve: ${dias}d (+25)`); 
+            }
+            // SE SAIU HOJE (0 DIAS), A PUNIÇÃO É DRÁSTICA PARA SAIR DO TOP 5
+            else if (dias === 0) { 
+                score -= 150; 
+                motivos.unshift(`❄️ ZERADO: Saiu hoje no Externo (-150)`); 
+            }
         }
 
         // 3. CRUZ DO DIA ──────────────────────────────────────────────────
@@ -27705,7 +27753,7 @@ function calcScoreCompleto(analise, puxada, externoBichos, cruzDoDia, turno, sat
 }
 
 // ── SCORE INDIVIDUAL DE DEZENAS ─────────────────────────────────────────
-// Avalia todas as 100 dezenas e retorna top 10 para o 1º prêmio
+// Avalia todas as 100 dezenas e retorna top 20 para o 1º prêmio
 function calcScoreDezenas(ranking, analise, sinalDoDia) {
     const cruz      = analise._cruzDoDia || [];
     const quentes   = analise.dezenaPorBicho1Premio || {};
@@ -27722,6 +27770,9 @@ function calcScoreDezenas(ranking, analise, sinalDoDia) {
         (analise._jogadaMestre.invertida|| '').slice(-2),
     ].filter(Boolean) : [];
 
+    // Captura a última dezena sorteada para o Filtro de Respiro
+    const ultimaDezenaSorteada = analise.ultimoResultado ? String(analise.ultimoResultado.dezena).padStart(2, '0') : null;
+
     const todas = [];
     for (let i = 0; i <= 99; i++) {
         const dz     = String(i).padStart(2,'0');
@@ -27730,6 +27781,13 @@ function calcScoreDezenas(ranking, analise, sinalDoDia) {
         let score    = 0;
         const motivos = [];
 
+        // ❄️ FILTRO DE RESPIRO DE DEZENA (Novo)
+        // Se a dezena acabou de sair no último sorteio, recebe punição massiva
+        if (ultimaDezenaSorteada && dz === ultimaDezenaSorteada) {
+            score -= 150;
+            motivos.push('❄️Respiro');
+        }
+
         // Grupo do bicho desta dezena
         const grupoIdx = Math.floor(i / 4);
         const grupo    = String(grupoIdx + 1).padStart(2,'0');
@@ -27737,15 +27795,15 @@ function calcScoreDezenas(ranking, analise, sinalDoDia) {
 
         // Pontos pelo ranking do grupo
         if      (rankPos === 0) { score += 30; motivos.push(`G${grupo}#1`); }
-else if (rankPos <= 2)  { score += 20; motivos.push(`G${grupo}#${rankPos+1}`); }
-else if (rankPos <= 5)  { score += 10; motivos.push(`G${grupo}#${rankPos+1}`); }
-else if (rankPos <= 9)  { score +=  5; motivos.push(`G${grupo}#${rankPos+1}`); }
+        else if (rankPos <= 2)  { score += 20; motivos.push(`G${grupo}#${rankPos+1}`); }
+        else if (rankPos <= 5)  { score += 10; motivos.push(`G${grupo}#${rankPos+1}`); }
+        else if (rankPos <= 9)  { score +=  5; motivos.push(`G${grupo}#${rankPos+1}`); }
 
         // Cruz do Dia
         const temCruz0 = cruz.includes(d0);
         const temCruz1 = cruz.includes(d1);
         if (temCruz0 && temCruz1) { score += 35; motivos.push('🌟Cruz✕'); }
-else if (temCruz0 || temCruz1) { score += 15; motivos.push('🌟Cruz'); }
+        else if (temCruz0 || temCruz1) { score += 15; motivos.push('🌟Cruz'); }
 
         // Sinal da data
         if (sinalDoDia) {
@@ -27773,11 +27831,11 @@ else if (temCruz0 || temCruz1) { score += 15; motivos.push('🌟Cruz'); }
         todas.push({ dz, score, motivos, grupo });
     }
 
-    // Ordena por score e pega top 10
+    // Ordena por score e pega top 20
     todas.sort((a, b) => b.score - a.score);
 
-// Garante diversidade: pelo menos 1 dezena dos top 8 grupos
-    const top20 = todas.slice(0, 20);
+    // Garante diversidade: pelo menos 1 dezena dos top 8 grupos
+    let top20 = todas.slice(0, 20);
     const gruposPresentes = new Set(top20.map(x => x.grupo));
     const gruposTop8 = ranking.slice(0, 8).map(r => r.grupo);
     
@@ -27791,8 +27849,44 @@ else if (temCruz0 || temCruz1) { score += 15; motivos.push('🌟Cruz'); }
             }
         }
     }
-    return top20;
-    return todas.slice(0, 20);
+    
+    // Ordena novamente após a injeção de diversidade
+    return top20.sort((a, b) => b.score - a.score);
+}
+
+function gerarJogadaMestreHibrida(analise, rankingBichos, rankingDezenas) {
+    try {
+        // 1. Identifica o Bicho "Dono da Casa" (O mais atrasado no Externo)
+        const bichoAtrasado = analise.bichosAtrasados && analise.bichosAtrasados.length > 0 
+            ? analise.bichosAtrasados[0] 
+            : rankingBichos[0];
+
+        // 2. Identifica a "Dezena de Ouro" (A #1 do ranking de dezenas)
+        const dezenaQuente = rankingDezenas && rankingDezenas.length > 0 
+            ? rankingDezenas[0].dz 
+            : '00';
+
+        // 3. Escolhe o Prefixo (Milhar e Centena)
+        // Usamos os dígitos da Cruz do Dia para o prefixo, pois são os mais prováveis de aparecer
+        const cruz = analise._cruzDoDia || [1, 2, 3, 4];
+        const prefixo = `${cruz[0]}${cruz[1]}`; // Ex: Se a cruz tem 1 e 2, prefixo é 12
+
+        // 4. Monta a Milhar Híbrida
+        const milharFinal = prefixo + dezenaQuente;
+
+        // 5. Gera a Invertida (Proteção)
+        const invertida = milharFinal.split('').reverse().join('');
+
+        return {
+            palpite: milharFinal,
+            invertida: invertida,
+            bicho: bichoAtrasado.animal,
+            motivo: `Fusão: Prefixo da Cruz + Dezena Quente de G${bichoAtrasado.grupo}`
+        };
+    } catch (e) {
+        console.error("Erro ao gerar Jogada de Mestre:", e);
+        return { palpite: '1234', invertida: '4321', bicho: 'Cachorro', motivo: 'Backup' };
+    }
 }
 
 function calcPaltitao(ranking, analise, nomeSorteio, sinalDoDia) {
@@ -28389,6 +28483,7 @@ function calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, satura
     };
     
     const paltitao = calcPaltitao(ranking, anComExtras, nomeSorteio, sinal);
+
     console.log('[Paltitao]', paltitao);
     console.log('[Ranking sample]', ranking.slice(0,3).map(b => b.grupo));
     console.log('[cruzDoDia]', anComExtras._cruzDoDia);
@@ -28398,6 +28493,13 @@ function calcGerarLogica(lot, hora, data, analise, puxada, soma, externo, satura
     const uniUsed  = new Set();
     ((an.unidadesAtrasadas || [])).forEach(u => { if (!uniUsed.has(u.numero)) { unidades.push(u); uniUsed.add(u.numero); } });
     ((externo || {}).unidades || []).forEach(u => { if (unidades.length < 3 && !uniUsed.has(u.numero)) { unidades.push(u); uniUsed.add(u.numero); } });
+
+    anComExtras._jogadaMestre = gerarJogadaMestreHibrida(anComExtras, ranking, paltitao.dezMotivos);
+    
+    // Injeta o resultado no motor para que o visual da Calculadora o exiba
+    if (motorResult) {
+        motorResult.jogadaDeMestre = anComExtras._jogadaMestre;
+    }
 
     return {
         ranking, top5, top10, top1,
@@ -28637,11 +28739,16 @@ window.calcGerarPalpites = async function() {
     r.top5.forEach((b, i) => {
         const mvs = (b.motivos || []).slice(0, 3).join(' · ');
         const dBase = b.dezenasBase || b.dezenas || [];
+        
+        // Busca se existe informação de dias para este bicho no mapa externo
+        const diasAtraso = (externo && externo.bichos) ? externo.bichos.find(ex => ex.grupo === b.grupo)?.dias : null;
+        const labelAtraso = (diasAtraso !== null && diasAtraso !== undefined) ? `<span style="color:#dc3545; font-weight:900; margin-left:5px;">[${diasAtraso}d]</span>` : '';
+
         html += `<div class="bicho-row" style="animation-delay:${i*0.06}s">
             <span class="br-rank">#${i+1}</span>
             <span class="br-emoji">${b.emoji}</span>
             <div class="br-info">
-                <div class="br-nome">${b.animal}</div>
+                <div class="br-nome">${b.animal} ${labelAtraso}</div>
                 <div class="br-grupo">G${b.grupo} · <strong>${b.forca}pts</strong>${b.confianca ? ' · '+b.confianca : ''}</div>
                 ${mvs ? `<div style="font-size:0.58rem;color:#888;margin-top:2px;line-height:1.4;">${mvs}</div>` : ''}
             </div>
@@ -28800,6 +28907,63 @@ window.calcGerarPalpites = async function() {
         if (id) console.log('✅ Palpite salvo:', id);
     });
 };
+
+async function refreshDynamicWeights(loteria) {
+    console.log(`[I.A. Learning] Calibrando pesos para ${loteria.toUpperCase()}...`);
+    
+    try {
+        const snap = await firestoreDB.collection('historicoPalpites')
+            .where('loteria', '==', loteria)
+            .orderBy('data', 'desc')
+            .limit(20)
+            .get();
+
+        if (snap.empty) return;
+
+        // Contadores de sucesso por sinal
+        // ... dentro da função refreshDynamicWeights, no objeto 'acertos' ...
+let acertos = { atraso: 0, calor: 0, puxada: 0, cruz: 0, ciclo: 0, correlacao: 0 };
+
+// ... dentro do loop snap.forEach, após verificar os motivos ...
+if (m.includes('correlacao') || m.includes('vizinho')) acertos.correlacao++;
+
+// ... na hora de definir os novos pesos (REGRAS DE PESO ADAPTATIVO) ...
+window.iaDynamicWeights.correlacao = 0.8 + ((acertos.correlacao / totalHits) * 0.7);
+        let totalHits = 0;
+
+        snap.forEach(doc => {
+            const d = doc.data();
+            // Se foi um acerto no Top 5, verificamos quais sinais levaram a isso
+            if (d.acertos && d.acertos.grupoTop5) {
+                totalHits++;
+                const bichoGanhador = d.top10Grupos.find(g => g.grupo === d.resultado.grupo);
+                if (bichoGanhador && bichoGanhador.motivos) {
+                    const m = bichoGanhador.motivos.join(' ').toLowerCase();
+                    if (m.includes('atraso') || m.includes('externo')) acertos.atraso++;
+                    if (m.includes('quente') || m.includes('frequente')) acertos.calor++;
+                    if (m.includes('puxada')) acertos.puxada++;
+                    if (m.includes('cruz')) acertos.cruz++;
+                    if (m.includes('ciclo')) acertos.ciclo++;
+                }
+            }
+        });
+
+        // REGRAS DE PESO ADAPTATIVO:
+        // Base 0.8 + (Bónus de até 0.7 se o sinal estiver a pagar muito)
+        if (totalHits > 0) {
+            window.iaDynamicWeights = {
+                atraso: 0.8 + ((acertos.atraso / totalHits) * 0.7),
+                calor: 0.8 + ((acertos.calor / totalHits) * 0.7),
+                puxada: 0.8 + ((acertos.puxada / totalHits) * 0.7),
+                cruz: 0.8 + ((acertos.cruz / totalHits) * 0.7),
+                ciclo: 0.8 + ((acertos.ciclo / totalHits) * 0.7)
+            };
+            console.log("[I.A. Learning] Novos Pesos:", window.iaDynamicWeights);
+        }
+    } catch (e) {
+        console.warn("Erro ao calibrar pesos:", e);
+    }
+}
 
 async function calcAtualizarLeds() {
     const setLed = (dotId, status) => {
