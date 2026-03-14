@@ -28759,9 +28759,14 @@ async function calcAtualizarLeds() {
 
     // LED Externo (testa o proxy)
     try {
-        const res = await fetch(`https://vipmojs.vercel.app/api/proxy?tipo=atrasados&loteria=${loteria}`)
+        // Pega a loteria selecionada ou usa 'rj' como padrão para o teste
+        const lotParaTeste = document.querySelector('input[name="calcLoteria"]:checked')?.value || 'rj';
+        const urlAlvo = `https://hojenobicho.com/atrasados/${lotParaTeste}/`;
+        const res = await fetch(`https://vipmojs.vercel.app/api/proxy?url=${encodeURIComponent(urlAlvo)}`);
+        
         setLed('ledExternoDot', res.ok ? 'ok' : 'aviso');
     } catch(e) {
+        console.warn("Falha no teste do LED Externo:", e);
         setLed('ledExternoDot', 'erro');
     }
 }
