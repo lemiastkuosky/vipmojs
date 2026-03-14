@@ -8484,8 +8484,13 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
     <strong style="color: #007bff; display: block; margin-bottom: 6px; font-size: 0.8rem;">🎯 Roadmap Real de Precisão:</strong>
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <span><b id="rdmBicho" style="transition: all 0.3s;">--%</b> Bicho no Top 5</span> 
+        <span><b id="rdmBicho" style="transition: all 0.3s;">--%</b> Grupo no Top 5</span> 
         <span id="rdmBichoStatus" style="font-size: 0.65rem; font-weight: bold; opacity: 0.8;">(Aguardando...)</span>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span><b id="rdmBicho10" style="transition: all 0.3s;">--%</b> Grupo no Top 10</span> 
+        <span id="rdmBicho10Status" style="font-size: 0.65rem; font-weight: bold; opacity: 0.8;">--</span>
     </div>
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -8497,6 +8502,7 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
         <span><b id="rdmMilhar" style="transition: all 0.3s;">--%</b> Milhar no 1º prêmio</span> 
         <span id="rdmMilharStatus" style="font-size: 0.65rem; font-weight: bold; opacity: 0.8;">--</span>
     </div>
+</div>
 </div><div></div><br>
 
     <div class="button-style-radios" id="iaLotteryRadios" style="flex-wrap: wrap;">
@@ -13111,14 +13117,18 @@ function applyAdvancedFilters(numberStr, numberType) {
 
 async function updateRealTimeRoadmap(loteria) {
     const elBicho = document.getElementById('rdmBicho');
+    const elBicho10 = document.getElementById('rdmBicho10'); // NOVO
     const elDezena = document.getElementById('rdmDezena');
     const elMilhar = document.getElementById('rdmMilhar');
+    
     const statusBicho = document.getElementById('rdmBichoStatus');
+    const statusBicho10 = document.getElementById('rdmBicho10Status'); // NOVO
     const statusDezena = document.getElementById('rdmDezenaStatus');
     const statusMilhar = document.getElementById('rdmMilharStatus');
 
     // Mostra que está processando
     if (statusBicho) statusBicho.innerText = "(Calculando...)";
+    if (statusBicho10) statusBicho10.innerText = "--";
 
     const applyStyle = (el, pct) => {
         if (!el) return;
@@ -13137,18 +13147,20 @@ async function updateRealTimeRoadmap(loteria) {
             .get();
 
         if (snap.empty) {
-            [elBicho, elDezena, elMilhar].forEach(el => { if(el) { el.innerText = "0%"; el.style.color = "#999"; }});
+            [elBicho, elBicho10, elDezena, elMilhar].forEach(el => { if(el) { el.innerText = "0%"; el.style.color = "#999"; }});
             if (statusBicho) statusBicho.innerText = "(Sem dados)";
+            if (statusBicho10) statusBicho10.innerText = "--";
             return;
         }
 
-        let totalValidado = 0, acB = 0, acD = 0, acM = 0;
+        let totalValidado = 0, acB = 0, acB10 = 0, acD = 0, acM = 0;
 
         snap.forEach(doc => {
             const d = doc.data();
             if (d.resultado && d.acertos) {
                 totalValidado++;
                 if (d.acertos.grupoTop5) acB++;
+                if (d.acertos.grupoTop10) acB10++; // CONTADOR DO TOP 10
                 if (d.acertos.dezena) acD++;
                 if (d.resultado.milhar && d.milhares && d.milhares.includes(d.resultado.milhar)) acM++;
             }
@@ -13156,14 +13168,17 @@ async function updateRealTimeRoadmap(loteria) {
 
         if (totalValidado > 0) {
             const pB = Math.round((acB / totalValidado) * 100);
+            const pB10 = Math.round((acB10 / totalValidado) * 100); // CÁLCULO TOP 10
             const pD = Math.round((acD / totalValidado) * 100);
             const pM = Math.round((acM / totalValidado) * 100);
 
             applyStyle(elBicho, pB);
+            applyStyle(elBicho10, pB10); // APLICA VISUAL TOP 10
             applyStyle(elDezena, pD);
             applyStyle(elMilhar, pM);
 
             if (statusBicho) statusBicho.innerText = pB >= 80 ? "🔥 ESTÁVEL" : "⚖️ OSCILANDO";
+            if (statusBicho10) statusBicho10.innerText = pB10 >= 85 ? "🎯 ALTA" : "⏳ NORMAL"; // STATUS TOP 10
             if (statusDezena) statusDezena.innerText = pD >= 50 ? "📈 ALTA" : "⏳ NORMAL";
             if (statusMilhar) statusMilhar.innerText = pM > 0 ? "🏆 CRAVOU" : "💎 RARO";
         } else {
@@ -19785,23 +19800,31 @@ function getNextDrawName(loteria) {
     await loadCercarPools();
     const modal = document.getElementById('randomGeneratorModal');
     await updateQuickQuantityButtons();
-    await refreshDynamicWeights(loteriaAtiva)
+    
+    // CORREÇÃO 1: Definir a loteria ativa ANTES de chamar a função
+    const loteriaAtiva = document.querySelector('input[name="iaLotteryOption"]:checked')?.value || 'rj';
+    
+    // CORREÇÃO 2: Chamar a função com o prefixo 'window.' para acessar a versão global
+    if (typeof window.refreshDynamicWeights === 'function') {
+        await window.refreshDynamicWeights(loteriaAtiva);
+    }
+    
     loadMcdSearchTerm();
     modal.classList.add('active');
 
     // === GATILHO DE ATUALIZAÇÃO DO ROADMAP AO ABRIR ===
-    const loteriaAtiva = document.querySelector('input[name="iaLotteryOption"]:checked')?.value || 'rj';
-    
     // Carrega as % nos bichos e o Roadmap real
     if (typeof fetchAndCacheIaPrefixes === 'function') fetchAndCacheIaPrefixes(loteriaAtiva);
     updateRealTimeRoadmap(loteriaAtiva); 
 
     document.getElementById('generatorActionButtons').style.display = 'none';
     document.getElementById('mcdSearchContainer').style.display = 'none';
-    hideWhatsAppPanel(); 
+    
+    // CORREÇÃO BÔNUS: O nome correto da função para fechar o WhatsApp é hideWhatsAppConfig()
+    if (typeof hideWhatsAppConfig === 'function') hideWhatsAppConfig(); 
+    
     document.getElementById('integratedHistoryPanel').style.display = 'none';
     hasAutoGeneratedBichos = false;
-    
 }
 
 /**
@@ -28317,7 +28340,22 @@ window.calcApagarPalpite = async function(docId) {
     }
 };
 
-// ── ABRIR DETALHE (CORRIGIDO) ────────────────────────────────────────────
+// ── FUNÇÃO DE CÓPIA DO MODAL DE DETALHES ─────────────────────────────────
+window.calcCopiarDetalhe = function(btn) {
+    const txt = window._calcTextoDetalhe || '';
+    if (!txt) return;
+    const orig = btn.innerHTML;
+    const ok = () => { btn.textContent = '✅ Copiado!'; setTimeout(() => btn.innerHTML = orig, 2000); };
+    function leg(t) {
+        const ta = document.createElement('textarea');
+        ta.value = t; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+    navigator.clipboard ? navigator.clipboard.writeText(txt).then(ok).catch(()=>{leg(txt);ok();}) : (leg(txt),ok());
+};
+
+// ── ABRIR DETALHE (CORRIGIDO E COM BOTÕES WHATSAPP) ──────────────────────
 window.calcAbrirDetalhe = async function(docId) {
     const snap = await firestoreDB.collection('historicoPalpites').doc(docId).get();
     if (!snap.exists) return;
@@ -28374,7 +28412,7 @@ window.calcAbrirDetalhe = async function(docId) {
 
     if (d.cruzDoDia?.length) {
         html += block('🌟 Cruz do Dia',
-            `<div style="display:flex;gap:10px;">${d.cruzDoDia.map(n=>
+            `<div style="display:flex;gap:10px;justify-content:center;">${d.cruzDoDia.map(n=>
                 `<span style="width:36px;height:36px;border-radius:8px;background:rgba(255,193,7,0.15);
                 border:1px solid rgba(255,193,7,0.4);color:#ffc107;font-size:1.1rem;font-weight:900;
                 display:flex;align-items:center;justify-content:center;">${n}</span>`
@@ -28426,11 +28464,48 @@ window.calcAbrirDetalhe = async function(docId) {
         }).join('')}</div>`);
     }
 
+    // --- RECONSTRUÇÃO DO TEXTO PARA WHATSAPP ---
+    let txtToCopy = `🎯 *PALPITES ${lotNome} — ${d.horario} (${dataFmt})*\n\n`;
+    if (d.cruzDoDia && d.cruzDoDia.length) txtToCopy += `🌟 *Cruz do Dia:* ${d.cruzDoDia.join(' · ')}\n\n`;
+    if (d.soma && d.soma.milhar) txtToCopy += `➕ *Milhar da Soma:* ${d.soma.milhar}\n\n`;
+    if (d.jogadaMestre && d.jogadaMestre.palpite) txtToCopy += `👑 *Jogada de Mestre:* ${d.jogadaMestre.palpite}${d.jogadaMestre.invertida?' / '+d.jogadaMestre.invertida:''}\n\n`;
+    
+    if (d.top10Grupos && d.top10Grupos.length) {
+        txtToCopy += `🐾 *Grupos:*\n${d.top10Grupos.slice(0,5).map((b,i)=>`${i+1}º ${typeof b==='object'?(b.emoji+' '+b.animal):'G'+b} (${typeof b==='object'?b.forca:''}pts)`).join('\n')}\n\n`;
+    }
+    
+    if (d.milhares && d.milhares.length) txtToCopy += `🎰 *Milhares:* ${d.milhares.join('  ')}\n\n`;
+    if (d.centenas && d.centenas.length) txtToCopy += `💯 *Centenas:* ${d.centenas.join('  ')}\n\n`;
+    if (d.duques && d.duques.length) txtToCopy += `🎲 *Duques:* ${d.duques.join('  ')}\n\n`;
+    if (d.ternos && d.ternos.length) txtToCopy += `🎯 *Ternos:* ${d.ternos.join('  ')}\n\n`;
+    if (d.top10Dezenas && d.top10Dezenas.length) {
+        txtToCopy += `🔢 *Top 20 Dezenas:* ${d.top10Dezenas.map(x=>typeof x==='string'?x:x.dz).join('  ')}\n\n`;
+    }
+    txtToCopy += `📲 _Gerado pelo VipMojs_`;
+
+    window._calcTextoDetalhe = txtToCopy;
+
+    // --- INJEÇÃO DOS BOTÕES COPIAR E WHATSAPP ---
     html += `
+        <div style="display:flex; gap:10px; margin-top:16px;">
+            <button onclick="calcCopiarDetalhe(this)" 
+                style="flex:1; padding:12px; border-radius:10px; border:none; background:#6f42c1; color:#fff; font-weight:800; font-size:0.95rem; cursor:pointer; box-shadow: 0 3px 0 #5a359b; transition: transform 0.1s;"
+                onmousedown="this.style.transform='translateY(2px)';this.style.boxShadow='none'" 
+                onmouseup="this.style.transform='';this.style.boxShadow='0 3px 0 #5a359b'">
+                📋 Copiar
+            </button>
+            <button onclick="window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(window._calcTextoDetalhe), '_blank')" 
+                style="flex:1; padding:12px; border-radius:10px; border:none; background:#25D366; color:#fff; font-weight:800; font-size:0.95rem; cursor:pointer; box-shadow: 0 3px 0 #1e7e34; transition: transform 0.1s;"
+                onmousedown="this.style.transform='translateY(2px)';this.style.boxShadow='none'" 
+                onmouseup="this.style.transform='';this.style.boxShadow='0 3px 0 #1e7e34'">
+                📲 WhatsApp
+            </button>
+        </div>
+        
         <button onclick="document.getElementById('calcDetalheModal').remove()"
-            style="width:100%;margin-top:14px;padding:14px;border-radius:12px;border:none;
-            background:#0d6efd;color:#fff;font-weight:800;font-size:1rem;cursor:pointer;">
-            Fechar
+            style="width:100%;margin-top:12px;padding:12px;border-radius:10px;border:none;
+            background:#334155;color:#fff;font-weight:800;font-size:0.95rem;cursor:pointer;">
+            Fechar Relatório
         </button>
     </div>`;
 
@@ -28908,7 +28983,7 @@ window.calcGerarPalpites = async function() {
     });
 };
 
-async function refreshDynamicWeights(loteria) {
+window.refreshDynamicWeights = async function(loteria) {
     console.log(`[I.A. Learning] Calibrando pesos para ${loteria.toUpperCase()}...`);
     
     try {
