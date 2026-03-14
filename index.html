@@ -11661,52 +11661,38 @@ async function runFullIAAnalysisUpdate(isAutomatic = false, loteriaAlvo = null) 
 }
 
 async function fetchAndCacheIaPrefixes(loteria) {
-    if (!loteria) { 
-        updateIaSuggestionCountsDisplay(null);
-        return; 
-    }
+    if (!loteria) { updateIaSuggestionCountsDisplay(null); return; }
     
-    // Feedback visual de carregamento nos bichos
-    const countSpans = document.querySelectorAll('.ia-suggestion-count');
-    countSpans.forEach(span => span.innerHTML = '<small style="color:#aaa;">...</small>');
+    // Mostra carregando nos bichos
+    document.querySelectorAll('.ia-suggestion-count').forEach(span => span.innerHTML = '...');
 
     try {
-        const [data, puxada, htmlAtrasados] = await Promise.all([
+        // Chamada unificada ao seu Proxy V8.0
+        const urlAtrasados = `https://vipmojs.vercel.app/api/proxy?tipo=atrasados&loteria=${loteria}&url=${encodeURIComponent('https://hojenobicho.com/atrasados/'+loteria+'/')}`;
+        
+        const [data, puxada, resProxy] = await Promise.all([
             getIaDataForDraw(loteria, 'geral'),
             getPuxadaDoDiaIA(loteria),
-            fetch(`https://vipmojs.vercel.app/api/proxy?tipo=atrasados&loteria=${loteria}`)
+            fetch(urlAtrasados)
         ]);
         
-        const dadosExternos = typeof extrairDadosDoHTML === 'function' ? extrairDadosDoHTML(htmlAtrasados) : { bichos: [], dezenas: [], centenas: [] };
+        const htmlAtrasados = await resProxy.text();
+        const dadosExternos = extrairDadosDoHTML(htmlAtrasados);
         const atrasadosReais = dadosExternos.bichos;
-        window.dezenasAtrasadasExternas = dadosExternos.dezenas;   // disponível globalmente para uso no scoring
-        window.centenasAtrasadasExternas = dadosExternos.centenas;
 
         if (data) {
-            if (!iaHistoricalPrefixesCache) iaHistoricalPrefixesCache = {};
-            iaHistoricalPrefixesCache[loteria] = {};
-            
-            if(data.prefixosPorBicho) {
-                for (const [grupo, prefixos] of Object.entries(data.prefixosPorBicho)) {
-                    iaHistoricalPrefixesCache[loteria][grupo] = new Set(prefixos);
-                }
-            }
-
             window.iaRankingsVisuais = {
                 atrasadosRealTime: atrasadosReais, 
                 frequentes: data.bichosFrequentes || [],
                 ciclos: data.ciclos || {},
                 puxada: puxada
             };
-
-            // ATENÇÃO: Esta chamada é o que faz a % aparecer no visual
             updateIaSuggestionCountsDisplay(loteria);
         }
     } catch (e) {
         console.error("Erro na sincronização IA:", e);
         updateIaSuggestionCountsDisplay(null);
     }
-    
 }
 
 function updateIaSuggestionCountsDisplay(lottery) {
@@ -23642,149 +23628,142 @@ function extrairDadosDoHTML(htmlString) {
     try {
         if (!htmlString || htmlString.trim() === '') return dadosExtraidos;
 
-        // 1. Limpeza do HTML
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlString, 'text/html');
         
-        // Remove scripts e estilos que sujam o texto
+        // Limpeza profunda: Remove o "lixo" que confunde a I.A.
         const lixo = doc.querySelectorAll('script, style, nav, footer, header');
         lixo.forEach(el => el.remove());
 
-        // 2. Normaliza o texto: remove espaços extras e acentos
         let textoPuro = doc.body.innerText.replace(/\s+/g, ' ');
         const textoBusca = textoPuro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-        console.log("🔍 Analisando texto normalizado (início):", textoBusca.substring(0, 500));
-
-        // 3. EXTRAÇÃO COM REGEX FLEXÍVEL
+        // --- LÓGICA 1: ATRASADOS (Para o Radar e % no Gerador) ---
         tabelaDeGrupos.forEach(bicho => {
-            // Nome do animal sem acento (ex: jacare, aguia)
             const nomeAnimal = bicho.animal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-            
-            // EXPLICAÇÃO DA NOVA REGEX:
-            // nomeAnimal -> Procura o bicho
-            // .{0,50}?   -> Pula até 50 caracteres (pode ser "saiu a", "ha", ou nada)
-            // (\d+)      -> Pega o número de dias
-            // \s* -> Espaço opcional
-            // (?:dias|atras) -> Procura a palavra "dias" ou "atrás"
-            const regexBicho = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*(?:dias|atras)`, 'i');
-            const matchBicho = textoBusca.match(regexBicho);
-            
-            if (matchBicho) {
-                const diasAtraso = parseInt(matchBicho[1], 10);
-                
-                // Evita duplicados e salva
-                if (!dadosExtraidos.bichos.find(d => d.grupo === bicho.grupo)) {
-                    dadosExtraidos.bichos.push({
-                        nome: bicho.animal, 
-                        grupo: bicho.grupo,
-                        emoji: bicho.emoji, 
-                        dias: diasAtraso
-                    });
-                }
+            const regexAtraso = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*(?:dias|atras)`, 'i');
+            const matchAtraso = textoBusca.match(regexAtraso);
+            if (matchAtraso) {
+                dadosExtraidos.bichos.push({
+                    nome: bicho.animal, grupo: bicho.grupo, emoji: bicho.emoji, 
+                    dias: parseInt(matchAtraso[1], 10)
+                });
             }
         });
-        
-        // Ordena: os que estão há mais tempo sem sair primeiro
-        dadosExtraidos.bichos.sort((a, b) => b.dias - a.dias);
-        console.log(`✅ Sucesso: ${dadosExtraidos.bichos.length} bichos identificados.`);
 
-    } catch (error) {
-        console.error("❌ Erro no extrator:", error);
-    }
+        // --- LÓGICA 2: RESULTADOS (Para a Calculadora e I.A. de Palpites) ---
+        // Regex aprimorada para capturar resultados no formato "1º 1234" ou "1-1234"
+        const regexMilhar = /(\d)[º°\-]\s*(\d{4})/g;
+        let matchM;
+        while ((matchM = regexMilhar.exec(textoPuro)) !== null) {
+            const num = matchM[2];
+            dadosExtraidos.unidades.push(num.slice(-1));
+            dadosExtraidos.dezenas.push(num.slice(-2));
+            dadosExtraidos.centenas.push(num.slice(-3));
+        }
+        dadosExtraidos.bichos.sort((a, b) => b.dias - a.dias);
+    } catch (error) { console.error("Erro no Extrator Híbrido:", error); }
     return dadosExtraidos;
 }
 
 async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     const textoOriginal = botao.innerHTML; 
     botao.disabled = true;
-    botao.innerHTML = 'Buscando...';
+    botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
 
-    // Mapeamento exato para o site hojenobicho.com
-    const mapaSite = { 
-        'rj': 'rj', 
-        'lk': 'lk', 
-        'ln': 'ln', 
-        'ba': 'ba', 
-        'fd': 'fed' // Federal no site é 'fed'
-    };
-
+    const mapaSite = { 'rj': 'rj', 'lk': 'lk', 'ln': 'ln', 'ba': 'ba', 'fd': 'fed' };
     const siglaCorreta = mapaSite[loteria] || loteria;
     const targetUrl = `https://hojenobicho.com/atrasados/${siglaCorreta}/`;
     const urlProxy = `https://vipmojs.vercel.app/api/proxy?url=${encodeURIComponent(targetUrl)}`;
 
-    console.log(`📡 Buscando atrasados de ${nomeLoteria} via: ${urlProxy}`);
-
     try {
         const response = await fetch(urlProxy);
-        if (!response.ok) throw new Error("Erro na rede ou Proxy offline");
+        if (!response.ok) throw new Error("Erro na rede");
         
         const htmlBruto = await response.text();
-        
-        // Chama o extrator com limpeza profunda
         const dadosExtraidos = extrairDadosDoHTML(htmlBruto);
         let dados = dadosExtraidos.bichos;
 
         if (!dados || dados.length === 0) {
-            console.error("❌ Nenhum dado extraído do HTML.");
-            showToast("Resultados não encontrados nesta loteria.", "error");
+            showToast("Dados não encontrados.", "error");
             return;
         }
 
-        // --- Montagem da Lista (Mantendo seu padrão visual) ---
-        const dadosCompletosParaTela = [];
-        tabelaDeGrupos.forEach(bichoMatriz => {
-            const bichoEncontrado = dados.find(d => d.grupo === bichoMatriz.grupo);
-            if (bichoEncontrado) {
-                dadosCompletosParaTela.push(bichoEncontrado);
-            } else {
-                dadosCompletosParaTela.push({
-                    nome: bichoMatriz.animal,
-                    grupo: bichoMatriz.grupo,
-                    emoji: bichoMatriz.emoji,
-                    dias: 0 
-                });
-            }
+        // 1. Mapeia todos os 25 bichos e separa em dois grupos
+        const todosOsBichos = tabelaDeGrupos.map(bichoMatriz => {
+            const encontrado = dados.find(d => d.grupo === bichoMatriz.grupo);
+            return {
+                nome: bichoMatriz.animal,
+                grupo: bichoMatriz.grupo,
+                emoji: bichoMatriz.emoji,
+                dias: encontrado ? encontrado.dias : 0
+            };
         });
 
-        dadosCompletosParaTela.sort((a, b) => b.dias - a.dias);
-        const bichosAtrasados = dadosCompletosParaTela.filter(b => b.dias > 0);
+        const listaAtrasados = todosOsBichos.filter(b => b.dias > 0).sort((a, b) => b.dias - a.dias);
+        const listaRecentes = todosOsBichos.filter(b => b.dias === 0);
 
-        document.getElementById('atrasadosResultHeader').innerHTML = `📊 RADAR ${nomeLoteria.toUpperCase()}<br><small>${new Date().toLocaleDateString('pt-BR')}</small>`;
+        // 2. Prepara o Cabeçalho
+        document.getElementById('atrasadosResultHeader').innerHTML = `
+            <div style="font-size: 1.2rem; font-weight: 900; color: #2563eb;">📊 RADAR DE ATRASADOS</div>
+            <div style="text-transform: uppercase; font-weight: 700; color: #666;">${nomeLoteria}</div>
+            <div style="font-size: 0.8rem; color: #999;">${new Date().toLocaleDateString('pt-BR')}</div>
+        `;
 
         let listHTML = '';
         let zapText = `📊 *RANKING DE ATRASADOS - ${nomeLoteria.toUpperCase()}* 📊\n\n*VIP I.A REAL TIME*\n━━━━━━━━━━━━━━━\n\n`;
 
-        bichosAtrasados.forEach((bicho, index) => {
+        // 3. Renderiza os ATRASADOS
+        listaAtrasados.forEach((bicho, index) => {
             const pos = index + 1;
-            const rowColor = pos <= 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent';
+            let rowBg = pos <= 5 ? 'rgba(220, 53, 69, 0.05)' : 'transparent';
+            let borderSide = pos <= 5 ? '4px solid #dc3545' : 'none';
+
             listHTML += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: ${rowColor}; border-radius: 8px; margin-bottom: 3px;">
-                    <span style="font-weight: 900; width: 30px; color: ${pos <= 5 ? '#dc3545' : 'inherit'};">${pos}º</span>
-                    <span style="font-size: 1.3rem; width: 35px;">${bicho.emoji}</span>
-                    <span style="flex-grow: 1; text-align: left; font-weight: 700;">${bicho.nome.toUpperCase()}</span>
-                    <span style="font-weight: bold; color: #666;">${bicho.dias}d</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: ${rowBg}; border-left: ${borderSide}; margin-bottom: 2px;">
+                    <span style="font-weight: 900; width: 25px; font-size: 0.8rem; color: #999;">${pos}º</span>
+                    <span style="font-size: 1.5rem; width: 40px; text-align: center;">${bicho.emoji}</span>
+                    <span style="flex-grow: 1; text-align: left; font-weight: 700; font-size: 0.95rem; margin-left: 10px;">${bicho.nome.toUpperCase()}</span>
+                    <span style="font-weight: 800; text-align: right; min-width: 60px; color: #444;">${bicho.dias}d</span>
                 </div>`;
-            zapText += `*${pos}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _Atrasado há ${bicho.dias} dias_\n`;
+            
+            zapText += `*${pos}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${bicho.dias} dias atrás_\n`;
         });
 
-        const bichosSaiuHoje = dadosCompletosParaTela.filter(b => b.dias === 0);
-        if (bichosSaiuHoje.length > 0) {
-            listHTML += `<div style="text-align: center; font-weight: 900; color: #28a745; margin-top: 15px; padding: 8px; background: rgba(40,167,69,0.1); border-radius: 8px;">✅ SAÍRAM RECENTEMENTE</div>`;
+        // 4. Seção SAÍRAM RECENTEMENTE (Onde os "0 dias" aparecem)
+        if (listaRecentes.length > 0) {
+            listHTML += `
+                <div style="background: #e8f5e9; color: #2e7d32; font-weight: 900; text-align: center; padding: 10px; margin: 15px 0 5px 0; border-radius: 8px; font-size: 0.85rem; letter-spacing: 1px;">
+                    ✅ SAÍRAM RECENTEMENTE / HOJE
+                </div>`;
+            
             zapText += `\n━━━━━━━━━━━━━━━\n✅ *SAÍRAM RECENTEMENTE:*\n`;
-            bichosSaiuHoje.forEach(b => { zapText += `${b.emoji} *${b.nome.toUpperCase()}*\n`; });
+
+            listaRecentes.forEach(bicho => {
+                listHTML += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: rgba(40, 167, 69, 0.03); margin-bottom: 2px;">
+                        <span style="font-size: 1.5rem; width: 40px; text-align: center;">${bicho.emoji}</span>
+                        <span style="flex-grow: 1; text-align: left; font-weight: 700; font-size: 0.95rem; margin-left: 10px;">${bicho.nome.toUpperCase()}</span>
+                        <span style="font-weight: 900; text-align: right; color: #2e7d32;">HOJE</span>
+                    </div>`;
+                
+                zapText += `${bicho.emoji} *${bicho.nome.toUpperCase()}* (Hoje)\n`;
+            });
         }
 
         zapText += `\n📲 _VIP - I.A in Real-Time_`;
         pendingAtrasadosMessage = zapText;
 
+        // Atualiza a tela e abre o popup
         document.getElementById('atrasadosResultList').innerHTML = listHTML;
         closeAtrasadosRealTimeModal(); 
-        document.getElementById('atrasadosResultModal').classList.add('active'); 
+        setTimeout(() => {
+            document.getElementById('atrasadosResultModal').classList.add('active'); 
+        }, 200);
 
     } catch (error) { 
         console.error(error);
-        showToast("Erro ao conectar com a base de dados.", "error");
+        showToast("Erro ao carregar dados.", "error");
     } finally {
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
@@ -23893,26 +23872,32 @@ async function syncLotteryBeforeIA(loteria) {
                 const docRef = await firestoreDB.collection('resultados').doc(idSorteioTeste).get();
                 
                 // Se o resultado NÃO está no banco, força a busca na internet
-                if (!docRef.exists) {
-                    if (!htmlLoteria) {
-                        htmlLoteria = await fetchLotteryResults(loteria, dataHojeLocal);
-                    }
-                    
-                    if (htmlLoteria) {
-                        const dadosExtraidos = extrairDadosResultados(htmlLoteria, horarioInfo.nome);
-                        if (dadosExtraidos && dadosExtraidos.length > 0) {
-                            for (const item of dadosExtraidos.slice(0, 5)) {
-                                if (item.milhar && item.milhar.length === 4) {
-                                    await salvarResultadoNoHistoricoIA(loteria, momentoSorteio, horarioInfo.nome, item);
-                                    precisaTreinarIA = true; 
-                                }
-                            }
-                        }
-                    }
-                } 
-                else if (momentoSorteio > iaLastUpdated) {
-                    precisaTreinarIA = true;
-                }
+                // Se o resultado NÃO está no banco, força a busca na internet
+if (!docRef.exists) {
+    if (!htmlLoteria) {
+        // Busca os resultados de hoje através do Proxy V8.0
+        htmlLoteria = await fetchLotteryResults(loteria, dataHojeLocal);
+    }
+    
+    if (htmlLoteria) {
+        // MUDANÇA: Utilizamos o extrator híbrido que limpa o HTML antes da busca
+        const dadosExtraidos = extrairDadosDoHTML(htmlLoteria); 
+        
+        // Verifica se o extrator encontrou milhares/dezenas na página
+        if (dadosExtraidos.dezenas && dadosExtraidos.dezenas.length > 0) {
+            // Se encontrou novos resultados, marcamos que a I.A. precisa ser treinada
+            precisaTreinarIA = true;
+            console.log(`[Auto-Sync] Novos resultados detectados via Extrator Híbrido para ${loteria}`);
+            
+            // Nota: O salvamento detalhado (1º ao 5º) agora é gerenciado 
+            // pelo fluxo da calculadora ou pela extração direta de resultados.
+        }
+    }
+} 
+else if (momentoSorteio > iaLastUpdated) {
+    // Se o resultado existe mas a I.A. está desatualizada em relação ao sorteio, treina
+    precisaTreinarIA = true;
+}
             } catch (e) {
                 console.error("Erro no Auto-Sync da Loteria:", e);
             }
