@@ -3420,35 +3420,72 @@ body.dark-mode .lottery-card-text small {
     margin-top: 10px;
 }
 
+/* --- ALINHAMENTO PERFEITO: BOTÕES DE HORÁRIO --- */
 #shareResultsModalBody .time-button {
-    padding: 12px;
-    border-radius: 8px;
+    padding: 14px 18px; /* Mais altura e respiro lateral */
+    border-radius: 10px;
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600; /* Texto um pouco mais forte */
     cursor: pointer;
-    transition: background-color 0.2s;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    transition: background-color 0.2s, transform 0.1s;
+    
+    /* Mágica do alinhamento */
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important; 
+    width: 100%;
+    box-sizing: border-box;
 }
 
+/* Efeito de clique suave */
+#shareResultsModalBody .time-button:active {
+    transform: scale(0.98);
+}
+
+/* Modo Escuro do Botão */
 body.dark-mode #shareResultsModalBody .time-button {
-    background-color: #495057;
-    border-color: #6c757d;
+    background-color: #3a3f44;
+    border-color: #555;
+    color: #f8f9fa;
 }
 
+/* 1. O texto da esquerda (Ex: BAHIA 10h) */
+#shareResultsModalBody .time-button > span:first-child {
+    display: flex;
+    align-items: center;
+    line-height: 1; /* Mata o espaço invisível acima/abaixo da fonte */
+    margin: 0;
+}
+
+/* 2. O wrapper invisível do cronômetro (Causador do desalinhamento) */
+#shareResultsModalBody .time-button > span[id^="countdown-"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* 3. A pílula/badge colorida (Disponível ou Cronômetro) */
 #shareResultsModalBody .time-button .badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: bold;
+    display: inline-flex !important; /* Bloco flexível interno */
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 6px 12px; /* Pílula mais gordinha e proporcional */
+    border-radius: 20px; /* Bordas bem redondas */
+    font-size: 0.85rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: 0.5px; /* Leve espaçamento nos números do relógio */
 }
 
+/* Cores das Pílulas */
 #shareResultsModalBody .time-button .badge.available {
     background-color: #28a745;
     color: white;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
 }
 
 #shareResultsModalBody .time-button .badge.waiting {
@@ -3456,31 +3493,12 @@ body.dark-mode #shareResultsModalBody .time-button {
     color: white;
 }
 
-#shareResultsModalBody .back-button {
-    background-color: #6c757d; /* Cor de fundo cinza */
-    color: white;              /* Cor do texto branca */
-    border: none;
-    text-decoration: none;     /* Remove o sublinhado */
-    cursor: pointer;
-    margin-top: 20px;
-    font-size: 0.9rem;
-    font-weight: bold;         /* Deixa o texto em negrito */
-    padding: 12px;             /* Adiciona preenchimento interno */
-    border-radius: 8px;        /* Bordas arredondadas */
-    width: 100%;               /* Ocupa a largura total */
-    transition: background-color 0.2s;
+body.dark-mode #shareResultsModalBody .time-button .badge.available {
+    background-color: #20c997;
+    color: #000;
 }
-
-#shareResultsModalBody .back-button:active {
-    background-color: #5a6268; /* Cor mais escura ao clicar */
-}
-
-body.dark-mode #shareResultsModalBody .back-button {
-    background-color: #5a6268; /* Tom de cinza para o modo escuro */
-}
-
-body.dark-mode #shareResultsModalBody .back-button:active {
-    background-color: #495057; /* Cor mais escura ao clicar no modo escuro */
+body.dark-mode #shareResultsModalBody .time-button .badge.waiting {
+    background-color: #6c757d;
 }
 
 /* --- Cor de Destaque para o Modo I.A. quando selecionado --- */
@@ -9465,8 +9483,7 @@ const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
             { display: '10:00', corteMinutos: 1 },
             { display: '12:00', corteMinutos: 1 },
             { display: '15:00', corteMinutos: 1 },
-            { display: '17:00', corteMinutos: 1 },
-            { display: '19:00', corteMinutos: 1 }, 
+            { display: '17:00', corteMinutos: 1 }, 
             { display: '21:00', corteMinutos: 1 }, 
             { display: '23:00', corteMinutos: 1 }
         ],
@@ -9482,6 +9499,7 @@ const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
         ],
 
         'Bahia': [
+            { display: '10:00', corteMinutos: 1 },
             { display: '12:00', corteMinutos: 1 },
             { display: '15:00', corteMinutos: 1 },
             { display: '19:00', corteMinutos: 1 },
@@ -11160,24 +11178,39 @@ if (iaLotterySelect) {
 }
 
 async function fetchLotteryResults(loteria, dataISO = null) {
-    let urlProxy = `/api/proxy?loteria=${loteria}&tipo=resultados`;
-    if (dataISO) urlProxy += `&data=${dataISO}`;
+    let urlProxy = '';
+    let isAllOrigins = false;
 
-    // Cria um controlador para cancelar a busca se demorar demais
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos de limite
+    // ROTA VIP EXCLUSIVA PARA LOTERIA NACIONAL (MEGA BICHO)
+    if (loteria === 'ln') {
+        const targetUrl = 'https://megabicho.com/jogo-do-bicho/resultados/ln';
+        // Usamos o AllOrigins para burlar o bloqueio CORS diretamente no navegador
+        urlProxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
+        isAllOrigins = true;
+    } 
+    // ROTA PADRÃO (SEU VERCEL PROXY) PARA AS OUTRAS (RJ, LK, FD)
+    else {
+        urlProxy = `https://vipmojs.vercel.app/api/proxy?loteria=${loteria}&tipo=resultados`;
+        if (dataISO) {
+            urlProxy += `&data=${dataISO}`;
+        }
+    }
+
+    console.log("📡 A buscar resultados em:", urlProxy);
 
     try {
-        const response = await fetch(urlProxy, { signal: controller.signal });
-        clearTimeout(timeoutId);
+        const response = await fetch(urlProxy);
+        if (!response.ok) throw new Error("Erro na rede");
         
-        if (!response.ok) throw new Error(`Erro: ${response.status}`);
-        return await response.text();
+        if (isAllOrigins) {
+            const data = await response.json();
+            return data.contents; // O AllOrigins devolve o HTML dentro de "contents"
+        } else {
+            return await response.text();
+        }
     } catch (error) {
-        clearTimeout(timeoutId);
-        console.warn("Falha na busca de resultados (Proxy offline ou bloqueado):", error.message);
-        // Retorna null em vez de travar o processo
-        return null; 
+        console.error("❌ Falha na busca:", error);
+        return null;
     }
 }
 
@@ -11641,7 +11674,7 @@ async function fetchAndCacheIaPrefixes(loteria) {
         const [data, puxada, htmlAtrasados] = await Promise.all([
             getIaDataForDraw(loteria, 'geral'),
             getPuxadaDoDiaIA(loteria),
-            fetch(`/api/proxy?tipo=atrasados&loteria=${loteria}`).then(res => res.text())
+            fetch(`https://vipmojs.vercel.app/api/proxy?tipo=atrasados&loteria=${loteria}`)
         ]);
         
         const dadosExternos = typeof extrairDadosDoHTML === 'function' ? extrairDadosDoHTML(htmlAtrasados) : { bichos: [], dezenas: [], centenas: [] };
@@ -11767,7 +11800,6 @@ const horariosLoterias = {
         { nome: 'NACIONAL 12:00', display: 'NACIONAL 12h', hora: 12, minuto: 5 },
         { nome: 'NACIONAL 15:00', display: 'NACIONAL 15h', hora: 15, minuto: 5 },
         { nome: 'NACIONAL 17:00', display: 'NACIONAL 17h', hora: 17, minuto: 5 },
-        { nome: 'NACIONAL 19:00', display: 'NACIONAL 19h', hora: 19, minuto: 5 },
         { nome: 'NACIONAL 21:00', display: 'NACIONAL 21h', hora: 21, minuto: 5 }, /* <-- ALTERADO DE 20:00 PARA 21:00 */
         { nome: 'NACIONAL 23:00', display: 'NACIONAL 23h', hora: 23, minuto: 5 }
     ],
@@ -11812,7 +11844,6 @@ const mapaSorteios = {
         'NACIONAL 12:00': 'div_display_12', 
         'NACIONAL 15:00': 'div_display_15', 
         'NACIONAL 17:00': 'div_display_17', 
-        'NACIONAL 19:00': 'div_display_19',
         'NACIONAL 21:00': 'div_display_21', 
         'NACIONAL 23:00': 'div_display_23',
 
@@ -13997,132 +14028,104 @@ function editBolaoParticipant(group, index) {
 function extrairDadosResultados(html, nomeSorteio) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    const nomeSorteioUP = nomeSorteio.toUpperCase();
     const resultados = [];
-
-    // --- 1. DETECÇÃO DE FONTE ---
-    const isPortalBrasil = html.includes('portalbrasil.net');
-    const isInvesteloto = html.includes('investeloto.com.br');
-
-    // --- 2. LÓGICA: PORTAL BRASIL (Geralmente LOOK GOIÁS) ---
-    if (isPortalBrasil) {
-        const matchTime = nomeSorteio.match(/(\d{2}):/);
-        const horaBusca = matchTime ? matchTime[1] + "h" : "";
-        const textoPuro = doc.body.innerText.replace(/\s+/g, ' ');
-        const inicioBloco = textoPuro.indexOf(horaBusca);
-        
-        if (inicioBloco === -1) return [];
-
-        const textoInteresse = textoPuro.substring(inicioBloco, inicioBloco + 2000);
-        // Regex para o padrão: 1º ► 0884-21 — TOURO
-        const regexLinha = /(\d+)º\s*►\s*(\d{3,4})-(\d{1,2})\s*—\s*([A-ZÁÉÍÓÚÇ]+)/gi;
-        
-        let m;
-        while ((m = regexLinha.exec(textoInteresse)) !== null) {
-            const grupoNum = m[3];
-            resultados.push({
-                posicao: m[1] + "º",
-                milhar: m[2].padStart(4, '0'),
-                grupo: `${grupoNum} - ${m[4]}`,
-                emoji: typeof getEmojiForGroup === 'function' ? getEmojiForGroup(parseInt(grupoNum)) : ""
-            });
-            if (resultados.length >= 7 && !nomeSorteio.includes("10º")) break;
-            if (resultados.length >= 10) break;
-        }
-    } 
     
-    // --- 3. LÓGICA: INVESTELOTO (Geralmente NACIONAL) ---
-    else if (isInvesteloto) {
-        const matchTime = nomeSorteio.match(/(\d{2}):/);
-        const horaBusca = matchTime ? matchTime[1] + ":00" : "";
-        
-        const tabelas = Array.from(doc.querySelectorAll('table'));
-        const tabelaAlvo = tabelas.find(t => t.innerText.includes(horaBusca));
+    // Limpa o texto (transforma quebras de linha em espaço)
+    const textoPuro = doc.body.innerText.replace(/\s+/g, ' ');
+    const nomeUP = nomeSorteio.toUpperCase();
 
-        if (tabelaAlvo) {
-            const linhas = tabelaAlvo.querySelectorAll('tr');
-            linhas.forEach(linha => {
-                const cols = linha.querySelectorAll('td');
-                if (cols.length >= 3 && cols[0].innerText.includes('º')) {
-                    const grupoInfo = cols[2].innerText.trim().split(' ');
-                    resultados.push({
-                        posicao: cols[0].innerText.trim(),
-                        milhar: cols[1].innerText.trim().padStart(4, '0'),
-                        grupo: cols[2].innerText.trim(),
-                        emoji: typeof getEmojiForGroup === 'function' ? getEmojiForGroup(parseInt(grupoInfo[0])) : ""
-                    });
-                }
+    console.log(`[DEBUG EXTRATOR] Tentando extrair: ${nomeUP}`);
+
+    // 1. Gerador de Palavras-chave Inteligente
+    let palavrasChave = [nomeUP];
+    let horaMatch = nomeSorteio.match(/(\d{2})[:h](\d{2})/i);
+    
+    if (horaMatch) {
+        let h = horaMatch[1];
+        let m = horaMatch[2];
+        
+        palavrasChave.push(`${h}:${m}`, `${h}H${m}`, `${h}H`, `${h}h${m}`, ` - ${h}h${m}`);
+        
+        if (nomeUP.includes('RIO') || nomeUP.includes('PT')) {
+            if (h === '09') palavrasChave.push('PTM-SP', 'PTM SP', 'PTM');
+            if (h === '11') palavrasChave.push('PTM');
+            if (h === '14') palavrasChave.push('PT');
+            if (h === '16') palavrasChave.push('PTV');
+            if (h === '18') palavrasChave.push('PTN');
+            if (h === '21') palavrasChave.push('CORUJA', 'CORUJINHA');
+        }
+        if (nomeUP.includes('LOOK')) {
+            palavrasChave.push(`LOOK ${h}:${m}`, `LOOK - ${h}:${m}`, `LOOK ${h}H${m}`);
+        }
+        if (nomeUP.includes('NACIONAL')) {
+            palavrasChave.push(`NACIONAL - ${h}h${m}`, `NACIONAL ${h}h${m}`);
+        }
+    } else if (nomeUP.includes('FEDERAL')) {
+        palavrasChave.push('FEDERAL', 'LOTERIA FEDERAL');
+    }
+
+    // 2. Localiza onde o sorteio começa
+    let inicio = -1;
+    for (let pC of palavrasChave) {
+        if (!pC) continue;
+        const pos = textoPuro.toUpperCase().indexOf(pC.toUpperCase());
+        if (pos !== -1) { 
+            inicio = pos; 
+            console.log(`[DEBUG EXTRATOR] Sorteio encontrado pela chave: "${pC}"`);
+            break; 
+        }
+    }
+
+    if (inicio === -1) {
+        console.warn(`[DEBUG EXTRATOR] Sorteio ${nomeUP} não encontrado no HTML.`);
+        return [];
+    }
+
+    const bloco = textoPuro.substring(inicio, inicio + 1500); 
+    
+    // 3. A REGEX MESTRA (Engole tudo: traço, seta azul, sem espaço, com espaço...)
+    const regexLinha = /(\d+)[º°]?(?:\s*Prêmio)?\s*[:►\-—]*\s*(\d{3,4})\s*[-\s►—:]*\s*(\d{1,2})(?:\s*[-\s—]*\s*([A-ZÁÉÍÓÚÃÕÇ]+))?/gi;
+    
+    let m;
+    let posicoesLidas = new Set(); 
+
+    while ((m = regexLinha.exec(bloco)) !== null) {
+        const posicaoNum = parseInt(m[1], 10);
+        
+        if (posicaoNum >= 1 && posicaoNum <= 10 && !posicoesLidas.has(posicaoNum)) {
+            posicoesLidas.add(posicaoNum);
+            
+            const milharLimpa = m[2].padStart(4, '0'); 
+            const numGrupo = m[3].padStart(2, '0');    
+            
+            // Tenta pegar o nome lido. Se não vier ou vier lixo ("Prêmio"), pega da nossa tabela
+            let nomeAnimal = m[4] ? m[4].trim().toUpperCase().split(' ')[0] : ''; 
+            if (!nomeAnimal || nomeAnimal === 'PRÊMIO' || nomeAnimal === 'PREMIO' || nomeAnimal.length <= 2) {
+                const bichoData = typeof tabelaDeGrupos !== 'undefined' ? tabelaDeGrupos.find(b => b.grupo === numGrupo) : null;
+                if (bichoData) nomeAnimal = bichoData.animal.toUpperCase();
+            }
+
+            let icone = "🎲";
+            if (typeof bichoNameToEmoji !== 'undefined' && nomeAnimal) {
+                icone = bichoNameToEmoji[nomeAnimal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] || "🎲";
+            }
+
+            resultados.push({
+                posicao: posicaoNum + "º",
+                milhar: milharLimpa,
+                grupo: `${numGrupo} - ${nomeAnimal}`,
+                emoji: icone,
+                bichoGrupo: numGrupo, 
+                bichoNome: nomeAnimal
             });
         }
+
+        if (resultados.length >= 7 && !nomeUP.includes("10º")) break;
+        if (resultados.length >= 10) break;
     }
 
-    // --- 4. LÓGICA: BICHO CERTO (RIO DE JANEIRO / FEDERAL / BAHIA) ---
-    else {
-        let termoBusca = "";
-        if (nomeSorteioUP.includes('RIO')) {
-            if (nomeSorteio.includes('09:')) termoBusca = 'PPT';
-            else if (nomeSorteio.includes('11:')) termoBusca = 'PTM';
-            else if (nomeSorteio.includes('14:')) termoBusca = 'PT';
-            else if (nomeSorteio.includes('16:')) termoBusca = 'PTV';
-            else if (nomeSorteio.includes('18:')) termoBusca = 'PTN';
-            else if (nomeSorteioUP.includes('CORUJA')) termoBusca = 'COR';
-        } else if (nomeSorteioUP.includes('LOOK')) {
-            const match = nomeSorteio.match(/(\d{2}:\d{2})/);
-            termoBusca = match ? match[1] : "";
-        } else if (nomeSorteioUP.includes('FEDERAL')) {
-            termoBusca = 'FEDERAL';
-        }
-
-        const headers = Array.from(doc.querySelectorAll('h4, h5, h6, strong, b, td'));
-        const alvo = headers.find(h => h.innerText.toUpperCase().includes(termoBusca) && h.innerText.length < 20);
-
-        if (alvo) {
-            let tabela = alvo.closest('table') || alvo.parentElement.querySelector('table');
-            if (!tabela) {
-                let p = alvo.parentElement;
-                for(let i=0; i<3; i++) { 
-                    if(!p) break;
-                    tabela = p.querySelector('table');
-                    if(tabela) break;
-                    p = p.parentElement;
-                }
-            }
-
-            if (tabela) {
-                const rows = tabela.querySelectorAll('tr');
-                rows.forEach(row => {
-                    const tds = row.querySelectorAll('td');
-                    if (tds.length >= 3 && tds[0].innerText.includes('º')) {
-                        const m = tds[2].innerText.trim();
-                        const g = tds[4] ? tds[4].innerText.trim() : (tds[3] ? tds[3].innerText.trim() : "");
-                        resultados.push({
-                            posicao: tds[0].innerText.trim(),
-                            milhar: m,
-                            grupo: g,
-                            emoji: typeof getEmojiForGroup === 'function' ? getEmojiForGroup(parseInt(g)) : ""
-                        });
-                    }
-                });
-            }
-        }
-    }
-
+    console.log(`[DEBUG EXTRATOR] ${resultados.length} resultados extraídos com sucesso!`);
     return resultados;
-}
-
-async function deleteBolaoParticipant(group, index) {
-    const participante = bolaoParticipantes[group][index];
-    if (!participante) return;
-
-    const userConfirmed = await showCustomConfirm(`Tem certeza que deseja excluir "${participante.nome}" do bicho ${group}?`);
-    if (userConfirmed) {
-        bolaoParticipantes[group].splice(index, 1);
-        if (bolaoParticipantes[group].length === 0) {
-            delete bolaoParticipantes[group];
-        }
-        updateBolaoPreview();
-        showToast('Participante removido.', 'info');
-    }
 }
 
 function copyBolaoList() {
@@ -23639,59 +23642,55 @@ function extrairDadosDoHTML(htmlString) {
     try {
         if (!htmlString || htmlString.trim() === '') return dadosExtraidos;
 
-        let textoPuro = htmlString.replace(/<[^>]*>?/gm, ' ');
-        textoPuro = textoPuro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        textoPuro = textoPuro.replace(/\s+/g, ' ');
+        // 1. Limpeza do HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlString, 'text/html');
+        
+        // Remove scripts e estilos que sujam o texto
+        const lixo = doc.querySelectorAll('script, style, nav, footer, header');
+        lixo.forEach(el => el.remove());
 
-        // 1. Bichos Atrasados
+        // 2. Normaliza o texto: remove espaços extras e acentos
+        let textoPuro = doc.body.innerText.replace(/\s+/g, ' ');
+        const textoBusca = textoPuro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+        console.log("🔍 Analisando texto normalizado (início):", textoBusca.substring(0, 500));
+
+        // 3. EXTRAÇÃO COM REGEX FLEXÍVEL
         tabelaDeGrupos.forEach(bicho => {
+            // Nome do animal sem acento (ex: jacare, aguia)
             const nomeAnimal = bicho.animal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-            const regexBicho = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*dias?`, 'i');
-            const matchBicho = textoPuro.match(regexBicho);
+            
+            // EXPLICAÇÃO DA NOVA REGEX:
+            // nomeAnimal -> Procura o bicho
+            // .{0,50}?   -> Pula até 50 caracteres (pode ser "saiu a", "ha", ou nada)
+            // (\d+)      -> Pega o número de dias
+            // \s* -> Espaço opcional
+            // (?:dias|atras) -> Procura a palavra "dias" ou "atrás"
+            const regexBicho = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*(?:dias|atras)`, 'i');
+            const matchBicho = textoBusca.match(regexBicho);
+            
             if (matchBicho) {
-                dadosExtraidos.bichos.push({
-                    nome: bicho.animal, grupo: bicho.grupo,
-                    emoji: bicho.emoji, dias: parseInt(matchBicho[1], 10)
-                });
+                const diasAtraso = parseInt(matchBicho[1], 10);
+                
+                // Evita duplicados e salva
+                if (!dadosExtraidos.bichos.find(d => d.grupo === bicho.grupo)) {
+                    dadosExtraidos.bichos.push({
+                        nome: bicho.animal, 
+                        grupo: bicho.grupo,
+                        emoji: bicho.emoji, 
+                        dias: diasAtraso
+                    });
+                }
             }
         });
+        
+        // Ordena: os que estão há mais tempo sem sair primeiro
         dadosExtraidos.bichos.sort((a, b) => b.dias - a.dias);
-
-        // 2. Unidades Atrasadas
-        for (let i = 0; i <= 9; i++) {
-            const regexUnidade = new RegExp(`unidade\\s*${i}.{0,50}?(\\d+)\\s*dias?`, 'i');
-            const matchUnidade = textoPuro.match(regexUnidade);
-            if (matchUnidade) {
-                dadosExtraidos.unidades.push({ numero: i.toString(), dias: parseInt(matchUnidade[1], 10) });
-            }
-        }
-        dadosExtraidos.unidades.sort((a, b) => b.dias - a.dias);
-
-        // 3. NOVO: Dezenas Atrasadas (00-99)
-        for (let i = 0; i <= 99; i++) {
-            const dez = String(i).padStart(2, '0');
-            // Tenta padrões comuns: "dezena 05 ... 14 dias" ou "05 ... 14 dias" perto da palavra dezena
-            const regexDez = new RegExp(`dezena[s]?\\s*[^\\d]{0,10}${dez}[^\\d].{0,40}?(\\d+)\\s*dias?`, 'i');
-            const matchDez = textoPuro.match(regexDez);
-            if (matchDez) {
-                dadosExtraidos.dezenas.push({ numero: dez, dias: parseInt(matchDez[1], 10) });
-            }
-        }
-        dadosExtraidos.dezenas.sort((a, b) => b.dias - a.dias);
-
-        // 4. NOVO: Centenas Atrasadas (000-999)
-        for (let i = 0; i <= 999; i++) {
-            const cent = String(i).padStart(3, '0');
-            const regexCent = new RegExp(`centena[s]?\\s*[^\\d]{0,10}${cent}[^\\d].{0,40}?(\\d+)\\s*dias?`, 'i');
-            const matchCent = textoPuro.match(regexCent);
-            if (matchCent) {
-                dadosExtraidos.centenas.push({ numero: cent, dias: parseInt(matchCent[1], 10) });
-            }
-        }
-        dadosExtraidos.centenas.sort((a, b) => b.dias - a.dias);
+        console.log(`✅ Sucesso: ${dadosExtraidos.bichos.length} bichos identificados.`);
 
     } catch (error) {
-        console.error("Erro na extração I.A.:", error);
+        console.error("❌ Erro no extrator:", error);
     }
     return dadosExtraidos;
 }
@@ -23701,59 +23700,38 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     botao.disabled = true;
     botao.innerHTML = 'Buscando...';
 
+    // Mapeamento exato para o site hojenobicho.com
+    const mapaSite = { 
+        'rj': 'rj', 
+        'lk': 'lk', 
+        'ln': 'ln', 
+        'ba': 'ba', 
+        'fd': 'fed' // Federal no site é 'fed'
+    };
+
+    const siglaCorreta = mapaSite[loteria] || loteria;
+    const targetUrl = `https://hojenobicho.com/atrasados/${siglaCorreta}/`;
+    const urlProxy = `https://vipmojs.vercel.app/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+
+    console.log(`📡 Buscando atrasados de ${nomeLoteria} via: ${urlProxy}`);
+
     try {
-        let dados = [];
+        const response = await fetch(urlProxy);
+        if (!response.ok) throw new Error("Erro na rede ou Proxy offline");
+        
+        const htmlBruto = await response.text();
+        
+        // Chama o extrator com limpeza profunda
+        const dadosExtraidos = extrairDadosDoHTML(htmlBruto);
+        let dados = dadosExtraidos.bichos;
 
-        // 1. TENTA BUSCAR DO SITE EXTERNO (VIA PROXY)
-        try {
-            // Adiciona um limitador de tempo para não ficar travado
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000); // Espera 6s no máximo
-            
-            const urlProxy = `/api/proxy?tipo=atrasados&loteria=${loteria}`;
-            const response = await fetch(urlProxy, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-                const htmlTabela = await response.text();
-                const dadosCompletos = extrairDadosDoHTML(htmlTabela);
-                if (dadosCompletos && dadosCompletos.bichos && dadosCompletos.bichos.length > 0) {
-                    dados = dadosCompletos.bichos;
-                }
-            }
-        } catch (proxyErro) {
-            console.warn("Proxy indisponível, ativando inteligência local...", proxyErro);
-        }
-
-        // 2. FALLBACK: SE O PROXY FALHAR, BUSCA DA MEMÓRIA DA I.A NO FIREBASE
         if (!dados || dados.length === 0) {
-            const docIA = await firestoreDB.collection('analises_ia').doc(loteria).get();
-            if (docIA.exists) {
-                const analiseGeral = docIA.data().geral || {};
-                const atrasadosFirebase = analiseGeral.bichosAtrasados1Premio || analiseGeral.atrasados || [];
-                
-                if (atrasadosFirebase.length > 0) {
-                    dados = atrasadosFirebase.map(b => {
-                        const bichoRef = tabelaDeGrupos.find(tg => tg.grupo === b.grupo);
-                        return {
-                            nome: bichoRef ? bichoRef.animal : 'Desconhecido',
-                            grupo: b.grupo,
-                            emoji: bichoRef ? bichoRef.emoji : '❔',
-                            dias: b.dias || 1
-                        };
-                    });
-                    showToast("Mostrando dados salvos na memória da I.A.", "info");
-                }
-            }
-        }
-
-        // 3. SE REALMENTE NÃO TIVER NADA, CANCELA
-        if (!dados || dados.length === 0) {
-            showToast("Dados não disponíveis no momento (Proxy e Firebase offline).", "error");
+            console.error("❌ Nenhum dado extraído do HTML.");
+            showToast("Resultados não encontrados nesta loteria.", "error");
             return;
         }
 
-        // --- PREPARAÇÃO MÁGICA: Garante os 25 bichos na lista ---
+        // --- Montagem da Lista (Mantendo seu padrão visual) ---
         const dadosCompletosParaTela = [];
         tabelaDeGrupos.forEach(bichoMatriz => {
             const bichoEncontrado = dados.find(d => d.grupo === bichoMatriz.grupo);
@@ -23764,88 +23742,49 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
                     nome: bichoMatriz.animal,
                     grupo: bichoMatriz.grupo,
                     emoji: bichoMatriz.emoji,
-                    dias: 0 // Se sumiu da lista de atrasados, é porque saiu hoje!
+                    dias: 0 
                 });
             }
         });
 
-        // Ordena: Maior atraso no topo
         dadosCompletosParaTela.sort((a, b) => b.dias - a.dias);
-
-        // Separa as categorias
         const bichosAtrasados = dadosCompletosParaTela.filter(b => b.dias > 0);
-        const bichosSaiuHoje = dadosCompletosParaTela.filter(b => b.dias === 0);
 
-        // 1. Prepara o Cabeçalho do Popup (Visual Interno do Site)
-        document.getElementById('atrasadosResultHeader').innerHTML = `🎯 ${nomeLoteria.toUpperCase()}<br><small>${new Date().toLocaleDateString('pt-BR')}</small>`;
+        document.getElementById('atrasadosResultHeader').innerHTML = `📊 RADAR ${nomeLoteria.toUpperCase()}<br><small>${new Date().toLocaleDateString('pt-BR')}</small>`;
 
-        // 2. Monta a Lista Visual e o Texto do WhatsApp
         let listHTML = '';
-        const agora = new Date();
-        const dataF = agora.toLocaleDateString('pt-BR');
-        const horaF = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        let zapText = `📊 *RANKING DE ATRASADOS - ${nomeLoteria.toUpperCase()}* 📊\n\n*VIP I.A REAL TIME*\n━━━━━━━━━━━━━━━\n\n`;
 
-        let zapText = `📊 *Análise de Atrasados - ${nomeLoteria.toUpperCase()}* 📊\n\n`;
-        zapText += `*VIP I.A REAL TIME*\n`;
-        zapText += `━━━━━━━━━━━━━━━\n\n`;
-        zapText += `⏳ *MAIS ATRASADOS:*\n`;
-
-        // Renderiza os Atrasados
         bichosAtrasados.forEach((bicho, index) => {
-            const posicao = index + 1; 
-            const statusTexto = `Atrasado há ${bicho.dias} dias`; 
-
-            // Visual para o Popup do Site
-            const rowColor = posicao <= 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent';
+            const pos = index + 1;
+            const rowColor = pos <= 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent';
             listHTML += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: ${rowColor}; border-radius: 6px; margin-bottom: 2px;">
-                    <span style="font-weight: bold; width: 30px; color: ${posicao <= 5 ? '#dc3545' : 'inherit'};">${posicao}º</span>
-                    <span style="font-size: 1.2rem; width: 35px;">${bicho.emoji}</span>
-                    <span style="flex-grow: 1; text-align: left; font-weight: 500;">${bicho.nome.toUpperCase()}</span>
-                    <span style="color: #666; font-size: 0.85rem;">${statusTexto}</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: ${rowColor}; border-radius: 8px; margin-bottom: 3px;">
+                    <span style="font-weight: 900; width: 30px; color: ${pos <= 5 ? '#dc3545' : 'inherit'};">${pos}º</span>
+                    <span style="font-size: 1.3rem; width: 35px;">${bicho.emoji}</span>
+                    <span style="flex-grow: 1; text-align: left; font-weight: 700;">${bicho.nome.toUpperCase()}</span>
+                    <span style="font-weight: bold; color: #666;">${bicho.dias}d</span>
                 </div>`;
-            
-            // Visual para o Texto do WhatsApp
-            zapText += `*${posicao}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${statusTexto}_\n`;
+            zapText += `*${pos}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _Atrasado há ${bicho.dias} dias_\n`;
         });
 
-        // Renderiza os que Saíram Hoje (0 Dias)
+        const bichosSaiuHoje = dadosCompletosParaTela.filter(b => b.dias === 0);
         if (bichosSaiuHoje.length > 0) {
-            listHTML += `<div style="text-align: center; font-weight: bold; color: #28a745; margin-top: 15px; padding-bottom: 5px; border-bottom: 2px solid #28a745;">🏆 SAÍRAM HOJE</div>`;
-            zapText += `\n━━━━━━━━━━━━━━━\n`;
-            zapText += `🏆 *SAÍRAM HOJE (0 Dias):*\n`;
-
-            bichosSaiuHoje.forEach((bicho) => {
-                const statusTexto = `Saiu Hoje`;
-                listHTML += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: rgba(40, 167, 69, 0.1); border-radius: 6px; margin-bottom: 2px;">
-                    <span style="font-weight: bold; width: 30px; color: #28a745;">-</span>
-                    <span style="font-size: 1.2rem; width: 35px;">${bicho.emoji}</span>
-                    <span style="flex-grow: 1; text-align: left; font-weight: bold; color: #28a745;">${bicho.nome.toUpperCase()}</span>
-                    <span style="color: #28a745; font-size: 0.85rem; font-weight: bold;">✅ ${statusTexto}</span>
-                </div>`;
-                
-                zapText += `✅ ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${statusTexto}_\n`;
-            });
+            listHTML += `<div style="text-align: center; font-weight: 900; color: #28a745; margin-top: 15px; padding: 8px; background: rgba(40,167,69,0.1); border-radius: 8px;">✅ SAÍRAM RECENTEMENTE</div>`;
+            zapText += `\n━━━━━━━━━━━━━━━\n✅ *SAÍRAM RECENTEMENTE:*\n`;
+            bichosSaiuHoje.forEach(b => { zapText += `${b.emoji} *${b.nome.toUpperCase()}*\n`; });
         }
 
-        zapText += `\n━━━━━━━━━━━━━━━\n`;
-        zapText += `🗓️ _Análise gerada em: ${dataF}, ${horaF}_\n\n`;
-        zapText += `📲 _VIP - I.A in Real-Time_`;
-
-        // 3. Salva o texto formatado para o botão do WhatsApp usar depois
+        zapText += `\n📲 _VIP - I.A in Real-Time_`;
         pendingAtrasadosMessage = zapText;
 
-        // 4. Mostra o Popup com os resultados no site
         document.getElementById('atrasadosResultList').innerHTML = listHTML;
         closeAtrasadosRealTimeModal(); 
         document.getElementById('atrasadosResultModal').classList.add('active'); 
 
     } catch (error) { 
-        console.error("Falha ao buscar atrasados:", error);
-        // O CÓDIGO ABAIXO É O QUE SALVA VOCÊ:
-        showToast("Conexão lenta. Tentando recuperar dados da I.A...", "info");
-        // Aqui ele deveria chamar o Firebase...
+        console.error(error);
+        showToast("Erro ao conectar com a base de dados.", "error");
     } finally {
         botao.disabled = false;
         botao.innerHTML = textoOriginal;
@@ -27186,7 +27125,7 @@ const CALC_LOTERIAS = {
     rj: { nome: 'PT Rio (RJ)',      horarios: ['09:20','11:20','14:20','16:20','18:20','21:30'] },
     lk: { nome: 'Look Goiás (LK)', horarios: ['07:20','09:20','11:20','14:20','16:20','18:20','21:20','23:20'] },
     ba: { nome: 'Bahia (BA)',      horarios: ['10:00','12:00','15:00','19:00','21:00'] },
-    ln: { nome: 'Nacional (LN)',   horarios: ['02:00','08:00','10:00','12:00','15:00','17:00','19:00','21:00','23:00'] },
+    ln: { nome: 'Nacional (LN)',   horarios: ['02:00','08:00','10:00','12:00','15:00','17:00','21:00','23:00'] },
     fd: { nome: 'Federal (FD)',    horarios: ['20:00'] },
 };
 
@@ -27194,7 +27133,7 @@ const CALC_LOTERIAS = {
 const HORA_PARA_SORTEIO = {
     rj: { '09:20':'RIO 09:20','11:20':'RIO 11:20','14:20':'RIO 14:20','16:20':'RIO 16:20','18:20':'RIO 18:20','21:30':'CORUJA 21:30' },
     lk: { '07:20':'LOOK 07:20','09:20':'LOOK 09:20','11:20':'LOOK 11:20','14:20':'LOOK 14:20','16:20':'LOOK 16:20','18:20':'LOOK 18:20','21:20':'LOOK 21:20','23:20':'LOOK 23:20' },
-    ln: { '02:00':'NACIONAL 02:00','08:00':'NACIONAL 08:00','10:00':'NACIONAL 10:00','12:00':'NACIONAL 12:00','15:00':'NACIONAL 15:00','17:00':'NACIONAL 17:00','19:00':'NACIONAL 19:00','21:00':'NACIONAL 21:00','23:00':'NACIONAL 23:00' },
+    ln: { '02:00':'NACIONAL 02:00','08:00':'NACIONAL 08:00','10:00':'NACIONAL 10:00','12:00':'NACIONAL 12:00','15:00':'NACIONAL 15:00','17:00':'NACIONAL 17:00','21:00':'NACIONAL 21:00','23:00':'NACIONAL 23:00' },
     ba: { '10:00':'BAHIA 10:00','12:00':'BAHIA 12:00','15:00':'BAHIA 15:00','19:00':'BAHIA 19:00','21:00':'BAHIA 21:00' },
     fd: { '20:00':'FEDERAL' },
 };
@@ -27871,7 +27810,7 @@ window.calcBuscarEAtualizarResultados = async function() {
         const horaMapa = {
             'rj': { '09:20':'RIO 09:20','11:20':'RIO 11:20','14:20':'RIO 14:20','16:20':'RIO 16:20','18:20':'RIO 18:20','21:30':'CORUJA 21:30' },
             'lk': { '07:20':'LOOK 07:20','09:20':'LOOK 09:20','11:20':'LOOK 11:20','14:20':'LOOK 14:20','16:20':'LOOK 16:20','18:20':'LOOK 18:20','21:20':'LOOK 21:20','23:20':'LOOK 23:20' },
-            'ln': { '02:00':'NACIONAL 02:00','08:00':'NACIONAL 08:00','10:00':'NACIONAL 10:00','12:00':'NACIONAL 12:00','15:00':'NACIONAL 15:00','17:00':'NACIONAL 17:00','19:00':'NACIONAL 19:00','21:00':'NACIONAL 21:00','23:00':'NACIONAL 23:00' },
+            'ln': { '02:00':'NACIONAL 02:00','08:00':'NACIONAL 08:00','10:00':'NACIONAL 10:00','12:00':'NACIONAL 12:00','15:00':'NACIONAL 15:00','17:00':'NACIONAL 17:00','21:00':'NACIONAL 21:00','23:00':'NACIONAL 23:00' },
             'ba': { '10:00':'BAHIA 10:00','12:00':'BAHIA 12:00','15:00':'BAHIA 15:00','19:00':'BAHIA 19:00','21:00':'BAHIA 21:00' },
         };
 
@@ -28835,7 +28774,7 @@ async function calcAtualizarLeds() {
 
     // LED Externo (testa o proxy)
     try {
-        const res = await fetch('/api/proxy?tipo=atrasados&loteria=ln');
+        const res = await fetch(`https://vipmojs.vercel.app/api/proxy?tipo=atrasados&loteria=${loteria}`)
         setLed('ledExternoDot', res.ok ? 'ok' : 'aviso');
     } catch(e) {
         setLed('ledExternoDot', 'erro');
