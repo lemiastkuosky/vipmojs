@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import admin from 'firebase-admin';
 
-// Inicialização do Firebase (evita inicializar múltiplas vezes)
+// Inicializa Firebase com as variáveis que você colocou na Vercel
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
@@ -26,28 +26,25 @@ export default async function handler(req, res) {
 
     $('#economicCalendarData tbody tr').each((i, el) => {
       const impactStars = $(el).find('.sentiment > i.grayFullBullishIcon').length;
-      
       if (impactStars === 3) {
-        const item = {
+        newsFound.push({
           time: $(el).find('.time').text().trim(),
           currency: $(el).find('.left.flagCur').text().trim(),
           event: $(el).find('.event').text().trim(),
           updatedAt: new Date().toISOString()
-        };
-        newsFound.push(item);
+        });
       }
     });
 
-    // Gravação no Firestore
+    // Grava no Firestore (Batch para performance)
     const batch = db.batch();
     newsFound.forEach(news => {
       const docId = `${news.currency}_${news.time}_${news.event.replace(/\s+/g, '_')}`;
-      const docRef = db.collection('noticias_impacto').doc(docId);
-      batch.set(docRef, news);
+      batch.set(db.collection('noticias_impacto').doc(docId), news);
     });
     await batch.commit();
 
-    return res.status(200).json({ success: true, count: newsFound.length });
+    return res.status(200).json({ status: "Operacional", news_count: newsFound.length });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
