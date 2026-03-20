@@ -1,20 +1,20 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-import admin from 'firebase-admin';
+const axios = require('axios');
+const cheerio = require('cheerio');
+const admin = require('firebase-admin');
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   try {
-    // 1. Inicializa o Firebase DENTRO do try/catch para não derrubar o servidor
+    // 1. Inicializa o Firebase
     if (!admin.apps.length) {
       if (!process.env.FIREBASE_PRIVATE_KEY) {
-        throw new Error("Chave do Firebase não encontrada nas variáveis da Vercel.");
+        throw new Error("Chave do Firebase não encontrada.");
       }
       
       admin.initializeApp({
         credential: admin.credential.cert({
           projectId: process.env.FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          // O replace garante que as quebras de linha funcionem
+          // Garante a leitura das quebras de linha da private key
           privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
         }),
       });
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     const db = admin.firestore();
 
-    // 2. Faz o Scraping da Investing
+    // 2. Scraping da Investing
     const { data } = await axios.get('https://www.investing.com/economic-calendar/', {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
@@ -31,7 +31,6 @@ export default async function handler(req, res) {
     const newsFound = [];
 
     $('#economicCalendarData tbody tr').each((i, el) => {
-      // Pega só os 3 touros (alto impacto)
       const impactStars = $(el).find('.sentiment > i.grayFullBullishIcon').length;
       if (impactStars === 3) {
         newsFound.push({
@@ -53,18 +52,16 @@ export default async function handler(req, res) {
       await batch.commit();
     }
 
-    // 4. Retorna o sucesso!
+    // 4. Retorno
     return res.status(200).json({ 
-      status: "Sucesso Absoluto!", 
-      noticias_salvas: newsFound.length,
-      dados: newsFound 
+      status: "Sucesso!", 
+      noticias_salvas: newsFound.length 
     });
 
   } catch (error) {
-    // Se algo der errado, agora ele te conta o que foi:
     return res.status(500).json({ 
-      erro: "Deu ruim em alguma etapa", 
+      erro: "Falha na execução", 
       detalhe: error.message 
     });
   }
-}
+};
