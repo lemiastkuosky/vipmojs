@@ -1245,12 +1245,15 @@
         </div>
 
         <div id="telaClientes" style="display:none;">
-            <div class="card">
-                <h2 id="tituloAgenda">👥 Agenda de Contatos</h2>
-                <input type="text" id="buscaAgenda" placeholder="🔍 Buscar nome ou telefone..." oninput="renderAgenda()">
-                <div id="listaAgenda" style="margin-top:15px;"></div>
-            </div>
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h2 id="tituloAgenda" style="margin:0;">👥 Agenda</h2>
+            <button class="btn-main" style="width:auto; padding:8px 16px; font-size:0.8rem;" onclick="abrirModalNovoContato()">➕ Novo Contato</button>
         </div>
+        <input type="text" id="buscaAgenda" placeholder="🔍 Buscar nome ou telefone..." oninput="renderAgenda()">
+        <div id="listaAgenda" style="margin-top:15px;"></div>
+    </div>
+</div>
 
         <div id="telaFinanceiro" style="display:none;">
             <div class="card">
@@ -1490,6 +1493,23 @@
 </div>
 
 <div id="modalAgenda" class="modal"><div class="modal-content"><h2>✏️ Editar Contato</h2><input type="hidden" id="editOldTel"><label>Nome</label><input type="text" id="editNomeCli"><label>Telefone</label><input type="tel" id="editTelCli"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button><button class="btn-back" onclick="fecharModais()">Cancelar</button></div></div></div>
+
+<div id="modalNovoContato" class="modal">
+    <div class="modal-content">
+        <h2>➕ Adicionar Contato</h2>
+        
+        <label>Nome do Cliente</label>
+        <input type="text" id="novoNomeCli" placeholder="Ex: João Silva">
+        
+        <label>WhatsApp</label>
+        <input type="tel" id="novoTelCli" placeholder="(00) 00000-0000">
+        
+        <div style="display:flex; gap:10px; margin-top:20px">
+            <button class="btn-main" onclick="salvarNovoContato()">Salvar Contato</button>
+            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
+        </div>
+    </div>
+</div>
 
 <div id="modalVenda" class="modal">
     <div class="modal-content">
@@ -3824,6 +3844,47 @@ function baixarImagemPublica() {
     function abrirModalAgenda(k) { document.getElementById('editOldTel').value=k; document.getElementById('editNomeCli').value=baseClientes[k].nome; document.getElementById('editTelCli').value=baseClientes[k].tel; document.getElementById('modalAgenda').style.display='flex'; }
     function confirmarEdicaoAgenda() { const o=document.getElementById('editOldTel').value, n=document.getElementById('editNomeCli').value, t=document.getElementById('editTelCli').value, k=t.replace(/\D/g,''); if(o!==k) database.ref('clientes/'+o).remove(); database.ref('clientes/'+k).set({nome:n, tel:t}).then(()=>fecharModais()); }
     
+function abrirModalNovoContato() {
+    // Limpa os campos antes de abrir
+    document.getElementById('novoNomeCli').value = "";
+    document.getElementById('novoTelCli').value = "";
+    
+    // Abre o modal
+    document.getElementById('modalNovoContato').style.display = 'flex';
+    
+    // Aplica a máscara de telefone (garante que funciona sempre que abrir)
+    const inputTelNovo = document.getElementById("novoTelCli");
+    if (inputTelNovo) VMasker(inputTelNovo).maskPattern("(99) 99999-9999");
+}
+
+function salvarNovoContato() {
+    const n = document.getElementById('novoNomeCli').value.trim();
+    const t = document.getElementById('novoTelCli').value.trim();
+    const k = t.replace(/\D/g, ''); // Extrai só os números para usar como chave no Firebase
+
+    // Validação básica
+    if (!n || k.length < 10) {
+        alert("Preencha o nome e um telefone válido com DDD.");
+        return;
+    }
+
+    // Trava o botão para não dar duplo clique
+    event.target.innerText = "⏳ Salvando...";
+    event.target.disabled = true;
+
+    // Salva no banco de dados
+    database.ref('clientes/' + k).set({ nome: n, tel: t }).then(() => {
+        fecharModais();
+        mostrarSucesso("Contato adicionado na agenda!");
+    }).catch(e => {
+        alert("Erro ao adicionar: " + e.message);
+    }).finally(() => {
+        // Destrava o botão
+        event.target.innerText = "Salvar Contato";
+        event.target.disabled = false;
+    });
+}
+
     function abrirModalVenda(k) { 
     // Busca os dados da venda e da configuração
     const v = dadosDB[edicaoAtivaID].vendas[k]; 
