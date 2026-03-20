@@ -1492,20 +1492,41 @@
     </div>
 </div>
 
-<div id="modalAgenda" class="modal"><div class="modal-content"><h2>✏️ Editar Contato</h2><input type="hidden" id="editOldTel"><label>Nome</label><input type="text" id="editNomeCli"><label>Telefone</label><input type="tel" id="editTelCli"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button><button class="btn-back" onclick="fecharModais()">Cancelar</button></div></div></div>
+<div id="modalAgenda" class="modal">
+    <div class="modal-content">
+        <h2>✏️ Editar Contato</h2>
+        <input type="hidden" id="editOldTel">
+        <label>Nome</label>
+        <input type="text" id="editNomeCli">
+        <label>Telefone</label>
+        <input type="tel" id="editTelCli">
+        <div style="display:flex;gap:10px;margin-top:20px">
+            <button class="btn-main" onclick="confirmarEdicaoAgenda()">Salvar</button>
+            <button class="btn-back" onclick="fecharModais()">Cancelar</button>
+        </div>
+    </div>
+</div>
 
 <div id="modalNovoContato" class="modal">
     <div class="modal-content">
         <h2>➕ Adicionar Contato</h2>
         
         <label>Nome do Cliente</label>
-        <input type="text" id="novoNomeCli" placeholder="Ex: João Silva">
+        <div class="autocomplete-container">
+            <input type="text" id="novoNomeCli" placeholder="Ex: João Silva" autocomplete="off">
+            <button class="btn-clear-input" onclick="limparCampo('novoNomeCli')">✕</button>
+            <div id="autocomplete-novo-nome" class="autocomplete-items"></div>
+        </div>
         
         <label>WhatsApp</label>
-        <input type="tel" id="novoTelCli" placeholder="(00) 00000-0000">
+        <div class="autocomplete-container">
+            <input type="tel" id="novoTelCli" placeholder="(00) 00000-0000" autocomplete="off">
+            <button class="btn-clear-input" onclick="limparCampo('novoTelCli')">✕</button>
+            <div id="autocomplete-novo-tel" class="autocomplete-items"></div>
+        </div>
         
         <div style="display:flex; gap:10px; margin-top:20px">
-            <button class="btn-main" onclick="salvarNovoContato()">Salvar Contato</button>
+            <button class="btn-main" onclick="salvarNovoContato(event)">Salvar Contato</button>
             <button class="btn-back" onclick="fecharModais()">Cancelar</button>
         </div>
     </div>
@@ -3089,6 +3110,77 @@ function voltarInicio() { edicaoAtivaID = ""; document.getElementById('telaInici
     // Autocomplete
     document.getElementById("telPart").addEventListener("input", function() { const v=this.value.replace(/\D/g,''), l=document.getElementById("autocomplete-tel-list"); l.innerHTML=""; if(v.length<4)return; Object.values(baseClientes).forEach(c=>{ if(c.tel.replace(/\D/g,'').includes(v)){ const d=document.createElement("div"); d.innerHTML=`<b>${c.tel}</b> - ${c.nome}`; d.onclick=()=>{document.getElementById("nomePart").value=c.nome;document.getElementById("telPart").value=c.tel;l.innerHTML=""}; l.appendChild(d); }}) });
     
+
+// --- AUTOCOMPLETE SILENCIOSO AGENDA (NOVO CONTATO) ---
+
+// --- AUTOCOMPLETE AGENDA (BUSCA ENQUANTO DIGITA) ---
+
+// Busca por Nome
+document.getElementById("novoNomeCli").addEventListener("input", function() { 
+    const v = this.value; 
+    const l = document.getElementById("autocomplete-novo-nome"); 
+    l.innerHTML = ""; 
+    
+    // Só começa a buscar depois de 2 letras
+    if (v.length < 2) return; 
+    
+    let resultados = 0;
+    Object.values(baseClientes || {}).forEach(c => { 
+        if (normalizeText(c.nome).includes(normalizeText(v)) && resultados < 5) { 
+            const d = document.createElement("div"); 
+            d.innerHTML = `👤 <b>${c.nome}</b><br><small style="color:var(--gray)">${c.tel}</small>`; 
+            d.onclick = () => { 
+                document.getElementById("novoNomeCli").value = c.nome;
+                document.getElementById("novoTelCli").value = c.tel;
+                l.innerHTML = ""; // Fecha a lista de nomes
+                document.getElementById("autocomplete-novo-tel").innerHTML = ""; // Garante que a de tel fique fechada
+            }; 
+            l.appendChild(d); 
+            resultados++;
+        }
+    });
+});
+
+// Busca por Telefone
+document.getElementById("novoTelCli").addEventListener("input", function() { 
+    const v = this.value.replace(/\D/g,''); 
+    const l = document.getElementById("autocomplete-novo-tel"); 
+    l.innerHTML = ""; 
+    
+    // Só começa a buscar depois de 3 números
+    if (v.length < 3) return; 
+    
+    let resultados = 0;
+    Object.values(baseClientes || {}).forEach(c => { 
+        if (c.tel.replace(/\D/g,'').includes(v) && resultados < 5) { 
+            const d = document.createElement("div"); 
+            d.innerHTML = `📱 <b>${c.tel}</b><br><small style="color:var(--gray)">${c.nome}</small>`; 
+            d.onclick = () => { 
+                document.getElementById("novoNomeCli").value = c.nome;
+                document.getElementById("novoTelCli").value = c.tel;
+                l.innerHTML = ""; // Fecha a lista de tels
+                document.getElementById("autocomplete-novo-nome").innerHTML = ""; // Garante que a de nomes fique fechada
+            }; 
+            l.appendChild(d); 
+            resultados++;
+        }
+    }); 
+});
+
+// Listener global para fechar as listas se você clicar fora delas
+document.addEventListener("click", e => { 
+    if(e.target.id != "novoNomeCli") { let l=document.getElementById("autocomplete-novo-nome"); if(l) l.innerHTML=""; }
+    if(e.target.id != "novoTelCli") { let l=document.getElementById("autocomplete-novo-tel"); if(l) l.innerHTML=""; }
+});
+
+// Atualize o event listener de clique global para fechar as novas listas também
+document.addEventListener("click", e => { 
+    if(e.target.id != "nomePart") { let l=document.getElementById("autocomplete-list"); if(l) l.innerHTML=""; }
+    if(e.target.id != "telPart") { let l=document.getElementById("autocomplete-tel-list"); if(l) l.innerHTML=""; }
+    if(e.target.id != "novoNomeCli") { let l=document.getElementById("autocomplete-novo-nome"); if(l) l.innerHTML=""; }
+    if(e.target.id != "novoTelCli") { let l=document.getElementById("autocomplete-novo-tel"); if(l) l.innerHTML=""; }
+});
+
     // --- AUTCOMPLETE CORRIGIDO COM NORMALIZAÇÃO DE ACENTOS E SUGESTÃO DE PENDÊNCIAS DA LISTA DO ZAP ---
     document.getElementById("nomePart").addEventListener("input", function() { 
         const v = this.value; 
@@ -3842,7 +3934,6 @@ function baixarImagemPublica() {
     function alternarStatusPagamento(key, novoStatus) { if(!edicaoAtivaID) return; database.ref('rifas/'+edicaoAtivaID+'/vendas/'+key).update({pago: novoStatus}); }
     function prepararImpressao(key) { if(dadosDB[edicaoAtivaID] && dadosDB[edicaoAtivaID].vendas[key]) { vendaRecenteParaEnvio = { ...dadosDB[edicaoAtivaID].vendas[key], key: key }; document.getElementById('modalWhatsapp').style.display = 'flex'; } }    
     function abrirModalAgenda(k) { document.getElementById('editOldTel').value=k; document.getElementById('editNomeCli').value=baseClientes[k].nome; document.getElementById('editTelCli').value=baseClientes[k].tel; document.getElementById('modalAgenda').style.display='flex'; }
-    function confirmarEdicaoAgenda() { const o=document.getElementById('editOldTel').value, n=document.getElementById('editNomeCli').value, t=document.getElementById('editTelCli').value, k=t.replace(/\D/g,''); if(o!==k) database.ref('clientes/'+o).remove(); database.ref('clientes/'+k).set({nome:n, tel:t}).then(()=>fecharModais()); }
     
 function abrirModalNovoContato() {
     // Limpa os campos antes de abrir
@@ -3857,10 +3948,10 @@ function abrirModalNovoContato() {
     if (inputTelNovo) VMasker(inputTelNovo).maskPattern("(99) 99999-9999");
 }
 
-function salvarNovoContato() {
+function salvarNovoContato(event) {
     const n = document.getElementById('novoNomeCli').value.trim();
     const t = document.getElementById('novoTelCli').value.trim();
-    const k = t.replace(/\D/g, ''); // Extrai só os números para usar como chave no Firebase
+    const k = t.replace(/\D/g, ''); // Extrai só os números
 
     // Validação básica
     if (!n || k.length < 10) {
@@ -3868,9 +3959,28 @@ function salvarNovoContato() {
         return;
     }
 
+    // --- TRAVA DE DUPLICIDADE (TELEFONE) ---
+    if (baseClientes && baseClientes[k]) {
+        document.getElementById('modalErrorTitle').innerText = "⛔ Contato Existente";
+        document.getElementById('msgDuplicado').innerHTML = `O WhatsApp <b>${t}</b> já está salvo como <b>${baseClientes[k].nome}</b>.<br><br>Não é possível ter dois contatos com o mesmo número.`;
+        document.getElementById('modalDuplicado').style.display = 'flex';
+        return; // Impede de salvar
+    }
+
+    // --- AVISO DE DUPLICIDADE (NOME) ---
+    if (baseClientes) {
+        const nomeExistente = Object.values(baseClientes).find(c => normalizeText(c.nome) === normalizeText(n));
+        if (nomeExistente) {
+            const confirmar = confirm(`Já existe uma pessoa chamada "${nomeExistente.nome}" na sua agenda (Tel: ${nomeExistente.tel}).\n\nTem certeza que deseja salvar outro contato com este mesmo nome?`);
+            if (!confirmar) return; // Se o cara clicar em cancelar, aborta
+        }
+    }
+
     // Trava o botão para não dar duplo clique
-    event.target.innerText = "⏳ Salvando...";
-    event.target.disabled = true;
+    const btnSalvar = event ? event.target : document.querySelector('#modalNovoContato .btn-main');
+    const textoOriginal = btnSalvar.innerText;
+    btnSalvar.innerText = "⏳ Salvando...";
+    btnSalvar.disabled = true;
 
     // Salva no banco de dados
     database.ref('clientes/' + k).set({ nome: n, tel: t }).then(() => {
@@ -3879,10 +3989,36 @@ function salvarNovoContato() {
     }).catch(e => {
         alert("Erro ao adicionar: " + e.message);
     }).finally(() => {
-        // Destrava o botão
-        event.target.innerText = "Salvar Contato";
-        event.target.disabled = false;
+        btnSalvar.innerText = textoOriginal;
+        btnSalvar.disabled = false;
     });
+}
+
+function confirmarEdicaoAgenda() { 
+    const o = document.getElementById('editOldTel').value; 
+    const n = document.getElementById('editNomeCli').value.trim(); 
+    const t = document.getElementById('editTelCli').value.trim(); 
+    const k = t.replace(/\D/g,''); 
+    
+    if (!n || k.length < 10) {
+        alert("Preencha o nome e um telefone válido com DDD.");
+        return;
+    }
+
+    // --- TRAVA DE DUPLICIDADE AO EDITAR ---
+    // Se o usuário mudou o telefone, verifica se o NOVO telefone já pertence a alguém
+    if (o !== k && baseClientes && baseClientes[k]) {
+        document.getElementById('modalErrorTitle').innerText = "⛔ Telefone Indisponível";
+        document.getElementById('msgDuplicado').innerHTML = `Você está tentando mudar o telefone para <b>${t}</b>, mas este número já pertence a <b>${baseClientes[k].nome}</b>.<br><br>Não é possível duplicar números.`;
+        document.getElementById('modalDuplicado').style.display = 'flex';
+        return;
+    }
+
+    if(o !== k) database.ref('clientes/'+o).remove(); 
+    database.ref('clientes/'+k).set({nome:n, tel:t}).then(() => {
+        fecharModais();
+        mostrarSucesso("Contato atualizado!");
+    }); 
 }
 
     function abrirModalVenda(k) { 
