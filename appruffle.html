@@ -1485,7 +1485,7 @@
 </div>
 
 <footer class="app-footer">
-    Criado por <strong>Le Miastkuosky</strong> - Versão 5.23
+    Criado por <strong>Le Miastkuosky</strong> - Versão 6.23
 </footer>
 
 <div id="modalNovaRifa" class="modal">
@@ -4001,7 +4001,7 @@ function acaoWhatsAgenda(acao) {
             `🔑 *CHAVE PIX (E-mail):* acaorodas@gmail.com\n` +
             `*(Leandro Miastkuosky)*\n\n` +
             `👇 *PIX COPIA E COLA (Toque para copiar):*\n` +
-            `${codigoPix}\n\n` + // O código fica dentro de crases para facilitar a cópia
+            `\`${codigoPix}\`\n\n` + // O código fica dentro de crases para facilitar a cópia
             `📸 *Por favor, envie o comprovante para garantir sua participação oficial.*\n\n` +
             `_MultiRodas ®_`;
 
@@ -4010,18 +4010,26 @@ function acaoWhatsAgenda(acao) {
         fecharModais();
     }
 
-    // --- ⏳ AÇÃO 2: COBRANÇA (LEMBRETE) COM MODAL DO SITE ---
+    // --- ⏳ AÇÃO 2: COBRANÇA COM TEXTO OFICIAL E AUTO-COPY PIX ---
     else if (acao === 'COBRANCA') {
         const vendas = dadosDB[rifaId]?.vendas || {};
         let vEncontrada = Object.values(vendas).find(v => 
             v.tel.replace(/\D/g, '').includes(tel.replace(/\D/g, '').slice(-8))
         );
 
-        if (!vEncontrada) return alert("Não achei nenhuma reserva.");
+        if (!vEncontrada) return alert("Reserva não encontrada.");
 
-        // Função interna para disparar a mensagem (usada após as confirmações)
+        // Função para disparar a mensagem (integrada com seus modais)
         const dispararCobranca = () => {
             const saudacao = gerarSaudacao();
+            const codigoPix = gerarPixCopiaECola(vEncontrada.valor); // Gera o Copia e Cola
+
+            // --- COPIA O PIX PARA O SEU CLIPBOARD AUTOMATICAMENTE ---
+            navigator.clipboard.writeText(codigoPix).then(() => {
+                console.log("Pix pronto para colar!");
+            });
+
+            // O SEU TEXTO ATUALIZADO
             let msgCobranca = `⚠️ *AVISO DE RESERVA - MULTIRODAS* ⚠️\n\n` +
                 `${saudacao}, *${nomeCli}*! Tudo bem?\n\n` +
                 `Sua reserva na ação *${config.nomeExibicao}* ainda aguarda confirmação. Caso não seja confirmada, suas reservas pendentes serão liberadas para outros participantes do grupo.\n\n` +
@@ -4030,6 +4038,8 @@ function acaoWhatsAgenda(acao) {
                 `💰 *Valor Total:* ${vEncontrada.valor}\n\n` +
                 `🔑 *CHAVE PIX (E-mail):* acaorodas@gmail.com\n` +
                 `*(Leandro Miastkuosky)*\n\n` +
+                `👉 *VOU ENVIAR O CÓDIGO COPIA E COLA NA PRÓXIMA MENSAGEM:*\n` +
+                `_(Basta você copiar e colar no seu banco)_\n\n` +
                 `📸 *Por favor, envie o comprovante para garantir sua participação oficial.*\n\n` +
                 `_MultiRodas ®_`;
 
@@ -4038,21 +4048,16 @@ function acaoWhatsAgenda(acao) {
             fecharModais();
         };
 
-        // --- TRAVA DE SEGURANÇA USANDO MODALCONFIRM ---
+        // TRAVA DE SEGURANÇA: JÁ ESTÁ PAGO?
         if (vEncontrada.pago === true) {
             document.getElementById('confirmTitle').innerText = "🚨 JÁ CONSTA PAGO";
-            document.getElementById('confirmMsg').innerHTML = `O cliente <b>${vEncontrada.nome}</b> já está marcado como PAGO no sistema.<br><br>Deseja enviar a cobrança mesmo assim?`;
-            
-            const btnSim = document.getElementById('confirmYes');
-            btnSim.innerText = "Sim, Cobrar";
-            btnSim.onclick = () => { dispararCobranca(); };
-            
+            document.getElementById('confirmMsg').innerHTML = `O cliente <b>${vEncontrada.nome}</b> já está marcado como PAGO.<br><br>Deseja cobrar assim mesmo?`;
+            document.getElementById('confirmYes').onclick = () => { dispararCobranca(); };
             document.getElementById('modalConfirm').style.display = 'flex';
         } else {
             dispararCobranca();
         }
     }
-
     // --- 🧾 AÇÃO 3: COMPROVANTE COM TEXTO ALINHADO E PROFISSIONAL ---
     else if (acao === 'COMPROVANTE') {
         const vendas = dadosDB[rifaId]?.vendas || {};
