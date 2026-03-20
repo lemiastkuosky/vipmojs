@@ -2,50 +2,43 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import admin from 'firebase-admin';
 
-// Inicializa Firebase com as variáveis que você colocou na Vercel
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = admin.firestore();
-
 export default async function handler(req, res) {
   try {
-    const { data } = await axios.get('https://www.investing.com/economic-calendar/', {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    
-    const $ = cheerio.load(data);
-    const newsFound = [];
+    // 1. Validando as chaves antes de conectar
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY) {
+      throw new Error("As variáveis de ambiente do Firebase não estão configuradas na Vercel.");
+    }
 
-    $('#economicCalendarData tbody tr').each((i, el) => {
-      const impactStars = $(el).find('.sentiment > i.grayFullBullishIcon').length;
-      if (impactStars === 3) {
-        newsFound.push({
-          time: $(el).find('.time').text().trim(),
-          currency: $(el).find('.left.flagCur').text().trim(),
-          event: $(el).find('.event').text().trim(),
-          updatedAt: new Date().toISOString()
-        });
+    // 2. Conectando no Firebase
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          // Garante que as quebras de linha sejam lidas corretamente
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        }),
+      });
+    }
+
+    const db = admin.firestore();
+
+    // 3. Testando o Scraping
+    const { data } = await axios.get('https://www.investing.com/economic-calendar/', {
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
       }
     });
 
-    // Grava no Firestore (Batch para performance)
-    const batch = db.batch();
-    newsFound.forEach(news => {
-      const docId = `${news.currency}_${news.time}_${news.event.replace(/\s+/g, '_')}`;
-      batch.set(db.collection('noticias_impacto').doc(docId), news);
-    });
-    await batch.commit();
+    return res.status(200).json({ status: "Sucesso!", message: "Conectou no Firebase e leu o site." });
 
-    return res.status(200).json({ status: "Operacional", news_count: newsFound.length });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    // 4. Se der erro, joga na tela em formato JSON!
+    return res.status(500).json({
+      erro_principal: error.message,
+      detalhes: error.response ? error.response.statusText : "Sem detalhes do Axios",
+      dica: "Copie esse erro e mande para a gente debugar"
+    });
   }
 }
