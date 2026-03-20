@@ -1,5 +1,18 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+// Se for usar Firebase, importe aqui também
+
+export default async function handler(req, res) {
+  // 1. Coloque aqui toda a lógica de scraping que criamos
+  // 2. No final, em vez de apenas console.log, você responde ao request:
+  
+  try {
+    const data = await seuMetodoDeScraping(); 
+    res.status(200).json({ success: true, news: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 async function checkHighImpactNews() {
     console.log("🔍 Monitorando o calendário econômico...");
