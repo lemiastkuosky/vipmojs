@@ -1388,7 +1388,7 @@
                 </div>
 
                 <label>Sorteio e Resultado:</label>
-<button class="btn-sec" style="width:100%; margin-bottom:20px; border:1px solid #fcd34d; background:#fffbeb; color:#92400e; font-weight:bold; justify-content:center;" onclick="document.getElementById('modalApuracao').style.display='flex'">
+<button class="btn-sec" style="width:100%; margin-bottom:20px; border:1px solid #fcd34d; background:#fffbeb; color:#92400e; font-weight:bold; justify-content:center;" onclick="abrirModalApuracao()">
     🏆 Realizar Apuração / Sorteio
 </button>
 
@@ -1641,19 +1641,28 @@
                         <div id="res_num_princ" style="font-size:3rem; font-weight:800; color:#1f2937; line-height:1; margin-bottom:10px;">000</div>
 
                         <div id="info_ganhador_princ" style="display:none; text-align:left; background:#f8fafc; padding:15px; border-radius:10px; border:1px dashed #cbd5e1;">
-                            <div style="color:#059669; font-weight:bold; font-size:1.1rem; text-align:center; margin-bottom:10px;">
-                                <span style="font-size:1.5rem;">🎉</span> <span id="res_nome_princ">Nome do Cliente</span>
+                            <div style="color:#059669 !important; font-weight:bold; font-size:1.1rem; text-align:center; margin-bottom:15px;">
+                                <span style="font-size:1.5rem;">🎉</span> <span id="res_nome_princ" style="color:#059669 !important;">Nome do Cliente</span>
                             </div>
                             
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.85rem; margin-bottom:10px;">
-                                <div><b style="color:#64748b;">📱 Tel:</b> <span id="res_tel_princ">--</span></div>
-                                <div><b style="color:#64748b;">💲 Valor:</b> <span id="res_valor_princ" style="color:#059669; font-weight:bold;">R$ 0,00</span></div>
-                                <div style="grid-column: span 2;"><b style="color:#64748b;">📅 Data:</b> <span id="res_data_princ">00/00/00 00:00</span></div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; font-size:0.9rem; margin-bottom:15px;">
+                                <div style="text-align: left;">
+                                    <b style="color:#64748b !important; display:block; margin-bottom:4px;">📱 Telefone:</b> 
+                                    <span id="res_tel_princ" style="color:#1f2937 !important; font-weight:900;">--</span>
+                                </div>
+                                <div style="text-align: left;">
+                                    <b style="color:#64748b !important; display:block; margin-bottom:4px;">💲 Valor Pago:</b> 
+                                    <span id="res_valor_princ" style="color:#059669 !important; font-weight:900;">R$ 0,00</span>
+                                </div>
+                                <div style="grid-column: span 2; text-align: left;">
+                                    <b style="color:#64748b !important; display:block; margin-bottom:4px;">📅 Data e Hora:</b> 
+                                    <span id="res_data_princ" style="color:#1f2937 !important; font-weight:900;">00/00/00 00:00</span>
+                                </div>
                             </div>
                             
-                            <div style="font-size:0.8rem; color:#64748b; border-top:1px solid #e2e8f0; padding-top:8px;">
-                                <b>🎟️ Cotas Compradas:</b><br>
-                                <span id="res_cotas_princ" style="color:#334155; word-break:break-all; line-height:1.2;">...</span>
+                            <div style="font-size:0.85rem; border-top:1px solid #e2e8f0; padding-top:10px; text-align: left;">
+                                <b style="color:#64748b !important; display:block; margin-bottom:4px;">🎟️ Cotas Compradas:</b>
+                                <span id="res_cotas_princ" style="color:#1f2937 !important; font-weight:bold; word-break:break-all; line-height:1.4;">...</span>
                             </div>
                         </div>
 
@@ -1691,7 +1700,7 @@
             </div>
 
             <div style="text-align:center; padding-bottom:15px; font-size:0.7rem; color:#9ca3af;">
-                Sistema Rifa Pro • Verificado
+                Sistema Rifa Pro • MultiRodas
             </div>
         </div>
 
@@ -1855,9 +1864,9 @@
                     ⏳ Lembrete de Pagamento
                 </button>
                 
-                <button class="btn-main" style="width:100%; justify-content:center; font-size:0.95rem; padding:12px;" onclick="acaoWhatsAgenda('COMPROVANTE')">
-                    🧾 Reenviar Comprovante
-                </button>
+                <button id="btnComprovanteZap" class="btn-main" style="width:100%; justify-content:center; font-size:0.95rem; padding:12px;" onclick="acaoWhatsAgenda('COMPROVANTE')">
+    🧾 Enviar Comprovante
+</button>
             </div>
 
             <button class="btn-back" style="justify-content:center; margin-top:10px;" onclick="document.getElementById('modalWhatsAgenda').style.display='none'">
@@ -2698,8 +2707,8 @@ function confirmarDuplicacao() {
         btn.innerHTML = "⏳ Salvando...";
 
         // 2. COLETA OS DADOS DO FORMULÁRIO
-        const n = document.getElementById('nomePart').value; 
-        const t = document.getElementById('telPart').value;
+        const n = document.getElementById('nomePart').value.trim(); 
+const t = document.getElementById('telPart').value.trim();
         const numsNormais = document.getElementById('numPart').value; 
         const numsBonus = document.getElementById('numPartGratis').value; 
         const brindeInput = document.getElementById('inputBrinde').value;
@@ -3708,143 +3717,6 @@ function finalizarImportacaoZap(listaNumeros) {
 
     // ---------------------------------------------------------
 
-    document.addEventListener("click", e=>{ if(e.target.id!="nomePart")document.getElementById("autocomplete-list").innerHTML=""; if(e.target.id!="telPart")document.getElementById("autocomplete-tel-list").innerHTML=""; });
-
-    // --- LÓGICA DE APURAÇÃO INTELIGENTE (DUPLA CHECAGEM) ---
-    // Substitua a função inteira por esta:
-function buscarGanhadorSorteio() {
-    if(!edicaoAtivaID) return;
-    
-    const input = document.getElementById('inputSorteio');
-    const rawValue = input.value.replace(/\D/g, ''); 
-    const config = dadosDB[edicaoAtivaID].config;
-    
-    // 1. TRAVA DE 4 DÍGITOS RÍGIDA
-    if(rawValue.length !== 4) {
-        alert("Por favor, digite exatamente 4 dígitos (Milhar).");
-        return;
-    }
-
-    // Fecha o modal de digitação
-    document.getElementById('modalApuracao').style.display = 'none';
-
-    // Configurações da Rifa (Quantos digitos ela usa?)
-    const tipoRifa = parseInt(config.tipo); // Ex: 3 (Centena)
-    
-    // Extrai o número vencedor baseado no tipo da rifa
-    // Se a rifa é centena (3), pega os últimos 3 do milhar digitado
-    const numPrincipal = rawValue.slice(-tipoRifa);
-    
-    // Busca Ganhador
-    let winnerPrincipal = null;
-    let statusPagamento = 'LIVRE'; // Pode ser: LIVRE, PAGO, PENDENTE
-
-    const vendas = dadosDB[edicaoAtivaID].vendas || {};
-
-    Object.values(vendas).forEach(v => {
-        // Verifica se o número sorteado está nesta venda
-        const cotas = v.nums.match(/\d+/g)||[];
-        if(cotas.includes(numPrincipal)) {
-            winnerPrincipal = v;
-            // Define se está pago ou devendo
-            statusPagamento = v.pago ? 'PAGO' : 'PENDENTE';
-        }
-    });
-
-    // Monta o Objeto de Resultado
-    const resultadoFinal = {
-        nomeRifa: config.nomeExibicao,
-        federalCompleta: rawValue,
-        
-        principal: {
-            ativo: true,
-            tipoLabel: getNomeTipo(tipoRifa),
-            numero: numPrincipal,
-            ganhador: winnerPrincipal,
-            status: statusPagamento // Passamos o status para a tela
-        },
-        
-        // Desativamos o brinde na visualização rápida para focar no principal,
-        // mas se quiser manter, a lógica seria similar.
-        brinde: { ativo: false } 
-    };
-
-    abrirModalCardUnico(resultadoFinal);
-}
-
-    function abrirModalCardUnico(dados) {
-    // Cabeçalho
-    document.getElementById('card_nome_rifa').innerText = dados.nomeRifa;
-    document.getElementById('card_federal_completa').innerText = dados.federalCompleta;
-
-    const p = dados.principal;
-    
-    // Exibe o número sorteado
-    document.getElementById('lbl_tipo_princ').innerText = p.tipoLabel;
-    document.getElementById('res_num_princ').innerText = p.numero;
-
-    // Elementos da tela
-    const infoContainer = document.getElementById('info_ganhador_princ');
-    const msgSemGanhador = document.getElementById('msg_sem_ganhador_princ');
-    const labelTitulo = infoContainer.querySelector('div'); // A barra de título do ganhador
-
-    // Reseta estilos visuais
-    infoContainer.style.border = "1px dashed #cbd5e1";
-    infoContainer.style.background = "#f8fafc";
-    labelTitulo.style.color = "#059669"; // Verde padrão
-
-    if(p.ganhador) {
-        // TEM ALGUÉM COM O NÚMERO
-        infoContainer.style.display = 'block';
-        msgSemGanhador.style.display = 'none';
-
-        // Preenche dados básicos
-        document.getElementById('res_nome_princ').innerText = p.ganhador.nome;
-        document.getElementById('res_tel_princ').innerText = p.ganhador.tel;
-        document.getElementById('res_data_princ').innerText = p.ganhador.data;
-        let cotas = p.ganhador.nums;
-        if(cotas.length > 80) cotas = cotas.substring(0, 80) + "...";
-        document.getElementById('res_cotas_princ').innerText = cotas;
-
-        // --- LÓGICA DE STATUS (AQUI ESTÁ A MÁGICA) ---
-        const elValor = document.getElementById('res_valor_princ');
-
-        if(p.status === 'PENDENTE') {
-            // MODO ALERTA: NÃO PAGOU!
-            labelTitulo.innerHTML = `<span style="font-size:1.5rem;">⚠️</span> NUMERO RESERVADO`;
-            labelTitulo.style.color = "#b45309"; // Laranja escuro
-            
-            infoContainer.style.background = "#fffbeb"; // Fundo amarelo claro
-            infoContainer.style.border = "2px solid #fcd34d"; // Borda amarela forte
-            
-            elValor.innerText = "NÃO PAGO";
-            elValor.style.color = "#ef4444"; // Texto vermelho
-            elValor.style.fontWeight = "900";
-
-        } else {
-            // MODO SUCESSO: TUDO CERTO
-            labelTitulo.innerHTML = `<span style="font-size:1.5rem;">🎉</span> GANHADOR OFICIAL`;
-            labelTitulo.style.color = "#059669"; // Verde
-            
-            infoContainer.style.background = "#ecfdf5"; // Fundo verde claro
-            infoContainer.style.border = "2px solid #10b981"; // Borda verde
-            
-            elValor.innerText = p.ganhador.valor || "Pago";
-            elValor.style.color = "#059669";
-        }
-
-    } else {
-        // NÃO TEM NINGUÉM (LIVRE)
-        infoContainer.style.display = 'none';
-        msgSemGanhador.style.display = 'block';
-        msgSemGanhador.innerText = "❌ Número disponível (Ninguém comprou)";
-    }
-
-    // Esconde o bloco de brinde para focar no principal (conforme simplificação)
-    document.getElementById('bloco_brinde').style.display = 'none';
-
-    document.getElementById('modalGanhador').style.display = 'flex';
-}
     function baixarCardGanhador() {
         const btn = document.querySelector('#modalGanhador .btn-main');
         const originalText = btn.innerText;
@@ -4093,11 +3965,14 @@ function enviarZapDireto(key) {
     }
 
     // 2. Converte para array tratando tanto Objetos quanto Arrays do Firebase
-    let lista = Object.keys(baseClientes).map(key => ({ 
-        id: key, 
-        nome: baseClientes[key].nome || "", 
-        tel: baseClientes[key].tel || "" 
-    }));
+    let lista = Object.keys(baseClientes)
+        // 👇 ESTA É A LINHA NOVA QUE FILTRA OS CONTATOS VAZIOS:
+        .filter(key => baseClientes[key].nome && baseClientes[key].nome.trim() !== "") 
+        .map(key => ({ 
+            id: key, 
+            nome: baseClientes[key].nome, 
+            tel: baseClientes[key].tel || "" 
+        }));
 
     // 3. Filtro de busca (Só filtra se houver algo digitado)
     if (termo.length > 0) { 
@@ -4311,14 +4186,21 @@ function baixarImagemPublica() {
 
     const saudacao = gerarSaudacao();
     
-    const msg = `🧾 *COMPROVANTE DE PARTICIPAÇÃO - MULTIRODAS* 🧾\n\n` +
-                `${saudacao}, *${v.nome.trim()}*! Tudo certo com sua participação. 👊\n\n` +
-                `🎟️ *Ação:* *${config.nomeExibicao.trim()}*\n` +
-                `🔢 *Cotas:* *${v.nums.trim()}*\n` +
-                `🏆 *Prêmio:* *${config.premio.trim()}*\n` +
-                (v.brinde ? `🍀 *Palpite Extra:* *${v.brinde.trim()}*\n` : '') +
-                `\n🔗 *Acesse seu Comprovante Digital:* \n${linkRecibo}\n\n` +
-                `Muito obrigado e Boa sorte! 🤞\n\n` +
+    const msg = `✅ *COMPROVANTE OFICIAL* ✅\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `${saudacao}, *${v.nome.trim()}*!\n` +
+                `Sua participação foi confirmada com sucesso. Muito obrigado pela confiança! 👊\n\n` +
+                `📋 *RESUMO DA COMPRA*\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `🎟️ *Ação:* ${config.nomeExibicao.trim()}\n` +
+                `🏆 *Prêmio:* ${config.premio.trim()}\n` +
+                `🔢 *Cotas:* ${v.nums.trim()}\n` +
+                (v.brinde ? `🍀 *Palpite Extra:* ${v.brinde.trim()}\n` : '') +
+                `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `🌐 *SEU RECIBO DIGITAL*\n` +
+                `Acesse o link abaixo para ver e baixar seu comprovante detalhado:\n` +
+                `🔗 ${linkRecibo}\n\n` +
+                `Boa sorte! 🍀🤞\n\n` +
                 `*MultiRodas ®*`;
 
     // --- REGISTRA O LOG PARA AS 24 HORAS ---
@@ -4949,58 +4831,7 @@ function pedirConfirmacao(tipo, key, extraVal) {
     area.scrollIntoView({behavior: "smooth"});
 }
 
-function verificarHistoricoEnvio(tel, rifaId) {
-    const infoCard = document.getElementById('lastEnvioCard');
-    const infoText = document.getElementById('lastEnvioText');
-    const modalContent = document.querySelector('#modalWhatsAgenda .modal-content');
-    
-    if(!infoCard || !modalContent) return;
-    
-    const telLimpo = tel.replace(/\D/g, '');
-    
-    database.ref(`clientes/${telLimpo}/envios/${rifaId}`).once('value', snapshot => {
-        const dados = snapshot.val();
-        const agora = new Date().getTime();
-        const vinteQuatroHoras = 24 * 60 * 60 * 1000;
 
-        // Limpa estilos anteriores
-        modalContent.classList.remove('sent', 'sent-cobranca');
-        infoCard.classList.remove('cobranca-style');
-
-        if (dados && (agora - dados.timestamp) < vinteQuatroHoras) {
-            infoCard.style.display = 'flex';
-            
-            // Texto alinhado e profissional com quebra de linha
-            infoText.innerHTML = `
-                ⚠️ <b>CONTATO RECENTE: ${dados.tipo.toUpperCase()}</b> <br>
-                <small>Enviado em ${dados.data}</small>
-            `;
-            
-            if (dados.tipo === "Cobrança") {
-                modalContent.classList.add('sent-cobranca'); // Fundo Vermelho
-                infoCard.classList.add('cobranca-style');
-            } else {
-                modalContent.classList.add('sent'); // Fundo Amarelo
-            }
-        } else {
-            infoCard.style.display = 'none';
-            modalContent.classList.remove('sent', 'sent-cobranca');
-        }
-    });
-}
-
-function registrarLogEnvio(tel, rifaId, tipo) {
-    const telLimpo = tel.replace(/\D/g, '');
-    const agora = new Date();
-    
-    // Salva o horário legível e o tempo em milisegundos para o cálculo
-    database.ref(`clientes/${telLimpo}/envios/${rifaId}`).set({
-        data: agora.toLocaleString('pt-BR'),
-        timestamp: agora.getTime(), // Isso permite fazer conta de matemática
-        tipo: tipo
-    });
-}
-    
     // --- FUNÇÕES DE CONFERÊNCIA (NOVO) ---
     function abrirModalConferencia() {
         if(!edicaoAtivaID || !dadosDB[edicaoAtivaID]) return alert("Selecione uma campanha!");
@@ -5228,9 +5059,8 @@ function registrarLogEnvio(tel, rifaId, tipo) {
                 `;
 
             } else {
-                // NÃO ENCONTRADO NO SISTEMA (LIVRE)
-                // Se no WhatsApp tem um nome ou status, mas no sistema está livre -> ERRO
-                
+       
+
                 counts.unknown++;
                 classRow = "row-unknown"; // Cinza/Erro
                 
@@ -5744,11 +5574,13 @@ function acaoWhatsAgenda(acao) {
     // --- ⏳ 2. COBRANÇA (TEXTO OFICIAL + AUTO-COPY PIX) ---
     else if (acao === 'COBRANCA') {
         const vendas = dadosDB[rifaId]?.vendas || {};
-        let vEncontrada = Object.values(vendas).find(v => 
-            v.tel.replace(/\D/g, '').includes(tel.replace(/\D/g, '').slice(-8))
+        
+        // Pega as vendas de trás pra frente para achar a mais recente
+        const chavesRecentes = Object.keys(vendas).reverse();
+        const keyEncontrada = chavesRecentes.find(k => 
+            vendas[k].tel.replace(/\D/g, '').includes(tel.replace(/\D/g, '').slice(-8))
         );
-
-        if (!vEncontrada) return alert("Reserva não encontrada.");
+        let vEncontrada = keyEncontrada ? vendas[keyEncontrada] : null;
 
         const dispararCobranca = () => {
             const codigoPix = gerarPixCopiaECola(vEncontrada.valor);
@@ -5789,9 +5621,13 @@ function acaoWhatsAgenda(acao) {
     // --- 🧾 3. COMPROVANTE (COM TRAVA DE SEGURANÇA PROFISSIONAL) ---
     else if (acao === 'COMPROVANTE') {
         const vendas = dadosDB[rifaId]?.vendas || {};
-        let vEncontrada = Object.values(vendas).find(v => 
-            v.tel.replace(/\D/g, '').includes(tel.replace(/\D/g, '').slice(-8))
+        
+        // Pega as vendas de trás pra frente para achar a mais recente
+        const chavesRecentes = Object.keys(vendas).reverse();
+        const keyEncontrada = chavesRecentes.find(k => 
+            vendas[k].tel.replace(/\D/g, '').includes(tel.replace(/\D/g, '').slice(-8))
         );
+        let vEncontrada = keyEncontrada ? vendas[keyEncontrada] : null;
 
         if (!vEncontrada) return alert("Registro não encontrado.");
 
@@ -5807,28 +5643,37 @@ function acaoWhatsAgenda(acao) {
             return; 
         }
 
-        const keyVenda = Object.keys(vendas).find(key => vendas[key] === vEncontrada);
+        // A chave já foi encontrada ali em cima, não precisamos buscar de novo!
+        const keyVenda = keyEncontrada;
         const token = btoa(`${rifaId}###${keyVenda}`);
         const linkRecibo = `${window.location.href.split('?')[0]}?t=${token}`;
 
-        let msgComprovante = `🧾 *COMPROVANTE DE PARTICIPAÇÃO - MULTIRODAS* 🧾\n\n` +
-            `${saudacao}, *${vEncontrada.nome.trim()}*!\n\n` +
-            `Sua participação na ação *${config.nomeExibicao.trim()}* foi confirmada com sucesso.\n\n` +
+        let msgComprovante = `✅ *COMPROVANTE OFICIAL* ✅\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `${saudacao}, *${vEncontrada.nome.trim()}*!\n` +
+            `Sua participação foi confirmada com sucesso. Muito obrigado pela confiança! 👊\n\n` +
+            `📋 *RESUMO DA COMPRA*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `🎟️ *Ação:* ${config.nomeExibicao.trim()}\n` +
-            `🔢 *Suas Cotas:* ${vEncontrada.nums}\n\n` +
-            `🔗 *Acesse seu Comprovante Digital:* \n${linkRecibo}\n\n` +
-            `Boa sorte! 🤞\n\n` +
+            `🏆 *Prêmio:* ${config.premio.trim()}\n` +
+            `🔢 *Cotas:* ${vEncontrada.nums}\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `🌐 *SEU RECIBO DIGITAL*\n` +
+            `Acesse o link abaixo para ver e baixar seu comprovante detalhado:\n` +
+            `🔗 ${linkRecibo}\n\n` +
+            `Boa sorte! 🍀🤞\n\n` +
             `*MultiRodas ®*`;
-
-        registrarLogEnvio(tel, rifaId, "Comprovante");
-        window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msgComprovante)}`, '_blank');
-        fecharModais();
     }
 }
 
-// --- FUNÇÕES DE LOG E HISTÓRICO ---
 function registrarLogEnvio(tel, rifaId, tipo) {
-    const telLimpo = tel.replace(/\D/g, '');
+    let telLimpo = tel.replace(/\D/g, '');
+    
+    // Remove o '55' forçado do Zap para parear com o contato real no banco
+    if (telLimpo.length >= 12 && telLimpo.startsWith('55')) {
+        telLimpo = telLimpo.substring(2);
+    }
+    
     const agora = new Date();
     database.ref(`clientes/${telLimpo}/envios/${rifaId}`).set({
         data: agora.toLocaleString('pt-BR'),
@@ -5841,12 +5686,21 @@ function verificarHistoricoEnvio(tel, rifaId) {
     const infoCard = document.getElementById('lastEnvioCard');
     const infoText = document.getElementById('lastEnvioText');
     const modalContent = document.querySelector('#modalWhatsAgenda .modal-content');
+    const btnComprovante = document.getElementById('btnComprovanteZap'); 
+
     if(!infoCard || !modalContent) return;
-    const telLimpo = tel.replace(/\D/g, '');
+    
+    if (btnComprovante) btnComprovante.innerHTML = "🧾 Enviar Comprovante";
+    
+    let telLimpo = tel.replace(/\D/g, '');
+    if (telLimpo.length >= 12 && telLimpo.startsWith('55')) {
+        telLimpo = telLimpo.substring(2);
+    }
+    
     database.ref(`clientes/${telLimpo}/envios/${rifaId}`).once('value', snapshot => {
         const dados = snapshot.val();
         const agora = new Date().getTime();
-        if (dados && (agora - dados.timestamp) < 86400000) {
+        if (dados && (agora - dados.timestamp) < 86400000) { 
             infoCard.style.display = 'flex';
             infoText.innerHTML = `⚠️ <b>CONTATO RECENTE: ${dados.tipo.toUpperCase()}</b> <br><small>Enviado em ${dados.data}</small>`;
             if (dados.tipo === "Cobrança") {
@@ -5855,12 +5709,177 @@ function verificarHistoricoEnvio(tel, rifaId) {
             } else {
                 modalContent.classList.add('sent');
             }
+            if (dados.tipo === "Comprovante" && btnComprovante) {
+                btnComprovante.innerHTML = "🧾 Reenviar Comprovante";
+            }
         } else {
             infoCard.style.display = 'none';
             modalContent.classList.remove('sent', 'sent-cobranca');
         }
     });
+} // <--- A CHAVE QUE FALTAVA FOI COLOCADA AQUI PARA PARAR O BUG!
+
+// ==========================================
+// 🏆 FUNÇÕES DE APURAÇÃO E SORTEIO
+// ==========================================
+
+function abrirModalApuracao() {
+    const modal = document.getElementById('modalApuracao');
+    
+    if (modal) {
+        // 1. A MÁGICA: Arranca o modal de onde ele estiver preso e joga na raiz da página!
+        document.body.appendChild(modal); 
+
+        // 2. FORÇA BRUTA: Ignora qualquer CSS que esteja tentando esconder ele
+        modal.style.setProperty('display', 'flex', 'important');
+        modal.style.setProperty('z-index', '999999', 'important');
+        modal.style.setProperty('opacity', '1', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+
+        // 3. Foca no campo de digitar o número
+        setTimeout(() => {
+            const input = document.getElementById('inputSorteio');
+            if (input) {
+                input.value = "";
+                input.focus();
+            }
+        }, 100);
+        
+    } else {
+        alert("Erro Crítico: A tela de apuração não existe no arquivo HTML.");
+    }
 }
+
+function buscarGanhadorSorteio() {
+    if(!edicaoAtivaID || !dadosDB[edicaoAtivaID]) return;
+
+    const input = document.getElementById('inputSorteio');
+    const rawValue = (input.value || "").replace(/\D/g, '');
+    const config = dadosDB[edicaoAtivaID].config;
+
+    if(rawValue.length !== 4) {
+        alert("Por favor, digite exatamente 4 dígitos (Milhar) do resultado da Loteria Federal.");
+        return;
+    }
+
+    document.getElementById('modalApuracao').style.display = 'none';
+    const tipoRifa = parseInt(config.tipo) || 4; 
+    const numPrincipalStr = rawValue.slice(-tipoRifa);
+    const numPrincipalInt = parseInt(numPrincipalStr, 10); 
+
+    let winnerPrincipal = null;
+    let statusPagamento = 'LIVRE';
+    const vendas = dadosDB[edicaoAtivaID].vendas || {};
+
+    Object.values(vendas).forEach(v => {
+        const numsStr = v.nums || ""; 
+        const cotas = numsStr.match(/\d+/g) || [];
+        const temCotaSorteada = cotas.some(cota => parseInt(cota, 10) === numPrincipalInt);
+
+        if(temCotaSorteada) {
+            winnerPrincipal = v;
+            statusPagamento = v.pago ? 'PAGO' : 'PENDENTE';
+        }
+    });
+
+    const resultadoFinal = {
+        nomeRifa: config.nomeExibicao || "Ação",
+        federalCompleta: rawValue,
+        principal: {
+            ativo: true,
+            tipoLabel: getNomeTipo(tipoRifa),
+            numero: numPrincipalStr,
+            ganhador: winnerPrincipal,
+            status: statusPagamento
+        }
+    };
+
+    abrirModalCardUnico(resultadoFinal);
+}
+
+function abrirModalCardUnico(dados) {
+    try {
+        document.getElementById('card_nome_rifa').innerText = dados.nomeRifa;
+        document.getElementById('card_federal_completa').innerText = dados.federalCompleta;
+
+        const p = dados.principal;
+        document.getElementById('lbl_tipo_princ').innerText = p.tipoLabel;
+        document.getElementById('res_num_princ').innerText = p.numero;
+
+        const infoContainer = document.getElementById('info_ganhador_princ');
+        const msgSemGanhador = document.getElementById('msg_sem_ganhador_princ');
+        const labelTitulo = infoContainer.querySelector('div');
+
+        infoContainer.style.border = "1px dashed #cbd5e1";
+        infoContainer.style.background = "#f8fafc";
+        labelTitulo.style.color = "#059669"; 
+
+        if(p.ganhador) {
+            infoContainer.style.display = 'block';
+            msgSemGanhador.style.display = 'none';
+
+            if(p.status === 'PENDENTE') {
+                labelTitulo.innerHTML = `<span style="font-size:1.5rem;">⚠️</span> <span id="res_nome_princ">${p.ganhador.nome} (RESERVADO)</span>`;
+                labelTitulo.style.color = "#b45309";
+                infoContainer.style.background = "#fffbeb";
+                infoContainer.style.border = "2px solid #fcd34d";
+
+                document.getElementById('res_valor_princ').innerText = "NÃO PAGO";
+                document.getElementById('res_valor_princ').style.color = "#ef4444";
+                document.getElementById('res_valor_princ').style.fontWeight = "900";
+            } else {
+                labelTitulo.innerHTML = `<span style="font-size:1.5rem;">🎉</span> <span id="res_nome_princ">${p.ganhador.nome}</span>`;
+                labelTitulo.style.color = "#059669";
+                infoContainer.style.background = "#ecfdf5";
+                infoContainer.style.border = "2px solid #10b981";
+
+                document.getElementById('res_valor_princ').innerText = p.ganhador.valor || "Pago";
+                document.getElementById('res_valor_princ').style.color = "#059669";
+            }
+
+            document.getElementById('res_tel_princ').innerText = p.ganhador.tel || "--";
+            document.getElementById('res_data_princ').innerText = p.ganhador.data || "--";
+
+            let cotas = p.ganhador.nums || "";
+            if(cotas.length > 80) cotas = cotas.substring(0, 80) + "...";
+            document.getElementById('res_cotas_princ').innerText = cotas;
+
+        } else {
+            infoContainer.style.display = 'none';
+            msgSemGanhador.style.display = 'block';
+            msgSemGanhador.innerText = "❌ Número disponível (Ninguém comprou)";
+        }
+
+        const blocoBrinde = document.getElementById('bloco_brinde');
+        if(blocoBrinde) blocoBrinde.style.display = 'none';
+
+        document.getElementById('modalGanhador').style.display = 'flex';
+        
+    } catch (error) {
+        console.error("Erro ao montar o card:", error);
+        alert("Ocorreu um erro interno ao gerar o resultado.");
+    }
+}
+
+// ==========================================
+// 📱 FIX: COLAR NÚMERO DIRETO DO WHATSAPP (+55)
+// ==========================================
+const camposDeTelefoneGlobal = ['telPart', 'novoTelCli', 'editTelCli', 'editTelVenda'];
+camposDeTelefoneGlobal.forEach(id => {
+    const campo = document.getElementById(id);
+    if (campo) {
+        campo.addEventListener('paste', function(e) {
+            let textoColado = (e.clipboardData || window.clipboardData).getData('text');
+            let numerosLimpos = textoColado.replace(/\D/g, '');
+            if (numerosLimpos.startsWith('55') && numerosLimpos.length >= 12) {
+                numerosLimpos = numerosLimpos.substring(2);
+            }
+            e.preventDefault();
+            this.value = VMasker.toPattern(numerosLimpos, "(99) 99999-9999");
+            this.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    }
+});
 
 </script>
 </body>
