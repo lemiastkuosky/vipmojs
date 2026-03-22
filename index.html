@@ -16,7 +16,6 @@
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-<header style="position: relative; text-align: center; margin-bottom: 10px;">
   <style>
     /* Reset e Estilos Base */
     * {
@@ -621,13 +620,15 @@ body.dark-mode #nomeContainerInModal select {
   }
 
   .modal.active {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     display: flex !important;
+    /* MUDANÇA: Trocar 'center' por 'flex-start' evita que o topo suma */
+    align-items: flex-start; 
+    justify-content: center;
     visibility: visible;
     opacity: 1;
     pointer-events: auto;
+    /* MUDANÇA: Garante que a tela preta de fundo também possa rolar */
+    overflow-y: auto; 
 }
 
 
@@ -641,11 +642,15 @@ body.dark-mode #nomeContainerInModal select {
     padding: 25px; 
     border-radius: 10px;
     width: 100%;
-    max-width: 650px; /* <-- Valor aumentado de 500px para 650px */
+    max-width: 650px; 
     max-height: 95vh;
     overflow-y: auto;
     position: relative;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    /* 👇 ADICIONE ESTAS 3 LINHAS 👇 */
+    margin: auto; 
+    margin-top: 15px; 
+    margin-bottom: 15px;
   }
   
   .close-modal {
@@ -7526,6 +7531,33 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
         padding-top: 45px !important; 
         transition: padding-top 0.3s ease;
     }
+
+    /* O container geral invisível não deve bloquear cliques */
+#toast-container, .toast-container {
+    pointer-events: none !important; 
+    z-index: 9999;
+}
+
+/* Mas a notificação em si (a caixinha colorida) deve receber cliques */
+.toast, .toast-message {
+    pointer-events: auto !important; 
+}
+
+.modal, .modal-overlay {
+    /* Quando o modal estiver oculto/fechado, ele não pode bloquear cliques */
+    pointer-events: none; 
+}
+
+.modal.active, .modal.show, .modal[style*="display: block"] {
+    /* Quando o modal estiver aberto, ele volta a receber cliques */
+    pointer-events: auto; 
+}
+
+header, footer, .bottom-bar {
+    /* Garante que eles não expandam além do tamanho visual deles */
+    height: auto; 
+}
+
 </style>
 
 <div id="resultNotificationBanner" onclick="openResultFromNotification()">
@@ -8511,7 +8543,7 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
 </div><div></div><br>
 
     <div class="button-style-radios" id="iaLotteryRadios" style="flex-wrap: wrap;">
-        <label style="flex: 1 1 30%;"><input type="radio" name="iaLotteryOption" value="rj" checked onchange="updateIaLotterySelection(this.value)"> RJ</label>
+    <label style="flex: 1 1 30%;"><input type="radio" name="iaLotteryOption" value="rj" onchange="updateIaLotterySelection(this.value)"> RJ</label>
         <label style="flex: 1 1 30%;"><input type="radio" name="iaLotteryOption" value="lk" onchange="updateIaLotterySelection(this.value)"> LK</label>
         <label style="flex: 1 1 30%;"><input type="radio" name="iaLotteryOption" value="ln" onchange="updateIaLotterySelection(this.value)"> NC</label>
         <label style="flex: 1 1 45%;"><input type="radio" name="iaLotteryOption" value="ba" onchange="updateIaLotterySelection(this.value)"> BA</label>
@@ -8714,6 +8746,23 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
     <button id="sortResultsBtn" onclick="toggleSortOrder()" title="Alternar Ordem dos Resultados" class="view-button" style="display: none; width: 100%; margin-top: 10px; background-color: #17a2b8;">
         Ordenar por Bicho 🔢
     </button>
+
+<div id="mcdCartPanel" style="display: none; background: rgba(0,0,0,0.03); border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-top: 15px; text-align: left;">
+            <h4 style="margin: 0 0 10px 0; color: #007bff; display: flex; justify-content: space-between; align-items: center;">
+                🛒 Carrinho de Jogos
+                <span id="cartTotalBadge" style="background: #28a745; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem;">0 itens</span>
+            </h4>
+            
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Deseja jogar estes números gerados? Digite o valor e guarde no carrinho para gerar tudo num único recibo!</p>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="tel" id="cartItemValueInput" class="save-dialog-input" placeholder="R$ 0,00" oninput="formatCurrency(this)" style="flex: 1; margin: 0; text-align: center; font-weight: bold; color: #28a745; height: 45px;">
+                <button onclick="addCurrentGameToCart()" class="save-button" style="flex: 1; margin: 0; background-color: #ffc107; color: #333; font-weight: bold; height: 45px; box-shadow: 0 4px 0 #d39e00;">➕ Guardar Jogo</button>
+            </div>
+            
+            <div id="cartItemsList" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+    
     <div id="randomResultWrapper" style="margin-top: 10px;">
         <div id="dezenaResult" class="result-group" style="display: none;"><h4>Dezenas</h4><div class="result-numbers"></div></div>
         <div id="centenaResult" class="result-group" style="display: none;"><h4>Centenas</h4><div class="result-numbers"></div></div>
@@ -12085,6 +12134,10 @@ async function shareReceiptToWhatsApp() {
         showToast('Comprovante enviado com sucesso!', 'success');
         setTimeout(closeReceiptModal, 800);
 
+        // Limpa o carrinho após a venda ser concluída
+    window.mcdCart = []; 
+    if (typeof renderCartItems === 'function') renderCartItems();
+
     } catch (error) {
         console.error("Erro no envio:", error);
         showToast(`Erro ao gerar link de compartilhamento.`, 'error');
@@ -15077,7 +15130,6 @@ function createEmojiLookupMap() {
     });
 }
 
-
 function generateReceiptText(metodoCalculoOverride = null) {
     const receiptContent = document.getElementById('receiptContent');
     const valorPago = document.getElementById('receiptValueInput').value || 'R$ 0,00';
@@ -15140,6 +15192,71 @@ function generateReceiptText(metodoCalculoOverride = null) {
             });
         }
     });
+
+    // ======== INÍCIO DA LÓGICA DO CARRINHO ========
+    if (window.mcdCart && window.mcdCart.length > 0) {
+        let numerosTexto = '';
+        let totalSomaPago = 0;
+        let totalNumerosGlobais = 0;
+        
+        window.mcdCart.forEach((item, idx) => {
+            totalSomaPago += item.valorNum;
+            totalNumerosGlobais += item.numeros.length;
+            
+            numerosTexto += `<div class="receipt-bicho-section">`;
+            numerosTexto += `<div class="receipt-bicho-title">🛒 JOGO ${idx + 1} - VALOR: ${item.valorStr}</div>`;
+            
+            const m = item.numeros.filter(n => n.length === 4);
+            const c = item.numeros.filter(n => n.length === 3);
+            const d = item.numeros.filter(n => n.length === 2);
+            
+            if (m.length > 0) numerosTexto += `<div class="number-line-container" style="margin-bottom: 8px;"><span class="receipt-number-line"><strong style="color:#000;">Milhares:</strong> <span class="selectable-numbers">${m.join(', ')}</span></span></div>`;
+            if (c.length > 0) numerosTexto += `<div class="number-line-container" style="margin-bottom: 8px;"><span class="receipt-number-line"><strong style="color:#000;">Centenas:</strong> <span class="selectable-numbers">${c.join(', ')}</span></span></div>`;
+            if (d.length > 0) numerosTexto += `<div class="number-line-container" style="margin-bottom: 8px;"><span class="receipt-number-line"><strong style="color:#000;">Dezenas:</strong> <span class="selectable-numbers">${d.join(', ')}</span></span></div>`;
+            
+            numerosTexto += `</div>`;
+        });
+
+        // Trava o input de valor geral pois é gerenciado pelas somas do carrinho
+        const valInput = document.getElementById('receiptValueInput');
+        if (valInput && !valInput.dataset.lockedByCart) {
+            valInput.value = (totalSomaPago * 100).toString();
+            formatCurrency(valInput);
+            valInput.readOnly = true;
+            valInput.dataset.lockedByCart = "true";
+            document.getElementById('quick-values-buttons').style.display = 'none'; // Esconde atalhos
+        }
+        
+        const valorPagoFormatado = 'R$ ' + totalSomaPago.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        // Estimativa Padrão para prêmio do carrinho
+        const premioFormatado = 'R$ ' + (totalSomaPago * 50).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); 
+
+        currentReceiptCode = lastGeneratedCode || generateReceiptCode(); 
+
+        const reciboCompleto = `
+==============================
+      RECIBO DE APOSTA
+==============================
+
+<span class="receipt-header-line"><strong>Código.........:</strong> ${currentReceiptCode}</span>
+<span class="receipt-header-line"><strong>Data/Hora......:</strong> ${dataHora}</span>
+<span class="receipt-header-line"><strong>Extração.......:</strong> ${extracao} - ${horario}</span>
+<span class="receipt-header-line"><strong>Valor Pago.....:</strong> ${valorPagoFormatado}</span>
+<span class="receipt-header-line"><strong>Possível Prêmio:</strong> ${premioFormatado}</span>
+<span class="receipt-header-line"><strong>Qtd. Números...:</strong> ${totalNumerosGlobais}</span>
+
+<span class="receipt-divider">------------------------------</span>
+<span class="receipt-divider">       JOGOS DO CARRINHO      </span>
+<span class="receipt-divider">------------------------------</span>
+${numerosTexto}
+<span class="receipt-divider">==============================</span>
+<span class="receipt-divider">         BOA SORTE! 🍀         </span>
+<span class="receipt-divider">==============================</span>`;
+
+        if (receiptContent) receiptContent.innerHTML = reciboCompleto.trim();
+        return; // Encerra a função aqui! O carrinho toma conta.
+    }
+    // ======== FIM DA LÓGICA DO CARRINHO ========
 
     const totalNumeros = totalMilhares + totalCentenas + totalDezenas;
     let numerosTexto = "Nenhum número para resumir.";
@@ -15838,6 +15955,7 @@ document.querySelectorAll('input[name="generationMode"]').forEach(radio => {
         const val = this.value;
         toggleBichosSelector(val === 'ia_bichos' ? 'bichos' : val);
         updateGeneratorOptions();
+        // Esta linha abaixo é a que grava a escolha:
         saveData(STORAGE_KEYS.LAST_GEN_MODE, val);
         
         if (val === 'ia_bichos') {
@@ -16006,19 +16124,24 @@ if (mcdSearchInput && clearMcdSearchBtn) {
 }
 
 async function loadLastGenMode() {
-    // FORÇA o modo 'bichos' (GP Bichos) como padrão absoluto ao abrir
-    const modeToLoad = 'bichos'; 
+    // Tenta buscar a última escolha salva, se não houver, usa 'bichos' como padrão
+    const savedMode = await window.getData(STORAGE_KEYS.LAST_GEN_MODE);
+    const modeToLoad = savedMode || 'bichos'; 
 
     const radioToCheck = document.querySelector(`input[name="generationMode"][value="${modeToLoad}"]`);
     
     if (radioToCheck) {
         radioToCheck.checked = true;
-        toggleBichosSelector(modeToLoad); 
+        // Atualiza a visibilidade dos seletores baseada no modo carregado
+        toggleBichosSelector(modeToLoad === 'ia_bichos' ? 'bichos' : modeToLoad); 
         updateGeneratorOptions(); 
+        
+        // Se for I.A., já dispara a busca das porcentagens
+        if (modeToLoad === 'ia_bichos') {
+            const loteria = document.querySelector('input[name="iaLotteryOption"]:checked')?.value || 'rj';
+            fetchAndCacheIaPrefixes(loteria);
+        }
     }
-    
-    // Sobrescreve a memória para garantir que não puxe "Aleatórios" depois
-    await window.saveData(STORAGE_KEYS.LAST_GEN_MODE, modeToLoad);
 }
 
 // --- FUNÇÃO DE RESET PARA LIMPAR O FIREBASE ---
@@ -19623,22 +19746,17 @@ function parseNumbers(inputText) {
         }
     }
 
-    /**
- * Garante que o estado VISUAL dos botões de Modo de Geração
- * corresponda ao valor que está realmente salvo.
- */
 async function ensureCorrectGenModeVisualState() {
-    // FORÇA o modo 'bichos' ao fechar a janela
-    const modeToEnsure = 'bichos'; 
+    // Busca o modo que está realmente salvo para garantir que o visual não mude sozinho
+    const modeToEnsure = await window.getData(STORAGE_KEYS.LAST_GEN_MODE) || 'bichos'; 
 
     const radioToCheck = document.querySelector(`input[name="generationMode"][value="${modeToEnsure}"]`);
 
-    if (radioToCheck && !radioToCheck.checked) {
+    if (radioToCheck) {
         radioToCheck.checked = true; 
-    } 
-    
-    toggleBichosSelector(modeToEnsure);
-    updateGeneratorOptions(); 
+        toggleBichosSelector(modeToEnsure === 'ia_bichos' ? 'bichos' : modeToEnsure);
+        updateGeneratorOptions(); 
+    }
 }
 
     async function importDataFromTxt(event) {
@@ -20439,8 +20557,15 @@ async function generateSelectedNumbers() {
         if (selectedBichos.length === 0) { showToast('Para I.A., selecione os Bichos.', 'error'); return; }
 
         const selectedRadio = document.querySelector('input[name="iaLotteryOption"]:checked');
-        const lotteryCode = selectedRadio ? selectedRadio.value : 'rj';
-        const nomeLoteria = selectedRadio ? selectedRadio.parentElement.textContent.trim() : 'Sorteio';
+        
+        // --- NOVA TRAVA: Obriga a escolher a loteria ---
+        if (!selectedRadio) {
+            showToast('Por favor, selecione uma Loteria (RJ, LK, NC...) para a I.A.', 'error');
+            return;
+        }
+        
+        const lotteryCode = selectedRadio.value;
+        const nomeLoteria = selectedRadio.parentElement.textContent.trim();
         
         // 👇 AQUI MUDA O CABEÇALHO PARA O NOVO PADRÃO 👇
         summaryParts.push(`- <strong>Modo:</strong> 🔮 I.A. (${nomeLoteria})`);
@@ -20789,7 +20914,8 @@ async function generateSelectedNumbers() {
             }
         });
 
-        document.getElementById('generatorActionButtons').style.display = 'flex'; 
+        document.getElementById('generatorActionButtons').style.display = 'flex';
+document.getElementById('mcdCartPanel').style.display = 'block'; // ESSA É A LINHA QUE MOSTRA O CARRINHO
         document.getElementById('mcdSearchContainer').style.display = 'flex'; 
         if (document.getElementById('sortResultsBtn')) document.getElementById('sortResultsBtn').style.display = 'block';
         
@@ -20801,6 +20927,12 @@ async function generateSelectedNumbers() {
         
         // 👇 ADICIONE ESTA LINHA AQUI 👇
         selectAllBichos(false); // Limpa os bichos selecionados após gerar com sucesso!
+
+        // --- NOVO: Limpa a seleção da loteria da I.A. e reseta os indicadores (%) ---
+        document.querySelectorAll('input[name="iaLotteryOption"]').forEach(r => r.checked = false);
+        if (typeof updateIaSuggestionCountsDisplay === 'function') {
+            updateIaSuggestionCountsDisplay(null);
+        }
 
     } else {
         showToast('Geração cancelada.', 'info');
@@ -22742,6 +22874,10 @@ function selectExtractionButton(buttonElement, value) {
     // 3. Atualiza os horários e o visor do recibo
     updateExtractionTimes();
     
+    // --- ADICIONE ESTA LINHA AQUI ---
+    validateReceiptInputs(); 
+    // --------------------------------
+
     // 4. Move o foco para o valor para agilizar a venda
     const valorInput = document.getElementById('receiptValueInput');
     if (valorInput) {
@@ -22929,6 +23065,13 @@ function closeReceiptModal() {
     const bottomButtonContainer = document.getElementById('final-action-buttons');
     if (bottomButtonContainer) {
         bottomButtonContainer.style.display = 'none';
+    }
+    // Destrava o campo de valor do recibo se o carrinho estivesse ativo
+    const valInput = document.getElementById('receiptValueInput');
+    if (valInput) {
+        valInput.readOnly = false;
+        delete valInput.dataset.lockedByCart;
+        document.getElementById('quick-values-buttons').style.display = 'flex';
     }
 
     // --- ADICIONE ESTA LINHA ---
@@ -24115,6 +24258,109 @@ else if (momentoSorteio > iaLastUpdated) {
         showToast(`🚀 I.A. calibrada com sucesso!`, 'success');
     }
 }
+
+window.mcdCart = [];
+
+window.addCurrentGameToCart = function() {
+    const valInput = document.getElementById('cartItemValueInput');
+    const valorStr = valInput.value.trim();
+    const valorNum = parseFloat(valorStr.replace(/\D/g, '')) / 100;
+
+    if (isNaN(valorNum) || valorNum <= 0) {
+        showToast('Digite o valor desta aposta antes de guardar.', 'error');
+        valInput.focus();
+        return;
+    }
+
+    // Pega os números gerados que estão na tela atualmente
+    let currentNumbers = [];
+    ['milhar', 'centena', 'dezena'].forEach(type => {
+        if (originalGeneratedNumbers[type] && originalGeneratedNumbers[type].length > 0) {
+            currentNumbers.push(...originalGeneratedNumbers[type]);
+        }
+    });
+
+    if (currentNumbers.length === 0) {
+        showToast('Gere os números primeiro!', 'error');
+        return;
+    }
+
+    // Cria um resumo visual ("Avestruz, Aguia")
+    const bichosEnvolvidos = new Set();
+    currentNumbers.forEach(num => {
+        const bichoName = getBichoFromNumber(num);
+        if (bichoName && bichoName !== 'Desconhecido') bichosEnvolvidos.add(bichoName);
+    });
+    const resumo = Array.from(bichosEnvolvidos).join(', ') || 'Aleatórios';
+
+    // Salva no carrinho
+    const newItem = {
+        id: Date.now(),
+        valorStr: valorStr,
+        valorNum: valorNum,
+        numeros: currentNumbers,
+        resumo: resumo
+    };
+
+    window.mcdCart.push(newItem);
+    valInput.value = '';
+    renderCartItems();
+    
+    // Limpa a tela do gerador para o usuário gerar o próximo sem se confundir
+    clearRandomResults();
+    
+    // Força o painel do carrinho a continuar visível
+    document.getElementById('mcdCartPanel').style.display = 'block';
+    
+    showToast('Jogo adicionado ao carrinho! Pode gerar o próximo.', 'success');
+};
+
+window.renderCartItems = function() {
+    const list = document.getElementById('cartItemsList');
+    const badge = document.getElementById('cartTotalBadge');
+    
+    if (window.mcdCart.length === 0) {
+        list.innerHTML = '';
+        badge.textContent = '0 itens';
+        if (!originalGeneratedNumbers.milhar.length && !originalGeneratedNumbers.centena.length && !originalGeneratedNumbers.dezena.length) {
+            document.getElementById('mcdCartPanel').style.display = 'none';
+        }
+        return;
+    }
+
+    badge.textContent = `${window.mcdCart.length} item(ns)`;
+    let html = '';
+    let totalCart = 0;
+
+    window.mcdCart.forEach((item, index) => {
+        totalCart += item.valorNum;
+        html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="flex: 1; min-width: 0;">
+                    <strong style="color: #007bff;">Jogo ${index + 1}</strong> <span style="color: #28a745; font-weight: bold;">(${item.valorStr})</span><br>
+                    <small style="color: #666; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.numeros.length} números • ${item.resumo}</small>
+                </div>
+                <button onclick="removeCartItem(${item.id})" style="background: none; border: none; color: #dc3545; font-size: 1.2rem; cursor: pointer; padding: 5px; flex-shrink: 0;" title="Remover Jogo">❌</button>
+            </div>
+        `;
+    });
+
+    // Linha de Total e Botão Final (Manda direto pro Recibo do Carrinho)
+    html += `
+        <div style="text-align: right; margin-top: 10px; font-size: 1.1rem; border-top: 1px solid #ccc; padding-top: 10px;">
+            <strong>Total Geral: <span style="color: #28a745;">R$ ${totalCart.toFixed(2).replace('.', ',')}</span></strong>
+        </div>
+        <button onclick="showReceiptModal()" class="save-button" style="width: 100%; margin-top: 10px; background-color: #28a745; box-shadow: 0 4px 0 #1e7e34;">📄 Gerar Recibo do Carrinho</button>
+    `;
+
+    list.innerHTML = html;
+    document.getElementById('mcdCartPanel').style.display = 'block';
+};
+
+window.removeCartItem = function(id) {
+    window.mcdCart = window.mcdCart.filter(item => item.id !== id);
+    renderCartItems();
+};
 
 // --- FUNÇÃO PARA ABRIR O WHATSAPP DIRETAMENTE ---
 function shareAtrasadosWhatsApp() {
@@ -26522,6 +26768,7 @@ window.reenviarVendidosKit = async function(kitIndex) {
 
     mostrarSucessoVendaKit(isMultiKit ? "Multi" : numKit, sortedGruposGlobais, bichoDetailsGlobal);
 };
+
 
 // =========================================================
 // MOTOR DE VENDAS PREMIUM (KITS E MULTI-KITS) - VERSÃO FINAL
