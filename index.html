@@ -8762,21 +8762,46 @@ header, footer, .bottom-bar {
 <button onclick="showReceiptModal(); autoSelecionarExtracaoIA();" style="background-color: #28a745; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer;">📄 Recibo Simples</button>    </div>
 </div>
 
-<!-- PAINEL DO CARRINHO MULTI-VALOR -->
-<div id="mcdCartPanel" style="display:none; margin-top: 15px; background: rgba(0,123,255,0.06); border: 1px solid rgba(0,123,255,0.2); border-radius: 12px; padding: 14px; box-sizing: border-box;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <strong style="font-size: 1rem;">🛒 Carrinho Multi-Valor</strong>
-        <span id="cartTotalBadge" style="background: #007bff; color: white; border-radius: 20px; padding: 2px 10px; font-size: 0.8rem; font-weight: bold;">0 itens</span>
+<div id="mcdCartPanel" style="display: none; margin: 20px auto; padding: 20px; border-radius: 20px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.1); box-sizing: border-box; width: 95%; max-width: 500px; color: #333;">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h4 style="margin:0; font-size:1.1rem; font-weight:bold; color:#222;">🛒 Venda Acumulada</h4>
+        <span id="cartTotalBadge" style="background:#28a745; color:white; padding:4px 12px; border-radius:20px; font-size:0.85rem; font-weight:bold;">0 itens</span>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
-        <input type="text" id="cartItemValueInput" class="save-dialog-input"
-            placeholder="Valor (ex: R$ 10,00)"
-            oninput="formatCurrency(this)"
-            style="margin:0; flex:1; text-align:center; font-weight:bold; color:#28a745;">
-        <button onclick="addCurrentGameToCart()" style="background-color:#007bff; color:white; border:none; padding:10px 14px; border-radius:8px; font-weight:bold; font-size:0.95rem; cursor:pointer; white-space:nowrap;">💰 Guardar</button>
+
+    <div style="background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(0,0,0,0.05); border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center;">
+        <span style="font-size: 1rem; color: #666;">Valor do Jogo: </span>
+        <span style="font-size: 1.5rem; font-weight: 800; color: #28a745;">R$ </span>
+        <input type="text" id="cartItemValueInput" value="0,00" readonly style="border: none; background: transparent; font-size: 1.5rem; font-weight: 800; color: #28a745; width: 100px; text-align: left; outline: none; pointer-events: none;">
     </div>
-    <p style="font-size:0.78rem; color:#888; margin: -4px 0 10px 0; text-align:center;">Digite o valor deste jogo e clique em Guardar. Depois gere o próximo.</p>
-    <div id="cartItemsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;">
+        <button type="button" onclick="somarValorRapido(5)" style="background: white; border: 1px solid #ddd; padding: 15px 0; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #333; cursor: pointer;">+5</button>
+        <button type="button" onclick="somarValorRapido(10)" style="background: white; border: 1px solid #ddd; padding: 15px 0; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #333; cursor: pointer;">+10</button>
+        <button type="button" onclick="somarValorRapido(25)" style="background: white; border: 1px solid #ddd; padding: 15px 0; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #333; cursor: pointer;">+25</button>
+        <button type="button" onclick="somarValorRapido(50)" style="background: white; border: 1px solid #ddd; padding: 15px 0; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #333; cursor: pointer;">+50</button>
+    </div>
+
+    <button type="button" onclick="zerarValorRapido()" style="width: 100%; background: #ffc107; border: none; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1rem; color: #000; margin-bottom: 20px; cursor: pointer; box-shadow: 0 4px 0 #d39e00;">
+        C (Limpar Valor)
+    </button>
+
+    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+        <button type="button" onclick="addCurrentGameToCart()" style="flex: 1; background: #007bff; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 0 #0056b3;">
+            ➕ Adicionar
+        </button>
+        <button type="button" onclick="goToReceiptFromCart()" style="flex: 1; background: #28a745; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 0 #1e7e34;">
+            📄 Ir p/ Recibo
+        </button>
+    </div>
+
+    <div id="cartItemsList" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 20px;"></div>
+    
+    <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
+        <button type="button" onclick="abrirModalConfirmacao('carrinho')" style="width: 100%; background: rgba(220, 53, 69, 0.08); color: #dc3545; border: 1px solid #dc3545; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer;">
+            🗑️ Limpar Carrinho
+        </button>
+    </div>
 </div>
     </div>
     </div>
@@ -8832,7 +8857,7 @@ header, footer, .bottom-bar {
         </div>
 
         <div class="button-group" style="margin-top: 20px; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 20px;">
-            <button type="button" onclick="clearMCDForm()" class="import-btn">🗑️ Limpar</button>
+            <button type="button" onclick="abrirModalConfirmacao('geral')" class="import-btn">🗑️ Limpar</button>
             <button type="button" onclick="closeRandomGeneratorModal()" class="load-button">❌ Fechar</button>
         </div>
     </div>
@@ -14894,6 +14919,9 @@ function shareAtrasadosLink(extracao) {
     
     // Abre o WhatsApp em uma nova aba
     window.open(whatsappUrl, '_blank');
+    setTimeout(() => {
+    finalizarELimparTudo();
+}, 500);
 }
 
 function generateByPuxada() {
@@ -16753,38 +16781,59 @@ updateNetworkStatusIA();
 
     function clearMCDForm() {
     // 1. Reseta os inputs do formulário
-    document.querySelector('input[name="generationMode"][value="bichos"]').checked = true;
-    document.querySelector('input[name="generationType"][value="milhar"]').checked = true;
-    document.querySelector('input[name="generationMethod"][value="padrao"]').checked = true;
-
+    const modeBichos = document.querySelector('input[name="generationMode"][value="bichos"]');
+    if(modeBichos) modeBichos.checked = true;
+    
+    const typeMilhar = document.querySelector('input[name="generationType"][value="milhar"]');
+    if(typeMilhar) typeMilhar.checked = true;
+    
+    const methodPadrao = document.querySelector('input[name="generationMethod"][value="padrao"]');
+    if(methodPadrao) methodPadrao.checked = true;
+    
     // SALVA NA MEMÓRIA que voltou pro GP Bichos
-    window.saveData(STORAGE_KEYS.LAST_GEN_MODE, 'bichos');
+    if(typeof window.saveData === 'function') window.saveData(STORAGE_KEYS.LAST_GEN_MODE, 'bichos');
+
+    // 2. Limpa a memória de ciclos
+    cercarBichoPools = {};
+    if(typeof removeData === 'function') removeData('cercarBichoPoolsData');
     
-    // 2. Limpa a memória RAM
-    cercarBichoPools = {}; 
+    // 3. ======== NOVO: ZERA O CARRINHO ========
+    window.mcdCart = []; // Esvazia a memória do carrinho
     
-    // 3. --- NOVO: Limpa o armazenamento persistente ---
-    removeData('cercarBichoPoolsData'); 
+    const cartList = document.getElementById('cartItemsList');
+    if (cartList) cartList.innerHTML = ''; // Limpa a lista da tela
     
-    // Esconde os painéis
+    const cartTotalBadge = document.getElementById('cartTotalBadge');
+    if (cartTotalBadge) cartTotalBadge.innerText = '0 itens'; // Zera o contador
     
-    toggleBichosSelector('bichos');
-    handleMethodChange();
-    updateGeneratorOptions();
+    const cartInput = document.getElementById('cartItemValueInput');
+    if (cartInput) cartInput.value = ''; // Limpa o campo do valor
     
-    // Desmarca bichos
-    selectAllBichos(false);
-    
-    // Reseta quantidade
+    const cartPanel = document.getElementById('mcdCartPanel');
+    if (cartPanel) cartPanel.style.display = 'none'; // Esconde o painel do carrinho
+    // ==========================================
+
+    // 4. Esconde os painéis e atualiza opções
+    if(typeof toggleBichosSelector === 'function') toggleBichosSelector('bichos');
+    if(typeof handleMethodChange === 'function') handleMethodChange();
+    if(typeof updateGeneratorOptions === 'function') updateGeneratorOptions();
+
+    // 5. Desmarca os bichos selecionados
+    if(typeof selectAllBichos === 'function') selectAllBichos(false);
+
+    // 6. Reseta quantidade
     const DEFAULT_QUANTITY_KEY = 'generatorDefaultQuantity';
-    getData(DEFAULT_QUANTITY_KEY).then(savedValue => {
-        document.getElementById('randomQuantityInput').value = savedValue || '100';
-    });
+    if(typeof getData === 'function') {
+        getData(DEFAULT_QUANTITY_KEY).then(savedValue => {
+            const qtyInput = document.getElementById('randomQuantityInput');
+            if(qtyInput) qtyInput.value = savedValue || '100';
+        });
+    }
 
-    // Limpa resultados visuais
-    clearRandomResults(); 
-
-    showToast('Formulário limpo e ciclos reiniciados.', 'info');
+    // 7. Limpa resultados visuais (Milhares geradas na tela)
+    if(typeof clearRandomResults === 'function') clearRandomResults();
+    
+    if(typeof showToast === 'function') showToast('Tudo limpo e zerado!', 'info');
 }
 
     function removeFromIndexedDB(key) {
@@ -24265,6 +24314,34 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     }
 }
 
+window.goToReceiptFromCart = function() {
+    if (!window.mcdCart || window.mcdCart.length === 0) {
+        showToast('Adicione pelo menos um bicho ao carrinho!', 'error');
+        return;
+    }
+
+    // Calcula o valor total de todas as apostas no carrinho
+    const totalGeral = window.mcdCart.reduce((sum, item) => sum + item.valorNum, 0);
+
+    // Formata o valor para o campo de recibo (ex: 1500 vira R$ 15,00)
+    const receiptInput = document.getElementById('receiptValueInput');
+    if (receiptInput) {
+        receiptInput.value = (totalGeral * 100).toString(); 
+        if (typeof formatCurrency === 'function') formatCurrency(receiptInput);
+    }
+
+    // Abre o modal de recibo (o que você já usa no app)
+    if (typeof showReceiptModal === 'function') {
+        showReceiptModal();
+    } else {
+        // Fallback caso o nome da função seja diferente no seu sistema
+        const modal = document.getElementById('receiptModal');
+        if(modal) modal.style.display = 'block';
+    }
+    
+    showToast('Resumo gerado com sucesso!', 'success');
+};
+
 // ========================================================================
 // === MOTOR DE AUTO-PREENCHIMENTO (GERAÇÃO RETROATIVA DA I.A) ===
 // ========================================================================
@@ -24416,10 +24493,9 @@ window.addCurrentGameToCart = function() {
     const valInput = document.getElementById('cartItemValueInput');
     const valorStr = valInput.value.trim();
     const valorNum = parseFloat(valorStr.replace(/\D/g, '')) / 100;
-
+    
     if (isNaN(valorNum) || valorNum <= 0) {
-        showToast('Digite o valor desta aposta antes de guardar.', 'error');
-        valInput.focus();
+        showToast('Escolha o valor da aposta antes de adicionar.', 'error');
         return;
     }
 
@@ -24436,7 +24512,7 @@ window.addCurrentGameToCart = function() {
         return;
     }
 
-    // Resumo compacto: pega as 2 últimas casas para identificar o bicho
+    // Identifica os bichos para o resumo do carrinho
     const bichoContagem = {};
     currentNumbers.forEach(num => {
         const str = String(num).padStart(2, '0');
@@ -24448,30 +24524,24 @@ window.addCurrentGameToCart = function() {
             bichoContagem[key].count++;
         }
     });
+
     const resumo = Object.entries(bichoContagem)
         .map(([g, v]) => `${v.emoji} ${v.nome} (${v.count}x)`)
-        .join(' | ') || 'Aleatórios';;
+        .join(' | ') || 'Aleatórios';
 
     // Salva no carrinho
-    const newItem = {
-        id: Date.now(),
-        valorStr: valorStr,
-        valorNum: valorNum,
-        numeros: currentNumbers,
-        resumo: resumo
-    };
-
+    const newItem = { id: Date.now(), valorStr: valorStr, valorNum: valorNum, numeros: currentNumbers, resumo: resumo };
     window.mcdCart.push(newItem);
-    valInput.value = '';
+
+    // --- LIMPEZA AUTOMÁTICA ---
+    if (typeof window.zerarValorRapido === 'function') {
+        window.zerarValorRapido(); // Zera o contador interno e o visor (R$ 0,00)
+    }
+    
     renderCartItems();
-    
-    // Limpa a tela do gerador para o usuário gerar o próximo sem se confundir
     clearRandomResults();
-    
-    // Força o painel do carrinho a continuar visível
     document.getElementById('mcdCartPanel').style.display = 'block';
-    
-    showToast('Jogo adicionado ao carrinho! Pode gerar o próximo.', 'success');
+    showToast('Adicionado! Pode gerar o próximo bicho.', 'success');
 };
 
 function getBichoEmojiByGrupo(grupo) {
@@ -24536,7 +24606,6 @@ window.renderCartItems = function() {
             <strong>Total: <span style="color:#28a745;">R$ ${totalCart.toFixed(2).replace('.',',')}</span></strong>
         </div>
         <button onclick="showCartReceiptModal()" class="save-button" style="width:100%; margin-top:10px; background-color:#28a745; box-shadow:0 4px 0 #1e7e34; font-size:1rem;">📄 Enviar Recibo do Carrinho</button>
-        <button onclick="limparCarrinho()" style="width:100%; margin-top:6px; background:none; border:1px solid #dc3545; color:#dc3545; padding:8px; border-radius:8px; cursor:pointer; font-size:0.85rem;">🗑️ Limpar Carrinho</button>
     `;
 
     list.innerHTML = html;
@@ -26353,6 +26422,32 @@ window.abrirVendaMultiKit = async function() {
 // BLOCO CORRIGIDO: VENDA DE KITS E MULTI-KITS
 // =========================================================
 
+// ==========================================
+// --- LÓGICA DO TECLADO DE VALOR RÁPIDO ---
+// ==========================================
+window.valorAcumuladoGerador = 0; // Armazena o valor total que está sendo digitado
+
+window.somarValorRapido = function(valor) {
+    window.valorAcumuladoGerador += valor;
+    atualizarVisorValor();
+};
+
+window.zerarValorRapido = function() {
+    window.valorAcumuladoGerador = 0;
+    atualizarVisorValor();
+};
+
+window.atualizarVisorValor = function() {
+    const input = document.getElementById('cartItemValueInput');
+    if (input) {
+        // Formata para 2 casas decimais com vírgula (ex: 15,00)
+        input.value = window.valorAcumuladoGerador.toFixed(2).replace('.', ',');
+    }
+};
+
+// --- CHAME ISTO DENTRO DA SUA FUNÇÃO addCurrentGameToCart ---
+// Após o push(), chame: window.zerarValorRapido();
+
 window.promptForMultiKitBichos = function(todosBichos, valorAtual) {
     return new Promise(resolve => {
         const modal = document.getElementById('customConfirmModal');
@@ -27384,6 +27479,32 @@ window.promptForKitBichos = function(bichosDoKit, numKit, valorAtual, grupoPreSe
     });
 };
 
+function limparCarrinho() {
+    // 1. Esvazia a memória do carrinho
+    window.mcdCart = [];
+    
+    // 2. Limpa a lista visual
+    const cartList = document.getElementById('cartItemsList');
+    if (cartList) cartList.innerHTML = '';
+    
+    // 3. Zera o contador/badge
+    const cartTotalBadge = document.getElementById('cartTotalBadge');
+    if (cartTotalBadge) cartTotalBadge.innerText = '0 itens';
+    
+    // 4. Limpa o campo de valor do carrinho
+    const cartInput = document.getElementById('cartItemValueInput');
+    if (cartInput) cartInput.value = '';
+    
+    // 5. Esconde o painel do carrinho
+    const cartPanel = document.getElementById('mcdCartPanel');
+    if (cartPanel) cartPanel.style.display = 'none';
+    
+    // Aviso na tela
+    if (typeof showToast === 'function') {
+        showToast('Carrinho esvaziado!', 'info');
+    }
+}
+
 // =========================================================================
 // MOTOR DE VENDA CASADA (MULTI-KIT) - VERSÃO DEFINITIVA
 // =========================================================================
@@ -28045,6 +28166,36 @@ async function calcAnalisarLoteria(lot) {
         return { lot, acerto: 0, roadmap: [], scoreComposto: 0, sinais: [], semDados: true };
     }
 }
+
+window.finalizarELimparTudo = function() {
+    // 1. Salva qual era o modo atual (bichos, milhar, etc)
+    const ultimoModo = typeof STORAGE_KEYS !== 'undefined' ? 
+                       localStorage.getItem('lastGenerationMode') : 'bichos';
+
+    // 2. Chama a limpeza do carrinho que já criamos
+    if (typeof limparCarrinho === 'function') {
+        limparCarrinho();
+    }
+
+    // 3. Chama a limpeza geral do formulário
+    if (typeof clearMCDForm === 'function') {
+        clearMCDForm();
+    }
+
+    // 4. Garante que o modo de geração permaneça o mesmo
+    // (Isso evita que ele volte para o padrão 'bichos' se o cara estava em 'milhar')
+    if (ultimoModo) {
+        if (typeof toggleBichosSelector === 'function') toggleBichosSelector(ultimoModo);
+        const radio = document.querySelector(`input[name="generationMode"][value="${ultimoModo}"]`);
+        if (radio) radio.checked = true;
+    }
+
+    // 5. Fecha qualquer modal que esteja aberto (Recibo, etc)
+    const receiptModal = document.getElementById('receiptModal');
+    if (receiptModal) receiptModal.style.display = 'none';
+
+    showToast('Sistema resetado para nova venda!', 'success');
+};
 
 window.calcCarregarAnalise = async function() {
     const corpo = document.getElementById('calcAnaliseCorpo');
@@ -29701,6 +29852,30 @@ async function calcAtualizarLeds() {
     }
 }
 
+// ==========================================
+// --- LÓGICA DOS BOTÕES DE VALOR RÁPIDO ---
+// ==========================================
+window.valorRapidoAtual = 0;
+
+window.somarValorRapido = function(valor) {
+    window.valorRapidoAtual += valor;
+    atualizarVisorValorRapido();
+};
+
+window.zerarValorRapido = function() {
+    window.valorRapidoAtual = 0;
+    atualizarVisorValorRapido();
+};
+
+window.atualizarVisorValorRapido = function() {
+    const input = document.getElementById('cartItemValueInput');
+    if (input) {
+        // Formata o número para ter sempre duas casas decimais com vírgula (ex: 15,00)
+        input.value = window.valorRapidoAtual.toFixed(2).replace('.', ',');
+    }
+};
+// ==========================================
+
 window.calcCopiar = function() {
     const txt = window._calcTextoAtual || '';
     if (!txt) return;
@@ -29726,6 +29901,61 @@ document.addEventListener('DOMContentLoaded', function() {
     const di = document.getElementById('calcDataInput');
     if (di) di.value = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
 });
+
+// ==========================================
+// --- LÓGICA DO MODAL DE CONFIRMAÇÃO ---
+// ==========================================
+window.acaoParaExecutar = null;
+
+window.abrirModalConfirmacao = function(tipo) {
+    const modal = document.getElementById('confirmModal');
+    const texto = document.getElementById('confirmModalText');
+    
+    if (!modal) {
+        console.error("Modal de confirmação não encontrado no HTML!");
+        if(tipo === 'carrinho') limparCarrinho();
+        if(tipo === 'geral') clearMCDForm();
+        return;
+    }
+
+    if (tipo === 'carrinho') {
+        texto.innerText = 'Deseja realmente esvaziar todo o carrinho de vendas?';
+        window.acaoParaExecutar = limparCarrinho;
+    } else if (tipo === 'geral') {
+        texto.innerText = 'Deseja realmente limpar todos os números gerados e zerar o painel?';
+        window.acaoParaExecutar = clearMCDForm;
+    }
+    
+    modal.style.display = 'flex';
+};
+
+window.fecharModalConfirmacao = function() {
+    const modal = document.getElementById('confirmModal');
+    if(modal) modal.style.display = 'none';
+    window.acaoParaExecutar = null;
+};
+
+window.executarAcaoConfirmada = function() {
+    if (typeof window.acaoParaExecutar === 'function') {
+        window.acaoParaExecutar();
+    }
+    window.fecharModalConfirmacao();
+};
+// ==========================================
+
+function fecharModalConfirmacao() {
+    const modal = document.getElementById('confirmModal');
+    if(modal) modal.style.display = 'none';
+    acaoParaExecutar = null;
+}
+
+function executarAcaoConfirmada() {
+    if (typeof acaoParaExecutar === 'function') {
+        acaoParaExecutar();
+    }
+    fecharModalConfirmacao();
+}
+// ==========================================
 
 })();
 // ===== FIM CALCULADORA DE PALPITES =====
@@ -29857,6 +30087,23 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="button-group" style="margin-top: 20px;">
             <button type="button" onclick="closeCustomValueModal()" class="import-btn">Cancelar</button>
             <button type="button" onclick="confirmCustomValueSelection()" class="save-button">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div style="background: white; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <div style="font-size: 40px; margin-bottom: 10px;">⚠️</div>
+        <h3 style="margin-top: 0; margin-bottom: 10px; color: #333;">Tem certeza?</h3>
+        <p id="confirmModalText" style="color: #666; font-size: 0.95rem; margin-bottom: 20px;">Deseja realmente apagar os dados?</p>
+        
+        <div style="display: flex; gap: 10px;">
+            <button type="button" onclick="fecharModalConfirmacao()" style="flex: 1; padding: 12px; border: none; border-radius: 8px; background: #e0e0e0; color: #333; font-weight: bold; cursor: pointer;">
+                Cancelar
+            </button>
+            <button type="button" onclick="executarAcaoConfirmada()" style="flex: 1; padding: 12px; border: none; border-radius: 8px; background: #dc3545; color: white; font-weight: bold; cursor: pointer;">
+                Sim, Limpar
+            </button>
         </div>
     </div>
 </div>
