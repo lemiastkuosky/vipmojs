@@ -621,13 +621,11 @@ body.dark-mode #nomeContainerInModal select {
 
   .modal.active {
     display: flex !important;
-    /* MUDANÇA: Trocar 'center' por 'flex-start' evita que o topo suma */
-    align-items: flex-start; 
+    align-items: center; /* Alinha no centro vertical real */
     justify-content: center;
     visibility: visible;
     opacity: 1;
     pointer-events: auto;
-    /* MUDANÇA: Garante que a tela preta de fundo também possa rolar */
     overflow-y: auto; 
 }
 
@@ -7542,9 +7540,27 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
     pointer-events: auto !important; 
 }
 
-.modal, .modal-overlay {
-    /* Quando o modal estiver oculto/fechado, ele não pode bloquear cliques */
-    pointer-events: none; 
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;       /* Ocupa a largura toda da tela */
+  height: 100vh;      /* Ocupa a altura toda da tela */
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  
+  /* ESTAS LINHAS SÃO AS MAIS IMPORTANTES */
+  justify-content: center; /* Centraliza horizontalmente */
+  align-items: center;     /* Centraliza verticalmente */
+  
+  padding: 15px;           /* Respiro para o celular não colar nas bordas */
+  box-sizing: border-box;
+  overflow-y: hidden;      /* Evita que o fundo role, apenas o modal dentro dele */
+}
+
+.modal-overlay.active {
+  display: flex !important; /* O 'flex' é o que permite o alinhamento ao centro */
 }
 
 .modal.active, .modal.show, .modal[style*="display: block"] {
@@ -8762,43 +8778,59 @@ header, footer, .bottom-bar {
 <button onclick="showReceiptModal(); autoSelecionarExtracaoIA();" style="background-color: #28a745; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer;">📄 Recibo Simples</button>    </div>
 </div>
 
-<div id="mcdCartPanel" style="display: none; margin: 20px auto; padding: 20px; border-radius: 20px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.1); box-sizing: border-box; width: 95%; max-width: 500px; color: #333;">
+<div id="mcdCartPanel" style="
+    display: none; 
+    margin: 20px auto; /* Centraliza no PC e Celular */
+    padding: 15px; 
+    border-radius: 18px; 
+    background: rgba(255, 255, 255, 0.85); 
+    backdrop-filter: blur(12px); 
+    -webkit-backdrop-filter: blur(12px); 
+    border: 1px solid rgba(255, 255, 255, 0.5); 
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
+    box-sizing: border-box; 
+    width: 92%; /* Deixa respiro lateral no celular */
+    max-width: 500px; /* Trava o tamanho no PC */
+    color: #333;
+    position: relative;
+    overflow: hidden;
+">
     
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h4 style="margin:0; font-size:1.1rem; font-weight:bold; color:#222;">🛒 Venda Acumulada</h4>
-        <span id="cartTotalBadge" style="background:#28a745; color:white; padding:4px 12px; border-radius:20px; font-size:0.85rem; font-weight:bold;">0 itens</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; width: 100%;">
+        <h4 style="margin:0; font-size:1rem; font-weight:bold; color:#222;">🛒 Venda Acumulada</h4>
+        <span id="cartTotalBadge" style="background:#28a745; color:white; padding:4px 10px; border-radius:20px; font-size:0.8rem; font-weight:bold;">0 itens</span>
     </div>
 
-    <div style="background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(0,0,0,0.05); border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center;">
-        <span style="font-size: 1rem; color: #666;">Valor do Jogo: </span>
-        <span style="font-size: 1.5rem; font-weight: 800; color: #28a745;">R$ </span>
-        <input type="text" id="cartItemValueInput" value="0,00" readonly style="border: none; background: transparent; font-size: 1.5rem; font-weight: 800; color: #28a745; width: 100px; text-align: left; outline: none; pointer-events: none;">
+    <div style="background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 12px; margin-bottom: 12px; text-align: center; width: 100%;">
+        <span style="font-size: 0.9rem; color: #555;">Valor do Jogo: </span>
+        <span style="font-size: 1.4rem; font-weight: 800; color: #28a745;">R$ </span>
+        <input type="text" id="cartItemValueInput" value="0,00" readonly style="border: none; background: transparent; font-size: 1.4rem; font-weight: 800; color: #28a745; width: 90px; text-align: left; outline: none; pointer-events: none; margin: 0;">
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;">
-        <button type="button" onclick="somarValorRapido(5)" style="background: white; border: 1px solid #ddd; padding: 15px 0; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #333; cursor: pointer;">+5</button>
-        <button type="button" onclick="somarValorRapido(10)" style="background: white; border: 1px solid #ddd; padding: 15px 0; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #333; cursor: pointer;">+10</button>
-        <button type="button" onclick="somarValorRapido(25)" style="background: white; border: 1px solid #ddd; padding: 15px 0; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #333; cursor: pointer;">+25</button>
-        <button type="button" onclick="somarValorRapido(50)" style="background: white; border: 1px solid #ddd; padding: 15px 0; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #333; cursor: pointer;">+50</button>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; width: 100%;">
+        <button type="button" onclick="somarValorRapido(5)" style="background: white; border: 1px solid #ddd; padding: 12px 0; border-radius: 8px; font-weight: bold; font-size: 0.95rem; color: #333; min-width: 0 !important;">+5</button>
+        <button type="button" onclick="somarValorRapido(10)" style="background: white; border: 1px solid #ddd; padding: 12px 0; border-radius: 8px; font-weight: bold; font-size: 0.95rem; color: #333; min-width: 0 !important;">+10</button>
+        <button type="button" onclick="somarValorRapido(25)" style="background: white; border: 1px solid #ddd; padding: 12px 0; border-radius: 8px; font-weight: bold; font-size: 0.95rem; color: #333; min-width: 0 !important;">+25</button>
+        <button type="button" onclick="somarValorRapido(50)" style="background: white; border: 1px solid #ddd; padding: 12px 0; border-radius: 8px; font-weight: bold; font-size: 0.95rem; color: #333; min-width: 0 !important;">+50</button>
     </div>
 
-    <button type="button" onclick="zerarValorRapido()" style="width: 100%; background: #ffc107; border: none; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1rem; color: #000; margin-bottom: 20px; cursor: pointer; box-shadow: 0 4px 0 #d39e00;">
+    <button type="button" onclick="zerarValorRapido()" style="width: 100%; min-width: 0 !important; background: #ffc107; border: none; padding: 14px; border-radius: 10px; font-weight: bold; font-size: 1rem; color: #000; margin-bottom: 18px; box-shadow: 0 3px 0 #d39e00;">
         C (Limpar Valor)
     </button>
 
-    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-        <button type="button" onclick="addCurrentGameToCart()" style="flex: 1; background: #007bff; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 0 #0056b3;">
+    <div style="display: flex; gap: 8px; margin-bottom: 18px; width: 100%; align-items: stretch;">
+        <button type="button" onclick="addCurrentGameToCart()" style="flex: 1; min-width: 0 !important; background: #007bff; color: white; padding: 15px 5px; border-radius: 10px; font-weight: bold; font-size: 0.9rem;">
             ➕ Adicionar
         </button>
-        <button type="button" onclick="goToReceiptFromCart()" style="flex: 1; background: #28a745; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 0 #1e7e34;">
+        <button type="button" onclick="goToReceiptFromCart()" style="flex: 1; min-width: 0 !important; background: #28a745; color: white; padding: 15px 5px; border-radius: 10px; font-weight: bold; font-size: 0.9rem;">
             📄 Ir p/ Recibo
         </button>
     </div>
 
-    <div id="cartItemsList" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 20px;"></div>
+    <div id="cartItemsList" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 18px;"></div>
     
     <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
-        <button type="button" onclick="abrirModalConfirmacao('carrinho')" style="width: 100%; background: rgba(220, 53, 69, 0.08); color: #dc3545; border: 1px solid #dc3545; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer;">
+        <button type="button" onclick="abrirModalConfirmacao('carrinho')" style="width: 100%; min-width: 0 !important; background: rgba(220, 53, 69, 0.08); color: #dc3545; border: 1px solid #dc3545; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.85rem;">
             🗑️ Limpar Carrinho
         </button>
     </div>
@@ -8902,7 +8934,7 @@ header, footer, .bottom-bar {
     </div>
 </div>
 
-<div id="receiptModal" class="modal modal-top" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
+<div id="receiptModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle" style="align-items: center; justify-content: center;">
     <div class="modal-content">
         <span class="close-modal" onclick="closeReceiptModal()" aria-label="Fechar">×</span>
         <h3 id="receiptModalTitle" class="modal-title">📄 Recibo de Pagamento</h3>
@@ -12221,6 +12253,13 @@ async function shareReceiptToWhatsApp() {
         msgFinal += `📲 _VIP - I.A in Real-Time_`;
 
         window.location.assign(`https://wa.me/?text=${encodeURIComponent(msgFinal)}`);
+        
+        // NOVO: Gatilho de limpeza com delay para dar tempo do Zap abrir
+        setTimeout(() => {
+            if (typeof window.finalizarELimparTudo === 'function') {
+                window.finalizarELimparTudo();
+            }
+        }, 1000);
         showToast('Carrinho enviado com sucesso!', 'success');
         // Salva uma única entrada no histórico com todos os jogos do carrinho
         const todosNumerosCart = dadosParaSalvar.flatMap(d => d.grupo.jogos.flatMap(j => j.numeros));
@@ -17757,14 +17796,15 @@ function updateIaLotterySelection(value) {
     if (hiddenSelect) {
         hiddenSelect.value = value;
     }
-    
     console.log(">>> Loteria I.A. alterada para:", value);
+    
+    // 👇 ADICIONE ESTA LINHA PARA SALVAR A ESCOLHA NA MEMÓRIA
+    window.saveData && window.saveData('iaLotteryPreference', value);
+
     if (typeof fetchAndCacheIaPrefixes === 'function') {
         fetchAndCacheIaPrefixes(value);
     }
-
-    // --- ADICIONE ESTA LINHA AQUI ---
-    updateRealTimeRoadmap(value); 
+    updateRealTimeRoadmap(value);
 }
 
 async function filtrarAuditoria(loteriaFiltro, periodoArg = null) {
@@ -21097,7 +21137,7 @@ document.getElementById('mcdCartPanel').style.display = 'block'; // ESSA É A LI
         // --- NOVO: Limpa a seleção da loteria da I.A. e reseta os indicadores (%) ---
         document.querySelectorAll('input[name="iaLotteryOption"]').forEach(r => r.checked = false);
         if (typeof updateIaSuggestionCountsDisplay === 'function') {
-            updateIaSuggestionCountsDisplay(null);
+            //updateIaSuggestionCountsDisplay(null);
         }
 
     } else {
@@ -23105,6 +23145,7 @@ async function updateExtractionTimes() {
 
 async function showReceiptModal() {
     const modal = document.getElementById('receiptModal');
+    if (!modal) return; // Segurança para não dar erro se o modal não existir
     
     // 1. Reseta o radio button oculto para 'padrao' toda vez que o modal é aberto
     const radioPadrao = document.querySelector('input[name="metodoPremio"][value="padrao"]');
@@ -23153,10 +23194,13 @@ async function showReceiptModal() {
     await updateExtractionTimes();
     
     // 5. Gera o texto do recibo inicial
-    generateReceiptText();
+    if (typeof generateReceiptText === 'function') {
+        generateReceiptText();
+    }
 
-    // 6. Mostra o modal
-    document.getElementById('receiptModal').classList.add('active');
+    // 6. MOSTRA O MODAL CENTRALIZADO (MUDANÇA AQUI)
+    modal.style.display = 'flex'; // Força o Flexbox para alinhar ao centro
+    modal.classList.add('active');
 }
 
 async function revealReceiptInputs() {
@@ -28172,48 +28216,33 @@ async function calcAnalisarLoteria(lot) {
     }
 }
 
-// ======================================================
-// RESETA O SISTEMA APÓS VENDA (MANTÉM APENAS O MODO)
-// ======================================================
 window.finalizarELimparTudo = function() {
-    // 1. Identifica qual modo estava ativo (milhar, dezena, etc)
-    // Buscamos o valor do rádio que está marcado
+    // 1. Guarda o modo que o vendedor estava usando
     const modoAtual = document.querySelector('input[name="generationMode"]:checked')?.value || 'bichos';
 
-    // 2. Limpa o Carrinho (Memória e Visual)
-    if (typeof window.limparCarrinho === 'function') {
-        // Chamamos direto a função de limpar sem perguntar "Tem certeza"
-        // Criamos uma versão silenciosa ou executamos os comandos:
-        window.mcdCart = [];
-        const cartList = document.getElementById('cartItemsList');
-        if (cartList) cartList.innerHTML = '';
-        const cartTotalBadge = document.getElementById('cartTotalBadge');
-        if (cartTotalBadge) cartTotalBadge.innerText = '0 itens';
-        const cartPanel = document.getElementById('mcdCartPanel');
-        if (cartPanel) cartPanel.style.display = 'none';
-    }
+    // 2. Limpa Memória e Visual do Carrinho
+    window.mcdCart = [];
+    const cartList = document.getElementById('cartItemsList');
+    if (cartList) cartList.innerHTML = '';
+    const cartBadge = document.getElementById('cartTotalBadge');
+    if (cartBadge) cartBadge.innerText = '0 itens';
+    const cartPanel = document.getElementById('mcdCartPanel');
+    if (cartPanel) cartPanel.style.display = 'none';
 
-    // 3. Limpa os campos de valores
-    if (typeof window.zerarValorRapido === 'function') {
-        window.zerarValorRapido();
-    }
+    // 3. Zera valores e resultados na tela
+    if (typeof window.zerarValorRapido === 'function') window.zerarValorRapido();
+    if (typeof clearRandomResults === 'function') clearRandomResults();
 
-    // 4. Limpa os números gerados que estão na tela
-    if (typeof clearRandomResults === 'function') {
-        clearRandomResults();
-    }
-
-    // 5. Fecha o Modal de Recibo
+    // 4. Fecha o Recibo
     const receiptModal = document.getElementById('receiptModal');
-    if (receiptModal) receiptModal.style.display = 'none';
+    if (receiptModal) receiptModal.classList.remove('active');
 
-    // 6. Garante que o modo de jogo não mudou
-    // (Isso evita que o sistema dê 'reset' para o padrão inicial)
+    // 5. MANTÉM O MODO ATIVO (Se estava em Milhar, continua em Milhar)
     if (typeof toggleBichosSelector === 'function') {
-        toggleBichosSelector(modoAtual);
+        toggleBichosSelector(modoAtual === 'ia_bichos' ? 'bichos' : modoAtual);
     }
-
-    showToast('Pronto para a próxima venda!', 'success');
+    
+    showToast('Tudo limpo para a próxima venda!', 'success');
 };
 
 window.calcCarregarAnalise = async function() {
