@@ -14918,11 +14918,16 @@ function shareAtrasadosLink(extracao) {
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
     
     // Abre o WhatsApp em uma nova aba
+    // ... código anterior do link ...
     window.open(whatsappUrl, '_blank');
+
+    // Aguarda um instante e reseta a tela para a próxima venda
     setTimeout(() => {
-    finalizarELimparTudo();
-}, 500);
-}
+        if (typeof window.finalizarELimparTudo === 'function') {
+            window.finalizarELimparTudo();
+        }
+    }, 800);
+};
 
 function generateByPuxada() {
     const bichoBaseSelect = document.getElementById('puxadaBichoBase');
@@ -28167,34 +28172,48 @@ async function calcAnalisarLoteria(lot) {
     }
 }
 
+// ======================================================
+// RESETA O SISTEMA APÓS VENDA (MANTÉM APENAS O MODO)
+// ======================================================
 window.finalizarELimparTudo = function() {
-    // 1. Salva qual era o modo atual (bichos, milhar, etc)
-    const ultimoModo = typeof STORAGE_KEYS !== 'undefined' ? 
-                       localStorage.getItem('lastGenerationMode') : 'bichos';
+    // 1. Identifica qual modo estava ativo (milhar, dezena, etc)
+    // Buscamos o valor do rádio que está marcado
+    const modoAtual = document.querySelector('input[name="generationMode"]:checked')?.value || 'bichos';
 
-    // 2. Chama a limpeza do carrinho que já criamos
-    if (typeof limparCarrinho === 'function') {
-        limparCarrinho();
+    // 2. Limpa o Carrinho (Memória e Visual)
+    if (typeof window.limparCarrinho === 'function') {
+        // Chamamos direto a função de limpar sem perguntar "Tem certeza"
+        // Criamos uma versão silenciosa ou executamos os comandos:
+        window.mcdCart = [];
+        const cartList = document.getElementById('cartItemsList');
+        if (cartList) cartList.innerHTML = '';
+        const cartTotalBadge = document.getElementById('cartTotalBadge');
+        if (cartTotalBadge) cartTotalBadge.innerText = '0 itens';
+        const cartPanel = document.getElementById('mcdCartPanel');
+        if (cartPanel) cartPanel.style.display = 'none';
     }
 
-    // 3. Chama a limpeza geral do formulário
-    if (typeof clearMCDForm === 'function') {
-        clearMCDForm();
+    // 3. Limpa os campos de valores
+    if (typeof window.zerarValorRapido === 'function') {
+        window.zerarValorRapido();
     }
 
-    // 4. Garante que o modo de geração permaneça o mesmo
-    // (Isso evita que ele volte para o padrão 'bichos' se o cara estava em 'milhar')
-    if (ultimoModo) {
-        if (typeof toggleBichosSelector === 'function') toggleBichosSelector(ultimoModo);
-        const radio = document.querySelector(`input[name="generationMode"][value="${ultimoModo}"]`);
-        if (radio) radio.checked = true;
+    // 4. Limpa os números gerados que estão na tela
+    if (typeof clearRandomResults === 'function') {
+        clearRandomResults();
     }
 
-    // 5. Fecha qualquer modal que esteja aberto (Recibo, etc)
+    // 5. Fecha o Modal de Recibo
     const receiptModal = document.getElementById('receiptModal');
     if (receiptModal) receiptModal.style.display = 'none';
 
-    showToast('Sistema resetado para nova venda!', 'success');
+    // 6. Garante que o modo de jogo não mudou
+    // (Isso evita que o sistema dê 'reset' para o padrão inicial)
+    if (typeof toggleBichosSelector === 'function') {
+        toggleBichosSelector(modoAtual);
+    }
+
+    showToast('Pronto para a próxima venda!', 'success');
 };
 
 window.calcCarregarAnalise = async function() {
