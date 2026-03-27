@@ -1323,7 +1323,7 @@ body.dark-mode #nomeContainerInModal select {
 }
 
 /* Adicione o :not(#receiptModal) nesta lista para evitar conflitos */
-.modal:not(#randomGeneratorModal):not(#receiptModal):not(#checkWinnerModal):not(#consultasModal)... {
+.modal:not(#randomGeneratorModal):not(#receiptModal):not(#checkWinnerModal):not(#consultasModal){
     z-index: 1000;
 }
 
@@ -7962,7 +7962,7 @@ header, footer, .bottom-bar {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V29.15</strong>
+            <strong>V31.15</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -11365,43 +11365,108 @@ if (iaLotterySelect) {
 }
 
 async function fetchLotteryResults(loteria, dataISO = null) {
-    let urlProxy = '';
-    let isAllOrigins = false;
-    
-    // O timestamp na URL já é a melhor arma anti-cache sem causar bloqueios CORS
-    const timestamp = new Date().getTime();
+    console.group(`🔍 DIAGNÓSTICO DE BUSCA: Loteria ${loteria} | Data: ${dataISO || 'Hoje'}`);
 
-    // ROTA VIP EXCLUSIVA PARA LOTERIA NACIONAL (MEGA BICHO)
-    if (loteria === 'ln') {
-        const targetUrl = 'https://megabicho.com/jogo-do-bicho/resultados/ln';
-        urlProxy = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}&_t=${timestamp}`;
-        isAllOrigins = true;
-    } 
-    // ROTA PADRÃO (SEU VERCEL PROXY) PARA AS OUTRAS (RJ, LK, FD, BA)
-    else {
-        urlProxy = `https://vipmojs.vercel.app/api/proxy?loteria=${loteria}&tipo=resultados&_t=${timestamp}`;
-        if (dataISO) {
-            urlProxy += `&data=${dataISO}`;
+    // FUNÇÃO 1: Chamada Direta no Vercel
+    async function buscarDireto(urlAlvo, nomeRota) {
+        console.log(`\n🌐 [${nomeRota}] A tentar chamada direta:`, urlAlvo);
+        try {
+            const res = await fetch(urlAlvo);
+            if (res.ok) {
+                const texto = await res.text();
+                console.log(`✅ [${nomeRota}] Sucesso!`);
+                return texto;
+            } else {
+                console.error(`❌ [${nomeRota}] Erro HTTP:`, res.status);
+            }
+        } catch(e) {
+            console.error(`💥 [${nomeRota}] Falhou a chamada direta:`, e.message);
         }
-    }
-
-    console.log("📡 A buscar resultados em LIVE:", urlProxy);
-
-    try {
-        // Removemos os headers problemáticos. Apenas o "cache: no-store" e o _t já resolvem.
-        const response = await fetch(urlProxy, { cache: "no-store" });
-        if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
-        
-        if (isAllOrigins) {
-            const data = await response.json();
-            return data.contents;
-        } else {
-            return await response.text();
-        }
-    } catch (error) {
-        console.error("❌ Falha na busca:", error);
         return null;
     }
+
+    // FUNÇÃO 2: Roleta de Proxies Atualizada (Furtiva)
+    async function buscarComProxyAlternativo(urlAlvo, nomeRota) {
+        // Servidores novos que costumam driblar melhor o Cloudflare
+        const proxies = [
+            `https://api.codetabs.com/v1/proxy?quest=${urlAlvo}`,
+            `https://corsproxy.org/?${encodeURIComponent(urlAlvo)}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(urlAlvo)}` // Usando o formato RAW em vez de GET
+        ];
+
+        for (let proxy of proxies) {
+            const nomeServidor = proxy.split('/')[2];
+            console.log(`\n🔗 [${nomeRota}] Tentando proxy furtivo:`, nomeServidor);
+            
+            try {
+                // Adicionamos alguns cabeçalhos falsos para fingir que é um navegador real
+                const res = await fetch(proxy, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+                    }
+                });
+
+                if (res.ok) {
+                    const texto = await res.text();
+                    
+                    // Verifica se não devolveu uma página de bloqueio do Cloudflare
+                    if (texto && texto.includes('1º') && !texto.includes('Cloudflare') && !texto.includes('Just a moment...')) {
+                        console.log(`✅ [${nomeRota}] Sucesso total driblando o bloqueio com:`, nomeServidor);
+                        return texto;
+                    } else {
+                        console.warn(`⚠️ [${nomeRota}] O proxy ${nomeServidor} foi pego pelo Cloudflare ou não achou os prêmios.`);
+                    }
+                } else {
+                    console.error(`❌ Erro no proxy ${nomeServidor}: Status`, res.status);
+                }
+            } catch(e) {
+                console.error(`💥 Proxy ${nomeServidor} bloqueado pelo navegador/CORS:`, e.message);
+            }
+        }
+        return null;
+    }
+
+    let html = null;
+
+    // 1. LOTERIA NACIONAL (Mega Bicho) - Vai direto para a roleta
+    if (loteria === 'ln') {
+         html = await buscarComProxyAlternativo('https://megabicho.com/jogo-do-bicho/resultados/ln', 'Mega Bicho (LN)');
+         console.groupEnd();
+         return html;
+    }
+
+    // 2. TENTATIVA 1: O SEU VERCEL
+    let urlVercel = `https://vipmojs.vercel.app/api/proxy?loteria=${loteria}&tipo=resultados`;
+    if (dataISO) urlVercel += `&data=${dataISO}`;
+    
+    html = await buscarDireto(urlVercel, 'Vercel API Direto');
+    
+    if (html && html.includes('1º') && !html.includes('Vercel 404')) {
+         console.groupEnd();
+         return html;
+    }
+
+    console.warn(`⚠️ Vercel demorou muito (Timeout/504). Chamando o Exército de Proxies...`);
+
+    // 3. TENTATIVA 2: ROTA DE EMERGÊNCIA (HOJE NO BICHO VIA ROLETA DE PROXIES)
+    let urlDireta = `https://hojenobicho.com/resultados/${loteria}/`;
+    if (dataISO) {
+        const partes = dataISO.split('-'); // Converte 2026-03-26 para 26-03-2026
+        if (partes.length === 3) {
+            urlDireta = `https://hojenobicho.com/resultados/${loteria}/${partes[2]}-${partes[1]}-${partes[0]}/`;
+        }
+    }
+    
+    html = await buscarComProxyAlternativo(urlDireta, 'Rota Direta Hoje no Bicho');
+    if (html && html.includes('1º')) {
+         console.groupEnd();
+         return html;
+    }
+
+    console.error("🚨 Todas as tentativas e proxies falharam.");
+    console.groupEnd();
+    return null;
 }
 
 const TARGET_PREFIX_COUNT_FOR_100_PERCENT = 25; // Alvo para 100%
@@ -24663,8 +24728,10 @@ window.renderCartItems = function() {
                         </div>
                     </div>
 
-                        <button onclick="removeCartItem(${item.id})" style="background:none; border:none; color:#dc3545; font-size:1.1rem; cursor:pointer; padding:3px 6px; flex-shrink:0;">❌</button>
-                    </div>
+<div style="display:flex; gap: 4px; flex-shrink:0;">
+    <button onclick="editCartItemValue(${item.id})" style="background:none; border:none; color:#007bff; font-size:1.1rem; cursor:pointer; padding:3px 6px;" title="Editar Valor">✏️</button>
+    <button onclick="removeCartItem(${item.id})" style="background:none; border:none; color:#dc3545; font-size:1.1rem; cursor:pointer; padding:3px 6px;" title="Excluir Jogo">❌</button>
+</div>                    </div>
                 `).join('')}
             </div>
         `;
@@ -25935,6 +26002,49 @@ async function gerarKitsVendas() {
         showToast("Erro ao processar estoque.", "error");
     }
 }
+
+window.editCartItemValue = async function(id) {
+    // Encontra o item específico no carrinho
+    const item = window.mcdCart.find(i => i.id === id);
+    if (!item) return;
+
+    // Pede o novo valor usando a janela padrão do sistema
+    const novoValorStr = await showCustomTextPrompt(
+        '✏️ Editar Valor do Jogo',
+        'Digite o novo valor para este jogo (Ex: 15,00):',
+        item.valorStr.replace('R$ ', '').trim()
+    );
+
+    // Valida se o usuário digitou e confirmou algo
+    if (novoValorStr !== null && novoValorStr.trim() !== '') {
+        
+        // Remove pontos e vírgulas para padronizar os cálculos
+        let limpo = novoValorStr.replace(/\D/g, '');
+        
+        // Tratamento inteligente: se o usuário digitou apenas "15" (sem centavos), 
+        // o sistema assume que são R$ 15,00 e adiciona os "00"
+        if (novoValorStr.indexOf(',') === -1 && novoValorStr.indexOf('.') === -1) {
+             limpo = limpo + "00"; 
+        }
+
+        if (!limpo || parseInt(limpo) === 0) {
+             showToast('Valor inválido. Nenhuma alteração feita.', 'error');
+             return;
+        }
+        
+        // Transforma o número limpo em formato financeiro novamente
+        const valorNum = parseFloat(limpo) / 100;
+        const valorFormatado = 'R$ ' + valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        
+        // Atualiza a memória do carrinho
+        item.valorStr = valorFormatado;
+        item.valorNum = valorNum;
+        
+        // Atualiza a tela e o valor total automaticamente
+        renderCartItems();
+        showToast('Valor atualizado com sucesso!', 'success');
+    }
+};
 
 window.resetKitsVendas = async function() {
     let confirmou = false;
