@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analisador de Dezenas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e17;
+  --bg2: #111827;
+  --bg3: #1a2235;
+  --card: #151d2e;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.14);
+  --green: #00e87b;
+  --green2: #00c468;
+  --green-dim: rgba(0,232,123,0.12);
+  --blue: #4f9eff;
+  --blue-dim: rgba(79,158,255,0.12);
+  --amber: #f5a623;
+  --amber-dim: rgba(245,166,35,0.12);
+  --red: #ff5c5c;
+  --red-dim: rgba(255,92,92,0.12);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,0.12);
+  --text: #e8edf5;
+  --text2: #7a8599;
+  --text3: #4a5568;
+  --mono: 'Space Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── HEADER ── */
+.header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-icon {
+  width: 36px; height: 36px;
+  background: var(--green-dim);
+  border: 1px solid rgba(0,232,123,0.3);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.header h1 { font-family: var(--mono); font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--green); }
+.header p { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.header-right { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+/* ── LAYOUT ── */
+.main { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 4px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; margin-bottom: 20px; }
+.tab {
+  flex: 1; padding: 9px; border-radius: 7px; border: none; cursor: pointer;
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  background: transparent; color: var(--text2);
+  transition: all 0.2s;
+}
+.tab.active { background: var(--bg3); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.tab:hover:not(.active) { color: var(--text); }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── SECTION LABEL ── */
+.label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+/* ── TEXTAREA ── */
+.input-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.7;
+}
+textarea::placeholder { color: var(--text3); }
+.hint { font-size: 11px; color: var(--text3); margin-top: 6px; line-height: 1.5; }
+
+/* ── BUTTONS ── */
+.btn {
+  width: 100%; padding: 12px;
+  border: none; border-radius: var(--radius); cursor: pointer;
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.3px; transition: all 0.2s;
+}
+.btn-primary {
+  background: var(--green); color: #000;
+}
+.btn-primary:hover { background: var(--green2); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  background: var(--bg3); color: var(--text2); border: 1px solid var(--border2);
+  margin-top: 8px;
+}
+.btn-secondary:hover { color: var(--text); border-color: var(--border2); background: var(--card); }
+
+/* ── STATS GRID ── */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+}
+.stat-val { font-family: var(--mono); font-size: 24px; font-weight: 700; line-height: 1; }
+.stat-lbl { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.stat-val.green { color: var(--green); }
+.stat-val.blue { color: var(--blue); }
+.stat-val.amber { color: var(--amber); }
+.stat-val.red { color: var(--red); }
+
+/* ── DEZENA MAP ── */
+.map-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.dz-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+}
+.dz {
+  aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.15s;
+  cursor: default;
+}
+.dz.saiu { background: rgba(255,255,255,0.03); color: var(--text3); }
+.dz.livre { background: rgba(0,232,123,0.1); color: var(--green); border: 1px solid rgba(0,232,123,0.2); }
+.dz.sel { background: var(--green); color: #000; }
+.dz.match { background: var(--amber); color: #000; animation: pulse 0.6s ease; }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+.map-legend {
+  display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap;
+}
+.leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+.leg-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+/* ── PROB BAR ── */
+.prob-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.prob-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.prob-label { font-size: 12px; color: var(--text2); }
+.prob-pct { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--green); }
+.prob-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.prob-fill { height: 100%; background: linear-gradient(90deg, var(--green2), var(--green)); border-radius: 3px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+.prob-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.6; }
+.prob-note b { color: var(--text2); }
+
+/* ── JOGOS ── */
+.jogos-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.jogos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+.jcard {
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid;
+}
+.jcard-1 { background: rgba(0,232,123,0.06); border-color: rgba(0,232,123,0.2); }
+.jcard-2 { background: rgba(79,158,255,0.06); border-color: rgba(79,158,255,0.2); }
+.jcard-3 { background: rgba(245,166,35,0.06); border-color: rgba(245,166,35,0.2); }
+.jcard-4 { background: rgba(167,139,250,0.06); border-color: rgba(167,139,250,0.2); }
+.jcard-title {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.jcard-1 .jcard-title { color: var(--green); }
+.jcard-2 .jcard-title { color: var(--blue); }
+.jcard-3 .jcard-title { color: var(--amber); }
+.jcard-4 .jcard-title { color: var(--purple); }
+.jcard-dzs { display: flex; flex-wrap: wrap; gap: 3px; }
+.jdz {
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 700;
+  padding: 3px 6px; border-radius: 4px;
+}
+.jcard-1 .jdz { background: rgba(0,232,123,0.12); color: var(--green); }
+.jcard-2 .jdz { background: rgba(79,158,255,0.12); color: var(--blue); }
+.jcard-3 .jdz { background: rgba(245,166,35,0.12); color: var(--amber); }
+.jcard-4 .jdz { background: rgba(167,139,250,0.12); color: var(--purple); }
+.jdz.hit { background: var(--amber) !important; color: #000 !important; }
+.jcard-score {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  font-size: 11px; color: var(--text2);
+}
+.prize-badge {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  padding: 3px 10px; border-radius: 5px;
+}
+.prize-none { background: rgba(255,255,255,0.05); color: var(--text3); }
+.prize-3 { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,232,123,0.3); }
+.prize-4 { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(79,158,255,0.3); }
+.prize-5 { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,166,35,0.4); animation: glow 1s ease infinite alternate; }
+@keyframes glow { from{box-shadow:0 0 5px rgba(245,166,35,0.3)} to{box-shadow:0 0 15px rgba(245,166,35,0.6)} }
+
+/* ── AI STATUS ── */
+.ai-loading {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px; background: var(--bg2);
+  border-radius: 8px; font-size: 12px; color: var(--text2);
+}
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(0,232,123,0.2);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ai-strategy {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(0,232,123,0.05);
+  border: 1px solid rgba(0,232,123,0.15);
+  border-left: 3px solid var(--green);
+  border-radius: 0 8px 8px 0;
+  font-size: 12px; color: var(--text2); line-height: 1.6;
+}
+.ai-strategy b { color: var(--green); }
+
+/* ── VERIFICADOR ── */
+.result-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+.rcard {
+  border-radius: 8px; padding: 14px;
+  background: var(--bg2); border: 1px solid var(--border);
+}
+.rcard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.rcard-title { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text2); }
+.acertos-count { font-family: var(--mono); font-size: 20px; font-weight: 700; }
+.acertos-0 { color: var(--text3); }
+.acertos-1, .acertos-2 { color: var(--text2); }
+.acertos-3 { color: var(--green); }
+.acertos-4 { color: var(--blue); }
+.acertos-5 { color: var(--amber); }
+.sorteio-dzs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.sdz {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(245,166,35,0.15);
+  border: 2px solid var(--amber);
+  color: var(--amber);
+}
+.total-ganho {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; text-align: center; margin-top: 12px;
+}
+.total-val { font-family: var(--mono); font-size: 28px; font-weight: 700; }
+.total-val.positivo { color: var(--green); }
+.total-val.zero { color: var(--text3); }
+
+/* ── EMPTY STATE ── */
+.empty {
+  text-align: center; padding: 32px 20px;
+  color: var(--text3); font-size: 12px; line-height: 1.8;
+}
+.empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .jogos-grid { grid-template-columns: 1fr; }
+  .result-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🎯</div>
+  <div>
+    <h1>Dezena Master</h1>
+    <p>Analisador inteligente para jogo do bicho</p>
+  </div>
+  <div class="header-right" id="clock"></div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('analise')">📊 Análise + Jogos IA</button>
+    <button class="tab" onclick="switchTab('verificar')">✅ Verificar Resultado</button>
+  </div>
+
+  <!-- ═══ TAB ANÁLISE ═══ -->
+  <div id="tab-analise" class="panel active">
+
+    <div class="label">Cole os resultados dos horários anteriores</div>
+    <div class="input-box">
+      <textarea id="inp-resultados" placeholder="Cole aqui os resultados — ex:&#10;2140-10  5322-06  0653-14  3528-07  7747-12&#10;8055-14  7032-08  3334-09  2327-07  9983-21&#10;&#10;Aceita qualquer formato com números de 4 dígitos"></textarea>
+      <div class="hint">💡 Quanto mais horários passados você colocar, mais precisos ficam os jogos. Ideal para o último horário do dia.</div>
+    </div>
+    <button class="btn btn-primary" id="btn-analisar" onclick="analisar()">🔍 Analisar e Gerar Jogos com IA</button>
+    <button class="btn btn-secondary" onclick="limpar()">🗑 Limpar tudo</button>
+
+    <div id="resultado-analise" style="display:none; margin-top:20px">
+
+      <div class="label" style="margin-top:0">Resumo</div>
+      <div class="stats" id="stats-row"></div>
+
+      <div class="label">Mapa de dezenas (00–99)</div>
+      <div class="map-wrap">
+        <div class="dz-grid" id="dz-map"></div>
+        <div class="map-legend">
+          <div class="leg"><div class="leg-dot" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08)"></div>já saiu</div>
+          <div class="leg"><div class="leg-dot" style="background:rgba(0,232,123,0.1);border:1px solid rgba(0,232,123,0.2)"></div>disponível</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>selecionada pela IA</div>
+        </div>
+      </div>
+
+      <div class="label">Probabilidade com 20 dezenas por jogo</div>
+      <div class="prob-wrap" id="prob-wrap"></div>
+
+      <div class="label">Jogos gerados pela IA</div>
+      <div class="jogos-wrap" id="jogos-wrap">
+        <div class="ai-loading" id="ai-loading">
+          <div class="spinner"></div>
+          <span>Gerando jogos inteligentes com IA...</span>
+        </div>
+        <div id="jogos-out"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ TAB VERIFICAR ═══ -->
+  <div id="tab-verificar" class="panel">
+    <div class="label">Cole o resultado sorteado</div>
+    <div class="input-box">
+      <textarea id="inp-sorteio" placeholder="Cole o resultado do sorteio — ex:&#10;6470-18  2998-25  4439-10  9013-04  2251-13&#10;&#10;Só precisa dos 5 primeiros prêmios (milhar)" style="min-height:60px"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="verificar()">🎲 Verificar Acertos</button>
+
+    <div id="resultado-verificar" style="margin-top:20px"></div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let saidasGlobal = [];
+let livresGlobal = [];
+let jogosGlobal = [];
+
+// ── CLOCK ──
+function tick() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleDateString('pt-BR') + ' ' +
+    now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+}
+tick(); setInterval(tick, 1000);
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['analise','verificar'][i] === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ── EXTRACT DEZENAS ──
+function extrairDezenas(txt) {
+  const nums = txt.match(/\b\d{4}\b/g) || [];
+  return [...new Set(nums.map(n => parseInt(n.slice(-2))))];
+}
+
+// ── COMBINATORICS ──
+function comb(n, k) {
+  if (k > n || k < 0) return 0;
+  if (k === 0 || k === n) return 1;
+  let r = 1;
+  for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+  return r;
+}
+
+function calcProb(total, sel, drawn = 5) {
+  const tot = comb(total, drawn);
+  if (tot === 0) return 0;
+  let p = 0;
+  for (let k = 3; k <= Math.min(drawn, sel); k++) {
+    const rem = drawn - k;
+    if (rem <= total - sel) p += comb(sel, k) * comb(total - sel, rem) / tot;
+  }
+  return Math.min(p * 100, 100);
+}
+
+// ── RENDER MAP ──
+function renderMap(saidas, selecionadas = new Set()) {
+  const el = document.getElementById('dz-map');
+  el.innerHTML = '';
+  for (let i = 0; i < 100; i++) {
+    const d = document.createElement('div');
+    const s = String(i).padStart(2, '0');
+    if (saidas.includes(i)) d.className = 'dz saiu';
+    else if (selecionadas.has(i)) d.className = 'dz sel';
+    else d.className = 'dz livre';
+    d.textContent = s;
+    d.id = 'dz-' + i;
+    el.appendChild(d);
+  }
+}
+
+// ── RENDER PROB ──
+function renderProb(livres) {
+  const p1 = calcProb(livres, 20);
+  const p4 = (1 - Math.pow(1 - p1 / 100, 4)) * 100;
+  document.getElementById('prob-wrap').innerHTML = `
+    <div class="prob-row">
+      <span class="prob-label">Chance de trinca+ por jogo (20 dez)</span>
+      <span class="prob-pct">${p1.toFixed(1)}%</span>
+    </div>
+    <div class="prob-bar"><div class="prob-fill" id="pbar" style="width:0%"></div></div>
+    <p class="prob-note" style="margin-top:10px">
+      Com 4 jogos, chance combinada: <b style="color:var(--blue)">${p4.toFixed(0)}%</b> de ao menos 1 trinca &nbsp;|&nbsp;
+      Pool restante: <b>${livres} dezenas</b> &nbsp;|&nbsp;
+      Cobertura por jogo: <b>${(20/livres*100).toFixed(0)}%</b>
+    </p>`;
+  setTimeout(() => {
+    const b = document.getElementById('pbar');
+    if (b) b.style.width = Math.min(p1, 100) + '%';
+  }, 100);
+}
+
+// ── RENDER JOGOS ──
+function renderJogos(jogos, hits = null) {
+  if (!jogos || !jogos.length) return;
+  const nomes = ['Jogo 1','Jogo 2','Jogo 3','Jogo 4'];
+  const cls = ['jcard-1','jcard-2','jcard-3','jcard-4'];
+  const prizes = {0:'—',1:'—',2:'—',3:'R$ 8,00',4:'R$ 80,00',5:'R$ 800,00'};
+  const pcls = {0:'prize-none',1:'prize-none',2:'prize-none',3:'prize-3',4:'prize-4',5:'prize-5'};
+
+  let html = '<div class="jogos-grid">';
+  jogos.forEach((j, i) => {
+    const dzs = [...new Set(j.dezenas)].sort((a, b) => a - b);
+    const acertos = hits ? dzs.filter(d => hits.includes(d)).length : null;
+    html += `<div class="jcard ${cls[i]}">
+      <div class="jcard-title">${nomes[i]} &nbsp;·&nbsp; ${dzs.length} dezenas</div>
+      <div class="jcard-dzs">${dzs.map(d => {
+        const isHit = hits && hits.includes(d);
+        return `<span class="jdz${isHit ? ' hit' : ''}">${String(d).padStart(2,'0')}</span>`;
+      }).join('')}</div>
+      ${hits !== null ? `
+      <div class="jcard-score">
+        <span>${acertos} acerto${acertos !== 1 ? 's' : ''}</span>
+        <span class="prize-badge ${pcls[acertos]}">${prizes[acertos]}</span>
+      </div>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+
+  if (hits) {
+    const totalPrize = jogos.reduce((sum, j) => {
+      const dzs = [...new Set(j.dezenas)];
+      const ac = dzs.filter(d => hits.includes(d)).length;
+      return sum + (ac === 3 ? 8 : ac === 4 ? 80 : ac === 5 ? 800 : 0);
+    }, 0);
+    const lucro = totalPrize - 4;
+    html += `<div class="total-ganho">
+      <div class="stat-lbl" style="margin-bottom:6px">TOTAL GANHO</div>
+      <div class="total-val ${totalPrize > 0 ? 'positivo' : 'zero'}">R$ ${totalPrize.toFixed(2).replace('.',',')}</div>
+      <div class="stat-lbl" style="margin-top:4px">${totalPrize > 0 ? (lucro >= 0 ? '▲ Lucro de R$ '+lucro.toFixed(2).replace('.',',') : '▼ Prejuízo de R$ '+Math.abs(lucro).toFixed(2).replace('.',',')) : 'Nenhum prêmio desta vez — tente no próximo horário!'}</div>
+    </div>`;
+  }
+
+  return html;
+}
+
+// ── ANALISAR ──
+async function analisar() {
+  const txt = document.getElementById('inp-resultados').value.trim();
+  if (!txt) { alert('Cole os resultados antes de analisar!'); return; }
+
+  const btn = document.getElementById('btn-analisar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analisando...';
+
+  saidasGlobal = extrairDezenas(txt);
+  livresGlobal = [];
+  for (let i = 0; i < 100; i++) if (!saidasGlobal.includes(i)) livresGlobal.push(i);
+
+  // show panel
+  document.getElementById('resultado-analise').style.display = 'block';
+  document.getElementById('resultado-analise').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // stats
+  const p1 = calcProb(livresGlobal.length, 20);
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat"><div class="stat-val red">${saidasGlobal.length}</div><div class="stat-lbl">Já saíram</div></div>
+    <div class="stat"><div class="stat-val green">${livresGlobal.length}</div><div class="stat-lbl">Disponíveis</div></div>
+    <div class="stat"><div class="stat-val blue">${p1.toFixed(0)}%</div><div class="stat-lbl">Chance trinca/jogo</div></div>
+    <div class="stat"><div class="stat-val amber">R$ 4</div><div class="stat-lbl">Investimento</div></div>`;
+
+  // map
+  renderMap(saidasGlobal);
+  renderProb(livresGlobal.length);
+
+  // AI jogos
+  document.getElementById('ai-loading').style.display = 'flex';
+  document.getElementById('jogos-out').innerHTML = '';
+
+  try {
+    const prompt = `Você é um especialista em análise de jogo do bicho.
+
+Dezenas JÁ SAÍDAS hoje (NÃO usar): ${saidasGlobal.sort((a,b)=>a-b).map(n=>String(n).padStart(2,'0')).join(', ')}
+
+Dezenas DISPONÍVEIS (${livresGlobal.length} total): ${livresGlobal.map(n=>String(n).padStart(2,'0')).join(', ')}
+
+Crie EXATAMENTE 4 jogos de 20 dezenas cada usando SOMENTE as disponíveis acima.
+
+Regras obrigatórias:
+1. Cada jogo: EXATAMENTE 20 dezenas únicas dentro do jogo
+2. Use APENAS dezenas da lista disponível
+3. Distribua cada jogo por TODAS as faixas (00s, 10s, 20s, 30s, 40s, 50s, 60s, 70s, 80s, 90s) — no máximo 3 dezenas por faixa por jogo
+4. Sobreposição estratégica: dezenas-âncora podem aparecer em 2 jogos para criar rede de segurança
+5. Os 4 jogos juntos devem cobrir o máximo das dezenas disponíveis
+
+Responda SOMENTE com JSON válido, sem markdown:
+{"jogos":[{"nome":"Jogo 1","dezenas":[0,6,10,14,21,25,32,38,41,47,52,58,61,67,72,76,80,85,91,96]},{"nome":"Jogo 2","dezenas":[...]},{"nome":"Jogo 3","dezenas":[...]},{"nome":"Jogo 4","dezenas":[...]}],"estrategia":"Frase breve explicando a lógica"}`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const raw = data.content.map(i => i.text || '').join('').replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(raw);
+    jogosGlobal = parsed.jogos;
+
+    // update map with selections
+    const allSel = new Set(parsed.jogos.flatMap(j => j.dezenas));
+    renderMap(saidasGlobal, allSel);
+
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('jogos-out').innerHTML =
+      renderJogos(parsed.jogos) +
+      (parsed.estrategia ? `<div class="ai-strategy"><b>Estratégia IA:</b> ${parsed.estrategia}</div>` : '');
+
+  } catch (e) {
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('jogos-out').innerHTML =
+      `<div style="color:var(--red);font-size:12px;padding:10px">Erro ao gerar jogos: ${e.message}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 Analisar e Gerar Jogos com IA';
+}
+
+// ── VERIFICAR ──
+function verificar() {
+  if (!jogosGlobal.length) {
+    document.getElementById('resultado-verificar').innerHTML =
+      `<div class="empty"><div class="empty-icon">📊</div>Primeiro faça a análise na aba <b>Análise + Jogos IA</b> para gerar os jogos.</div>`;
+    return;
+  }
+
+  const txt = document.getElementById('inp-sorteio').value.trim();
+  if (!txt) { alert('Cole o resultado do sorteio!'); return; }
+
+  const sorteadas = extrairDezenas(txt).slice(0, 5);
+  if (sorteadas.length < 3) { alert('Não encontrei dezenas suficientes. Verifique o formato.'); return; }
+
+  const out = document.getElementById('resultado-verificar');
+
+  // sorteio display
+  let html = `<div class="label">Dezenas sorteadas</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      ${sorteadas.map(d => `<div class="sdz">${String(d).padStart(2,'0')}</div>`).join('')}
+    </div>
+    <div class="label">Resultado por jogo</div>`;
+
+  html += renderJogos(jogosGlobal, sorteadas);
+  out.innerHTML = html;
+  out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── LIMPAR ──
+function limpar() {
+  document.getElementById('inp-resultados').value = '';
+  document.getElementById('resultado-analise').style.display = 'none';
+  saidasGlobal = []; livresGlobal = []; jogosGlobal = [];
+}
+</script>
+</body>
+</html>
