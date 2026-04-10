@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Helix Cash - Gire e Ganhe Dinheiro Real</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <meta name="theme-color" content="#0a0a1a">
+  <style>
+    /* Isso garante que a logo apareça e não quebre o layout */
+    .logo {
+      display: flex;
+      align-items: center;
+      height: 40px;
+    }
+    .logo img {
+      height: 100%; /* Ajusta a altura ao header */
+      width: auto;  /* Mantém a proporção da logo */
+      display: block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Estilo do Botão Admin */
+    .admin-badge-btn {
+      background: rgba(124, 77, 255, 0.2);
+      border: 1px solid rgba(124, 77, 255, 0.5);
+      color: #b388ff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      text-decoration: none;
+      display: none; /* Escondido por padrão */
+      align-items: center;
+      gap: 4px;
+    }
+    .admin-badge-btn:active { transform: scale(0.95); }
+
+    /* --- NOVOS ESTILOS HEADER E MENU LATERAL --- */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 5px 5px 5px 15px;
+      border-radius: 50px;
+      border: 1px solid rgba(124, 77, 255, 0.1);
+      cursor: pointer;
+    }
+    .balance-display { text-align: right; }
+    .balance-display small { display: block; font-size: 9px; color: #a0a0c0; text-transform: uppercase; font-weight: 700; }
+    .balance-display strong { color: #00e676; font-size: 14px; font-weight: 900; }
+
+    .side-menu {
+      position: fixed; top: 0; right: -300px; width: 300px; height: 100%;
+      background: #12122a; z-index: 10000; transition: 0.3s;
+      box-shadow: -5px 0 20px rgba(0,0,0,0.5); padding: 25px;
+      display: flex; flex-direction: column;
+    }
+    .side-menu.active { right: 0; }
+    .menu-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); z-index: 9999; display: none; backdrop-filter: blur(4px);
+    }
+    .menu-overlay.active { display: block; }
+
+    .side-menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .close-btn { background: none; border: none; color: #fff; font-size: 30px; cursor: pointer; }
+    
+    .user-info-large { text-align: center; margin-bottom: 30px; }
+    .avatar-big { 
+        width: 80px; height: 80px; background: var(--primary); border-radius: 50%; 
+        margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;
+        font-size: 32px; font-weight: 900; color: #fff; border: 4px solid rgba(255,255,255,0.1);
+    }
+    .user-info-large h4 { font-size: 18px; margin-bottom: 5px; }
+    .user-info-large p { font-size: 13px; color: #a0a0c0; }
+
+    .menu-items { background: rgba(255,255,255,0.03); border-radius: 16px; padding: 10px; margin-bottom: 20px; }
+    .menu-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .menu-item:last-child { border: none; }
+    .menu-item span { font-size: 13px; color: #a0a0c0; }
+    
+    .btn-admin-link {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: linear-gradient(135deg, #7c4dff, #b388ff);
+      color: white; padding: 16px; border-radius: 12px; font-weight: 800; text-decoration: none;
+      font-size: 14px; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .btn-logout-menu {
+      width: 100%; margin-top: auto; background: rgba(255, 23, 68, 0.1);
+      color: #ff1744; border: 1px solid rgba(255, 23, 68, 0.2); padding: 14px; border-radius: 12px;
+      font-weight: 700; cursor: pointer;
+    }
+
+    /* Estilos específicos para o link de indicação e botões sociais */
+    .referral-link-box {
+      background: var(--bg-dark);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 12px 15px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--primary);
+      font-family: monospace;
+    }
+    .share-btn {
+      flex: 1;
+      height: 45px;
+      border: none;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: white;
+      transition: transform 0.2s;
+    }
+    .share-btn:active { transform: scale(0.95); }
+    .share-btn.whatsapp { background: #25D366; }
+    .share-btn.facebook { background: #1877F2; }
+    .share-btn.telegram { background: #0088cc; }
+    .share-btn.twitter { background: #1DA1F2; }
+    .share-btn svg { width: 22px; height: 22px; fill: currentColor; }
+
+    /* --- CORREÇÕES MOBILE --- */
+    @media (max-width: 768px) {
+      /* 1. Tela Inicial: Valores (Stats Grid) - Mantido Perfeito */
+      .stats-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+      }
+      .stat-item:first-child {
+        grid-column: span 2 !important; 
+      }
+      .stat-value {
+        font-size: clamp(1.3rem, 5vw, 1.8rem) !important; 
+        white-space: normal !important;
+        word-wrap: break-word !important;
+      }
+
+      /* 2. Cartões de Autenticação (Login, Cadastro) - Mantidos Largos */
+      .auth-page {
+        padding: 15px !important;
+        box-sizing: border-box !important;
+      }
+      .auth-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 25px 20px !important;
+        box-sizing: border-box !important;
+        border-radius: 16px !important;
+      }
+
+      /* 3. Inputs de Digitação - Mantidos Grandes */
+      .form-input {
+        width: 100% !important;
+        height: 50px !important;
+        padding: 0 15px !important;
+        font-size: 16px !important; 
+        box-sizing: border-box !important;
+        border-radius: 10px !important;
+      }
+      .form-group label {
+        font-size: 14px !important;
+        margin-bottom: 8px !important;
+      }
+      .btn-block {
+        height: 50px !important;
+        font-size: 16px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+
+      /* 4. CORREÇÃO NOVA: Ajuste Exclusivo do Painel */
+      .panel-page {
+        padding: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .panel-header {
+        padding: 15px 15px 5px 15px !important;
+      }
+      .panel-sub {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 15px 15px 90px 15px !important;
+        box-sizing: border-box !important;
+      }
+      .header-right {
+        padding: 4px 4px 4px 12px !important;
+        gap: 8px !important;
+      }
+      .balance-display strong {
+        font-size: 14px !important;
+      }
+      .user-avatar {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 16px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sideMenu" class="side-menu">
+  <div class="side-menu-header">
+    <h3 style="font-weight: 900; color: var(--primary);">MINHA CONTA</h3>
+    <button onclick="toggleMenu()" class="close-btn">&times;</button>
+  </div>
+  <div class="side-menu-content" style="flex: 1; display: flex; flex-direction: column;">
+    <div class="user-info-large">
+      <div class="avatar-big" id="menuAvatar">U</div>
+      <h4 id="menuUserName">Carregando...</h4>
+      <p id="menuUserEmail">...</p>
+    </div>
+    
+    <div class="menu-items">
+      <div class="menu-item">
+        <span>Saldo Real</span>
+        <strong style="color: #00e676;">R$ <span id="menuBalance">0,00</span></strong>
+      </div>
+      <div class="menu-item">
+        <span>Bônus</span>
+        <strong style="color: #b388ff;">R$ <span id="menuBonus">0,00</span></strong>
+      </div>
+    </div>
+
+    <div id="adminMenuArea" style="display:none;">
+      <a href="/admin.html" class="btn btn-admin-link">⚙️ Painel Admin</a>
+    </div>
+
+    <button onclick="logout()" class="btn btn-logout-menu">SAIR DA CONTA</button>
+  </div>
+</div>
+<div id="menuOverlay" class="menu-overlay" onclick="toggleMenu()"></div>
+
+<div id="page-landing" class="page active">
+  <header class="header">
+    <div class="logo">
+      <img src="https://helix-cash.vercel.app/public/images/helixcash.png" alt="" style="height: 50px;">
+    </div>
+    <div class="header-actions">
+      <a href="#login" class="btn btn-secondary btn-sm">Entrar</a>
+      <a href="#cadastro" class="btn btn-accent btn-sm">Cadastrar</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge"><span class="dot"></span> <span id="stat-online">12.847</span> jogadores online agora</div>
+      <h1>GIRE E<br><span class="gradient-text">GANHE</span></h1>
+      <p>Jogue Helix Jump e transforme suas habilidades em dinheiro real. Passe plataformas para ganhar prêmios incríveis!</p>
+      <div class="hero-cta">
+        <button onclick="document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-game').classList.remove('hidden'); window.startHelixDemo();" class="btn btn-primary btn-block" style="max-width:320px; margin:0 auto; border:none; cursor:pointer;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          JOGAR GRÁTIS
+        </button>
+      </div>
+      <a href="#login" class="hero-link">Já tenho conta →</a>
+      <div class="hero-tags">
+        <span class="hero-tag"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Saque via PIX</span>
+        <span class="hero-tag"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Depósito mín. R$10</span>
+        <span class="hero-tag"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Resultado na hora</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-item"><div class="stat-value" id="stat-users">12.847</div><div class="stat-label">Jogadores online</div></div>
+      <div class="stat-item"><div class="stat-value" id="stat-paid">R$ 248.420,00</div><div class="stat-label">Total pago hoje</div></div>
+      <div class="stat-item"><div class="stat-value" id="stat-maxwin">R$ 9.700,00</div><div class="stat-label">Maior ganho do dia</div></div>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--bg-dark)">
+    <h2 class="section-title">Como funciona?</h2>
+    <p class="section-subtitle">Simples, rápido e transparente</p>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-number">01</div>
+        <div class="step-icon">💰</div>
+        <h3>Defina sua aposta</h3>
+        <p>Escolha de R$1,00 a R$100,00 e decida o quanto quer arriscar por partida.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">02</div>
+        <div class="step-icon">🌀</div>
+        <h3>Jogue Helix Jump</h3>
+        <p>Desvie das plataformas pretas e alcance o maior número de plataformas possível.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">03</div>
+        <div class="step-icon">📈</div>
+        <h3>Ganhe até 7x</h3>
+        <p>Alcance a meta e receba até 7x o valor apostado no seu saldo. Saque via PIX na hora.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--bg-card)">
+    <h2 class="section-title">O que dizem nossos jogadores</h2>
+    <p class="section-subtitle">Resultados reais de jogadores reais</p>
+    <div class="testimonials">
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">"Comecei com R$10 e em 3 partidas já tinha R$70. O jogo é justo e o PIX cai na hora. Recomendo muito!"</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:var(--gradient-2)">A</div>
+          <div><div class="testimonial-name">Ana P.</div><div class="testimonial-role">Jogadora desde 2024</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">"Sou viciado em Helix Jump de qualquer forma, agora ainda ganho dinheiro jogando. Já saquei mais de R$300 esse mês!"</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:var(--gradient-1)">C</div>
+          <div><div class="testimonial-name">Carlos M.</div><div class="testimonial-role">Jogador profissional</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">"Sistema de indicação é incrível. Já ganhei R$20 só indicando amigos e nem precisei jogar. Transparente e confiável."</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:linear-gradient(135deg,#ffc107,#ff9800)">L</div>
+          <div><div class="testimonial-name">Lucas R.</div><div class="testimonial-role">4 amigos indicados</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <h2>Pronto para girar e ganhar?</h2>
+    <p>Crie sua conta grátis, deposite a partir de R$10 e comece a ganhar agora.</p>
+    <a href="#cadastro" class="btn btn-primary" style="background:#000;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.3)">CRIAR CONTA GRÁTIS</a>
+  </section>
+
+  <footer class="footer">
+    <p>© 2024 Helix Cash. Todos os direitos reservados.</p>
+    <div class="age-badge">🔞 18+ Jogue com responsabilidade</div>
+  </footer>
+</div>
+
+<div id="page-register" class="page">
+  <div class="auth-page">
+    <a href="#" class="logo" style="margin-bottom:32px">
+      <img src="https://helix-cash.vercel.app/public/images/helixcash.png" alt="" style="height: 50px;">
+    </a>
+    <div class="auth-card">
+      <h2>Criar Conta</h2>
+      <p class="subtitle">Comece a jogar e ganhar agora</p>
+      <form id="registerForm">
+        <div class="form-group">
+          <label>Nome completo</label>
+          <input type="text" class="form-input" name="name" placeholder="Seu nome" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" class="form-input" name="email" placeholder="seu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>Telefone</label>
+          <input type="tel" class="form-input" name="phone" placeholder="(00) 00000-0000">
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" class="form-input" name="password" placeholder="Mínimo 6 caracteres" required minlength="6">
+        </div>
+        <div id="registerError" class="form-error hidden"></div>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:20px">CRIAR CONTA</button>
+      </form>
+      <div class="form-link">Já tem conta? <a href="#login">Entrar</a></div>
+    </div>
+  </div>
+</div>
+
+<div id="page-login" class="page">
+  <div class="auth-page">
+    <a href="#" class="logo" style="margin-bottom:32px">
+      <img src="https://helix-cash.vercel.app/public/images/helixcash.png" alt="" style="height: 50px;">
+    </a>
+    <div class="auth-card">
+      <h2>Entrar</h2>
+      <p class="subtitle">Bem-vindo de volta!</p>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" class="form-input" name="email" placeholder="seu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" class="form-input" name="password" placeholder="Sua senha" required>
+        </div>
+        <div id="loginError" class="form-error hidden"></div>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:20px">ENTRAR</button>
+      </form>
+      <div class="form-link">Não tem conta? <a href="#cadastro">Cadastre-se</a></div>
+    </div>
+  </div>
+</div>
+
+<div id="page-panel" class="page">
+  <div class="panel-page">
+    <div class="panel-header">
+      <div class="logo">
+        <img src="https://helix-cash.vercel.app/public/images/helixcash.png" alt="" style="height: 50px;">
+      </div>
+      
+      <div class="header-right" onclick="toggleMenu()">
+        <div class="balance-display">
+          <small>Saldo</small>
+          <strong>R$ <span id="userBalance">0,00</span></strong>
+        </div>
+        <div class="user-avatar" id="userAvatar">U</div>
+      </div>
+    </div>
+
+    <div id="panel-game" class="panel-sub active">
+      
+      <div style="position: relative; overflow: hidden; background: linear-gradient(135deg, #1d0738 0%, #5c2068 100%); padding: 30px 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('data:image/svg+xml,%3Csvg width=\'30\' height=\'30\' viewBox=\'0 0 30 30\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M14 14H10v2h4v4h2v-4h4v-2h-4v-4h-2v4z\' fill=\'rgba(255,255,255,0.04)\'/%3E%3C/svg%3E'); z-index: 1;"></div>
+        
+        <div style="position: relative; z-index: 2;">
+          <div style="font-size: 11px; font-weight: 700; color: #a0a0c0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">SEU SALDO DISPONÍVEL</div>
+          <div id="bannerBalanceDisplay" style="font-size: 46px; font-weight: 900; color: #ffffff; letter-spacing: -1px; margin-bottom: 24px; text-shadow: 0 4px 10px rgba(0,0,0,0.3);">R$ 0,00</div>
+          
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button onclick="document.querySelector('[data-panel=\'deposit\']').click()" style="flex: 1; min-width: 100px; background: #00d26a; color: #fff; border: none; padding: 12px 10px; border-radius: 50px; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 210, 106, 0.3); font-family: 'Inter', sans-serif;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+              Depositar
+            </button>
+            
+            <button onclick="document.querySelector('[data-panel=\'withdraw\']').click()" style="flex: 1; min-width: 100px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 12px 10px; border-radius: 50px; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              Sacar
+            </button>
+
+            <button onclick="document.querySelector('[data-panel=\'referral\']').click()" style="flex: 1; min-width: 100px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 12px 10px; border-radius: 50px; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Indicar
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="info-box">
+        <span class="icon">ℹ️</span>
+        <span>Quanto maior a meta de plataformas, maior o seu prêmio!</span>
+      </div>
+
+      <div class="game-card">
+        <div class="game-card-header" style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div style="flex: 1;">
+            <h2 style="margin: 0; white-space: nowrap; font-size: clamp(16px, 4.5vw, 22px);">INICIAR PARTIDA</h2>
+            <p style="font-size:12px; color:var(--text-secondary); margin: 4px 0 0 0; line-height: 1.3;">Passe plataformas, acumule dinheiro e escolha quando resgatar!</p>
+          </div>
+          <div class="online-badge" style="flex-shrink: 0; white-space: nowrap; align-self: flex-start;"><span class="dot"></span> <span id="panelOnline">12.847</span> online</div>
+        </div>
+
+        <div class="meta-tabs" style="display: flex; justify-content: center; gap: 12px; margin: 15px 0;">
+          <div class="meta-tab" style="display: flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="6"></circle>
+              <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+            Meta = 1x
+          </div>
+          <div class="meta-tab" style="display: flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 1 0 0-8c-2 0-4 1.33-6 4Z"/>
+            </svg>
+            Plataformas
+          </div>
+        </div>
+
+        <div class="bet-label">VALOR DE ENTRADA</div>
+        <div class="bet-options">
+          <button class="bet-option" data-amount="1">R$1</button>
+          <button class="bet-option" data-amount="2">R$2</button>
+          <button class="bet-option" data-amount="5">R$5</button>
+          <button class="bet-option" data-amount="10">R$10</button>
+          <button class="bet-option" data-amount="20">R$20</button>
+        </div>
+
+        <div class="bet-display">
+          <span class="currency">R$</span>
+          <span class="amount" id="betAmount">0,00</span>
+        </div>
+
+        <div class="game-stats">
+          <div><div class="game-stat-label">META DE GANHO</div><div class="game-stat-value" id="metaGanho">R$ 0,00</div></div>
+          <div><div class="game-stat-label">POR PLATAFORMA</div><div class="game-stat-value" id="perPlatform">—</div></div>
+          <div><div class="game-stat-label">PLAT. P/ META</div><div class="game-stat-value" id="platMeta">—</div></div>
+        </div>
+
+        <button id="btnPlay" class="btn btn-primary btn-block" style="font-size:18px;padding:16px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          JOGAR AGORA
+        </button>
+      </div>
+    </div>
+
+    <div id="panel-deposit" class="panel-sub hidden">
+      <div class="panel-content">
+        <h2>Depositar</h2>
+        <p style="color:var(--text-secondary);margin-bottom:20px">Escolha o valor e pague via PIX</p>
+
+        <div class="amount-grid">
+          <button class="amount-option" data-dep="10">R$ 10</button>
+          <button class="amount-option" data-dep="20">R$ 20</button>
+          <button class="amount-option" data-dep="50">R$ 50</button>
+          <button class="amount-option" data-dep="100">R$ 100</button>
+          <button class="amount-option" data-dep="200">R$ 200</button>
+          <button class="amount-option" data-dep="500">R$ 500</button>
+        </div>
+
+        <div class="form-group">
+          <label>Ou digite o valor</label>
+          <input type="number" class="form-input" id="depositAmount" placeholder="Ex: 50" min="1" step="1">
+        </div>
+
+        <div class="form-group">
+          <label>CPF Pagador (Apenas números ou com máscara)</label>
+          <input type="text" class="form-input" id="depositCpf" placeholder="Ex: 000.000.000-00" maxlength="14">
+        </div>
+
+        <button id="btnDeposit" class="btn btn-primary btn-block">GERAR PIX</button>
+        
+        </div>
+    </div>
+
+    <div id="panel-withdraw" class="panel-sub hidden">
+      <div class="panel-content">
+        <h2>Sacar</h2>
+        <p style="color:var(--text-secondary);margin-bottom:20px">Receba via PIX na hora</p>
+
+        <div class="referral-card" style="margin-bottom:20px">
+          <div style="text-align:center">
+            <div style="font-size:12px;color:var(--text-secondary)">Saldo disponível</div>
+            <div style="font-size:32px;font-weight:900;color:var(--primary)" id="withdrawBalance">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Valor do saque</label>
+          <input type="number" class="form-input" id="withdrawAmount" placeholder="Mínimo R$ 30,00" min="30">
+        </div>
+        <div class="form-group">
+          <label>Tipo de chave PIX</label>
+          <select class="form-input" id="pixType">
+            <option value="cpf">CPF</option>
+            <option value="phone">Telefone</option>
+            <option value="email">Email</option>
+            <option value="random">Chave aleatória</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Chave PIX</label>
+          <input type="text" class="form-input" id="pixKey" placeholder="Sua chave PIX">
+        </div>
+        <button id="btnWithdraw" class="btn btn-primary btn-block">SOLICITAR SAQUE</button>
+      </div>
+    </div>
+
+    <div id="panel-referral" class="panel-sub hidden">
+      <div class="panel-content">
+        <h2 style="font-size: 22px; margin-bottom: 8px;">Convide um amigo e ganhe R$ 20,00</h2>
+        <p style="color:var(--text-secondary);margin-bottom:24px;font-size:14px;line-height:1.5;">Compartilhe seu código com seus amigos e você e eles ganharão R$ 20,00 de bônus.</p>
+
+        <div class="referral-card" style="margin-bottom: 20px;">
+          <p style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:10px;">Seu link de indicação</p>
+          
+          <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <div class="referral-link-box" id="referralLinkDisplay" style="margin-bottom: 0; flex: 1; display: flex; align-items: center; font-size: 13px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: rgba(0,0,0,0.2);">Gerando link...</div>
+            <button class="btn btn-primary" onclick="copyReferralLink()" style="padding: 0 16px; border-radius: 10px; flex-shrink: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
+
+          <div class="social-share-buttons" style="display: flex; gap: 10px; margin-bottom: 24px;">
+            <button class="share-btn whatsapp" onclick="shareSocial('whatsapp')">
+              <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </button>
+            <button class="share-btn facebook" onclick="shareSocial('facebook')">
+              <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </button>
+            <button class="share-btn telegram" onclick="shareSocial('telegram')">
+              <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+            </button>
+            <button class="share-btn twitter" onclick="shareSocial('twitter')">
+              <svg viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
+            </button>
+          </div>
+
+          <p style="font-size:14px; font-weight:700; margin-bottom:12px;">Suas Estatísticas</p>
+          <div class="referral-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="ref-stat" style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
+              <div class="value" id="refCount" style="font-size: 24px; font-weight: 900; color: #fff; margin-bottom: 4px;">0</div>
+              <div class="label" style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Indicações</div>
+            </div>
+            <div class="ref-stat" style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
+              <div class="value" id="refEarned" style="font-size: 24px; font-weight: 900; color: #00e676; margin-bottom: 4px;">R$ 0,00</div>
+              <div class="label" style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Ganhos</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="referral-card">
+          <p style="font-weight:700; margin-bottom:20px; font-size: 16px;">Como Funciona?</p>
+          
+          <div class="how-it-works-steps" style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="step-item" style="display: flex; align-items: flex-start; gap: 15px;">
+              <div class="step-icon-small" style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(124, 77, 255, 0.4);">1</div>
+              <div>
+                <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #fff; font-weight: 700;">Compartilhe seu link</h4>
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">Copie seu link de indicação ou use os botões para enviar direto aos seus amigos.</p>
+              </div>
+            </div>
+            
+            <div class="step-item" style="display: flex; align-items: flex-start; gap: 15px;">
+              <div class="step-icon-small" style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(124, 77, 255, 0.4);">2</div>
+              <div>
+                <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #fff; font-weight: 700;">Seu amigo deposita R$ 50</h4>
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">Ele cria uma conta pelo seu link e faz um primeiro depósito de <b>no mínimo R$ 50,00</b>.</p>
+              </div>
+            </div>
+            
+            <div class="step-item" style="display: flex; align-items: flex-start; gap: 15px;">
+              <div class="step-icon-small" style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(124, 77, 255, 0.4);">3</div>
+              <div>
+                <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #fff; font-weight: 700;">O bônus está na conta!</h4>
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">O bônus de R$ 20,00 cai na hora para vocês jogarem e multiplicarem os lucros!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="referralList" style="margin-top:16px"></div>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-panel="game">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8l4 4-4 4M8 12h8"/></svg>
+        Jogar
+      </button>
+      <button class="nav-item" data-panel="deposit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+        Depositar
+      </button>
+      <button class="nav-item" data-panel="withdraw">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        Sacar
+      </button>
+      <button class="nav-item" data-panel="referral">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Indicar
+      </button>
+      <button class="nav-item" onclick="logout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </button>
+    </nav>
+  </div>
+</div>
+
+<div id="page-game" class="game-screen hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:#FFE4EE;overflow:hidden;">
+  <canvas id="gameCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;display:block;touch-action:none;"></canvas>
+
+  <div id="gameOverOverlay" class="game-over-overlay hidden">
+    <div class="game-result">
+      <div id="resultIcon" style="font-size:48px;margin-bottom:8px;">&#128165;</div>
+      <h2 id="resultTitle">Fim de Jogo!</h2>
+      <div class="prize" id="resultPrize">R$ 0,00</div>
+      <div class="details" id="resultDetails"></div>
+      <button class="btn btn-primary" onclick="closeGame()" style="margin-top:16px;width:100%;max-width:280px;">VOLTAR AO PAINEL</button>
+    </div>
+  </div>
+</div>
+
+<div id="pixModal" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);padding:20px;">
+  <div style="background:var(--bg-card);border:1px solid rgba(124,77,255,0.2);border-radius:16px;padding:24px;width:100%;max-width:400px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+    
+    <h3 style="font-size:22px;font-weight:900;margin-bottom:8px;color:var(--primary);">PIX Gerado!</h3>
+    <p style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">Escaneie o QR Code ou copie a chave abaixo.</p>
+    
+    <div style="background:#fff;padding:12px;border-radius:16px;width:200px;height:200px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+      <img id="pixQrImage" style="display:none;width:100%;height:100%;object-fit:contain;" alt="QR Code PIX">
+      <div id="qrLoading" style="color:#000;font-size:12px;font-weight:bold;">Gerando QR Code...</div>
+    </div>
+    
+    <div style="text-align:left;margin-bottom:8px;">
+      <label style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);font-weight:700;">Código Copia e Cola</label>
+    </div>
+    <div id="pixCode" style="word-break:break-all;font-size:12px;background:var(--bg-dark);padding:15px;border-radius:12px;margin-bottom:20px;color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);max-height:80px;overflow-y:auto;text-align:left;line-height:1.4;font-family:monospace;">Aguardando código...</div>
+    
+    <button class="btn btn-primary btn-block" onclick="navigator.clipboard.writeText(document.getElementById('pixCode').textContent.trim());showToast('Código PIX copiado com sucesso!')" style="margin-bottom:12px;display:block;width:100%;">
+      COPIAR CÓDIGO PIX
+    </button>
+    <button class="btn btn-secondary btn-block" onclick="document.getElementById('pixModal').classList.add('hidden')" style="display:block;width:100%;">
+      Fechar e Aguardar Pagamento
+    </button>
+    
+    <p style="font-size:12px;color:var(--text-secondary);margin-top:16px; display:flex; align-items:center; justify-content:center; gap:6px;">
+      <span class="loader" style="width:12px;height:12px;border-width:2px; border-style:solid; border-color:var(--primary) transparent var(--primary) transparent; border-radius:50%; animation:spin 1s linear infinite;"></span> Aguardando seu pagamento...
+    </p>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/js/game.js"></script>
+<script src="/js/demo.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  // Função para copiar o link de indicação
+  function copyReferralLink() {
+    const link = document.getElementById('referralLinkDisplay').textContent;
+    if(link && link !== "Gerando link...") {
+      navigator.clipboard.writeText(link);
+      showToast('Link de convite copiado!');
+    }
+  }
+
+  // Função para compartilhar nas redes sociais
+  function shareSocial(platform) {
+    const link = document.getElementById('referralLinkDisplay').textContent;
+    const text = "Vem jogar no Helix Cash e ganhe R$ 20,00 de bônus! " + link;
+    
+    let url = '';
+    if(platform === 'whatsapp') {
+        url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    } else if(platform === 'facebook') {
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
+    } else if(platform === 'telegram') {
+        url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Vem jogar no Helix Cash e ganhe R$ 20 de bônus!")}`;
+    } else if(platform === 'twitter') {
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    }
+    
+    if(url) window.open(url, '_blank');
+  }
+
+  // Função para abrir/fechar o menu lateral
+  function toggleMenu() {
+    const menu = document.getElementById('sideMenu');
+    const overlay = document.getElementById('menuOverlay');
+    if(!menu || !overlay) return;
+    
+    const isActive = menu.classList.toggle('active');
+    overlay.classList.toggle('active');
+    
+    if(isActive) {
+      const user = JSON.parse(localStorage.getItem('hc_user') || '{}');
+      document.getElementById('menuUserName').textContent = user.name || 'Usuário';
+      document.getElementById('menuUserEmail').textContent = user.email || '';
+      document.getElementById('menuBalance').textContent = parseFloat(user.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      document.getElementById('menuBonus').textContent = parseFloat(user.bonus_balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      document.getElementById('menuAvatar').textContent = (user.name || 'U').charAt(0).toUpperCase();
+      
+      if(user.is_admin) {
+        document.getElementById('adminMenuArea').style.display = 'block';
+      }
+    }
+  }
+
+  // Script para mostrar o botão Admin apenas para administradores
+  function checkAdmin() {
+    const user = JSON.parse(localStorage.getItem('hc_user') || '{}');
+    const adminBtn = document.getElementById('btnAdminPanel');
+    if (user && user.is_admin) {
+      if(adminBtn) adminBtn.style.display = 'none';
+    }
+  }
+  
+  window.addEventListener('load', checkAdmin);
+  window.addEventListener('storage', checkAdmin);
+
+  // 1. Corrigir o botão "Sair" para deslogar instantaneamente e ir para a tela de Login
+  window.logout = function() {
+    localStorage.removeItem('hc_token');
+    localStorage.removeItem('hc_user');
+    
+    // Fecha o menu lateral caso tenha sido clicado por lá
+    document.getElementById('sideMenu').classList.remove('active');
+    document.getElementById('menuOverlay').classList.remove('active');
+    
+    // Muda a hash para a tela de login e recarrega para limpar todo o estado da memória
+    window.location.hash = '#login';
+    window.location.reload();
+  };
+
+  // 2. Controlar os Status Falsos Altos
+  function updateFakeStats() {
+    const online = Math.floor(Math.random() * (100000 - 10000 + 1)) + 10000;
+    const paid = Math.floor(Math.random() * (850000 - 350000 + 1)) + 350000;
+    const maxwin = Math.floor(Math.random() * (15000 - 8000 + 1)) + 8000;
+
+    if(document.getElementById('stat-online')) document.getElementById('stat-online').textContent = online.toLocaleString('pt-BR');
+    if(document.getElementById('stat-users')) document.getElementById('stat-users').textContent = online.toLocaleString('pt-BR');
+    if(document.getElementById('panelOnline')) document.getElementById('panelOnline').textContent = online.toLocaleString('pt-BR');
+    
+    if(document.getElementById('stat-paid')) document.getElementById('stat-paid').textContent = 'R$ ' + paid.toLocaleString('pt-BR') + ',00';
+    if(document.getElementById('stat-maxwin')) document.getElementById('stat-maxwin').textContent = 'R$ ' + maxwin.toLocaleString('pt-BR') + ',00';
+  }
+
+  window.loadPublicStats = updateFakeStats;
+  window.loadStats = updateFakeStats;
+
+  setTimeout(updateFakeStats, 500);
+  setInterval(updateFakeStats, 5000);
+
+  // Sincronizar o banner central com o saldo atual do header
+  const headerBalance = document.getElementById('userBalance');
+  const bannerBalance = document.getElementById('bannerBalanceDisplay');
+
+  if(headerBalance && bannerBalance) {
+      bannerBalance.textContent = 'R$ ' + headerBalance.textContent;
+      
+      const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+              bannerBalance.textContent = 'R$ ' + headerBalance.textContent;
+          });
+      });
+      
+      observer.observe(headerBalance, { childList: true, characterData: true, subtree: true });
+  }
+</script>
+</body>
+</html>
