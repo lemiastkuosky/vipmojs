@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conferidor de Loteria</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+        h2 { color: #4CAF50; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .box {
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #aaa; }
+        input[type="text"], textarea {
+            width: 100%;
+            background-color: #2c2c2c;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        textarea { resize: vertical; height: 60px; font-family: monospace; }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        button:hover { background-color: #45a049; }
+        .resultado-item {
+            background-color: #2a2a2a;
+            padding: 12px;
+            margin-top: 10px;
+            border-left: 5px solid #444;
+            border-radius: 4px;
+        }
+        .acertos-0, .acertos-1 { border-color: #555; opacity: 0.7; }
+        .acertos-2 { border-color: #2196F3; } /* Duque */
+        .acertos-3 { border-color: #FFC107; color: #FFC107; font-weight: bold; } /* Terno */
+        .acertos-4 { border-color: #FF5722; color: #FF5722; font-weight: bold; font-size: 1.1em;} /* Quadra */
+        .acertos-5 { border-color: #E91E63; color: #E91E63; font-weight: bold; font-size: 1.2em;} /* Quina */
+        .numero-acertado {
+            background-color: #4CAF50;
+            color: #121212;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🎯 Simulador e Conferidor de Jogos</h2>
+
+    <div class="box">
+        <label for="resultado">Dezenas Sorteadas (separe por espaço ou traço):</label>
+        <input type="text" id="resultado" placeholder="Ex: 40 22 53 28 47">
+    </div>
+
+    <div class="box">
+        <label>Jogo 01</label>
+        <textarea id="jogo1">00 06 10 14 21 29 35 42 44 50 56 62 69 74 77 80 86 93 98 09</textarea>
+        
+        <label style="margin-top: 10px;">Jogo 02</label>
+        <textarea id="jogo2">01 07 10 15 20 24 26 36 43 51 59 63 70 75 81 87 90 94 99 00</textarea>
+
+        <label style="margin-top: 10px;">Jogo 03</label>
+        <textarea id="jogo3">04 08 17 18 25 37 41 44 50 52 60 64 67 72 76 80 82 90 95 99</textarea>
+
+        <label style="margin-top: 10px;">Jogo 04</label>
+        <textarea id="jogo4">05 20 25 38 45 49 54 60 61 65 70 73 77 79 84 85 92 96 97 00</textarea>
+    </div>
+
+    <button onclick="conferir()">Conferir Resultados</button>
+
+    <div id="saida" style="margin-top: 20px;"></div>
+
+    <script>
+        function extrairDezenas(texto) {
+            return texto.split(/[\s,\-]+/).filter(n => n.trim() !== '').map(n => n.padStart(2, '0'));
+        }
+
+        function conferir() {
+            const inputResultado = document.getElementById('resultado').value;
+            if (!inputResultado) {
+                alert("Por favor, insira as dezenas sorteadas.");
+                return;
+            }
+
+            const sorteadas = extrairDezenas(inputResultado);
+            let htmlSaida = `<h3>Análise do Sorteio:</h3>`;
+
+            for (let i = 1; i <= 4; i++) {
+                const jogoTexto = document.getElementById(`jogo${i}`).value;
+                const dezenasJogo = extrairDezenas(jogoTexto);
+                
+                let acertos = dezenasJogo.filter(dezena => sorteadas.includes(dezena));
+                let qtdAcertos = acertos.length;
+                
+                let classeAcerto = `acertos-${qtdAcertos}`;
+                let nomePremio = "";
+                
+                if (qtdAcertos === 2) nomePremio = " (Duque)";
+                if (qtdAcertos === 3) nomePremio = " 🏆 (TERNO)";
+                if (qtdAcertos === 4) nomePremio = " 🔥 (QUADRA)";
+                if (qtdAcertos === 5) nomePremio = " 💎 (QUINA)";
+
+                let acertosFormatados = acertos.map(n => `<span class="numero-acertado">${n}</span>`).join('');
+
+                htmlSaida += `
+                    <div class="resultado-item ${classeAcerto}">
+                        <strong>Jogo ${String(i).padStart(2, '0')}:</strong> ${qtdAcertos} acerto(s)${nomePremio}<br>
+                        <span style="font-size: 0.9em; color: #ccc;">Dezenas capturadas: ${acertosFormatados || 'Nenhuma'}</span>
+                    </div>
+                `;
+            }
+
+            document.getElementById('saida').innerHTML = htmlSaida;
+        }
+    </script>
+</body>
+</html>
