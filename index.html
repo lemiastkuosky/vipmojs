@@ -21118,30 +21118,48 @@ async function generateSelectedNumbers() {
                     const dezenasPool = bicho.dezenas;
                     typeKeys.forEach(typeKey => {
                         const set = new Set();
-                        let attempts = 0;
-                        const maxAttempts = qtd * 100; 
 
-                        while(set.size < qtd && attempts < maxAttempts) {
-                            attempts++;
-                            let num = '';
-                            const d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
-                            
-                            if (typeKey === 'milhar') {
-                                // Cruz do dia inclina o prefixo sem depender da I.A.
-                                const diaHoje = new Date().getDate() % 10;
-                                const cruzDigitos = [diaHoje, (diaHoje + 3) % 10, (diaHoje + 6) % 10, (diaHoje + 9) % 10];
-                                const usarCruz = getSecureRandomInt(100) < 40; // 40% de chance de usar dígito da cruz
-                                const cruzDigito = cruzDigitos[getSecureRandomInt(cruzDigitos.length)];
-                                const prefixo = usarCruz
-                                    ? String(cruzDigito) + String(getSecureRandomInt(10))
-                                    : String(getSecureRandomInt(100)).padStart(2, '0');
-                                num = prefixo + d;
+                       if (typeKey === 'milhar') {
+                            // === 25 PREFIXOS × 4 DEZENAS ===
+                            // Sorteia 25 prefixos únicos e gera todas as dezenas do bicho
+                            // para cada um — se acertar o prefixo, a dezena certa está garantida.
+                            const numPrefixos = Math.floor(qtd / dezenasPool.length);
+
+                            // Monta e embaralha os 100 prefixos possíveis
+                            const todosPrefixos = Array.from({length: 100}, (_, i) => String(i).padStart(2, '0'));
+                            for (let i = todosPrefixos.length - 1; i > 0; i--) {
+                                const j = getSecureRandomInt(i + 1);
+                                [todosPrefixos[i], todosPrefixos[j]] = [todosPrefixos[j], todosPrefixos[i]];
                             }
-                            else if (typeKey === 'centena') num = String(getSecureRandomInt(10)) + d;
-                            else if (typeKey === 'dezena') num = d;
 
-                            if (applyAdvancedFilters(num, typeKey)) set.add(num);
+                            // Pega os primeiros numPrefixos que gerem combinações válidas
+                            let count = 0;
+                            for (const p of todosPrefixos) {
+                                if (count >= numPrefixos) break;
+                                let algumValido = false;
+                                for (const dezena of dezenasPool) {
+                                    const n = p + dezena;
+                                    if (applyAdvancedFilters(n, 'milhar')) {
+                                        set.add(n);
+                                        algumValido = true;
+                                    }
+                                }
+                                if (algumValido) count++;
+                            }
+                        
+                        } else {
+                            let attempts = 0;
+                            const maxAttempts = qtd * 100;
+                            while (set.size < qtd && attempts < maxAttempts) {
+                                attempts++;
+                                const d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+                                let num = '';
+                                if (typeKey === 'centena') num = String(getSecureRandomInt(10)) + d;
+                                else if (typeKey === 'dezena') num = d;
+                                if (applyAdvancedFilters(num, typeKey)) set.add(num);
+                            }
                         }
+
                         const resultadoDoBicho = Array.from(set);
                         shuffleArray(resultadoDoBicho);
                         finalResults[typeKey].push(...resultadoDoBicho);
@@ -24389,47 +24407,84 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
         `;
 
         let listHTML = '';
-        let zapText = `📊 *RANKING DE ATRASADOS - ${nomeLoteria.toUpperCase()}* 📊\n\n*VIP I.A REAL TIME*\n━━━━━━━━━━━━━━━\n\n`;
+        // === 1. MONTA O TEXTO PARA O WHATSAPP (zapText) ===
+let zapText = `📊 *RANKING DE ATRASADOS - ${nomeLoteria.toUpperCase()}* 📊\n\n*VIP I.A REAL TIME*\n━━━━━━━━━━━━━━━\n\n`;
 
-        // 3. Renderiza os ATRASADOS
-        listaAtrasados.forEach((bicho, index) => {
-            const pos = index + 1;
-            let rowBg = pos <= 5 ? 'rgba(220, 53, 69, 0.05)' : 'transparent';
-            let borderSide = pos <= 5 ? '4px solid #dc3545' : 'none';
+zapText += `🎯 *Top 5 (Mais chances de sair)*\n`;
+listaAtrasados.slice(0, 5).forEach((bicho, index) => {
+    zapText += `${index + 1}º ${bicho.emoji} ${bicho.nome} ➔ ${bicho.dias} dias atrás\n`;
+});
 
-            listHTML += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: ${rowBg}; border-left: ${borderSide}; margin-bottom: 2px;">
-                    <span style="font-weight: 900; width: 25px; font-size: 0.8rem; color: #999;">${pos}º</span>
-                    <span style="font-size: 1.5rem; width: 40px; text-align: center;">${bicho.emoji}</span>
-                    <span style="flex-grow: 1; text-align: left; font-weight: 700; font-size: 0.95rem; margin-left: 10px;">${bicho.nome.toUpperCase()}</span>
-                    <span style="font-weight: 800; text-align: right; min-width: 60px; color: #444;">${bicho.dias}d</span>
-                </div>`;
-            
-            zapText += `*${pos}º* ${bicho.emoji} *${bicho.nome.toUpperCase()}* ➔ _${bicho.dias} dias atrás_\n`;
-        });
+if (listaAtrasados.length > 5) {
+    zapText += `\n⚠️ *Top 10 (Chances médias)*\n`;
+    listaAtrasados.slice(5, 10).forEach((bicho, index) => {
+        zapText += `${index + 6}º ${bicho.emoji} ${bicho.nome} ➔ ${bicho.dias} dias atrás\n`;
+    });
+}
 
-        // 4. Seção SAÍRAM RECENTEMENTE (Onde os "0 dias" aparecem)
-        if (listaRecentes.length > 0) {
-            listHTML += `
-                <div style="background: #e8f5e9; color: #2e7d32; font-weight: 900; text-align: center; padding: 10px; margin: 15px 0 5px 0; border-radius: 8px; font-size: 0.85rem; letter-spacing: 1px;">
-                    ✅ SAÍRAM RECENTEMENTE / HOJE
-                </div>`;
-            
-            zapText += `\n━━━━━━━━━━━━━━━\n✅ *SAÍRAM RECENTEMENTE:*\n`;
+if (listaAtrasados.length > 10) {
+    zapText += `\n🔵 *Demais Atrasados*\n`;
+    listaAtrasados.slice(10).forEach((bicho, index) => {
+        zapText += `${index + 11}º ${bicho.emoji} ${bicho.nome} ➔ ${bicho.dias} dias atrás\n`;
+    });
+}
 
-            listaRecentes.forEach(bicho => {
-                listHTML += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: rgba(40, 167, 69, 0.03); margin-bottom: 2px;">
-                        <span style="font-size: 1.5rem; width: 40px; text-align: center;">${bicho.emoji}</span>
-                        <span style="flex-grow: 1; text-align: left; font-weight: 700; font-size: 0.95rem; margin-left: 10px;">${bicho.nome.toUpperCase()}</span>
-                        <span style="font-weight: 900; text-align: right; color: #2e7d32;">HOJE</span>
-                    </div>`;
-                
-                zapText += `${bicho.emoji} *${bicho.nome.toUpperCase()}* (Hoje)\n`;
-            });
-        }
+zapText += `\n━━━━━━━━━━━━━━━\n✅ *SAÍRAM RECENTEMENTE:*\n`;
+if (listaRecentes && listaRecentes.length > 0) {
+    listaRecentes.forEach(bicho => {
+        zapText += `${bicho.emoji} ${bicho.nome} (Hoje)\n`;
+    });
+} else {
+    zapText += `Nenhum registrado para hoje ainda.\n`;
+}
 
-        zapText += `\n📲 _VIP - I.A in Real-Time_`;
+zapText += `\n💡 *COMO USAR ESTA ANÁLISE:* \n`;
+zapText += `Foque suas estratégias e palpites nos animais do *Top 5*. A nossa I.A identifica que eles romperam o ciclo normal de ausência e possuem as maiores probabilidades matemáticas de retorno a curto prazo. Invista com inteligência!\n\n`;
+zapText += `📲 _VIP - I.A in Real-Time_`;
+
+
+// === 2. MONTA A LISTA PARA A TELA DO APLICATIVO (listHTML) ===
+
+
+listHTML += `<div style="font-weight: 800; margin-top: 15px; margin-bottom: 5px; color: #e11d48; font-size: 1.1rem;">🎯 Top 5 (Mais chances)</div>`;
+listaAtrasados.slice(0, 5).forEach((bicho, index) => {
+    listHTML += `<div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+        <span><b>${index + 1}º</b> ${bicho.emoji} ${bicho.nome}</span> 
+        <span style="color: #64748b; font-size: 0.9em; background: #f8fafc; padding: 2px 6px; border-radius: 4px;">${bicho.dias} dias atrás</span>
+    </div>`;
+});
+
+if (listaAtrasados.length > 5) {
+    listHTML += `<div style="font-weight: 800; margin-top: 20px; margin-bottom: 5px; color: #d97706; font-size: 1.1rem;">⚠️ Top 10 (Chances médias)</div>`;
+    listaAtrasados.slice(5, 10).forEach((bicho, index) => {
+        listHTML += `<div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+            <span><b>${index + 6}º</b> ${bicho.emoji} ${bicho.nome}</span> 
+            <span style="color: #64748b; font-size: 0.9em;">${bicho.dias} dias atrás</span>
+        </div>`;
+    });
+}
+
+if (listaAtrasados.length > 10) {
+    listHTML += `<div style="font-weight: 800; margin-top: 20px; margin-bottom: 5px; color: #3b82f6; font-size: 1.1rem;">🔵 Demais Atrasados</div>`;
+    listaAtrasados.slice(10).forEach((bicho, index) => {
+        listHTML += `<div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+            <span><b>${index + 11}º</b> ${bicho.emoji} ${bicho.nome}</span> 
+            <span style="color: #64748b; font-size: 0.9em;">${bicho.dias} dias atrás</span>
+        </div>`;
+    });
+}
+
+listHTML += `<div style="font-weight: 800; margin-top: 20px; margin-bottom: 5px; color: #16a34a; font-size: 1.1rem;">✅ Saíram Recentemente</div>`;
+if (listaRecentes && listaRecentes.length > 0) {
+    listaRecentes.forEach(bicho => {
+        listHTML += `<div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">${bicho.emoji} ${bicho.nome} <span style="color: #16a34a; font-weight: bold; font-size: 0.9em;">(Hoje)</span></div>`;
+    });
+} else {
+    listHTML += `<div style="padding: 8px 0; color: #64748b;">Nenhum registrado para hoje.</div>`;
+}
+
+// Essa linha final pega todo o visual HTML gerado e joga na tela (Verifique se a div de resultados no seu código usa esse ID mesmo)
+document.getElementById('atrasadosResultList').innerHTML = listHTML;
         pendingAtrasadosMessage = zapText;
 
         // Atualiza a tela e abre o popup
@@ -30133,7 +30188,30 @@ function executarAcaoConfirmada() {
     }
     fecharModalConfirmacao();
 }
-// ==========================================
+
+// 🔥 NOVA FUNÇÃO - 100 Milhares de Grupo de Bicho (versão melhorada e natural)
+// Use esta função a partir de agora. Não altera nenhuma outra parte do site.
+function gerar100MilharesBicho(dezenasDoBicho) {
+    // dezenasDoBicho = ex: [73,74,75,76] para o Pavão
+
+    let centenas = Array.from({ length: 100 }, (_, i) => i.toString().padStart(2, '0'));
+
+    // Embaralhamento perfeito
+    for (let i = centenas.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [centenas[i], centenas[j]] = [centenas[j], centenas[i]];
+    }
+
+    const milhares = centenas.map(centena => {
+        const final = dezenasDoBicho[Math.floor(Math.random() * dezenasDoBicho.length)];
+        return centena + final.toString().padStart(2, '0');
+    });
+
+    milhares.sort((a, b) => parseInt(a) - parseInt(b));
+
+    return milhares;
+}
+
 
 })();
 // ===== FIM CALCULADORA DE PALPITES =====
