@@ -24848,18 +24848,25 @@ function shareAtrasadosWhatsApp() {
 }
 
 // 2. Função chamada pelos botões de dentro do Modal
+// 2. Função chamada pelos botões de dentro do Modal
 function executeShareWhatsApp(incluirExtras) {
     // Esconde o modal assim que o usuário faz a escolha
     document.getElementById('shareExtrasModal').style.display = 'none';
 
-    // Captura os dados do modal de atrasados na tela
-    const loteriaNome = document.getElementById('atrasadosResultHeader').innerText;
-    const listaAtrasados = document.getElementById('atrasadosResultList').innerText;
+    // Captura os dados brutos da tela
+    const loteriaNomeRaw = document.getElementById('atrasadosResultHeader').innerText;
+    const listaAtrasadosRaw = document.getElementById('atrasadosResultList').innerText;
+    
+    // CORREÇÃO 1: Limpa o título (Pega apenas o nome da loteria, descartando 'Radar' e 'Data')
+    const linhasHeader = loteriaNomeRaw.split('\n');
+    const nomeLimpo = linhasHeader.length > 1 ? linhasHeader[1].trim() : loteriaNomeRaw.replace(/📊|RADAR DE ATRASADOS/gi, '').trim();
+
+    // CORREÇÃO 2: Junta o bicho e os dias na mesma linha com a setinha (➔)
+    const listaAtrasados = listaAtrasadosRaw.replace(/\n(\d+\s+dias?\s+atrás)/g, ' ➔ $1');
     
     const divisor = "━━━━━━━━━━━━━━━";
-    let msg = `📊 *RANKING DE ATRASADOS - ${loteriaNome.toUpperCase()}* 📊\n\n`;
+    let msg = `📊 *RANKING DE ATRASADOS - ${nomeLimpo.toUpperCase()}* 📊\n\n`;
 
-    // SE O USUÁRIO CLICOU EM "ENVIAR COM I.A."
     if (incluirExtras) {
         const hoje = new Date();
         const diaNum = hoje.getDate();
@@ -24933,12 +24940,10 @@ function executeShareWhatsApp(incluirExtras) {
         msg += `➔ Dezenas: ${linhaDezenas}\n\n`;
     }
 
-    // PARTE PADRÃO: SEMPRE ADICIONA A LISTA DE ATRASADOS
     msg += `${divisor}\n\n`;
     msg += `${listaAtrasados}\n\n`;
     msg += `${divisor}\n`;
 
-    // RODAPÉ: Ajusta a dica final dependendo da escolha
     if (incluirExtras) {
         msg += `💡 *ESTRATÉGIA DE JOGO:*\n`;
         msg += `Concentre as suas jogadas nos animais do Top 5. O nosso sistema identificou que estes romperam o ciclo estatístico normal de ausência. Cruze o Ranking com os Bichos do Dia e com as sugestões de dezenas para otimizar os seus resultados!\n\n`;
@@ -24946,12 +24951,10 @@ function executeShareWhatsApp(incluirExtras) {
 
     msg += `🤖 _VIP - I.A. EM TEMPO REAL_`;
 
-    // DISPARA PARA O WHATSAPP
     const encodedMessage = encodeURIComponent(msg);
     window.location.assign(`https://wa.me/?text=${encodedMessage}`);
 }
         
-
 // 2. NOVA FUNÇÃO CHAMADA PELO CLIQUE DO BOTÃO
 async function handleUpdateClick() {
     const headerBtn = document.getElementById('header-update-btn');
