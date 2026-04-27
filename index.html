@@ -24839,27 +24839,116 @@ window.removeCartItem = function(id) {
     renderCartItems();
 };
 
-// --- FUNÇÃO PARA ABRIR O WHATSAPP DIRETAMENTE ---
+// 1. Função chamada pelo botão "Compartilhar" na tela (apenas abre o modal)
 function shareAtrasadosWhatsApp() {
-    if (!pendingAtrasadosMessage) {
-        showToast('Erro: Nenhuma mensagem carregada.', 'error');
-        return;
+    const modal = document.getElementById('shareExtrasModal');
+    if (modal) {
+        modal.style.display = 'flex';
     }
+}
+
+// 2. Função chamada pelos botões de dentro do Modal
+function executeShareWhatsApp(incluirExtras) {
+    // Esconde o modal assim que o usuário faz a escolha
+    document.getElementById('shareExtrasModal').style.display = 'none';
+
+    // Captura os dados do modal de atrasados na tela
+    const loteriaNome = document.getElementById('atrasadosResultHeader').innerText;
+    const listaAtrasados = document.getElementById('atrasadosResultList').innerText;
     
-    // Codifica o texto para garantir que espaços e emojis funcionem
-    const encodedMessage = encodeURIComponent(pendingAtrasadosMessage);
-    
-    // O uso do wa.me/ sem número força a abertura da lista de contatos do App
-    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
-    
-    // Altera a localização da janela atual. 
-    // Em celulares, isso costuma disparar o App na hora sem avisos extras.
-    window.location.assign(whatsappUrl);
-    
-    showToast('Abrindo WhatsApp...', 'success');
-    
-    // Fecha o popup de visualização após o disparo
-    setTimeout(closeAtrasadosResultModal, 800);
+    const divisor = "━━━━━━━━━━━━━━━";
+    let msg = `📊 *RANKING DE ATRASADOS - ${loteriaNome.toUpperCase()}* 📊\n\n`;
+
+    // SE O USUÁRIO CLICOU EM "ENVIAR COM I.A."
+    if (incluirExtras) {
+        const hoje = new Date();
+        const diaNum = hoje.getDate();
+        const mesNum = hoje.getMonth() + 1;
+        const diaStr = diaNum.toString().padStart(2, '0');
+        const mesStr = mesNum.toString().padStart(2, '0');
+        const dataFormatada = `${diaStr}/${mesStr}`;
+        const diaInvNum = parseInt(diaStr.split('').reverse().join(''), 10);
+
+        const bichos = [
+            "", "🦩 Avestruz", "🦅 Aguia", "🫏 Burro", "🦋 Borboleta", "🐕 Cachorro", 
+            "🐐 Cabra", "🐏 Carneiro", "🐫 Camelo", "🐍 Cobra", "🐰 Coelho", 
+            "🐎 Cavalo", "🐘 Elefante", "🐔 Galo", "🐈 Gato", "🐊 Jacare", 
+            "🦁 Leao", "🐒 Macaco", "🐖 Porco", "🦚 Pavao", "🦃 Peru", 
+            "🐂 Touro", "🐯 Tigre", "🐻 Urso", "🦌 Veado", "🐮 Vaca"
+        ];
+        
+        const tabelaBichos = {
+            'avestruz': ['01', '02', '03', '04'], 'aguia': ['05', '06', '07', '08'], 'burro': ['09', '10', '11', '12'],
+            'borboleta': ['13', '14', '15', '16'], 'cachorro': ['17', '18', '19', '20'], 'cabra': ['21', '22', '23', '24'],
+            'carneiro': ['25', '26', '27', '28'], 'camelo': ['29', '30', '31', '32'], 'cobra': ['33', '34', '35', '36'],
+            'coelho': ['37', '38', '39', '40'], 'cavalo': ['41', '42', '43', '44'], 'elefante': ['45', '46', '47', '48'],
+            'galo': ['49', '50', '51', '52'], 'gato': ['53', '54', '55', '56'], 'jacare': ['57', '58', '59', '60'],
+            'leao': ['61', '62', '63', '64'], 'macaco': ['65', '66', '67', '68'], 'porco': ['69', '70', '71', '72'],
+            'pavao': ['73', '74', '75', '76'], 'peru': ['77', '78', '79', '80'], 'touro': ['81', '82', '83', '84'],
+            'tigre': ['85', '86', '87', '88'], 'urso': ['89', '90', '91', '92'], 'veado': ['93', '94', '95', '96'],
+            'vaca': ['97', '98', '99', '00']
+        };
+
+        function getGrupoByDezena(num) {
+            if (num === 0) return 25;
+            return Math.ceil(num / 4);
+        }
+
+        const bDezenaDia = bichos[getGrupoByDezena(diaNum)];
+        const bDezenaInv = bichos[getGrupoByDezena(diaInvNum)];
+
+        const linhas = listaAtrasados.split('\n');
+        const bichosEncontrados = [];
+        
+        for (let linha of linhas) {
+            if (linha.includes('1º') || linha.includes('2º') || linha.includes('3º')) {
+                if (linha.includes('➔')) {
+                    const esquerda = linha.split('➔')[0].trim(); 
+                    const palavras = esquerda.split(' ');
+                    const bichoNome = palavras[palavras.length - 1]; 
+                    if (bichoNome && bichosEncontrados.length < 3) {
+                        bichosEncontrados.push(bichoNome);
+                    }
+                }
+            }
+        }
+
+        let dezenasIA = [diaStr]; 
+        
+        bichosEncontrados.forEach((bichoNome, index) => {
+            let nomeLimpo = bichoNome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            let dezenas = tabelaBichos[nomeLimpo];
+            if (dezenas) {
+                let indiceDezena = (diaNum + index) % 4;
+                dezenasIA.push(dezenas[indiceDezena]);
+            }
+        });
+
+        const linhaDezenas = dezenasIA.join(' ➔ ');
+
+        msg += `${divisor}\n`;
+        msg += `📅 *BICHOS DO DIA (${dataFormatada})*\n`;
+        msg += `➔ Destaques: ${bDezenaDia} | ${bDezenaInv}\n\n`;
+        msg += `💎 *SUGESTÕES DE DEZENAS DA I.A.*\n`;
+        msg += `➔ Dezenas: ${linhaDezenas}\n\n`;
+    }
+
+    // PARTE PADRÃO: SEMPRE ADICIONA A LISTA DE ATRASADOS
+    msg += `${divisor}\n\n`;
+    msg += `${listaAtrasados}\n\n`;
+    msg += `${divisor}\n`;
+
+    // RODAPÉ: Ajusta a dica final dependendo da escolha
+    if (incluirExtras) {
+        msg += `💡 *ESTRATÉGIA DE JOGO:*\n`;
+        msg += `Concentre as suas jogadas nos animais do Top 5. O nosso sistema identificou que estes romperam o ciclo estatístico normal de ausência. Cruze o Ranking com os Bichos do Dia e com as sugestões de dezenas para otimizar os seus resultados!\n\n`;
+    }
+
+    msg += `🤖 _VIP - I.A. EM TEMPO REAL_`;
+
+    // DISPARA PARA O WHATSAPP
+    const encodedMessage = encodeURIComponent(msg);
+    window.location.assign(`https://wa.me/?text=${encodedMessage}`);
 }
         
 
@@ -30361,6 +30450,22 @@ function gerar100MilharesBicho(dezenasDoBicho) {
                 Sim, Limpar
             </button>
         </div>
+    </div>
+</div>
+
+<div id="shareExtrasModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(3px);">
+    <div style="background: #1e1e24; width: 85%; max-width: 320px; border-radius: 16px; padding: 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05);">
+        
+        <div style="font-size: 45px; margin-bottom: 12px;">🤖</div>
+        <h3 style="margin-top: 0; margin-bottom: 10px; color: #ffffff; font-size: 1.25rem; font-weight: 600;">Opções de Envio</h3>
+        <p style="color: #a0a0a5; font-size: 0.95rem; margin-bottom: 24px; line-height: 1.4;">Deseja incluir a Análise do Dia e as Sugestões da I.A. na mensagem?</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button type="button" onclick="executeShareWhatsApp(true)" style="background: #25D366; color: #ffffff; padding: 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer;">✨ Enviar completo I.A.</button>
+            <button type="button" onclick="executeShareWhatsApp(false)" style="background: #333338; color: #ffffff; padding: 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer;">📄 Apenas os atrasados</button>
+            <button type="button" onclick="document.getElementById('shareExtrasModal').style.display='none'" style="background: transparent; color: #88888e; border: none; padding: 10px; cursor: pointer; font-size: 0.95rem; font-weight: 500; margin-top: 4px;">Cancelar</button>
+        </div>
+
     </div>
 </div>
 
