@@ -24848,23 +24848,29 @@ function shareAtrasadosWhatsApp() {
 }
 
 function executeShareWhatsApp(incluirExtras) {
-    // Esconde o modal assim que o usuário faz a escolha
+    // Esconde o modal assim que o utilizador faz a escolha
     document.getElementById('shareExtrasModal').style.display = 'none';
 
-    // Captura os dados brutos da tela
+    // Captura os dados brutos do ecrã
     const loteriaNomeRaw = document.getElementById('atrasadosResultHeader').innerText;
     const listaAtrasadosRaw = document.getElementById('atrasadosResultList').innerText;
     
-    // Limpa o título (Pega apenas o nome da loteria)
+    // Limpa o título (Pega apenas o nome da lotaria)
     const linhasHeader = loteriaNomeRaw.split('\n');
     const nomeLimpo = linhasHeader.length > 1 ? linhasHeader[1].trim() : loteriaNomeRaw.replace(/📊|RADAR DE ATRASADOS/gi, '').trim();
 
-    // Formata os dias com a seta (➔) e ajusta o bloco de "Saíram Recentemente"
+    // 1. Formata os dias com a seta (➔)
     let listaAtrasados = listaAtrasadosRaw.replace(/\n(\d+\s+dias?\s+atrás)/g, ' ➔ $1');
-    listaAtrasados = listaAtrasados.replace(/✅\s*Saíram Recentemente/gi, '\n━━━━━━━━━━━━━━━\n✅ *SAÍRAM RECENTEMENTE:*\n');
+    
+    // 2. FORÇA AS QUEBRAS DE LINHA (OS ESPAÇOS) ENTRE AS SECÇÕES
+    listaAtrasados = listaAtrasados.replace(/\n⚠️ Top/gi, '\n\n⚠️ Top');
+    listaAtrasados = listaAtrasados.replace(/\n🔵 Demais/gi, '\n\n🔵 Demais');
+    listaAtrasados = listaAtrasados.replace(/\n✅\s*Saíram Recentemente/gi, '\n\n━━━━━━━━━━━━━━━\n✅ *SAÍRAM RECENTEMENTE:*\n\n');
     
     const divisor = "━━━━━━━━━━━━━━━";
-    let msg = `📊 *VIP ATRASADOS - ${nomeLimpo.toUpperCase()}*\n\n`;
+    
+    // Título com espaço extra no final
+    let msg = `📊 *VIP ATRASADOS - ${nomeLimpo.toUpperCase()}* \n\n`;
     msg += `${divisor}\n\n`;
 
     // Captura da Data e Hora atual
@@ -24944,11 +24950,12 @@ function executeShareWhatsApp(incluirExtras) {
         msg += `Dezenas: ${linhaDezenas}\n\n`;
     }
 
-    // Adiciona o corpo do Ranking
-    msg += `${listaAtrasados}\n\n`;
+    // Adiciona o corpo do Ranking, garantindo que também fecha com uma linha em branco
+    msg += `${listaAtrasados.trim()}\n\n`;
 
     // Bloco Final (Dicas e Rodapé)
     msg += `${divisor}\n`;
+    
     if (incluirExtras) {
         msg += `💡 *COMO USAR ESTA ANÁLISE:*\n`;
         msg += `Foque suas estratégias e palpites nos animais do *Top 5*. A nossa I.A identifica que eles romperam o ciclo normal de ausência e possuem as maiores probabilidades matemáticas de retorno a curto prazo. Invista com inteligência!\n\n`;
