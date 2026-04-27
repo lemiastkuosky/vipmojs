@@ -24847,8 +24847,6 @@ function shareAtrasadosWhatsApp() {
     }
 }
 
-// 2. Função chamada pelos botões de dentro do Modal
-// 2. Função chamada pelos botões de dentro do Modal
 function executeShareWhatsApp(incluirExtras) {
     // Esconde o modal assim que o usuário faz a escolha
     document.getElementById('shareExtrasModal').style.display = 'none';
@@ -24857,18 +24855,24 @@ function executeShareWhatsApp(incluirExtras) {
     const loteriaNomeRaw = document.getElementById('atrasadosResultHeader').innerText;
     const listaAtrasadosRaw = document.getElementById('atrasadosResultList').innerText;
     
-    // CORREÇÃO 1: Limpa o título (Pega apenas o nome da loteria, descartando 'Radar' e 'Data')
+    // Limpa o título (Pega apenas o nome da loteria)
     const linhasHeader = loteriaNomeRaw.split('\n');
     const nomeLimpo = linhasHeader.length > 1 ? linhasHeader[1].trim() : loteriaNomeRaw.replace(/📊|RADAR DE ATRASADOS/gi, '').trim();
 
-    // CORREÇÃO 2: Junta o bicho e os dias na mesma linha com a setinha (➔)
-    const listaAtrasados = listaAtrasadosRaw.replace(/\n(\d+\s+dias?\s+atrás)/g, ' ➔ $1');
+    // Formata os dias com a seta (➔) e ajusta o bloco de "Saíram Recentemente"
+    let listaAtrasados = listaAtrasadosRaw.replace(/\n(\d+\s+dias?\s+atrás)/g, ' ➔ $1');
+    listaAtrasados = listaAtrasados.replace(/✅\s*Saíram Recentemente/gi, '\n━━━━━━━━━━━━━━━\n✅ *SAÍRAM RECENTEMENTE:*\n');
     
     const divisor = "━━━━━━━━━━━━━━━";
-    let msg = `📊 *RANKING DE ATRASADOS - ${nomeLimpo.toUpperCase()}* 📊\n\n`;
+    let msg = `📊 *VIP ATRASADOS - ${nomeLimpo.toUpperCase()}*\n\n`;
+    msg += `${divisor}\n\n`;
+
+    // Captura da Data e Hora atual
+    const hoje = new Date();
+    const horas = hoje.getHours().toString().padStart(2, '0');
+    const minutos = hoje.getMinutes().toString().padStart(2, '0');
 
     if (incluirExtras) {
-        const hoje = new Date();
         const diaNum = hoje.getDate();
         const mesNum = hoje.getMonth() + 1;
         const diaStr = diaNum.toString().padStart(2, '0');
@@ -24933,23 +24937,25 @@ function executeShareWhatsApp(incluirExtras) {
 
         const linhaDezenas = dezenasIA.join(' ➔ ');
 
-        msg += `${divisor}\n`;
         msg += `📅 *BICHOS DO DIA (${dataFormatada})*\n`;
-        msg += `➔ Destaques: ${bDezenaDia} | ${bDezenaInv}\n\n`;
+        msg += `Destaques: ${bDezenaDia} | ${bDezenaInv}\n\n`;
+        
         msg += `💎 *SUGESTÕES DE DEZENAS DA I.A.*\n`;
-        msg += `➔ Dezenas: ${linhaDezenas}\n\n`;
+        msg += `Dezenas: ${linhaDezenas}\n\n`;
     }
 
-    msg += `${divisor}\n\n`;
+    // Adiciona o corpo do Ranking
     msg += `${listaAtrasados}\n\n`;
+
+    // Bloco Final (Dicas e Rodapé)
     msg += `${divisor}\n`;
-
     if (incluirExtras) {
-        msg += `💡 *ESTRATÉGIA DE JOGO:*\n`;
-        msg += `Concentre as suas jogadas nos animais do Top 5. O nosso sistema identificou que estes romperam o ciclo estatístico normal de ausência. Cruze o Ranking com os Bichos do Dia e com as sugestões de dezenas para otimizar os seus resultados!\n\n`;
+        msg += `💡 *COMO USAR ESTA ANÁLISE:*\n`;
+        msg += `Foque suas estratégias e palpites nos animais do *Top 5*. A nossa I.A identifica que eles romperam o ciclo normal de ausência e possuem as maiores probabilidades matemáticas de retorno a curto prazo. Invista com inteligência!\n\n`;
     }
-
-    msg += `🤖 _VIP - I.A. EM TEMPO REAL_`;
+    
+    msg += `🤖 _VIP - I.A. EM TEMPO REAL_\n\n`;
+    msg += `_RELATÓRIO GERADO AS ${horas}:${minutos}HS_`;
 
     const encodedMessage = encodeURIComponent(msg);
     window.location.assign(`https://wa.me/?text=${encodedMessage}`);
