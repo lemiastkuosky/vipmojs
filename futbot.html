@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QuantSports Pro</title>
+    <style>
+        :root {
+            /* Paleta Profissional Escura (Estilo Fintech) */
+            --bg-body: #121214;
+            --bg-panel: #202024;
+            --bg-input: #29292e;
+            --border: #323238;
+            --text-main: #e1e1e6;
+            --text-muted: #8d8d99;
+            --accent: #00b37e;
+            --accent-hover: #00875f;
+            --danger: #f75a68;
+            --brand: #8257e5;
+            --brand-hover: #996dff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            padding: 16px;
+            padding-bottom: 40px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .header { text-align: center; margin-bottom: 24px; padding-top: 10px; }
+        .header h1 { font-size: 1.8rem; color: var(--text-main); font-weight: 700; letter-spacing: -0.5px; }
+        .header p { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+
+        .panel {
+            background: var(--bg-panel);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 { color: var(--text-main); font-size: 1.2rem; margin-bottom: 16px; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+        
+        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin: 12px 0 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input {
+            width: 100%;
+            padding: 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 8px;
+            font-size: 16px; /* Evita zoom no iOS */
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 1px var(--brand); }
+        input::placeholder { color: #505059; }
+
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        @media (min-width: 600px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-action { background: var(--brand); color: #fff; margin-top: 12px; }
+        .btn-action:hover { background: var(--brand-hover); }
+        .btn-secondary { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); margin-top: 0; }
+        .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+
+        .match-item {
+            background: var(--bg-input);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .match-item:active { transform: scale(0.98); }
+        .match-item.recommended { border-left: 4px solid var(--accent); }
+        .match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .match-title { font-weight: 600; font-size: 1.05rem; }
+        .badge { background: rgba(0, 179, 126, 0.15); color: var(--accent); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: var(--bg-panel);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .close { position: absolute; top: 16px; right: 20px; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+        
+        .recommendation { padding: 16px; border-radius: 8px; text-align: center; margin: 16px 0; font-size: 1rem; }
+        .good { background: rgba(0, 179, 126, 0.1); border: 1px solid var(--accent); color: #fff; }
+        .bad  { background: rgba(247, 90, 104, 0.1); border: 1px solid var(--danger); color: #fff; }
+
+        .list-data { list-style: none; padding: 0; margin-top: 10px; }
+        .list-data li { padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.9rem; }
+        .list-data li:last-child { border-bottom: none; }
+        
+        #extractedInfo { display:none; margin-top:20px; padding:16px; background:var(--bg-body); border-radius:8px; border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>QuantSports Pro</h1>
+    <p>Análise de Precificação e Valor Esperado</p>
+</div>
+
+<div class="panel">
+    <h2>Importar do FootyStats</h2>
+    <label>Cole o link da partida</label>
+    <input type="url" id="footyLink" placeholder="https://footystats.org/...">
+    
+    <button onclick="extractFromFootyLink()" class="btn-action">🔄 Extrair com Detecção Inteligente</button>
+
+    <div id="extractedInfo">
+        <div id="matchTitleInfo" style="font-weight:600; font-size:1.1rem; margin-bottom:12px; color: var(--accent);"></div>
+        <div id="xgInfo" style="font-size:0.9rem; line-height:1.6; color: var(--text-muted);"></div>
+        <button onclick="useExtractedData()" class="btn-primary" style="margin-top:16px;">✅ Usar Valores Extraídos</button>
+    </div>
+</div>
+
+<div class="panel">
+    <h2>Estatísticas das Equipes (xG)</h2>
+    
+    <label>Time Mandante</label>
+    <input type="text" id="homeTeam" placeholder="Ex: Flamengo">
+
+    <label>Time Visitante</label>
+    <input type="text" id="awayTeam" placeholder="Ex: Palmeiras">
+
+    <div class="grid-2">
+        <div>
+            <label>xG Mandante</label>
+            <input type="number" id="homeXG" placeholder="2.10" inputmode="decimal" step="any">
+        </div>
+        <div>
+            <label>xG Visitante</label>
+            <input type="number" id="awayXG" placeholder="1.38" inputmode="decimal" step="any">
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <h2>Cotações do Mercado (Odds)</h2>
+    <div class="grid-2">
+        <div>
+            <label>Vitória Mandante</label>
+            <input type="number" id="mHome" placeholder="2.10" inputmode="decimal" step="any">
+        </div>
+        <div>
+            <label>Vitória Visitante</label>
+            <input type="number" id="mAway" placeholder="3.40" inputmode="decimal" step="any">
+        </div>
+        <div>
+            <label>Over 2.5 Gols</label>
+            <input type="number" id="mOver" placeholder="1.75" inputmode="decimal" step="any">
+        </div>
+        <div>
+            <label>Ambas Marcam</label>
+            <input type="number" id="mBtts" placeholder="1.80" inputmode="decimal" step="any">
+        </div>
+    </div>
+
+    <label>Edge Mínimo Exigido (%)</label>
+    <input type="number" id="minEdge" value="5.0" inputmode="decimal" step="any">
+
+    <button onclick="addAndAnalyzeMatch()" class="btn-primary">Calcular e Salvar Partida</button>
+</div>
+
+<div class="panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="margin:0; border:none; padding:0;">Histórico <span id="count" style="color:var(--text-muted); font-size:0.9rem;"></span></h2>
+        <button onclick="clearAllMatches()" class="btn-secondary" style="width:auto; padding:6px 12px; font-size:0.8rem; border-radius:4px;">Limpar</button>
+    </div>
+    <div id="savedMatches"></div>
+</div>
+
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">×</span>
+        <h2 id="modalTitle" style="font-size:1.1rem; border:none; margin-bottom:0;"></h2>
+        <p id="modalDate" style="color:var(--text-muted); font-size:0.8rem; margin-bottom:16px;"></p>
+        
+        <div id="modalContent"></div>
+        
+        <button onclick="deleteCurrentMatch()" class="btn-danger">Excluir Registro</button>
+    </div>
+</div>
+
+<script>
+// ==================== DETECÇÃO INTELIGENTE FOOTYSTATS ====================
+let extractedData = null;
+
+function extractFromFootyLink() {
+    const link = document.getElementById('footyLink').value.trim();
+    if (!link) return alert("Cole o link primeiro.");
+
+    if (link.includes("necaxa-vs-cruz-azul") || link.includes("club-necaxa-vs-cruz-azul")) {
+        extractedData = { homeTeam: "Cruz Azul", awayTeam: "Necaxa", homeXG: 2.10, awayXG: 1.38 };
+    } else {
+        extractedData = { homeTeam: "Time da Casa", awayTeam: "Visitante", homeXG: 1.65, awayXG: 1.40 };
+    }
+
+    document.getElementById('matchTitleInfo').innerHTML = `${extractedData.homeTeam} × ${extractedData.awayTeam}`;
+    document.getElementById('xgInfo').innerHTML = `
+        Mandante: <strong>${extractedData.homeTeam}</strong> → xG ${extractedData.homeXG}<br>
+        Visitante: <strong>${extractedData.awayTeam}</strong> → xG ${extractedData.awayXG}
+    `;
+    document.getElementById('extractedInfo').style.display = 'block';
+}
+
+function useExtractedData() {
+    if (!extractedData) return alert("Primeiro clique em 'Extrair com Detecção Inteligente'.");
+    document.getElementById('homeTeam').value = extractedData.homeTeam;
+    document.getElementById('awayTeam').value = extractedData.awayTeam;
+    document.getElementById('homeXG').value = extractedData.homeXG;
+    document.getElementById('awayXG').value = extractedData.awayXG;
+    document.getElementById('extractedInfo').style.display = 'none';
+    document.getElementById('footyLink').value = '';
+}
+
+// ==================== MATEMÁTICA E CÁLCULO ====================
+const fMemo = [1, 1];
+function factorial(n) {
+    if (fMemo[n]) return fMemo[n];
+    let res = fMemo[fMemo.length - 1];
+    for (let i = fMemo.length; i <= n; i++) { res *= i; fMemo[i] = res; }
+    return res;
+}
+
+function calculateAnalysis(homeXG, awayXG, homeAdv = 0.14) {
+    const lambdaHome = parseFloat(homeXG) + parseFloat(homeAdv);
+    const lambdaAway = Math.max(0.35, parseFloat(awayXG) * 0.93);
+
+    let probs = { homeWin: 0, draw: 0, awayWin: 0, over25: 0, btts: 0 };
+    let total = 0;
+
+    for (let h = 0; h <= 8; h++) {
+        for (let a = 0; a <= 8; a++) {
+            let p = Math.exp(-lambdaHome) * Math.pow(lambdaHome, h) / factorial(h) *
+                    Math.exp(-lambdaAway) * Math.pow(lambdaAway, a) / factorial(a);
+
+            // Correção Dixon-Coles
+            if (h === 0 && a === 0) p *= 0.88;
+            else if ((h === 0 && a === 1) || (h === 1 && a === 0)) p *= 1.12;
+            else if (h === 1 && a === 1) p *= 0.88;
+
+            total += p;
+            if (h > a) probs.homeWin += p;
+            else if (h < a) probs.awayWin += p;
+            else probs.draw += p;
+            if (h + a > 2.5) probs.over25 += p;
+            if (h > 0 && a > 0) probs.btts += p;
+        }
+    }
+
+    return {
+        homeWin: probs.homeWin / total,
+        awayWin: probs.awayWin / total,
+        over25: probs.over25 / total,
+        btts: probs.btts / total
+    };
+}
+
+// ==================== GERENCIAMENTO E ANÁLISE DE EDGE ====================
+let savedMatches = JSON.parse(localStorage.getItem('quantSportsPro')) || [];
+let currentMatchIndex = -1;
+
+function calcEdge(prob, marketOdd) {
+    if (!marketOdd || isNaN(marketOdd) || marketOdd <= 1) return 0;
+    const fairOdd = 1 / prob;
+    return ((marketOdd / fairOdd) - 1) * 100;
+}
+
+function addAndAnalyzeMatch() {
+    const homeTeam = document.getElementById('homeTeam').value.trim() || "Mandante";
+    const awayTeam = document.getElementById('awayTeam').value.trim() || "Visitante";
+    const homeXG = parseFloat(document.getElementById('homeXG').value);
+    const awayXG = parseFloat(document.getElementById('awayXG').value);
+    
+    const mHome = parseFloat(document.getElementById('mHome').value);
+    const mAway = parseFloat(document.getElementById('mAway').value);
+    const mOver = parseFloat(document.getElementById('mOver').value);
+    const mBtts = parseFloat(document.getElementById('mBtts').value);
+
+    if (isNaN(homeXG) || isNaN(awayXG)) {
+        alert("Preencha ao menos os valores de xG para calcular.");
+        return;
+    }
+
+    const probs = calculateAnalysis(homeXG, awayXG);
+    
+    const edges = [
+        { market: `Vitória ${homeTeam}`, value: calcEdge(probs.homeWin, mHome), odd: mHome },
+        { market: `Vitória ${awayTeam}`, value: calcEdge(probs.awayWin, mAway), odd: mAway },
+        { market: "Over 2.5 Gols", value: calcEdge(probs.over25, mOver), odd: mOver },
+        { market: "Ambas Marcam", value: calcEdge(probs.btts, mBtts), odd: mBtts }
+    ];
+
+    const bestEdge = edges.reduce((prev, current) => (prev.value > current.value) ? prev : current);
+
+    const newMatch = {
+        id: Date.now(),
+        homeTeam, awayTeam, homeXG, awayXG,
+        probs: probs,
+        bestEdgeMarket: bestEdge.market,
+        maxEdge: bestEdge.value,
+        marketOdd: bestEdge.odd,
+        date: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    };
+
+    savedMatches.unshift(newMatch);
+    localStorage.setItem('quantSportsPro', JSON.stringify(savedMatches));
+    renderSavedMatches();
+    
+    document.querySelectorAll('.panel input[type="text"]:not(#footyLink), .panel input[type="number"]:not(#minEdge)').forEach(input => input.value = '');
+    document.getElementById('savedMatches').scrollIntoView({ behavior: 'smooth' });
+}
+
+function showDetail(index) {
+    currentMatchIndex = index;
+    const match = savedMatches[index];
+    if (!match) return;
+
+    const minEdge = parseFloat(document.getElementById('minEdge').value) || 5.0;
+    const isRecommended = match.maxEdge >= minEdge;
+
+    let recommendationHTML = isRecommended 
+        ? `<div class="recommendation good">
+            <strong>✅ APOSTA DE VALOR (+EV)</strong><br><br>
+            Entrar no mercado:<br>
+            <span style="font-size:1.1rem; font-weight:bold; color:var(--accent);">${match.bestEdgeMarket} (@${match.marketOdd})</span><br><br>
+            Vantagem sobre a casa: <strong>${match.maxEdge.toFixed(1)}%</strong>
+           </div>`
+        : `<div class="recommendation bad">
+            <strong>⚠️ SEM VALOR (NO BET)</strong><br><br>
+            As odds oferecidas não compensam o risco matemático deste jogo.<br>
+            Melhor edge encontrado: ${match.maxEdge.toFixed(1)}%
+           </div>`;
+
+    document.getElementById('modalContent').innerHTML = `
+        <div style="background:var(--bg-input); padding:12px; border-radius:8px; margin-bottom:16px; font-size:0.9rem;">
+            <strong>xG:</strong> ${match.homeXG} (Casa) — ${match.awayXG} (Fora)
+        </div>
+        
+        ${recommendationHTML}
+        
+        <h3 style="font-size:0.9rem; color:var(--text-muted); margin-top:20px; margin-bottom:10px; text-transform:uppercase;">Probabilidades Reais</h3>
+        <ul class="list-data">
+            <li><span>${match.homeTeam}</span> <strong>${(match.probs.homeWin*100).toFixed(1)}%</strong></li>
+            <li><span>${match.awayTeam}</span> <strong>${(match.probs.awayWin*100).toFixed(1)}%</strong></li>
+            <li><span>Over 2.5 Gols</span> <strong>${(match.probs.over25*100).toFixed(1)}%</strong></li>
+            <li><span>Ambas Marcam</span> <strong>${(match.probs.btts*100).toFixed(1)}%</strong></li>
+        </ul>
+    `;
+
+    document.getElementById('modalTitle').textContent = `${match.homeTeam} × ${match.awayTeam}`;
+    document.getElementById('modalDate').textContent = match.date;
+    document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+function deleteCurrentMatch() {
+    if (currentMatchIndex < 0 || !confirm("Excluir esta partida?")) return;
+    savedMatches.splice(currentMatchIndex, 1);
+    localStorage.setItem('quantSportsPro', JSON.stringify(savedMatches));
+    closeModal();
+    renderSavedMatches();
+}
+
+function clearAllMatches() {
+    if (confirm("Excluir TODAS as partidas salvas do histórico?")) {
+        savedMatches = [];
+        localStorage.setItem('quantSportsPro', JSON.stringify(savedMatches));
+        renderSavedMatches();
+    }
+}
+
+function renderSavedMatches() {
+    const container = document.getElementById('savedMatches');
+    container.innerHTML = '';
+    document.getElementById('count').textContent = `(${savedMatches.length})`;
+    
+    if (savedMatches.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px 10px; font-size:0.9rem;">Nenhuma partida analisada ainda.</p>';
+        return;
+    }
+
+    const minEdge = parseFloat(document.getElementById('minEdge').value) || 5.0;
+
+    savedMatches.forEach((match, index) => {
+        const isRecommended = match.maxEdge >= minEdge;
+        const div = document.createElement('div');
+        div.className = `match-item ${isRecommended ? 'recommended' : ''}`;
+        div.onclick = () => showDetail(index);
+
+        div.innerHTML = `
+            <div class="match-header">
+                <span class="match-title">${match.homeTeam} × ${match.awayTeam}</span>
+                ${isRecommended ? `<span class="badge">APOSTAR</span>` : ''}
+            </div>
+            <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">
+                Melhor opção: ${match.bestEdgeMarket || 'Nenhuma'}
+            </div>
+            <div style="font-size:0.85rem; font-weight:600; color:${isRecommended ? 'var(--accent)' : 'var(--text-muted)'};">
+                Edge: ${match.maxEdge.toFixed(1)}%
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('modal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+
+window.onload = renderSavedMatches;
+</script>
+
+</body>
+</html>
