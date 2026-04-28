@@ -1436,9 +1436,58 @@ async function atualizarMercado(){
   document.getElementById('market-loading').style.display='none';
 }
 
+// ══════════════════════════════════════════════════════
+// INTEGRAÇÃO COM BOT.PY — lê saldo e status via API local
+// ══════════════════════════════════════════════════════
+const BOT_API = 'http://localhost:5000';
+
+async function fetchBotStatus() {
+  const el = document.getElementById('h-saldo');
+  const elStatus = document.getElementById('bot-status-badge'); // opcional
+  try {
+    const r = await fetch(`${BOT_API}/api/status`, { signal: AbortSignal.timeout(3000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    // Saldo
+    if (d.saldo_usdt !== null && d.saldo_usdt !== undefined) {
+      el.textContent = '$' + d.saldo_usdt.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      el.style.color = 'var(--green)';
+    } else {
+      el.textContent = 'Disponível';
+    }
+
+    // Sincroniza P&L do bot.py → painel HTML (se houver trades reais)
+    if (d.total_trades > 0) {
+      sistema.lucro_hoje  = d.lucro_hoje;
+      sistema.perda_hoje  = d.perda_hoje;
+      sistema.total_trades = d.total_trades;
+      sistema.trades_ganhos = d.trades_ganhos;
+      renderPnL();
+    }
+
+    // Atualiza badge de modo se existir
+    const modeEl = document.getElementById('h-mode');
+    if (modeEl && d.modo) {
+      modeEl.textContent = d.modo;
+      modeEl.style.color = d.modo === 'AUTO' ? 'var(--green)' : 'var(--amber)';
+    }
+
+    console.log('[BOT] Conectado — saldo:', d.saldo_usdt, '| modo:', d.modo);
+  } catch (e) {
+    // Bot não está rodando ou porta 5000 inacessível — não quebra o painel
+    el.textContent = 'Bot offline';
+    el.style.color = 'var(--text3)';
+    el.title = 'Inicie o bot.py para ver o saldo real';
+    console.info('[BOT] Servidor local não encontrado (bot.py offline?)');
+  }
+}
+
 (async()=>{
   await atualizarMercado();
-  setInterval(atualizarMercado,60000);
+  await fetchBotStatus();                    // busca saldo imediatamente
+  setInterval(atualizarMercado, 60000);
+  setInterval(fetchBotStatus,   15000);      // atualiza saldo a cada 15s
 })();
 </script>
 </body>
