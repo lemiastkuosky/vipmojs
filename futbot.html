@@ -397,7 +397,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="logo">
     <div class="logo-dot">⚽</div>
     <div>
-      <div class="logo-name">QUANTSPORTS</div>
+      <div class="logo-name">Analsy PRO</div>
       <div class="logo-tag">POISSON · DIXON-COLES · AI</div>
     </div>
   </div>
@@ -925,7 +925,7 @@ async function callGemini(systemPrompt,userPrompt,tentativas=3){
 async function fetchXGCore(home,away,liga,statusEl,successEl){
   statusEl.style.display='flex';successEl.style.display='none';
   try{
-    const sys=`Você é um analista de futebol quantitativo. Responda SOMENTE em JSON: {"homeXG":num,"awayXG":num,"homeTeamFull":"str","awayTeamFull":"str","confidence":num,"reasoning":"str"}`;
+    const sys=`Você é um analista de futebol. Responda SOMENTE em JSON: {"homeXG":num,"awayXG":num,"homeTeamFull":"str","awayTeamFull":"str","confidence":num,"reasoning":"str"}`;
     const usr=`Estime o xG médio dos últimos 5-8 jogos para: ${home} (casa) vs ${away} (fora) - ${liga}. Seja preciso e baseie-se em dados recentes.`;
     const raw=await callGemini(sys,usr);
     const m=raw.match(/\{[\s\S]*\}/);
@@ -963,12 +963,86 @@ async function fetchXGMobile(){
 }
 
 // ══════════════════════════════════════════
-// RADAR — SCAN LEAGUE
+// RADAR — SCAN LEAGUE (Atualizado com Scraping)
 // ══════════════════════════════════════════
+
+// Função para raspar o site de estatísticas usando um proxy público confiável
+async function fetchUrlText(url) {
+  try {
+    // Usando o AllOrigins, que converte a resposta em JSON e evita bloqueios
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    
+    if (!response.ok) throw new Error('Falha na conexão com o site');
+    
+    const data = await response.json();
+    const html = data.contents;
+    
+    if (!html) throw new Error('Página retornou vazia');
+
+    // Converte o HTML em texto puro (remove botões, imagens, menus pesados)
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    return doc.body.innerText.replace(/\s+/g, ' ').trim();
+  } catch (err) {
+    console.error("Erro no Web Scraping:", err);
+    throw new Error("Não foi possível extrair dados deste link. O site pode estar bloqueando a leitura.");
+  }
+}
+
+// Botão Desktop
 async function scanLeague(){
-  const liga=document.getElementById('leagueScanner').value;
-  const customList=document.getElementById('customGamesList').value.trim();
-  await runScan(liga,customList,'scan-status','scan-status-text','btn-scan');
+  const liga = document.getElementById('leagueScanner').value;
+  let customList = document.getElementById('customGamesList').value.trim();
+
+  try {
+    // LÓGICA DO BOTÃO: Se começar com http, é link. Puxa os dados do site.
+    if (customList.startsWith('http')) {
+      toast('📡 Lendo estatísticas do site...', 'amber');
+      
+      // Feedback visual na tela enquanto baixa o site
+      document.getElementById('scan-status').style.display = 'flex';
+      document.getElementById('scan-status-text').textContent = 'Baixando dados do link...';
+      document.getElementById('btn-scan').disabled = true;
+
+      // Substitui o link pelo texto raspado da página
+      customList = await fetchUrlText(customList);
+    }
+
+    // Se estiver vazio, customList será "", e o runScan puxará a liga do sistema normalmente.
+    // Se não for link, for só texto colado, vai direto para o runScan.
+    await runScan(liga, customList, 'scan-status', 'scan-status-text', 'btn-scan');
+
+  } catch (error) {
+    // Se der erro no scraping, avisa o usuário e destrava o botão
+    toast(error.message, 'red');
+    document.getElementById('scan-status').style.display = 'none';
+    document.getElementById('btn-scan').disabled = false;
+  }
+}
+
+// Botão Mobile
+async function scanLeagueMobile(){
+  const liga = document.getElementById('mob-leagueScanner').value || document.getElementById('leagueScanner').value;
+  let customList = document.getElementById('mob-customGamesList').value.trim() || document.getElementById('customGamesList').value.trim();
+
+  try {
+    // LÓGICA DO BOTÃO MOBILE
+    if (customList.startsWith('http')) {
+      toast('📡 Lendo estatísticas do site...', 'amber');
+      document.getElementById('scan-status-mob').style.display = 'flex';
+      document.getElementById('btn-scan-mob').disabled = true;
+
+      customList = await fetchUrlText(customList);
+    }
+
+    await runScan(liga, customList, 'scan-status-mob', 'scan-status-mob', 'btn-scan-mob');
+
+  } catch (error) {
+    toast(error.message, 'red');
+    document.getElementById('scan-status-mob').style.display = 'none';
+    document.getElementById('btn-scan-mob').disabled = false;
+  }
 }
 async function scanLeagueMobile(){
   const liga=document.getElementById('mob-leagueScanner').value||document.getElementById('leagueScanner').value;
