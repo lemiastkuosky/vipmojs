@@ -24884,7 +24884,10 @@ function executeShareWhatsApp(incluirExtras) {
         const diaStr = diaNum.toString().padStart(2, '0');
         const mesStr = mesNum.toString().padStart(2, '0');
         const dataFormatada = `${diaStr}/${mesStr}`;
-        const diaInvNum = parseInt(diaStr.split('').reverse().join(''), 10);
+        
+        // Inverte o dia (ex: 08 vira '80') para gerar as dezenas e grupos invertidos
+        const diaInvStr = diaStr.split('').reverse().join('');
+        const diaInvNum = parseInt(diaInvStr, 10);
 
         const bichos = [
             "", "🦩 Avestruz", "🦅 Aguia", "🫏 Burro", "🦋 Borboleta", "🐕 Cachorro", 
@@ -24911,12 +24914,34 @@ function executeShareWhatsApp(incluirExtras) {
             return Math.ceil(num / 4);
         }
 
-        const bDezenaDia = bichos[getGrupoByDezena(diaNum)];
-        const bDezenaInv = bichos[getGrupoByDezena(diaInvNum)];
+        // --- 1. LÓGICA DOS DESTAQUES (BICHOS DO DIA) ---
+        let destaques = [];
 
+        // Dezena do Dia (Sempre entra)
+        destaques.push(bichos[getGrupoByDezena(diaNum)]);
+
+        // Grupo do Dia (Só entra se o dia for <= 25)
+        if (diaNum <= 25) {
+            destaques.push(bichos[diaNum]);
+        }
+
+        // Dezena Invertida (Sempre entra)
+        destaques.push(bichos[getGrupoByDezena(diaInvNum)]);
+
+        // Grupo Invertido (Só entra se o número invertido for <= 25)
+        if (diaInvNum <= 25) {
+            destaques.push(bichos[diaInvNum]);
+        }
+
+        // Remove duplicados e junta tudo
+        let destaquesFinais = [...new Set(destaques)];
+        const linhaDestaques = destaquesFinais.join(' | ');
+
+        // --- 2. LÓGICA DAS DEZENAS DA I.A. ---
         const linhas = listaAtrasados.split('\n');
         const bichosEncontrados = [];
         
+        // Puxa os Top 3 bichos atrasados da tela
         for (let linha of linhas) {
             if (linha.includes('1º') || linha.includes('2º') || linha.includes('3º')) {
                 if (linha.includes('➔')) {
@@ -24930,12 +24955,14 @@ function executeShareWhatsApp(incluirExtras) {
             }
         }
 
-        let dezenasIA = [diaStr]; 
+        // AQUI: Usando o dia invertido (diaInvStr) no lugar do dia normal (diaStr)
+        let dezenasIA = [diaInvStr]; 
         
         bichosEncontrados.forEach((bichoNome, index) => {
-            let nomeLimpo = bichoNome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-            let dezenas = tabelaBichos[nomeLimpo];
+            let nomeLimpoBicho = bichoNome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            let dezenas = tabelaBichos[nomeLimpoBicho];
             if (dezenas) {
+                // Calcula uma das 4 dezenas de forma dinâmica
                 let indiceDezena = (diaNum + index) % 4;
                 dezenasIA.push(dezenas[indiceDezena]);
             }
@@ -24943,8 +24970,9 @@ function executeShareWhatsApp(incluirExtras) {
 
         const linhaDezenas = dezenasIA.join(' ➔ ');
 
+        // --- 3. MONTAGEM DA MENSAGEM ---
         msg += `📅 *BICHOS DO DIA (${dataFormatada})*\n`;
-        msg += `Destaques: ${bDezenaDia} | ${bDezenaInv}\n\n`;
+        msg += `Destaques: ${linhaDestaques}\n\n`;
         
         msg += `💎 *SUGESTÕES DE DEZENAS DA I.A.*\n`;
         msg += `Dezenas: ${linhaDezenas}\n\n`;
