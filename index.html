@@ -12293,23 +12293,28 @@ async function shareReceiptToWhatsApp() {
                     el.style.display = nums.length ? 'block' : 'none';
                     el.querySelector('.result-numbers').textContent = nums.join(' ');
                 };
-                injectResult('milharResult',  milharesDoGrupo);
-                injectResult('centenaResult', centenasDoGrupo);
-                injectResult('dezenaResult',  dezenasDoGrupo);
+                const receiptModal = document.getElementById('receiptModal');
+const eraInvisivel = !receiptModal.classList.contains('active');
+if (eraInvisivel) receiptModal.classList.add('active');
 
-                // Injeta valor e extração para o generateReceiptText ler
-                const valInputTemp = document.getElementById('receiptValueInput');
-                const oldVal = valInputTemp.value;
-                valInputTemp.value = grupo.valorStr;
+injectResult('milharResult',  milharesDoGrupo);
+injectResult('centenaResult', centenasDoGrupo);
+injectResult('dezenaResult',  dezenasDoGrupo);
 
-                generateReceiptText(chosenMethod);
+const valInputTemp = document.getElementById('receiptValueInput');
+const oldVal = valInputTemp.value;
+valInputTemp.value = grupo.valorStr;
 
-                const receiptEl = document.getElementById('receiptContent');
-                const clone = receiptEl.cloneNode(true);
-                clone.querySelectorAll('.copy-bicho-type-btn').forEach(b => b.remove());
-                const conteudoRecibo = clone.textContent;
+generateReceiptText(chosenMethod);
 
-                valInputTemp.value = oldVal;
+const receiptEl = document.getElementById('receiptContent');
+const clone = receiptEl.cloneNode(true);
+clone.querySelectorAll('.copy-bicho-type-btn').forEach(b => b.remove());
+const conteudoRecibo = clone.textContent;
+
+valInputTemp.value = oldVal;
+
+if (eraInvisivel) receiptModal.classList.remove('active');
 
                 const docRef = await firestoreDB.collection('receipts').add({
                     content: conteudoRecibo,
@@ -21156,32 +21161,28 @@ async function generateSelectedNumbers() {
                         const set = new Set();
 
                        if (typeKey === 'milhar') {
-                            // === 25 PREFIXOS × 4 DEZENAS ===
-                            // Sorteia 25 prefixos únicos e gera todas as dezenas do bicho
-                            // para cada um — se acertar o prefixo, a dezena certa está garantida.
-                            const numPrefixos = Math.floor(qtd / dezenasPool.length);
+    // Quantidade de prefixos = qtd ÷ dezenas do bicho (ex: 100 ÷ 4 = 25 prefixos)
+    const numPrefixos = Math.round(qtd / dezenasPool.length);
 
-                            // Monta e embaralha os 100 prefixos possíveis
-                            const todosPrefixos = Array.from({length: 100}, (_, i) => String(i).padStart(2, '0'));
-                            for (let i = todosPrefixos.length - 1; i > 0; i--) {
-                                const j = getSecureRandomInt(i + 1);
-                                [todosPrefixos[i], todosPrefixos[j]] = [todosPrefixos[j], todosPrefixos[i]];
-                            }
+    // Monta e embaralha os 100 prefixos possíveis
+    const todosPrefixos = Array.from({length: 100}, (_, i) => String(i).padStart(2, '0'));
+    for (let i = todosPrefixos.length - 1; i > 0; i--) {
+        const j = getSecureRandomInt(i + 1);
+        [todosPrefixos[i], todosPrefixos[j]] = [todosPrefixos[j], todosPrefixos[i]];
+    }
 
-                            // Pega os primeiros numPrefixos que gerem combinações válidas
-                            let count = 0;
-                            for (const p of todosPrefixos) {
-                                if (count >= numPrefixos) break;
-                                let algumValido = false;
-                                for (const dezena of dezenasPool) {
-                                    const n = p + dezena;
-                                    if (applyAdvancedFilters(n, 'milhar')) {
-                                        set.add(n);
-                                        algumValido = true;
-                                    }
-                                }
-                                if (algumValido) count++;
-                            }
+    // Para cada prefixo sorteado, gera TODAS as dezenas do bicho
+    let count = 0;
+    for (const p of todosPrefixos) {
+        if (count >= numPrefixos) break;
+        for (const dezena of dezenasPool) {
+            const n = p + dezena;
+            if (applyAdvancedFilters(n, 'milhar')) {
+                set.add(n);
+            }
+        }
+        count++;
+    }
                         
                         } else {
                             let attempts = 0;
