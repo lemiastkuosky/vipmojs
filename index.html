@@ -11382,6 +11382,12 @@ if (iaLotterySelect) {
 async function fetchLotteryResults(loteria, dataISO = null) {
     console.group(`🔍 DIAGNÓSTICO DE BUSCA: Loteria ${loteria} | Data: ${dataISO || 'Hoje'}`);
 
+    // --- CORREÇÃO: Transforma 'fd' em 'federal' para os links funcionarem ---
+    let loteriaBusca = loteria;
+    if (loteria === 'fd') {
+        loteriaBusca = 'federal';
+    }
+
     // FUNÇÃO 1: Chamada Direta no Vercel
     async function buscarDireto(urlAlvo, nomeRota) {
         console.log(`\n🌐 [${nomeRota}] A tentar chamada direta:`, urlAlvo);
@@ -11406,7 +11412,7 @@ async function fetchLotteryResults(loteria, dataISO = null) {
         const proxies = [
             `https://api.codetabs.com/v1/proxy?quest=${urlAlvo}`,
             `https://corsproxy.org/?${encodeURIComponent(urlAlvo)}`,
-            `https://api.allorigins.win/raw?url=${encodeURIComponent(urlAlvo)}` // Usando o formato RAW em vez de GET
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(urlAlvo)}`
         ];
 
         for (let proxy of proxies) {
@@ -11414,18 +11420,15 @@ async function fetchLotteryResults(loteria, dataISO = null) {
             console.log(`\n🔗 [${nomeRota}] Tentando proxy furtivo:`, nomeServidor);
             
             try {
-                // Adicionamos alguns cabeçalhos falsos para fingir que é um navegador real
                 const res = await fetch(proxy, {
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
                     }
                 });
 
                 if (res.ok) {
                     const texto = await res.text();
-                    
-                    // Verifica se não devolveu uma página de bloqueio do Cloudflare
                     if (texto && texto.includes('1º') && !texto.includes('Cloudflare') && !texto.includes('Just a moment...')) {
                         console.log(`✅ [${nomeRota}] Sucesso total driblando o bloqueio com:`, nomeServidor);
                         return texto;
@@ -11444,15 +11447,15 @@ async function fetchLotteryResults(loteria, dataISO = null) {
 
     let html = null;
 
-    // 1. LOTERIA NACIONAL (Mega Bicho) - Vai direto para a roleta
+    // 1. LOTERIA NACIONAL (Mega Bicho)
     if (loteria === 'ln') {
          html = await buscarComProxyAlternativo('https://megabicho.com/jogo-do-bicho/resultados/ln', 'Mega Bicho (LN)');
          console.groupEnd();
          return html;
     }
 
-    // 2. TENTATIVA 1: O SEU VERCEL
-    let urlVercel = `https://vipmojs.vercel.app/api/proxy?loteria=${loteria}&tipo=resultados`;
+    // 2. TENTATIVA 1: O SEU VERCEL (Atualizado para usar a loteriaBusca)
+    let urlVercel = `https://vipmojs.vercel.app/api/proxy?loteria=${loteriaBusca}&tipo=resultados`;
     if (dataISO) urlVercel += `&data=${dataISO}`;
     
     html = await buscarDireto(urlVercel, 'Vercel API Direto');
@@ -11464,25 +11467,27 @@ async function fetchLotteryResults(loteria, dataISO = null) {
 
     console.warn(`⚠️ Vercel demorou muito (Timeout/504). Chamando o Exército de Proxies...`);
 
-    // 3. TENTATIVA 2: ROTA DE EMERGÊNCIA (HOJE NO BICHO VIA ROLETA DE PROXIES)
-    let urlDireta = `https://hojenobicho.com/resultados/${loteria}/`;
+    // 3. TENTATIVA 2: ROTA DE EMERGÊNCIA (Atualizado para usar a loteriaBusca)
+    let urlDireta = `https://hojenobicho.com/resultados/${loteriaBusca}/`;
     if (dataISO) {
-        const partes = dataISO.split('-'); // Converte 2026-03-26 para 26-03-2026
+        const partes = dataISO.split('-'); 
         if (partes.length === 3) {
-            urlDireta = `https://hojenobicho.com/resultados/${loteria}/${partes[2]}-${partes[1]}-${partes[0]}/`;
+            urlDireta = `https://hojenobicho.com/resultados/${loteriaBusca}/${partes[2]}-${partes[1]}-${partes[0]}/`;
         }
     }
-    
-    html = await buscarComProxyAlternativo(urlDireta, 'Rota Direta Hoje no Bicho');
+
+    html = await buscarComProxyAlternativo(urlDireta, 'Rota de Emergência');
+
     if (html && html.includes('1º')) {
-         console.groupEnd();
-         return html;
+        console.groupEnd();
+        return html;
     }
 
-    console.error("🚨 Todas as tentativas e proxies falharam.");
+    console.warn(`⚠️ Todas as tentativas falharam para ${loteriaBusca}.`);
     console.groupEnd();
     return null;
 }
+
 
 const TARGET_PREFIX_COUNT_FOR_100_PERCENT = 25; // Alvo para 100%
 
@@ -12363,24 +12368,22 @@ async function shareReceiptToWhatsApp() {
                 window.finalizarELimparTudo();
             }
         }, 1000);
-        showToast('Carrinho enviado com sucesso!', 'success');
-        // Salva uma única entrada no histórico com todos os jogos do carrinho
-        const todosNumerosCart = dadosParaSalvar.flatMap(d => d.grupo.jogos.flatMap(j => j.numeros));
-        const histEntryCart = {
-            id: Date.now(),
-            code: dadosParaSalvar[0]?.codigo || generateReceiptCode(),
-            date: new Date().toISOString(),
-            fromCart: true,
-            extracaoNome: extracaoNome,
-            horarioSelecionado: horarioSelecionado,
-            totalGeral: totalGeral,
-            jogos: dadosParaSalvar.map(d => ({ valorStr: d.grupo.valorStr, numeros: d.grupo.jogos.flatMap(j => j.numeros) })),
-            results: {
-                milhar: todosNumerosCart.filter(n => String(n).length === 4),
-                centena: todosNumerosCart.filter(n => String(n).length === 3),
-                dezena: todosNumerosCart.filter(n => String(n).length === 2)
-            }
-        };
+        const todosNumerosCart = grupos.flatMap(g => g.jogos.flatMap(j => j.numeros));
+const histEntryCart = {
+    id: Date.now(),
+    code: generateReceiptCode(),
+    date: new Date().toISOString(),
+    fromCart: true,
+    extracaoNome: extracaoNome,
+    horarioSelecionado: horarioSelecionado,
+    totalGeral: totalGeral,
+    jogos: grupos.map(g => ({ valorStr: g.valorStr, numeros: g.jogos.flatMap(j => j.numeros) })),
+    results: {
+        milhar: todosNumerosCart.filter(n => String(n).length === 4),
+        centena: todosNumerosCart.filter(n => String(n).length === 3),
+        dezena: todosNumerosCart.filter(n => String(n).length === 2)
+    }
+};
         const hCart = await getData('generationHistory') || [];
         hCart.unshift(histEntryCart);
         await saveData('generationHistory', hCart.slice(0, 50));
@@ -12676,6 +12679,7 @@ function populateShareTimeSlots(loteria, nomeLoteriaDisplay) {
 }
 
 async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay, nomeHorarioDisplay, buttonElement) {
+    console.log("👉 BOTÃO CLICADO! Função ativada para:", loteria, nomeSorteio);
     const originalButtonText = buttonElement.innerHTML;
     buttonElement.disabled = true; // Desabilita o botão enquanto busca
     buttonElement.innerHTML = 'Buscando...'; // Feedback visual
@@ -12746,9 +12750,22 @@ async function generateShareResultsLink(loteria, nomeSorteio, nomeLoteriaDisplay
     // --- Fim da Verificação de Horário ---
 
     try {
+        console.log("=========================================");
+        console.log("🚀 INICIANDO BUSCA DE RESULTADOS");
+        console.log("👉 Loteria:", loteria, "| Sorteio:", nomeSorteio);
+
         // --- Busca e Extração ---
         const htmlResultados = await fetchLotteryResults(loteria);
+        
+        console.log("🌐 HTML Retornado? ", htmlResultados ? "SIM (Tamanho: " + htmlResultados.length + ")" : "NÃO (Retornou null)");
+        if (htmlResultados) {
+            console.log("📄 Trecho do HTML:", htmlResultados.substring(0, 300));
+        }
+
         const dadosExtraidos = extrairDadosResultados(htmlResultados, nomeSorteio);
+        
+        console.log("📊 Dados Extraídos pelo regex:", dadosExtraidos);
+        console.log("=========================================");
 
         // 1. SE NÃO ENCONTRAR RESULTADO (A trava do botão)
         if (!dadosExtraidos || dadosExtraidos.length === 0) {
@@ -14597,8 +14614,14 @@ function extrairDadosResultados(html, nomeSorteio) {
     }
 
     if (inicio === -1) {
-        console.warn(`[DEBUG EXTRATOR] Sorteio ${nomeUP} não encontrado no HTML. O site origem pode ainda não ter soltado a tabela completa.`);
+        console.warn(`[DEBUG EXTRATOR] Sorteio ${nomeUP} não encontrado no HTML.`);
+        console.log("🔎 Palavras-chave procuradas:", palavrasChave);
+        console.log("📝 Texto Puro lido da página:", textoPuro.substring(0, 500) + "...");
         return [];
+    } else {
+        console.log(`[DEBUG EXTRATOR] Achou a palavra-chave no índice:`, inicio);
+        const bloco = textoPuro.substring(inicio, inicio + 500);
+        console.log(`[DEBUG EXTRATOR] Bloco de texto que vai para a Regex:`, bloco);
     }
 
     // Aumenta o bloco de busca para garantir que capte tudo
@@ -24351,7 +24374,7 @@ function extrairDadosDoHTML(htmlString) {
         // --- LÓGICA 1: ATRASADOS (Para o Radar e % no Gerador) ---
         tabelaDeGrupos.forEach(bicho => {
             const nomeAnimal = bicho.animal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-            const regexAtraso = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*(?:dias|atras)`, 'i');
+            const regexAtraso = new RegExp(`${nomeAnimal}.{0,50}?(\\d+)\\s*(?:dias|atras|sorteio)`, 'i');
             const matchAtraso = textoBusca.match(regexAtraso);
             if (matchAtraso) {
                 dadosExtraidos.bichos.push({
@@ -24381,7 +24404,7 @@ async function gerarLinkWhatsapp(botao, loteria, nomeLoteria) {
     botao.disabled = true;
     botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
 
-    const mapaSite = { 'rj': 'rj', 'lk': 'lk', 'ln': 'ln', 'ba': 'ba', 'fd': 'fed' };
+    const mapaSite = { 'rj': 'rj', 'lk': 'lk', 'ln': 'ln', 'ba': 'ba', 'fd': 'fd' };
     const siglaCorreta = mapaSite[loteria] || loteria;
     const targetUrl = `https://hojenobicho.com/atrasados/${siglaCorreta}/`;
     const urlProxy = `https://vipmojs.vercel.app/api/proxy?url=${encodeURIComponent(targetUrl)}`;
