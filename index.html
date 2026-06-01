@@ -1314,7 +1314,7 @@ body.dark-mode #nomeContainerInModal select {
 #receiptModal { /* <--- ADICIONADO AQUI */
     z-index: 1150 !important; 
 }
-/
+
 .modal:not(#randomGeneratorModal):not(#receiptModal):not(#checkWinnerModal):not(#consultasModal){
     z-index: 1000;
 }
@@ -5425,7 +5425,7 @@ body.dark-mode .mcd-result-card.win-gold .mcd-number-display {
 #customValueInputModal .import-btn:active {
     background-color: #a71d2a !important;
 }
-/
+
 .ia-progress-container {
     width: 80%;
     height: 4px;
@@ -5580,7 +5580,7 @@ body:has(input[value="ia_bichos"]:checked) .ia-progress-container {
 body.dark-mode .logo-mojs {
     color: #f8f9fa; 
 }
-/
+
 .footer-system-status {
     display: flex;
     flex-direction: column;
@@ -5629,7 +5629,7 @@ body.dark-mode .logo-mojs {
         transform: translateY(0);
     }
 }
-/
+
 .result-group, .mcd-result-card, .ia-result-card, .saved-item {
     animation: fadeUpIn 0.5s ease forwards;
 }
@@ -8440,6 +8440,11 @@ header, footer, .bottom-bar {
                onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
         Padrão
     </label>
+    <label>
+    <input type="radio" name="bichoMilharMethod" value="original" 
+           onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
+    Original
+</label>
     <label>
         <input type="radio" name="bichoMilharMethod" value="fechamento_mc" 
                onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
@@ -11738,20 +11743,22 @@ function updateBichoMethodDescription() {
 
     let descriptionText = '';
     switch (selectedValue) {
-        case 'padrao':
-            descriptionText = 'Gera milhares com prefixos aleatórios (00-99) para os bichos selecionados.';
-            break;
-        case 'fechamento_mc':
-            descriptionText = 'Gera milhares usando apenas os dígitos das dezenas do bicho como prefixos. (Ex: Tigre [85,88] usa 88, 85, 58, 55).';
-            break;
-        case 'cercar_completo':
-            descriptionText = 'Gera TODAS as 400 milhares (prefixos 00-99) do bicho, sem repetição, até esgotar.';
-            break;
-        default:
-            descriptionText = ''; // Padrão
-    }
-    descriptionEl.textContent = descriptionText;
+    case 'padrao':
+        descriptionText = 'Gera milhares com prefixos aleatórios (00-99) para os bichos selecionados.';
+        break;
+    case 'original':
+        descriptionText = 'Modo clássico: usa os dígitos iniciais configurados nos filtros como prefixo. Mais preciso quando os filtros estão preenchidos.';
+        break;
+    case 'fechamento_mc':
+        descriptionText = 'Gera milhares usando apenas os dígitos das dezenas do bicho como prefixos. (Ex: Tigre [85,88] usa 88, 85, 58, 55).';
+        break;
+    case 'cercar_completo':
+        descriptionText = 'Gera TODAS as 400 milhares (prefixos 00-99) do bicho, sem repetição, até esgotar.';
+        break;
+    default:
+        descriptionText = '';
 }
+    descriptionEl.textContent = descriptionText;}
 
 const horariosLoterias = {
     'rj': [
@@ -20869,34 +20876,45 @@ async function generateSelectedNumbers() {
                     finalResults.milhar.push(...selecionados);
                 }
                 else {
-                    const dezenasPool = bicho.dezenas;
-                    typeKeys.forEach(typeKey => {
-                        const set = new Set();
+    const dezenasPool = bicho.dezenas;
+    typeKeys.forEach(typeKey => {
+        const set = new Set();
 
-                       if (typeKey === 'milhar') {
-    // Quantidade de prefixos = qtd ÷ dezenas do bicho (ex: 100 ÷ 4 = 25 prefixos)
-    const numPrefixos = Math.round(qtd / dezenasPool.length);
-
-    // Monta e embaralha os 100 prefixos possíveis
-    const todosPrefixos = Array.from({length: 100}, (_, i) => String(i).padStart(2, '0'));
-    for (let i = todosPrefixos.length - 1; i > 0; i--) {
-        const j = getSecureRandomInt(i + 1);
-        [todosPrefixos[i], todosPrefixos[j]] = [todosPrefixos[j], todosPrefixos[i]];
-    }
-
-    let count = 0;
-for (const p of todosPrefixos) {
-    if (set.size >= qtd) break;
-    if (count >= numPrefixos) break;
-    for (const dezena of dezenasPool) {
-        if (set.size >= qtd) break;
-        const n = p + dezena;
-        if (applyAdvancedFilters(n, 'milhar')) {
-            set.add(n);
+       if (typeKey === 'milhar') {
+        if (bichoMilharMethod === 'original') {
+            // MODO ORIGINAL: usa milharStartDigits e centenaStartDigits se preenchidos
+            const milharDigits = milharStartDigits.length > 0 ? milharStartDigits : [...Array(10).keys()].map(String);
+            const centenaDigits = centenaStartDigits.length > 0 ? centenaStartDigits : [...Array(10).keys()].map(String);
+            const maxAttempts = qtd * 50;
+            let attempts = 0;
+            while (set.size < qtd && attempts < maxAttempts) {
+                attempts++;
+                const randomDezena = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+                const prefixoMilhar = milharDigits[getSecureRandomInt(milharDigits.length)];
+                const prefixoCentena = centenaDigits[getSecureRandomInt(centenaDigits.length)];
+                const finalNumber = prefixoMilhar + prefixoCentena + randomDezena;
+                if (applyAdvancedFilters(finalNumber, 'milhar')) set.add(finalNumber);
+            }
+        } else {
+            // MODO PADRÃO: prefixos embaralhados em blocos
+            const numPrefixos = Math.round(qtd / dezenasPool.length);
+            const todosPrefixos = Array.from({length: 100}, (_, i) => String(i).padStart(2, '0'));
+            for (let i = todosPrefixos.length - 1; i > 0; i--) {
+                const j = getSecureRandomInt(i + 1);
+                [todosPrefixos[i], todosPrefixos[j]] = [todosPrefixos[j], todosPrefixos[i]];
+            }
+            let count = 0;
+            for (const p of todosPrefixos) {
+                if (set.size >= qtd) break;
+                if (count >= numPrefixos) break;
+                for (const dezena of dezenasPool) {
+                    if (set.size >= qtd) break;
+                    const n = p + dezena;
+                    if (applyAdvancedFilters(n, 'milhar')) set.add(n);
+                }
+                count++;
+            }
         }
-    }
-    count++;
-}
                         
                         } else {
                             let attempts = 0;
