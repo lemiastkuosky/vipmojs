@@ -59,6 +59,7 @@
     .btn-primary { background: var(--accent); color: #000; width: 100%; margin-top: 6px; }
     .btn-green   { background: var(--green); color: #000; }
     .btn-ghost   { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-danger  { background: var(--danger); color: #fff; }
     .btn-sm      { padding: 8px 14px; font-size: 0.8rem; }
     .btn-xs      { padding: 5px 10px; font-size: 0.72rem; }
 
@@ -87,14 +88,26 @@
     .counter { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
 
     /* CARDS */
-    .list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
-    .receipt-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 80px; }
+    .receipt-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px; display: flex; flex-direction: column; gap: 10px;
+      position: relative; transition: border-color .15s;
+    }
+    .receipt-card.selected { border-color: var(--danger) !important; background: rgba(224,92,92,.06); }
     .card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .card-id   { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
     .card-date { font-family: var(--mono); font-size: 0.72rem; color: var(--text); }
     .badge { display: inline-block; font-family: var(--mono); font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
     .badge-active  { background: #1a3a28; color: var(--green); border: 1px solid #2a5a38; }
     .badge-expired { background: #2a1a1a; color: var(--danger); border: 1px solid #4a2222; }
+
+    .card-checkbox {
+      display: none; width: 20px; height: 20px; flex-shrink: 0;
+      accent-color: var(--danger); cursor: pointer;
+    }
+    body.select-mode .card-checkbox { display: block; }
+    body.select-mode .receipt-card  { cursor: pointer; }
 
     /* milhar atual no card */
     .milhar-atual {
@@ -106,12 +119,25 @@
     }
     .milhar-label { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
 
+    /* DELETE BAR */
+    #deleteBar {
+      display: none; position: fixed;
+      bottom: 0; left: 0; right: 0; z-index: 50;
+      background: #160d0d; border-top: 1px solid var(--danger);
+      padding: 12px 16px; gap: 10px;
+      align-items: center; justify-content: space-between;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+    #deleteBar.open { display: flex; }
+    #deleteBar .del-info { font-family: var(--mono); font-size: 0.8rem; color: var(--danger); flex: 1; }
+    #deleteBar .del-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
     /* OVERLAY / MODAL */
     .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; align-items: flex-end; }
     .overlay.open { display: flex; }
     .modal {
       background: var(--surface); border: 1px solid var(--border); border-radius: 20px 20px 0 0;
-      width: 100%; max-height: 85vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      width: 100%; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
       padding: 0 0 env(safe-area-inset-bottom, 16px); display: flex; flex-direction: column;
     }
     .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
@@ -121,7 +147,7 @@
     .modal-meta strong { color: var(--text); }
     .modal-body { padding: 20px 16px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
 
-    /* EDITOR DE UMA MILHAR */
+    /* EDITOR */
     .section-label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin-bottom: 8px; }
 
     /* busca */
@@ -139,6 +165,38 @@
     }
     #searchResult.found    { background: rgba(61,214,140,.1); color: var(--green); border: 1px solid rgba(61,214,140,.25); }
     #searchResult.notfound { background: rgba(224,92,92,.1);  color: var(--danger); border: 1px solid rgba(224,92,92,.25); }
+
+    /* BICHO CHIPS */
+    .bicho-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .bicho-chip {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; padding: 8px 4px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      cursor: pointer; transition: border-color .12s, background .12s;
+      font-family: var(--mono); font-size: 0.6rem; color: var(--muted);
+      user-select: none; -webkit-user-select: none;
+    }
+    .bicho-chip .bc-emoji { font-size: 1.1rem; line-height: 1; }
+    .bicho-chip .bc-name  { font-size: 0.55rem; text-transform: uppercase; }
+    .bicho-chip .bc-nums  { font-size: 0.52rem; color: var(--muted); }
+    .bicho-chip:hover     { border-color: var(--accent); }
+    .bicho-chip.active    { border-color: var(--accent); background: rgba(245,200,66,.1); color: var(--accent); }
+    .bicho-chip.active .bc-nums { color: rgba(245,200,66,.7); }
+
+    /* MILHAR CHIPS (lista de milhares do recibo) */
+    .m-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 8px 14px; border-radius: 8px; cursor: pointer;
+      font-family: var(--mono); font-size: 1rem; font-weight: 700; letter-spacing: 2px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+      transition: border-color .12s, background .12s, color .12s;
+      user-select: none; -webkit-user-select: none;
+    }
+    .m-chip:hover { border-color: var(--accent); color: var(--text); }
+    .m-chip.active {
+      border-color: var(--accent); background: rgba(245,200,66,.12); color: var(--accent);
+    }
+    .m-chip-none { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); padding: 8px 0; }
 
     /* troca */
     .troca-box {
@@ -166,6 +224,13 @@
     .troca-labels { display: flex; gap: 12px; }
     .troca-labels span { flex: 1; text-align: center; font-family: var(--mono); font-size: 0.65rem; color: var(--muted); }
 
+    #milharHint {
+      font-family: var(--mono); font-size: 0.75rem; margin-top: 8px;
+      padding: 7px 12px; border-radius: 8px; display: none; text-align: center;
+    }
+    #milharHint.ok  { background: rgba(61,214,140,.1); color: var(--green); border: 1px solid rgba(61,214,140,.25); display: block; }
+    #milharHint.err { background: rgba(224,92,92,.1);  color: var(--danger); border: 1px solid rgba(224,92,92,.25); display: block; }
+
     /* FOOTER */
     .modal-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
     .modal-footer .btn { flex: 1; }
@@ -176,7 +241,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     #toast {
-      position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); left: 50%;
+      position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); left: 50%;
       transform: translateX(-50%) translateY(20px);
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
       padding: 10px 18px; font-family: var(--mono); font-size: 0.82rem; color: var(--text);
@@ -186,6 +251,22 @@
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     #toast.ok   { border-color: var(--green);  color: var(--green); }
     #toast.err  { border-color: var(--danger); color: var(--danger); }
+
+    /* CONFIRM MODAL */
+    #confirmOverlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85);
+      z-index: 300; align-items: center; justify-content: center; padding: 20px;
+    }
+    #confirmOverlay.open { display: flex; }
+    .confirm-box {
+      background: var(--surface); border: 1px solid var(--danger); border-radius: 16px;
+      padding: 24px 20px; width: 100%; max-width: 320px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .confirm-box h3 { font-size: 1rem; font-weight: 800; color: var(--danger); }
+    .confirm-box p  { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+    .confirm-actions { display: flex; gap: 8px; }
+    .confirm-actions .btn { flex: 1; }
   </style>
 </head>
 <body>
@@ -208,6 +289,7 @@
     <span class="logo">🎰 Admin VIP</span>
     <div class="user-chip">
       <span id="userEmail"></span>
+      <button class="btn btn-ghost btn-xs" id="selectModeBtn" onclick="toggleSelectMode()">☑️ Selecionar</button>
       <button class="btn btn-ghost btn-xs" onclick="doLogout()">Sair</button>
     </div>
   </header>
@@ -226,6 +308,15 @@
   </div>
 </div>
 
+<!-- DELETE BAR -->
+<div id="deleteBar">
+  <span class="del-info" id="deleteInfo">0 selecionados</span>
+  <div class="del-actions">
+    <button class="btn btn-ghost btn-sm" onclick="selectAll()">Todos</button>
+    <button class="btn btn-danger btn-sm" onclick="askDeleteSelected()">🗑️ Apagar</button>
+  </div>
+</div>
+
 <!-- EDITOR -->
 <div class="overlay" id="editorOverlay">
   <div class="modal" id="editorModal">
@@ -238,20 +329,22 @@
 
     <div class="modal-body">
 
-      <!-- Buscar milhar -->
+      <!-- Todas as milhares do recibo -->
       <div>
-        <div class="section-label">BUSCAR MILHAR NO RECIBO</div>
-        <div class="search-milhar-wrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="milharSearch" maxlength="4" placeholder="0000" inputmode="numeric"
-                 oninput="this.value=this.value.replace(/\D/g,''); doSearch()" />
-        </div>
-        <div id="searchResult"></div>
+        <div class="section-label">MILHARES NO RECIBO — toque para selecionar qual alterar</div>
+        <div id="milharesChips" style="display:flex;flex-wrap:wrap;gap:8px;min-height:36px;"></div>
+        <div id="searchResult" style="margin-top:8px;"></div>
+      </div>
+
+      <!-- Bichos -->
+      <div>
+        <div class="section-label">ESCOLHER BICHO (opcional — filtra milhares válidas)</div>
+        <div class="bicho-grid" id="bichoGrid"></div>
       </div>
 
       <!-- Troca -->
       <div>
-        <div class="section-label">ALTERAR MILHAR</div>
+        <div class="section-label">ALTERAR MILHAR SELECIONADA</div>
         <div class="troca-box">
           <div class="troca-labels">
             <span>ATUAL</span>
@@ -262,10 +355,11 @@
             <div class="troca-num" id="milharAtualDisplay">—</div>
             <div class="arrow">→</div>
             <input type="text" id="novaMilharInput" maxlength="4" placeholder="0000" inputmode="numeric"
-                   oninput="this.value=this.value.replace(/\D/g,'')"
+                   oninput="onNovaMilharInput()"
                    onkeydown="if(event.key==='Enter'){event.preventDefault();saveReceipt();}" />
           </div>
         </div>
+        <div id="milharHint"></div>
       </div>
 
     </div>
@@ -273,6 +367,18 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeEditor()">Cancelar</button>
       <button class="btn btn-green" id="saveBtn" onclick="saveReceipt()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div id="confirmOverlay">
+  <div class="confirm-box">
+    <h3>🗑️ Confirmar exclusão</h3>
+    <p id="confirmMsg">Tem certeza?</p>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn btn-danger" id="confirmOkBtn" onclick="confirmDeleteNow()">Apagar</button>
     </div>
   </div>
 </div>
@@ -293,8 +399,57 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-let allReceipts = [];
-let currentDoc  = null; // { id, data }
+let allReceipts  = [];
+let currentDoc   = null;
+let selectedIds  = new Set();
+let selectMode   = false;
+let activeBicho  = null; // índice 0-24 ou null
+
+// ── Jogo do Bicho: 25 bichos, cada um tem 4 dezenas (00–99 agrupadas) ──
+// Cada bicho: milhares terminando em suas dezenas
+// Bicho 1=Avestruz: 01,02,03,04 → milhares X001..X004, X101..X104 etc
+// Tabela completa: bicho N cobre dezenas (N-1)*4+1 .. N*4 (01-based, 01 a 00)
+const BICHOS = [
+  { nome:'Avestruz', emoji:'🦅', dezenas:['01','02','03','04'] },
+  { nome:'Águia',    emoji:'🦅', dezenas:['05','06','07','08'] },
+  { nome:'Burro',    emoji:'🫏', dezenas:['09','10','11','12'] },
+  { nome:'Borboleta',emoji:'🦋', dezenas:['13','14','15','16'] },
+  { nome:'Cachorro', emoji:'🐕', dezenas:['17','18','19','20'] },
+  { nome:'Cabra',    emoji:'🐐', dezenas:['21','22','23','24'] },
+  { nome:'Carneiro', emoji:'🐑', dezenas:['25','26','27','28'] },
+  { nome:'Camelo',   emoji:'🐪', dezenas:['29','30','31','32'] },
+  { nome:'Cobra',    emoji:'🐍', dezenas:['33','34','35','36'] },
+  { nome:'Coelho',   emoji:'🐰', dezenas:['37','38','39','40'] },
+  { nome:'Cavalo',   emoji:'🐴', dezenas:['41','42','43','44'] },
+  { nome:'Elefante', emoji:'🐘', dezenas:['45','46','47','48'] },
+  { nome:'Galo',     emoji:'🐓', dezenas:['49','50','51','52'] },
+  { nome:'Gato',     emoji:'🐱', dezenas:['53','54','55','56'] },
+  { nome:'Jacaré',   emoji:'🐊', dezenas:['57','58','59','60'] },
+  { nome:'Leão',     emoji:'🦁', dezenas:['61','62','63','64'] },
+  { nome:'Macaco',   emoji:'🐒', dezenas:['65','66','67','68'] },
+  { nome:'Porco',    emoji:'🐷', dezenas:['69','70','71','72'] },
+  { nome:'Pavão',    emoji:'🦚', dezenas:['73','74','75','76'] },
+  { nome:'Peru',     emoji:'🦃', dezenas:['77','78','79','80'] },
+  { nome:'Touro',    emoji:'🐂', dezenas:['81','82','83','84'] },
+  { nome:'Tigre',    emoji:'🐯', dezenas:['85','86','87','88'] },
+  { nome:'Urso',     emoji:'🐻', dezenas:['89','90','91','92'] },
+  { nome:'Veado',    emoji:'🦌', dezenas:['93','94','95','96'] },
+  { nome:'Vaca',     emoji:'🐄', dezenas:['97','98','99','00'] },
+];
+
+// Retorna true se a milhar pertence ao bicho de índice bichoIdx
+function milharPertenceAoBicho(milhar, bichoIdx) {
+  if (bichoIdx === null) return true;
+  const dezena = milhar.slice(-2); // últimos 2 dígitos
+  return BICHOS[bichoIdx].dezenas.includes(dezena);
+}
+
+// Retorna nome do bicho que a milhar pertence
+function bichoDoMilhar(milhar) {
+  if (!milhar) return null;
+  const dezena = milhar.slice(-2);
+  return BICHOS.find(b => b.dezenas.includes(dezena)) || null;
+}
 
 // ── Auth ──
 auth.onAuthStateChanged(user => {
@@ -302,6 +457,7 @@ auth.onAuthStateChanged(user => {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     document.getElementById('userEmail').textContent = user.email.split('@')[0];
+    buildBichoGrid();
     loadReceipts();
   } else {
     document.getElementById('loginScreen').style.display = 'flex';
@@ -330,6 +486,8 @@ function doLogout() { auth.signOut(); }
 async function loadReceipts() {
   document.getElementById('receiptsList').innerHTML = '<div class="empty-state"><span class="spinner"></span></div>';
   document.getElementById('counter').textContent = '…';
+  selectedIds.clear();
+  updateDeleteBar();
   try {
     const snap = await db.collection('receipts').orderBy('createdAt', 'desc').limit(200).get();
     allReceipts = snap.docs.map(d => ({ id: d.id, data: d.data() }));
@@ -357,37 +515,43 @@ function renderList(list) {
       : '<span class="badge badge-active">Ativo</span>';
 
     const milhar = extractMilhar(data.content || '');
+    const bicho  = bichoDoMilhar(milhar);
     const clientLink = `https://meus-recibos-vip.web.app/recibo.html?id=${id}`;
+    const checked = selectedIds.has(id) ? 'checked' : '';
 
     return `
-      <div class="receipt-card">
+      <div class="receipt-card${selectedIds.has(id) ? ' selected' : ''}" id="card-${id}" onclick="onCardClick('${id}', event)">
         <div class="card-row">
-          <span class="card-id">${id.substring(0,16)}…</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" class="card-checkbox" ${checked} onclick="event.stopPropagation();toggleSelect('${id}')" />
+            <span class="card-id">${id.substring(0,16)}…</span>
+          </div>
           ${badge}
         </div>
         <div class="card-date">📅 ${dateStr}</div>
         <div class="card-row">
           <div>
-            <div class="milhar-label" style="margin-bottom:4px">MILHAR</div>
+            <div class="milhar-label" style="margin-bottom:4px">MILHAR${bicho ? ' · ' + bicho.emoji + ' ' + bicho.nome : ''}</div>
             <div class="milhar-atual">${milhar || '<span style="color:var(--muted);font-size:.8rem">não encontrada</span>'}</div>
           </div>
         </div>
         <div class="card-row" style="gap:8px">
-          <button class="btn btn-primary btn-sm" style="flex:1" onclick="openEditor('${id}')">✏️ Alterar Milhar</button>
-          <a href="${clientLink}" target="_blank" class="btn btn-ghost btn-sm">🔗 Ver</a>
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar Milhar</button>
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();askDeleteOne('${id}')">🗑️</button>
+          <a href="${clientLink}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">🔗 Ver</a>
         </div>
       </div>`;
   }).join('');
 }
 
-// ── Busca a milhar de 4 dígitos do content, ignorando anos (19xx / 20xx) ──
+// ── Extrai milhar ignorando anos ──
 function extractMilhar(content) {
   const matches = [...content.matchAll(/\b(\d{4})\b/g)];
   const milhar = matches.find(m => !/^(19|20)\d{2}$/.test(m[1]));
   return milhar ? milhar[1] : null;
 }
 
-// ── Filter list ──
+// ── Filter ──
 function filterReceipts() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   if (!q) { renderList(allReceipts); return; }
@@ -396,11 +560,205 @@ function filterReceipts() {
   ));
 }
 
+// ── SELECT MODE ──
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  document.body.classList.toggle('select-mode', selectMode);
+  document.getElementById('selectModeBtn').textContent = selectMode ? '✖️ Cancelar' : '☑️ Selecionar';
+  if (!selectMode) {
+    selectedIds.clear();
+    updateDeleteBar();
+    renderList(allReceipts);
+  }
+}
+
+function onCardClick(id, e) {
+  if (!selectMode) return;
+  toggleSelect(id);
+}
+
+function toggleSelect(id) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+    document.getElementById('card-' + id)?.classList.remove('selected');
+    document.querySelector(`#card-${id} .card-checkbox`).checked = false;
+  } else {
+    selectedIds.add(id);
+    document.getElementById('card-' + id)?.classList.add('selected');
+    document.querySelector(`#card-${id} .card-checkbox`).checked = true;
+  }
+  updateDeleteBar();
+}
+
+function selectAll() {
+  // Select all currently rendered cards
+  document.querySelectorAll('.receipt-card').forEach(card => {
+    const id = card.id.replace('card-', '');
+    if (id) {
+      selectedIds.add(id);
+      card.classList.add('selected');
+      card.querySelector('.card-checkbox').checked = true;
+    }
+  });
+  updateDeleteBar();
+}
+
+function updateDeleteBar() {
+  const bar = document.getElementById('deleteBar');
+  const n = selectedIds.size;
+  document.getElementById('deleteInfo').textContent = `${n} recibo${n !== 1 ? 's' : ''} selecionado${n !== 1 ? 's' : ''}`;
+  if (n > 0 && selectMode) bar.classList.add('open');
+  else bar.classList.remove('open');
+}
+
+// ── DELETE ONE ──
+let pendingDeleteIds = [];
+
+function askDeleteOne(id) {
+  pendingDeleteIds = [id];
+  const rec = allReceipts.find(r => r.id === id);
+  const milhar = rec ? extractMilhar(rec.data.content || '') : '—';
+  document.getElementById('confirmMsg').innerHTML =
+    `Apagar o recibo <strong style="color:var(--text)">${id.substring(0,16)}…</strong>?<br><br>Milhar: <strong style="color:var(--accent)">${milhar || '—'}</strong><br><br>Essa ação não pode ser desfeita.`;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+function askDeleteSelected() {
+  if (!selectedIds.size) return;
+  pendingDeleteIds = [...selectedIds];
+  document.getElementById('confirmMsg').innerHTML =
+    `Apagar <strong style="color:var(--danger)">${pendingDeleteIds.length}</strong> recibo${pendingDeleteIds.length !== 1 ? 's' : ''} selecionado${pendingDeleteIds.length !== 1 ? 's' : ''}?<br><br>Essa ação não pode ser desfeita.`;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+  pendingDeleteIds = [];
+}
+
+async function confirmDeleteNow() {
+  if (!pendingDeleteIds.length) return;
+  const btn = document.getElementById('confirmOkBtn');
+  btn.disabled = true; btn.textContent = 'Apagando…';
+
+  try {
+    // Firestore batch delete (max 500 per batch, mas 200 é nosso limit)
+    const batch = db.batch();
+    pendingDeleteIds.forEach(id => batch.delete(db.collection('receipts').doc(id)));
+    await batch.commit();
+
+    // Remove do cache local
+    pendingDeleteIds.forEach(id => {
+      allReceipts = allReceipts.filter(r => r.id !== id);
+      selectedIds.delete(id);
+    });
+
+    const n = pendingDeleteIds.length;
+    showToast(`🗑️ ${n} recibo${n !== 1 ? 's' : ''} apagado${n !== 1 ? 's' : ''}!`, 'ok');
+    closeConfirm();
+    if (selectMode) toggleSelectMode();
+    renderList(allReceipts);
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Apagar';
+  }
+}
+
+// ── BICHO GRID ──
+function buildBichoGrid() {
+  const grid = document.getElementById('bichoGrid');
+  grid.innerHTML = BICHOS.map((b, i) => `
+    <div class="bicho-chip" id="bicho-${i}" onclick="selectBicho(${i})">
+      <span class="bc-emoji">${b.emoji}</span>
+      <span class="bc-name">${b.nome}</span>
+      <span class="bc-nums">${b.dezenas.join(' ')}</span>
+    </div>`).join('');
+}
+
+function selectBicho(i) {
+  if (activeBicho === i) {
+    // deselect
+    activeBicho = null;
+    document.getElementById('bicho-' + i)?.classList.remove('active');
+  } else {
+    if (activeBicho !== null) document.getElementById('bicho-' + activeBicho)?.classList.remove('active');
+    activeBicho = i;
+    document.getElementById('bicho-' + i)?.classList.add('active');
+  }
+  // Re-validate input after bicho change
+  onNovaMilharInput();
+}
+
+// ── Extrai TODAS as milhares únicas do content (ignora anos) ──
+function extractAllMilhares(content) {
+  const matches = [...content.matchAll(/\b(\d{4})\b/g)];
+  const seen = new Set();
+  const result = [];
+  for (const m of matches) {
+    const v = m[1];
+    if (/^(19|20)\d{2}$/.test(v)) continue; // ignora anos
+    if (!seen.has(v)) { seen.add(v); result.push(v); }
+  }
+  return result;
+}
+
+let selectedMilhar = null; // milhar atualmente selecionada no editor
+
+// ── Renderiza os chips de milhar ──
+function renderMilharChips(milhares, autoSelect) {
+  const container = document.getElementById('milharesChips');
+  if (!milhares.length) {
+    container.innerHTML = '<span class="m-chip-none">Nenhuma milhar encontrada no recibo.</span>';
+    return;
+  }
+  container.innerHTML = milhares.map(m => {
+    const b = bichoDoMilhar(m);
+    const label = b ? ` ${b.emoji}` : '';
+    return `<div class="m-chip" id="mchip-${m}" onclick="selectMilharChip('${m}')">${m}${label}</div>`;
+  }).join('');
+
+  // auto-seleciona a primeira (ou a indicada)
+  const toSelect = autoSelect || milhares[0];
+  if (toSelect) selectMilharChip(toSelect);
+}
+
+function selectMilharChip(m) {
+  // remove active de todos
+  document.querySelectorAll('.m-chip').forEach(c => c.classList.remove('active'));
+  const chip = document.getElementById('mchip-' + m);
+  if (chip) chip.classList.add('active');
+
+  selectedMilhar = m;
+  document.getElementById('milharAtualDisplay').textContent = m;
+  document.getElementById('novaMilharInput').value = '';
+  document.getElementById('milharHint').className = '';
+  document.getElementById('milharHint').textContent = '';
+
+  // auto-highlight bicho do chip selecionado
+  const b = bichoDoMilhar(m);
+  if (b) {
+    const idx = BICHOS.indexOf(b);
+    if (idx !== -1 && activeBicho === null) selectBicho(idx);
+    else if (idx !== -1) {
+      // só atualiza se o bicho mudou
+      if (activeBicho !== idx) {
+        if (activeBicho !== null) document.getElementById('bicho-' + activeBicho)?.classList.remove('active');
+        activeBicho = idx;
+        document.getElementById('bicho-' + idx)?.classList.add('active');
+      }
+    }
+  }
+}
+
 // ── Open editor ──
 function openEditor(id) {
   const rec = allReceipts.find(r => r.id === id);
   if (!rec) return;
   currentDoc = rec;
+  activeBicho = null;
+  selectedMilhar = null;
+  document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
 
   const created = rec.data.createdAt ? rec.data.createdAt.toDate() : null;
   const dateStr = created
@@ -410,11 +768,15 @@ function openEditor(id) {
   document.getElementById('modalMeta').innerHTML =
     `<span><strong>${id.substring(0,16)}…</strong></span><span>📅 ${dateStr}</span>`;
 
-  const milharAtual = extractMilhar(rec.data.content || '') || '—';
-  document.getElementById('milharAtualDisplay').textContent = milharAtual;
+  document.getElementById('milharAtualDisplay').textContent = '—';
   document.getElementById('novaMilharInput').value = '';
-  document.getElementById('milharSearch').value = '';
   document.getElementById('searchResult').style.display = 'none';
+  document.getElementById('milharHint').className = '';
+  document.getElementById('milharHint').textContent = '';
+
+  // Renderiza todas as milhares
+  const todas = extractAllMilhares(rec.data.content || '');
+  renderMilharChips(todas);
 
   document.getElementById('editorOverlay').classList.add('open');
   document.getElementById('editorModal').scrollTop = 0;
@@ -426,19 +788,41 @@ function closeEditor() {
   currentDoc = null;
 }
 
-// ── Busca dentro do editor ──
-function doSearch() {
-  const val = document.getElementById('milharSearch').value;
-  const result = document.getElementById('searchResult');
-  if (val.length < 4) { result.style.display = 'none'; return; }
-  const content = currentDoc?.data?.content || '';
-  const found = new RegExp(`\\b${val}\\b`).test(content);
-  result.style.display = '';
-  result.className = found ? 'found' : 'notfound';
-  result.textContent = found ? `✅ ${val} está no recibo` : `❌ ${val} não está no recibo`;
+// ── Validate nova milhar contra bicho selecionado ──
+function onNovaMilharInput() {
+  const el = document.getElementById('novaMilharInput');
+  el.value = el.value.replace(/\D/g, '');
+  const val = el.value;
+  const hint = document.getElementById('milharHint');
+
+  if (val.length < 4) { hint.className = ''; hint.textContent = ''; return; }
+
+  if (activeBicho === null) {
+    // Nenhum bicho selecionado: apenas informa qual bicho
+    const b = bichoDoMilhar(val);
+    if (b) {
+      hint.className = 'ok';
+      hint.textContent = `${b.emoji} ${b.nome} (dezena ${val.slice(-2)})`;
+    }
+    return;
+  }
+
+  const valido = milharPertenceAoBicho(val, activeBicho);
+  const b = BICHOS[activeBicho];
+  if (valido) {
+    hint.className = 'ok';
+    hint.textContent = `✅ Pertence ao ${b.emoji} ${b.nome}`;
+  } else {
+    const bReal = bichoDoMilhar(val);
+    hint.className = 'err';
+    hint.textContent = `❌ ${val} é do ${bReal ? bReal.emoji + ' ' + bReal.nome : '?'} — não do ${b.emoji} ${b.nome}`;
+  }
 }
 
-// ── Save: substitui APENAS a milhar no content, nada mais ──
+// ── doSearch removido: busca substituída pelos chips de milhar ──
+function doSearch() {}
+
+// ── Save ──
 async function saveReceipt() {
   if (!currentDoc) return;
   const nova = document.getElementById('novaMilharInput').value.trim();
@@ -446,34 +830,29 @@ async function saveReceipt() {
     showToast('Digite exatamente 4 dígitos.', 'err'); return;
   }
 
-  const milharAtual = extractMilhar(currentDoc.data.content || '');
-  if (!milharAtual) {
-    showToast('Nenhuma milhar encontrada no recibo.', 'err'); return;
+  // Bloqueia se bicho selecionado e milhar não pertence
+  if (activeBicho !== null && !milharPertenceAoBicho(nova, activeBicho)) {
+    const b = BICHOS[activeBicho];
+    showToast(`❌ Milhar não pertence ao ${b.emoji} ${b.nome}`, 'err'); return;
   }
-  if (milharAtual === nova) {
-    showToast('A milhar já é essa.', 'err'); return;
-  }
+
+  if (!selectedMilhar) { showToast('Selecione uma milhar para alterar.', 'err'); return; }
+  if (selectedMilhar === nova) { showToast('A milhar já é essa.', 'err'); return; }
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'Salvando…';
 
   try {
-    // Substitui só a milhar — word-boundary garante que não troca números maiores que contenham ela
-    const novoContent = currentDoc.data.content.replace(
-      new RegExp(`\\b${milharAtual}\\b`),
-      nova
-    );
-
-    // Só atualiza o campo content — createdAt, expiresAt, isPaid, tipo ficam intactos
+    const novoContent = currentDoc.data.content.replace(new RegExp(`\\b${selectedMilhar}\\b`), nova);
     await db.collection('receipts').doc(currentDoc.id).update({ content: novoContent });
 
-    // Atualiza cache local
     const idx = allReceipts.findIndex(r => r.id === currentDoc.id);
     if (idx !== -1) allReceipts[idx].data.content = novoContent;
 
     showToast('✅ Milhar alterada!', 'ok');
     closeEditor();
     renderList(allReceipts);
+    selectedMilhar = null;
   } catch(e) {
     showToast('Erro: ' + e.message, 'err');
   } finally {
@@ -487,11 +866,14 @@ function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'show ' + type;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.className = ''; }, 2500);
+  toastTimer = setTimeout(() => { t.className = ''; }, 2800);
 }
 
 document.getElementById('editorOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeEditor();
+});
+document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirm();
 });
 </script>
 </body>
