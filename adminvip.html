@@ -88,7 +88,7 @@
     .counter { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
 
     /* CARDS */
-    .list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 80px; }
+    .list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
     .receipt-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px;
       padding: 14px; display: flex; flex-direction: column; gap: 10px;
@@ -150,9 +150,6 @@
     /* EDITOR */
     .section-label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin-bottom: 8px; }
 
-    /* busca */
-    .search-milhar-wrap { position: relative; }
-    .search-milhar-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
     /* BICHO CHIPS */
     .bicho-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
     .bicho-chip {
@@ -169,6 +166,13 @@
     .bicho-chip:hover     { border-color: var(--accent); }
     .bicho-chip.active    { border-color: var(--accent); background: rgba(245,200,66,.1); color: var(--accent); }
     .bicho-chip.active .bc-nums { color: rgba(245,200,66,.7); }
+    /* Estilo para bichos bloqueados */
+    .bicho-chip.disabled {
+      opacity: 0.25;
+      filter: grayscale(1);
+      cursor: not-allowed;
+      border-color: transparent !important;
+    }
 
     /* BUSCA no editor */
     .search-milhar-wrap { position: relative; margin-bottom: 0; }
@@ -243,6 +247,8 @@
     .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .app-version { text-align: center; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); padding: 10px 0 40px; }
+
     #toast {
       position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); left: 50%;
       transform: translateX(-50%) translateY(20px);
@@ -274,7 +280,6 @@
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
     <h1>🎰 Admin VIP</h1>
@@ -286,7 +291,6 @@
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <header>
     <span class="logo">🎰 Admin VIP</span>
@@ -309,9 +313,10 @@
   <div class="list" id="receiptsList">
     <div class="empty-state"><span class="spinner"></span></div>
   </div>
+  
+  <div class="app-version">Versão 1.1.0</div>
 </div>
 
-<!-- DELETE BAR -->
 <div id="deleteBar">
   <span class="del-info" id="deleteInfo">0 selecionados</span>
   <div class="del-actions">
@@ -321,7 +326,6 @@
   </div>
 </div>
 
-<!-- EDITOR -->
 <div class="overlay" id="editorOverlay">
   <div class="modal" id="editorModal">
     <div class="modal-handle"></div>
@@ -333,7 +337,6 @@
 
     <div class="modal-body">
 
-      <!-- Busca + todas as milhares do recibo -->
       <div>
         <div class="section-label">BUSCAR MILHAR NO RECIBO</div>
         <div class="search-milhar-wrap">
@@ -346,13 +349,11 @@
         <div id="milharesChips" style="display:flex;flex-wrap:wrap;gap:8px;min-height:36px;"></div>
       </div>
 
-      <!-- Bichos -->
       <div>
-        <div class="section-label">ESCOLHER BICHO (opcional — filtra milhares válidas)</div>
+        <div class="section-label">BICHOS NESTE BILHETE</div>
         <div class="bicho-grid" id="bichoGrid"></div>
       </div>
 
-      <!-- Troca -->
       <div>
         <div class="section-label">ALTERAR MILHAR SELECIONADA</div>
         <div class="troca-box">
@@ -381,7 +382,6 @@
   </div>
 </div>
 
-<!-- CONFIRM DELETE -->
 <div id="confirmOverlay">
   <div class="confirm-box">
     <h3>🗑️ Confirmar exclusão</h3>
@@ -409,17 +409,14 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-let allReceipts  = [];
-let currentDoc   = null;
-let selectedIds  = new Set();
-let selectMode   = false;
-let activeBicho  = null; // índice 0-24 ou null
-let bichoTravado = null; // bicho fixo da milhar atual — não pode trocar
+let allReceipts   = [];
+let currentDoc    = null;
+let selectedIds   = new Set();
+let selectMode    = false;
+let activeBicho   = null; 
+let allowedBichos = new Set(); // Guarda apenas os bichos que estão no bilhete atual
 
 // ── Jogo do Bicho: 25 bichos, cada um tem 4 dezenas (00–99 agrupadas) ──
-// Cada bicho: milhares terminando em suas dezenas
-// Bicho 1=Avestruz: 01,02,03,04 → milhares X001..X004, X101..X104 etc
-// Tabela completa: bicho N cobre dezenas (N-1)*4+1 .. N*4 (01-based, 01 a 00)
 const BICHOS = [
   { nome:'Avestruz', emoji:'🦅', dezenas:['01','02','03','04'] },
   { nome:'Águia',    emoji:'🦅', dezenas:['05','06','07','08'] },
@@ -448,14 +445,6 @@ const BICHOS = [
   { nome:'Vaca',     emoji:'🐄', dezenas:['97','98','99','00'] },
 ];
 
-// Retorna true se a milhar pertence ao bicho de índice bichoIdx
-function milharPertenceAoBicho(milhar, bichoIdx) {
-  if (bichoIdx === null) return true;
-  const dezena = milhar.slice(-2); // últimos 2 dígitos
-  return BICHOS[bichoIdx].dezenas.includes(dezena);
-}
-
-// Retorna nome do bicho que a milhar pertence
 function bichoDoMilhar(milhar) {
   if (!milhar) return null;
   const dezena = milhar.slice(-2);
@@ -508,7 +497,6 @@ async function loadReceipts() {
   }
 }
 
-// ── Render cards ──
 function renderList(list) {
   document.getElementById('counter').textContent = String(list.length);
   const container = document.getElementById('receiptsList');
@@ -519,11 +507,32 @@ function renderList(list) {
     const dateStr = created
       ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created)
       : '—';
+    
     const expires = data.expiresAt ? (data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt)) : null;
-    const expired = expires && expires < new Date();
-    const badge = expired
-      ? '<span class="badge badge-expired">Expirado</span>'
-      : '<span class="badge badge-active">Ativo</span>';
+    
+    // Calcula tempo restante
+    let badgeHtml = '';
+    if (expires) {
+      const now = new Date();
+      const diffMs = expires - now;
+      if (diffMs <= 0) {
+        badgeHtml = '<span class="badge badge-expired">Expirado</span>';
+      } else {
+        const totalMin = Math.floor(diffMs / 60000);
+        const dias = Math.floor(totalMin / 1440);
+        const horas = Math.floor((totalMin % 1440) / 60);
+        const min = totalMin % 60;
+        
+        let tempoStr = '';
+        if (dias > 0) tempoStr += `${dias}d `;
+        if (horas > 0) tempoStr += `${horas}h `;
+        tempoStr += `${min}m`;
+        
+        badgeHtml = `<span class="badge badge-active" title="Tempo restante">⏱️ ${tempoStr.trim()}</span>`;
+      }
+    } else {
+      badgeHtml = '<span class="badge badge-active">Ativo</span>';
+    }
 
     const milhar = extractMilhar(data.content || '');
     const clientLink = `https://meus-recibos-vip.web.app/recibo.html?id=${id}`;
@@ -536,7 +545,7 @@ function renderList(list) {
             <input type="checkbox" class="card-checkbox" ${checked} onclick="event.stopPropagation();toggleSelect('${id}')" />
             <span class="card-id">${id.substring(0,16)}…</span>
           </div>
-          ${badge}
+          ${badgeHtml}
         </div>
         <div class="card-date">📅 ${dateStr}</div>
         <div class="card-row">
@@ -554,14 +563,12 @@ function renderList(list) {
   }).join('');
 }
 
-// ── Extrai milhar ignorando anos ──
 function extractMilhar(content) {
   const matches = [...content.matchAll(/\b(\d{4})\b/g)];
   const milhar = matches.find(m => !/^(19|20)\d{2}$/.test(m[1]));
   return milhar ? milhar[1] : null;
 }
 
-// ── Filter ──
 function filterReceipts() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   if (!q) { renderList(allReceipts); return; }
@@ -601,7 +608,6 @@ function toggleSelect(id) {
 }
 
 function selectAll() {
-  // Select all currently rendered cards
   document.querySelectorAll('.receipt-card').forEach(card => {
     const id = card.id.replace('card-', '');
     if (id) {
@@ -660,12 +666,10 @@ async function confirmDeleteNow() {
   btn.disabled = true; btn.textContent = 'Apagando…';
 
   try {
-    // Firestore batch delete (max 500 per batch, mas 200 é nosso limit)
     const batch = db.batch();
     pendingDeleteIds.forEach(id => batch.delete(db.collection('receipts').doc(id)));
     await batch.commit();
 
-    // Remove do cache local
     pendingDeleteIds.forEach(id => {
       allReceipts = allReceipts.filter(r => r.id !== id);
       selectedIds.delete(id);
@@ -695,8 +699,13 @@ function buildBichoGrid() {
 }
 
 function selectBicho(i) {
-  // Se há bicho travado, não permite desmarcar nem trocar
-  if (typeof bichoTravado === 'number') return;
+  // Impede de selecionar bicho que não está na lista de permitidos
+  if (allowedBichos.size > 0 && !allowedBichos.has(i)) {
+    const b = BICHOS[i];
+    showToast(`❌ O ${b.emoji} ${b.nome} não foi gerado neste bilhete.`, 'err');
+    return;
+  }
+
   if (activeBicho === i) {
     activeBicho = null;
     document.getElementById('bicho-' + i)?.classList.remove('active');
@@ -708,22 +717,20 @@ function selectBicho(i) {
   onNovaMilharInput();
 }
 
-// ── Extrai TODAS as milhares únicas do content (ignora anos) ──
 function extractAllMilhares(content) {
   const matches = [...content.matchAll(/\b(\d{4})\b/g)];
   const seen = new Set();
   const result = [];
   for (const m of matches) {
     const v = m[1];
-    if (/^(19|20)\d{2}$/.test(v)) continue; // ignora anos
+    if (/^(19|20)\d{2}$/.test(v)) continue;
     if (!seen.has(v)) { seen.add(v); result.push(v); }
   }
   return result;
 }
 
-let selectedMilhar = null; // milhar atualmente selecionada no editor
+let selectedMilhar = null; 
 
-// ── Renderiza os chips de milhar ──
 function renderMilharChips(milhares, autoSelect) {
   const container = document.getElementById('milharesChips');
   if (!milhares.length) {
@@ -734,7 +741,6 @@ function renderMilharChips(milhares, autoSelect) {
     return `<div class="m-chip" id="mchip-${m}" onclick="selectMilharChip('${m}')">${m}</div>`;
   }).join('');
 
-  // auto-seleciona a primeira (ou a indicada)
   const toSelect = autoSelect || milhares[0];
   if (toSelect) selectMilharChip(toSelect);
 }
@@ -750,17 +756,15 @@ function selectMilharChip(m) {
   document.getElementById('milharHint').className = '';
   document.getElementById('milharHint').textContent = '';
 
-  // Trava o bicho da milhar selecionada — não pode trocar
   const b = bichoDoMilhar(m);
   const idx = b ? BICHOS.indexOf(b) : -1;
   document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
-  if (idx !== -1) {
-    bichoTravado = idx;
-    activeBicho  = idx;
+  
+  if (idx !== -1 && allowedBichos.has(idx)) {
+    activeBicho = idx;
     document.getElementById('bicho-' + idx)?.classList.add('active');
   } else {
-    bichoTravado = null;
-    activeBicho  = null;
+    activeBicho = null;
   }
   onNovaMilharInput();
 }
@@ -771,9 +775,27 @@ function openEditor(id) {
   if (!rec) return;
   currentDoc = rec;
   activeBicho  = null;
-  bichoTravado = null;
   selectedMilhar = null;
-  document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
+  allowedBichos.clear();
+
+  // Mapeia todas as milhares do recibo e descobre os bichos válidos
+  const todas = extractAllMilhares(rec.data.content || '');
+  todas.forEach(m => {
+    const b = bichoDoMilhar(m);
+    if (b) {
+      allowedBichos.add(BICHOS.indexOf(b));
+    }
+  });
+
+  // Atualiza a grade de bichos deixando opaco os não permitidos
+  document.querySelectorAll('.bicho-chip').forEach((c, idx) => {
+    c.classList.remove('active');
+    if (allowedBichos.size > 0 && !allowedBichos.has(idx)) {
+      c.classList.add('disabled');
+    } else {
+      c.classList.remove('disabled');
+    }
+  });
 
   const created = rec.data.createdAt ? rec.data.createdAt.toDate() : null;
   const dateStr = created
@@ -791,8 +813,6 @@ function openEditor(id) {
   document.getElementById('milharHint').className = '';
   document.getElementById('milharHint').textContent = '';
 
-  // Renderiza todas as milhares (sem auto-selecionar bicho)
-  const todas = extractAllMilhares(rec.data.content || '');
   renderMilharChips(todas);
   document.getElementById('editorOverlay').classList.add('open');
   document.getElementById('editorModal').scrollTop = 0;
@@ -804,7 +824,7 @@ function closeEditor() {
   currentDoc = null;
 }
 
-// ── Validate nova milhar contra bicho selecionado ──
+// ── Validate nova milhar ──
 function onNovaMilharInput() {
   const el = document.getElementById('novaMilharInput');
   el.value = el.value.replace(/\D/g, '');
@@ -813,7 +833,6 @@ function onNovaMilharInput() {
 
   if (val.length < 4) { hint.className = ''; hint.textContent = ''; return; }
 
-  // Bloqueia se milhar já existe no recibo (exceto a própria selecionada)
   const todasExistentes = extractAllMilhares(currentDoc?.data?.content || '');
   if (todasExistentes.includes(val) && val !== selectedMilhar) {
     hint.className = 'err';
@@ -821,30 +840,22 @@ function onNovaMilharInput() {
     return;
   }
 
-  // Sem bicho selecionado: apenas informa a qual bicho pertence
-  if (activeBicho === null) {
-    const b = bichoDoMilhar(val);
-    if (b) {
+  const bReal = bichoDoMilhar(val);
+  if (bReal) {
+    const bIdx = BICHOS.indexOf(bReal);
+    if (allowedBichos.size > 0 && !allowedBichos.has(bIdx)) {
+      hint.className = 'err';
+      hint.textContent = `❌ O ${bReal.emoji} ${bReal.nome} não foi gerado neste bilhete`;
+    } else {
       hint.className = 'ok';
-      hint.textContent = `${b.emoji} ${b.nome} (dezena ${val.slice(-2)})`;
+      hint.textContent = `✅ ${val} é do ${bReal.emoji} ${bReal.nome}`;
     }
-    return;
-  }
-
-  // Com bicho selecionado: bloqueia se não pertencer
-  const valido = milharPertenceAoBicho(val, activeBicho);
-  const b = BICHOS[activeBicho];
-  if (valido) {
-    hint.className = 'ok';
-    hint.textContent = `✅ Pertence ao ${b.emoji} ${b.nome}`;
   } else {
-    const bReal = bichoDoMilhar(val);
-    hint.className = 'err';
-    hint.textContent = `❌ ${val} é do ${bReal ? bReal.emoji + ' ' + bReal.nome : '?'} — não do ${b.emoji} ${b.nome}`;
+    hint.className = '';
+    hint.textContent = '';
   }
 }
 
-// ── Busca milhar no recibo e destaca o chip ──
 function doSearch() {
   const val = document.getElementById('milharSearch').value;
   const result = document.getElementById('searchResult');
@@ -854,7 +865,6 @@ function doSearch() {
   if (found) {
     result.className = 'found';
     result.textContent = `✅ ${val} está no recibo`;
-    // Se já existe como chip, seleciona ele
     const chip = document.getElementById('mchip-' + val);
     if (chip) selectMilharChip(val);
   } else {
@@ -874,23 +884,24 @@ async function saveReceipt() {
   if (!selectedMilhar) { showToast('Selecione uma milhar para alterar.', 'err'); return; }
   if (selectedMilhar === nova) { showToast('A milhar já é essa.', 'err'); return; }
 
-  // Bloqueia se milhar nova já existe no recibo
   const todasExistentes = extractAllMilhares(currentDoc.data.content || '');
   if (todasExistentes.includes(nova) && nova !== selectedMilhar) {
     showToast(`❌ ${nova} já existe neste recibo`, 'err'); return;
   }
 
-  // Bloqueia se bicho selecionado e milhar não pertence
-  if (activeBicho !== null && !milharPertenceAoBicho(nova, activeBicho)) {
-    const b = BICHOS[activeBicho];
-    showToast(`❌ Milhar não pertence ao ${b.emoji} ${b.nome}`, 'err'); return;
+  const bReal = bichoDoMilhar(nova);
+  if (bReal) {
+    const bIdx = BICHOS.indexOf(bReal);
+    if (allowedBichos.size > 0 && !allowedBichos.has(bIdx)) {
+      showToast(`❌ O ${bReal.emoji} ${bReal.nome} não está neste bilhete`, 'err');
+      return;
+    }
   }
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'Salvando…';
 
   try {
-    // Substitui APENAS a primeira ocorrência exata, mantendo a posição no texto
     const regex = new RegExp(`\\b${selectedMilhar}\\b`);
     const novoContent = currentDoc.data.content.replace(regex, nova);
     await db.collection('receipts').doc(currentDoc.id).update({ content: novoContent });
@@ -909,7 +920,6 @@ async function saveReceipt() {
   }
 }
 
-// ── Toast ──
 let toastTimer;
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
@@ -924,6 +934,13 @@ document.getElementById('editorOverlay').addEventListener('click', function(e) {
 document.getElementById('confirmOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeConfirm();
 });
+
+// Atualiza os cronômetros na tela a cada 1 minuto (se não estiver selecionando recibos)
+setInterval(() => {
+  if (document.getElementById('app').style.display !== 'none' && !selectMode) {
+    filterReceipts();
+  }
+}, 60000);
 </script>
 </body>
 </html>
