@@ -804,17 +804,15 @@ function onNovaMilharInput() {
 
   if (val.length < 4) { hint.className = ''; hint.textContent = ''; return; }
 
-  if (activeBicho === null) {
-    // Bloqueia se milhar já existe no recibo (exceto a própria selecionada)
+  // Bloqueia se milhar já existe no recibo (exceto a própria selecionada)
   const todasExistentes = extractAllMilhares(currentDoc?.data?.content || '');
-  const jaExiste = todasExistentes.includes(val) && val !== selectedMilhar;
-  if (jaExiste) {
+  if (todasExistentes.includes(val) && val !== selectedMilhar) {
     hint.className = 'err';
     hint.textContent = `❌ ${val} já existe neste recibo`;
     return;
   }
 
-  // Sem bicho selecionado: apenas informa
+  // Sem bicho selecionado: apenas informa a qual bicho pertence
   if (activeBicho === null) {
     const b = bichoDoMilhar(val);
     if (b) {
@@ -824,6 +822,7 @@ function onNovaMilharInput() {
     return;
   }
 
+  // Com bicho selecionado: bloqueia se não pertencer
   const valido = milharPertenceAoBicho(val, activeBicho);
   const b = BICHOS[activeBicho];
   if (valido) {
