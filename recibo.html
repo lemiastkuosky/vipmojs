@@ -246,7 +246,6 @@
       if (document.hidden) {
         overlay.style.display = 'block';
       } else {
-        // Pequeno delay para garantir que screenshot já passou
         setTimeout(() => { overlay.style.display = 'none'; }, 300);
       }
     });
@@ -268,6 +267,46 @@
     firebase.initializeApp(firebaseConfig);
     const firestoreDB = firebase.firestore();
 
+    // ── Função Rastreadora de Acessos ──
+    async function registrarAcesso(receiptId) {
+      console.log("🚀 [VIEW TRACKER] Iniciando...");
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdmin = urlParams.get('admin');
+
+        // Busca o IP
+        let userIp = 'Desconhecido';
+        try {
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          const ipData = await ipResponse.json();
+          userIp = ipData.ip;
+        } catch (e) {
+          console.warn("⚠️ [VIEW TRACKER] IP bloqueado por navegador/adblock");
+        }
+
+        // Define o dispositivo ou admin
+        let userDevice = navigator.userAgent;
+        if (isAdmin === 'true') {
+          userDevice = "👑 [ADMIN] Visualização via painel";
+        }
+
+        // Salva os dados de acesso no Firestore
+        const docRef = firestoreDB.collection('receipts').doc(receiptId);
+        await docRef.update({
+          views: firebase.firestore.FieldValue.increment(1),
+          accessLog: firebase.firestore.FieldValue.arrayUnion({
+            ip: userIp,
+            ua: userDevice,
+            time: new Date()
+          })
+        });
+        
+        console.log("✅ [VIEW TRACKER] Acesso salvo com sucesso no banco!");
+      } catch (error) {
+        console.error("🚨 [VIEW TRACKER] ERRO (Verifique as regras do Firestore):", error);
+      }
+    }
+
     function populateReceipt(receiptText) {
       const extractValue = (regex) => (receiptText.match(regex) || [])[1]?.trim() || 'N/A';
       document.getElementById('receipt-code').textContent       = extractValue(/Código\.*:\s*(.*)/);
@@ -287,22 +326,30 @@
       const errorEl     = document.getElementById('error-message');
       const expiredEl   = document.getElementById('expired-message');
       const receiptContainer = document.getElementById('receipt-container');
+      
       try {
         const params    = new URLSearchParams(window.location.search);
         const receiptId = params.get('id');
         if (!receiptId) throw new Error('ID não fornecido.');
+        
         const doc = await firestoreDB.collection('receipts').doc(receiptId).get();
         if (!doc.exists) { loadingEl.style.display = 'none'; expiredEl.style.display = 'block'; return; }
+        
         const data = doc.data();
         const expiresAt = data.expiresAt ? data.expiresAt.toDate() : null;
+        
         if (expiresAt && new Date() > expiresAt) {
           loadingEl.style.display = 'none';
           expiredEl.style.display = 'block';
         } else {
           populateReceipt(data.content);
           if (data.isPaid === true) receiptContainer.classList.add('paid-stamp');
+          
           loadingEl.style.display = 'none';
           receiptContainer.style.display = 'block';
+
+          // Executa o log de acesso assim que validar e mostrar o recibo
+          registrarAcesso(receiptId);
         }
       } catch (error) {
         loadingEl.style.display = 'none';
