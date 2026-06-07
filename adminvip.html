@@ -414,6 +414,7 @@ let currentDoc   = null;
 let selectedIds  = new Set();
 let selectMode   = false;
 let activeBicho  = null; // índice 0-24 ou null
+let bichoTravado = null; // bicho fixo da milhar atual — não pode trocar
 
 // ── Jogo do Bicho: 25 bichos, cada um tem 4 dezenas (00–99 agrupadas) ──
 // Cada bicho: milhares terminando em suas dezenas
@@ -694,8 +695,9 @@ function buildBichoGrid() {
 }
 
 function selectBicho(i) {
+  // Se há bicho travado, não permite desmarcar nem trocar
+  if (typeof bichoTravado === 'number') return;
   if (activeBicho === i) {
-    // deselect
     activeBicho = null;
     document.getElementById('bicho-' + i)?.classList.remove('active');
   } else {
@@ -703,7 +705,6 @@ function selectBicho(i) {
     activeBicho = i;
     document.getElementById('bicho-' + i)?.classList.add('active');
   }
-  // Re-validate input after bicho change
   onNovaMilharInput();
 }
 
@@ -739,7 +740,6 @@ function renderMilharChips(milhares, autoSelect) {
 }
 
 function selectMilharChip(m) {
-  // remove active de todos
   document.querySelectorAll('.m-chip').forEach(c => c.classList.remove('active'));
   const chip = document.getElementById('mchip-' + m);
   if (chip) chip.classList.add('active');
@@ -750,7 +750,18 @@ function selectMilharChip(m) {
   document.getElementById('milharHint').className = '';
   document.getElementById('milharHint').textContent = '';
 
-  // valida contra bicho já selecionado (se houver)
+  // Trava o bicho da milhar selecionada — não pode trocar
+  const b = bichoDoMilhar(m);
+  const idx = b ? BICHOS.indexOf(b) : -1;
+  document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
+  if (idx !== -1) {
+    bichoTravado = idx;
+    activeBicho  = idx;
+    document.getElementById('bicho-' + idx)?.classList.add('active');
+  } else {
+    bichoTravado = null;
+    activeBicho  = null;
+  }
   onNovaMilharInput();
 }
 
@@ -759,7 +770,8 @@ function openEditor(id) {
   const rec = allReceipts.find(r => r.id === id);
   if (!rec) return;
   currentDoc = rec;
-  activeBicho = null;
+  activeBicho  = null;
+  bichoTravado = null;
   selectedMilhar = null;
   document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
 
@@ -782,9 +794,6 @@ function openEditor(id) {
   // Renderiza todas as milhares (sem auto-selecionar bicho)
   const todas = extractAllMilhares(rec.data.content || '');
   renderMilharChips(todas);
-  activeBicho = null;
-  document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
-
   document.getElementById('editorOverlay').classList.add('open');
   document.getElementById('editorModal').scrollTop = 0;
   setTimeout(() => document.getElementById('novaMilharInput').focus(), 300);
