@@ -153,19 +153,6 @@
     /* busca */
     .search-milhar-wrap { position: relative; }
     .search-milhar-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-    #milharSearch {
-      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r);
-      color: var(--text); font-family: var(--mono); font-size: 1rem;
-      padding: 11px 12px 11px 34px; letter-spacing: 2px; outline: none; -webkit-appearance: none;
-    }
-    #milharSearch:focus { border-color: var(--accent); }
-    #searchResult {
-      margin-top: 8px; font-family: var(--mono); font-size: 0.8rem;
-      padding: 7px 12px; border-radius: 8px; display: none;
-    }
-    #searchResult.found    { background: rgba(61,214,140,.1); color: var(--green); border: 1px solid rgba(61,214,140,.25); }
-    #searchResult.notfound { background: rgba(224,92,92,.1);  color: var(--danger); border: 1px solid rgba(224,92,92,.25); }
-
     /* BICHO CHIPS */
     .bicho-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
     .bicho-chip {
@@ -182,6 +169,22 @@
     .bicho-chip:hover     { border-color: var(--accent); }
     .bicho-chip.active    { border-color: var(--accent); background: rgba(245,200,66,.1); color: var(--accent); }
     .bicho-chip.active .bc-nums { color: rgba(245,200,66,.7); }
+
+    /* BUSCA no editor */
+    .search-milhar-wrap { position: relative; margin-bottom: 0; }
+    .search-milhar-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    #milharSearch {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r);
+      color: var(--text); font-family: var(--mono); font-size: 1rem;
+      padding: 11px 12px 11px 34px; letter-spacing: 2px; outline: none; -webkit-appearance: none;
+    }
+    #milharSearch:focus { border-color: var(--accent); }
+    #searchResult {
+      margin-top: 8px; font-family: var(--mono); font-size: 0.8rem;
+      padding: 7px 12px; border-radius: 8px; display: none;
+    }
+    #searchResult.found    { background: rgba(61,214,140,.1); color: var(--green); border: 1px solid rgba(61,214,140,.25); display: block; }
+    #searchResult.notfound { background: rgba(224,92,92,.1);  color: var(--danger); border: 1px solid rgba(224,92,92,.25); display: block; }
 
     /* MILHAR CHIPS (lista de milhares do recibo) */
     .m-chip {
@@ -313,6 +316,7 @@
   <span class="del-info" id="deleteInfo">0 selecionados</span>
   <div class="del-actions">
     <button class="btn btn-ghost btn-sm" onclick="selectAll()">Todos</button>
+    <button class="btn btn-danger btn-sm" onclick="askDeleteAll()">🗑️ Apagar Tudo</button>
     <button class="btn btn-danger btn-sm" onclick="askDeleteSelected()">🗑️ Apagar</button>
   </div>
 </div>
@@ -329,11 +333,17 @@
 
     <div class="modal-body">
 
-      <!-- Todas as milhares do recibo -->
+      <!-- Busca + todas as milhares do recibo -->
       <div>
-        <div class="section-label">MILHARES NO RECIBO — toque para selecionar qual alterar</div>
+        <div class="section-label">BUSCAR MILHAR NO RECIBO</div>
+        <div class="search-milhar-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="milharSearch" maxlength="4" placeholder="0000" inputmode="numeric"
+                 oninput="this.value=this.value.replace(/\D/g,''); doSearch()" />
+        </div>
+        <div id="searchResult"></div>
+        <div class="section-label" style="margin-top:14px">MILHARES NO RECIBO — toque para selecionar qual alterar</div>
         <div id="milharesChips" style="display:flex;flex-wrap:wrap;gap:8px;min-height:36px;"></div>
-        <div id="searchResult" style="margin-top:8px;"></div>
       </div>
 
       <!-- Bichos -->
@@ -515,7 +525,6 @@ function renderList(list) {
       : '<span class="badge badge-active">Ativo</span>';
 
     const milhar = extractMilhar(data.content || '');
-    const bicho  = bichoDoMilhar(milhar);
     const clientLink = `https://meus-recibos-vip.web.app/recibo.html?id=${id}`;
     const checked = selectedIds.has(id) ? 'checked' : '';
 
@@ -531,7 +540,7 @@ function renderList(list) {
         <div class="card-date">📅 ${dateStr}</div>
         <div class="card-row">
           <div>
-            <div class="milhar-label" style="margin-bottom:4px">MILHAR${bicho ? ' · ' + bicho.emoji + ' ' + bicho.nome : ''}</div>
+            <div class="milhar-label" style="margin-bottom:4px">MILHAR</div>
             <div class="milhar-atual">${milhar || '<span style="color:var(--muted);font-size:.8rem">não encontrada</span>'}</div>
           </div>
         </div>
@@ -631,6 +640,14 @@ function askDeleteSelected() {
   document.getElementById('confirmOverlay').classList.add('open');
 }
 
+function askDeleteAll() {
+  pendingDeleteIds = allReceipts.map(r => r.id);
+  if (!pendingDeleteIds.length) return;
+  document.getElementById('confirmMsg').innerHTML =
+    `Apagar <strong style="color:var(--danger)">TODOS os ${pendingDeleteIds.length} recibos</strong>?<br><br>⚠️ Isso limpará toda a base. Essa ação não pode ser desfeita.`;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
 function closeConfirm() {
   document.getElementById('confirmOverlay').classList.remove('open');
   pendingDeleteIds = [];
@@ -713,9 +730,7 @@ function renderMilharChips(milhares, autoSelect) {
     return;
   }
   container.innerHTML = milhares.map(m => {
-    const b = bichoDoMilhar(m);
-    const label = b ? ` ${b.emoji}` : '';
-    return `<div class="m-chip" id="mchip-${m}" onclick="selectMilharChip('${m}')">${m}${label}</div>`;
+    return `<div class="m-chip" id="mchip-${m}" onclick="selectMilharChip('${m}')">${m}</div>`;
   }).join('');
 
   // auto-seleciona a primeira (ou a indicada)
@@ -735,20 +750,8 @@ function selectMilharChip(m) {
   document.getElementById('milharHint').className = '';
   document.getElementById('milharHint').textContent = '';
 
-  // auto-highlight bicho do chip selecionado
-  const b = bichoDoMilhar(m);
-  if (b) {
-    const idx = BICHOS.indexOf(b);
-    if (idx !== -1 && activeBicho === null) selectBicho(idx);
-    else if (idx !== -1) {
-      // só atualiza se o bicho mudou
-      if (activeBicho !== idx) {
-        if (activeBicho !== null) document.getElementById('bicho-' + activeBicho)?.classList.remove('active');
-        activeBicho = idx;
-        document.getElementById('bicho-' + idx)?.classList.add('active');
-      }
-    }
-  }
+  // valida contra bicho já selecionado (se houver)
+  onNovaMilharInput();
 }
 
 // ── Open editor ──
@@ -770,13 +773,17 @@ function openEditor(id) {
 
   document.getElementById('milharAtualDisplay').textContent = '—';
   document.getElementById('novaMilharInput').value = '';
-  document.getElementById('searchResult').style.display = 'none';
+  document.getElementById('milharSearch').value = '';
+  document.getElementById('searchResult').className = '';
+  document.getElementById('searchResult').textContent = '';
   document.getElementById('milharHint').className = '';
   document.getElementById('milharHint').textContent = '';
 
-  // Renderiza todas as milhares
+  // Renderiza todas as milhares (sem auto-selecionar bicho)
   const todas = extractAllMilhares(rec.data.content || '');
   renderMilharChips(todas);
+  activeBicho = null;
+  document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
 
   document.getElementById('editorOverlay').classList.add('open');
   document.getElementById('editorModal').scrollTop = 0;
@@ -798,7 +805,17 @@ function onNovaMilharInput() {
   if (val.length < 4) { hint.className = ''; hint.textContent = ''; return; }
 
   if (activeBicho === null) {
-    // Nenhum bicho selecionado: apenas informa qual bicho
+    // Bloqueia se milhar já existe no recibo (exceto a própria selecionada)
+  const todasExistentes = extractAllMilhares(currentDoc?.data?.content || '');
+  const jaExiste = todasExistentes.includes(val) && val !== selectedMilhar;
+  if (jaExiste) {
+    hint.className = 'err';
+    hint.textContent = `❌ ${val} já existe neste recibo`;
+    return;
+  }
+
+  // Sem bicho selecionado: apenas informa
+  if (activeBicho === null) {
     const b = bichoDoMilhar(val);
     if (b) {
       hint.className = 'ok';
@@ -819,8 +836,24 @@ function onNovaMilharInput() {
   }
 }
 
-// ── doSearch removido: busca substituída pelos chips de milhar ──
-function doSearch() {}
+// ── Busca milhar no recibo e destaca o chip ──
+function doSearch() {
+  const val = document.getElementById('milharSearch').value;
+  const result = document.getElementById('searchResult');
+  if (val.length < 4) { result.className = ''; result.textContent = ''; return; }
+  const content = currentDoc?.data?.content || '';
+  const found = new RegExp(`\\b${val}\\b`).test(content);
+  if (found) {
+    result.className = 'found';
+    result.textContent = `✅ ${val} está no recibo`;
+    // Se já existe como chip, seleciona ele
+    const chip = document.getElementById('mchip-' + val);
+    if (chip) selectMilharChip(val);
+  } else {
+    result.className = 'notfound';
+    result.textContent = `❌ ${val} não está no recibo`;
+  }
+}
 
 // ── Save ──
 async function saveReceipt() {
@@ -830,20 +863,28 @@ async function saveReceipt() {
     showToast('Digite exatamente 4 dígitos.', 'err'); return;
   }
 
+  if (!selectedMilhar) { showToast('Selecione uma milhar para alterar.', 'err'); return; }
+  if (selectedMilhar === nova) { showToast('A milhar já é essa.', 'err'); return; }
+
+  // Bloqueia se milhar nova já existe no recibo
+  const todasExistentes = extractAllMilhares(currentDoc.data.content || '');
+  if (todasExistentes.includes(nova) && nova !== selectedMilhar) {
+    showToast(`❌ ${nova} já existe neste recibo`, 'err'); return;
+  }
+
   // Bloqueia se bicho selecionado e milhar não pertence
   if (activeBicho !== null && !milharPertenceAoBicho(nova, activeBicho)) {
     const b = BICHOS[activeBicho];
     showToast(`❌ Milhar não pertence ao ${b.emoji} ${b.nome}`, 'err'); return;
   }
 
-  if (!selectedMilhar) { showToast('Selecione uma milhar para alterar.', 'err'); return; }
-  if (selectedMilhar === nova) { showToast('A milhar já é essa.', 'err'); return; }
-
   const btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'Salvando…';
 
   try {
-    const novoContent = currentDoc.data.content.replace(new RegExp(`\\b${selectedMilhar}\\b`), nova);
+    // Substitui APENAS a primeira ocorrência exata, mantendo a posição no texto
+    const regex = new RegExp(`\\b${selectedMilhar}\\b`);
+    const novoContent = currentDoc.data.content.replace(regex, nova);
     await db.collection('receipts').doc(currentDoc.id).update({ content: novoContent });
 
     const idx = allReceipts.findIndex(r => r.id === currentDoc.id);
