@@ -9,7 +9,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Impede a seleção de texto */
     body {
       -webkit-user-select: none;
       -ms-user-select: none;
@@ -17,7 +16,27 @@
       -webkit-touch-callout: none;
     }
 
-    /* Estilos Gerais */
+    /* Bloqueia print */
+    @media print {
+      body * { display: none !important; }
+      body::after {
+        display: block !important;
+        content: "Impressão não permitida.";
+        font-size: 2rem;
+        text-align: center;
+        margin-top: 40vh;
+      }
+    }
+
+    /* Overlay de proteção contra screenshot (ativado via JS) */
+    #protectionOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9999;
+    }
+
     html, body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -31,10 +50,9 @@
       min-height: 100vh;
     }
 
-    /* Container principal do recibo */
     .receipt-container {
-      position: relative; /* Necessário para a marca d'água */
-      overflow: hidden;   /* Garante que a marca d'água não vaze */
+      position: relative;
+      overflow: hidden;
       width: 100%;
       max-width: 400px;
       background-color: #ffffff;
@@ -42,10 +60,9 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       padding: 25px;
       box-sizing: border-box;
-      display: none; /* Começa escondido */
+      display: none;
     }
     
-    /* Estilo para a Marca D'água "PAGO" */
     .receipt-container.paid-stamp::before {
       content: "PAGO";
       position: absolute;
@@ -54,18 +71,16 @@
       transform: translate(-50%, -50%) rotate(-30deg);
       font-size: 5rem;
       font-weight: 900;
-      color: rgba(40, 167, 69, 0.12); /* Verde, bem transparente */
+      color: rgba(40, 167, 69, 0.12);
       pointer-events: none;
-      z-index: 0; /* Coloca atrás do conteúdo */
+      z-index: 0;
     }
     
-    /* Garante que o conteúdo real fique na frente da marca d'água */
     .receipt-header, .receipt-details, .receipt-summary, .receipt-footer {
-        position: relative;
-        z-index: 1;
+      position: relative;
+      z-index: 1;
     }
 
-    /* Cabeçalho */
     .receipt-header {
       text-align: center;
       margin-bottom: 20px;
@@ -87,7 +102,6 @@
       letter-spacing: 1px;
     }
 
-    /* Detalhes do recibo */
     .receipt-details .detail-item {
       display: flex;
       justify-content: space-between;
@@ -99,7 +113,6 @@
     .receipt-details .label { font-weight: 600; color: #555; }
     .receipt-details .value { color: #111; font-family: 'Courier New', Courier, monospace; font-weight: bold; }
 
-    /* Resumo dos números */
     .receipt-summary {
       margin-top: 20px;
       padding-top: 20px;
@@ -116,7 +129,6 @@
       line-height: 1.5;
     }
 
-    /* Rodapé */
     .receipt-footer {
       text-align: center;
       margin-top: 25px;
@@ -136,7 +148,6 @@
       margin-bottom: 0;
     }
 
-    /* Mensagens de Status */
     .status-message {
       width: 100%;
       max-width: 400px;
@@ -158,6 +169,8 @@
   </style>
 </head>
 <body>
+
+  <div id="protectionOverlay"></div>
 
   <div id="receipt-container" class="receipt-container">
     <div class="receipt-header">
@@ -207,7 +220,43 @@
   </div>
 
   <script>
-    // 1. Sua configuração do Firebase
+    // ── Proteção contra cópia e screenshot ──
+
+    // Bloqueia menu de contexto (segurar no celular)
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Bloqueia atalhos de teclado (PrintScreen, Ctrl+P, Ctrl+S, Ctrl+C)
+    document.addEventListener('keydown', e => {
+      if (
+        e.key === 'PrintScreen' ||
+        (e.ctrlKey && ['p','s','c','u','a'].includes(e.key.toLowerCase())) ||
+        (e.metaKey && ['p','s','c','u','a'].includes(e.key.toLowerCase()))
+      ) {
+        e.preventDefault();
+      }
+    });
+
+    // Bloqueia eventos de cópia/corte
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('cut',  e => e.preventDefault());
+
+    // Esconde conteúdo quando a aba perde o foco (troca de app para tirar screenshot)
+    const overlay = document.getElementById('protectionOverlay');
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        overlay.style.display = 'block';
+      } else {
+        // Pequeno delay para garantir que screenshot já passou
+        setTimeout(() => { overlay.style.display = 'none'; }, 300);
+      }
+    });
+
+    // iOS: bloqueia screenshot via evento de captura de tela (Safari 17.4+)
+    if ('onscreenshotavailable' in window) {
+      window.onscreenshotavailable = () => { overlay.style.display = 'block'; setTimeout(() => { overlay.style.display = 'none'; }, 1000); };
+    }
+
+    // ── Firebase ──
     const firebaseConfig = {
       apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
       authDomain: "meus-recibos-vip.firebaseapp.com",
@@ -216,83 +265,53 @@
       messagingSenderId: "254959368683",
       appId: "1:254959368683:web:80676a26f614040df6c1ae"
     };
-
-    // 2. Inicialize o Firebase
     firebase.initializeApp(firebaseConfig);
     const firestoreDB = firebase.firestore();
 
-    // 3. Função para popular o HTML com os dados do recibo
     function populateReceipt(receiptText) {
       const extractValue = (regex) => (receiptText.match(regex) || [])[1]?.trim() || 'N/A';
-      
-      document.getElementById('receipt-code').textContent = extractValue(/Código\.*:\s*(.*)/);
-      document.getElementById('receipt-datetime').textContent = extractValue(/Data\/Hora\.*:\s*(.*)/);
+      document.getElementById('receipt-code').textContent       = extractValue(/Código\.*:\s*(.*)/);
+      document.getElementById('receipt-datetime').textContent   = extractValue(/Data\/Hora\.*:\s*(.*)/);
       document.getElementById('receipt-extraction').textContent = extractValue(/Extração\.*:\s*(.*)/);
-      document.getElementById('receipt-value').textContent = extractValue(/Valor Pago\.*:\s*(.*)/);
-      document.getElementById('receipt-prize').textContent = extractValue(/Possível Prêmio:\s*(.*)/);
-      document.getElementById('receipt-quantity').textContent = extractValue(/Qtd\. Números\.*:\s*(.*)/);
-      
+      document.getElementById('receipt-value').textContent      = extractValue(/Valor Pago\.*:\s*(.*)/);
+      document.getElementById('receipt-prize').textContent      = extractValue(/Possível Prêmio:\s*(.*)/);
+      document.getElementById('receipt-quantity').textContent   = extractValue(/Qtd\. Números\.*:\s*(.*)/);
       const summaryMatch = receiptText.split(/RESUMO DETALHADO\s*-+\s*/);
-      document.getElementById('summary-content').textContent = summaryMatch.length > 1 ? summaryMatch[1].split('==============================')[0].trim() : 'Nenhum detalhe encontrado.';
+      document.getElementById('summary-content').textContent = summaryMatch.length > 1
+        ? summaryMatch[1].split('==============================')[0].trim()
+        : 'Nenhum detalhe encontrado.';
     }
 
-    // 4. Função principal para buscar e exibir o recibo
     async function fetchReceipt() {
-      const loadingEl = document.getElementById('loading-message');
-      const errorEl = document.getElementById('error-message');
-      const expiredEl = document.getElementById('expired-message');
+      const loadingEl   = document.getElementById('loading-message');
+      const errorEl     = document.getElementById('error-message');
+      const expiredEl   = document.getElementById('expired-message');
       const receiptContainer = document.getElementById('receipt-container');
-
       try {
-        const params = new URLSearchParams(window.location.search);
+        const params    = new URLSearchParams(window.location.search);
         const receiptId = params.get('id');
-
-        if (!receiptId) {
-          throw new Error('ID do recibo não fornecido na URL.');
-        }
-
+        if (!receiptId) throw new Error('ID não fornecido.');
         const doc = await firestoreDB.collection('receipts').doc(receiptId).get();
-
-        if (!doc.exists) {
-          loadingEl.style.display = 'none';
-          expiredEl.style.display = 'block';
-          return;
-        }
-        
+        if (!doc.exists) { loadingEl.style.display = 'none'; expiredEl.style.display = 'block'; return; }
         const data = doc.data();
-        
-        // --- LÓGICA DE EXPIRAÇÃO ATUALIZADA ---
         const expiresAt = data.expiresAt ? data.expiresAt.toDate() : null;
-        const now = new Date();
-
-        // Se o link tiver uma data de expiração E a data atual for maior que a de expiração...
-        if (expiresAt && now > expiresAt) {
+        if (expiresAt && new Date() > expiresAt) {
           loadingEl.style.display = 'none';
           expiredEl.style.display = 'block';
         } else {
-          // Caso contrário, o link é válido e o recibo é exibido.
           populateReceipt(data.content);
-          
-          if (data.isPaid === true) {
-            receiptContainer.classList.add('paid-stamp');
-          }
-          
+          if (data.isPaid === true) receiptContainer.classList.add('paid-stamp');
           loadingEl.style.display = 'none';
           receiptContainer.style.display = 'block';
         }
-        // --- FIM DA ATUALIZAÇÃO ---
-
       } catch (error) {
-        console.error("Erro ao buscar recibo:", error);
         loadingEl.style.display = 'none';
-        errorEl.textContent = 'Não foi possível carregar o recibo. Verifique sua conexão ou o ID do link.';
+        errorEl.textContent = 'Não foi possível carregar o recibo.';
         errorEl.style.display = 'block';
       }
     }
 
-    // Inicia a busca assim que a página carregar
     window.onload = fetchReceipt;
   </script>
-
 </body>
 </html>
