@@ -417,6 +417,14 @@ let selectMode    = false;
 let activeBicho   = null; 
 let allowedBichos = new Set();
 
+// Converte Firestore Timestamp, Date JS ou string para Date de forma segura
+function toDate(val) {
+  if (!val) return new Date(0);
+  if (typeof val.toDate === 'function') return val.toDate();
+  if (val instanceof Date) return val;
+  return new Date(val);
+}
+
 const BICHOS = [
   { nome:'Avestruz', emoji:'🦅', dezenas:['01','02','03','04'] },
   { nome:'Águia',    emoji:'🦅', dezenas:['05','06','07','08'] },
@@ -495,9 +503,9 @@ function renderList(list) {
   if (!list.length) { container.innerHTML = '<div class="empty-state">Nenhum recibo encontrado.</div>'; return; }
 
   container.innerHTML = list.map(({ id, data }) => {
-    const created = data.createdAt ? data.createdAt.toDate() : null;
+    const created = data.createdAt ? toDate(data.createdAt) : null;
     const dateStr = created ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created) : '—';
-    const expires = data.expiresAt ? (data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt)) : null;
+    const expires = data.expiresAt ? toDate(data.expiresAt) : null;
     
     let badgeHtml = '';
     if (expires) {
@@ -525,12 +533,12 @@ function renderList(list) {
     const logs = data.accessLog || [];
     let miniLogHtml = '';
     if (logs.length > 0) {
-      const sortedLogs = [...logs].sort((a, b) => b.time.toDate() - a.time.toDate());
+      const sortedLogs = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
       const recentLogs = sortedLogs.slice(0, 3);
       
       const logItems = recentLogs.map(log => {
         const ua = log.ua || '';
-        const dateObj = log.time.toDate();
+        const dateObj = toDate(log.time);
         const timeStr = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(dateObj);
         
         const isAdmin = ua.includes('👑');
@@ -731,7 +739,7 @@ function openEditor(id) {
     if (allowedBichos.size > 0 && !allowedBichos.has(idx)) c.classList.add('disabled'); else c.classList.remove('disabled');
   });
   
-  const created = rec.data.createdAt ? rec.data.createdAt.toDate() : null;
+  const created = rec.data.createdAt ? toDate(rec.data.createdAt) : null;
   const dateStr = created ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created) : '—';
   document.getElementById('modalMeta').innerHTML = `<span><strong>${id.substring(0,16)}…</strong></span><span>📅 ${dateStr}</span>`;
   document.getElementById('milharAtualDisplay').textContent = '—'; document.getElementById('novaMilharInput').value = '';
@@ -795,7 +803,7 @@ async function saveReceipt() {
 function openLogModal(id) {
   const rec = allReceipts.find(r => r.id === id); if (!rec) return;
 
-  const created = rec.data.createdAt ? rec.data.createdAt.toDate() : null;
+  const created = rec.data.createdAt ? toDate(rec.data.createdAt) : null;
   const dateStr = created ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created) : '—';
   
   document.getElementById('logMetaId').innerHTML = `<span><strong>${id.substring(0,16)}…</strong></span><span>📅 ${dateStr}</span>`;
@@ -807,7 +815,7 @@ function openLogModal(id) {
     logContainer.innerHTML = `<div class="empty-state" style="padding: 20px 0;">Nenhum acesso registrado ainda.</div>`;
   } else {
     // Ordena do mais recente para o mais antigo
-    const sorted = [...logs].sort((a, b) => b.time.toDate() - a.time.toDate());
+    const sorted = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
 
     logContainer.innerHTML = sorted.map((log, idx) => {
       const ua = log.ua || '';
@@ -820,7 +828,7 @@ function openLogModal(id) {
       else if (/windows/i.test(ua))          sysName = '💻 Windows';
       else if (/mac os/i.test(ua))           sysName = '💻 Mac (Apple)';
 
-      const t = log.time.toDate();
+      const t = toDate(log.time);
       const accessDateStr = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(t);
       const num = sorted.length - idx; // #1 = mais recente
 

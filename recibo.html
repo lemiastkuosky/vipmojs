@@ -271,7 +271,6 @@
 
     // ── Função Rastreadora de Acessos ──
     async function registrarAcesso(receiptId) {
-      // Log imediato — se este não aparecer, o problema é antes desta linha
       console.log("🚀 [VIEW TRACKER] Função chamada para ID:", receiptId);
 
       if (!receiptId) {
@@ -279,14 +278,10 @@
         return;
       }
 
-      // ── Verifica se Firestore está pronto ──
       if (!firestoreDB) {
         console.error("🚨 [VIEW TRACKER] firestoreDB não inicializado!");
         return;
       }
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const isAdmin   = urlParams.get('admin') === 'true';
 
       // ── Busca IP com timeout de 3s ──
       let userIp = 'Desconhecido';
@@ -302,15 +297,12 @@
         console.warn("⚠️ [VIEW TRACKER] IP não obtido (bloqueado ou timeout):", e.message);
       }
 
-      const userDevice = isAdmin
-        ? "👑 [ADMIN] Visualização via painel"
-        : navigator.userAgent;
+      const userDevice = navigator.userAgent;
 
       // ── Tenta gravar no Firestore ──
       try {
         console.log("💾 [VIEW TRACKER] Gravando no Firestore...");
         const docRef = firestoreDB.collection('receipts').doc(receiptId);
-
         await docRef.update({
           views: firebase.firestore.FieldValue.increment(1),
           accessLog: firebase.firestore.FieldValue.arrayUnion({
@@ -319,13 +311,10 @@
             time: new Date()
           })
         });
-
         console.log("✅ [VIEW TRACKER] Views atualizado com sucesso!");
       } catch (error) {
-        // Erro mais comum: regras do Firestore bloqueando escrita
         console.error("🚨 [VIEW TRACKER] ERRO ao gravar:", error.code, error.message);
         console.error("👉 Verifique as REGRAS do Firestore em: https://console.firebase.google.com/project/meus-recibos-vip/firestore/rules");
-        console.error("👉 Regra mínima necessária: allow write: if true;");
       }
     }
 
@@ -374,7 +363,21 @@
       receiptContainer.style.display = 'block';
 
       console.log('📋 [FETCH] Chamando registrarAcesso...');
-      registrarAcesso(receiptId);
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('admin') === 'true') {
+        // Admin visualizando: registra no log mas NÃO incrementa views
+        try {
+          await firestoreDB.collection('receipts').doc(receiptId).update({
+            accessLog: firebase.firestore.FieldValue.arrayUnion({
+              ip: '—',
+              ua: '👑 [ADMIN] Visualização via painel',
+              time: new Date()
+            })
+          });
+        } catch(e) { console.warn('Admin log error:', e.message); }
+      } else {
+        registrarAcesso(receiptId);
+      }
     }
   } catch (error) {
     console.error('📋 [FETCH] ERRO:', error);
