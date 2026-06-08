@@ -322,41 +322,45 @@
     }
 
     async function fetchReceipt() {
-      const loadingEl   = document.getElementById('loading-message');
-      const errorEl     = document.getElementById('error-message');
-      const expiredEl   = document.getElementById('expired-message');
-      const receiptContainer = document.getElementById('receipt-container');
+  const loadingEl   = document.getElementById('loading-message');
+  const errorEl     = document.getElementById('error-message');
+  const expiredEl   = document.getElementById('expired-message');
+  const receiptContainer = document.getElementById('receipt-container');
+  
+  try {
+    const params    = new URLSearchParams(window.location.search);
+    const receiptId = params.get('id');
+    console.log('📋 [FETCH] receiptId:', receiptId);
+    if (!receiptId) throw new Error('ID não fornecido.');
+    
+    const doc = await firestoreDB.collection('receipts').doc(receiptId).get();
+    console.log('📋 [FETCH] doc.exists:', doc.exists);
+    if (!doc.exists) { loadingEl.style.display = 'none'; expiredEl.style.display = 'block'; return; }
+    
+    const data = doc.data();
+    const expiresAt = data.expiresAt ? data.expiresAt.toDate() : null;
+    console.log('📋 [FETCH] expiresAt:', expiresAt, '| agora:', new Date(), '| expirado:', expiresAt && new Date() > expiresAt);
+    
+    if (expiresAt && new Date() > expiresAt) {
+      loadingEl.style.display = 'none';
+      expiredEl.style.display = 'block';
+    } else {
+      populateReceipt(data.content);
+      if (data.isPaid === true) receiptContainer.classList.add('paid-stamp');
       
-      try {
-        const params    = new URLSearchParams(window.location.search);
-        const receiptId = params.get('id');
-        if (!receiptId) throw new Error('ID não fornecido.');
-        
-        const doc = await firestoreDB.collection('receipts').doc(receiptId).get();
-        if (!doc.exists) { loadingEl.style.display = 'none'; expiredEl.style.display = 'block'; return; }
-        
-        const data = doc.data();
-        const expiresAt = data.expiresAt ? data.expiresAt.toDate() : null;
-        
-        if (expiresAt && new Date() > expiresAt) {
-          loadingEl.style.display = 'none';
-          expiredEl.style.display = 'block';
-        } else {
-          populateReceipt(data.content);
-          if (data.isPaid === true) receiptContainer.classList.add('paid-stamp');
-          
-          loadingEl.style.display = 'none';
-          receiptContainer.style.display = 'block';
+      loadingEl.style.display = 'none';
+      receiptContainer.style.display = 'block';
 
-          // Executa o log de acesso assim que validar e mostrar o recibo
-          registrarAcesso(receiptId);
-        }
-      } catch (error) {
-        loadingEl.style.display = 'none';
-        errorEl.textContent = 'Não foi possível carregar o recibo.';
-        errorEl.style.display = 'block';
-      }
+      console.log('📋 [FETCH] Chamando registrarAcesso...');
+      registrarAcesso(receiptId);
     }
+  } catch (error) {
+    console.error('📋 [FETCH] ERRO:', error);
+    loadingEl.style.display = 'none';
+    errorEl.textContent = 'Não foi possível carregar o recibo.';
+    errorEl.style.display = 'block';
+  }
+}
 
     window.onload = fetchReceipt;
   </script>
