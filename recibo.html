@@ -241,8 +241,10 @@
     document.addEventListener('cut',  e => e.preventDefault());
 
     // Esconde conteúdo quando a aba perde o foco (troca de app para tirar screenshot)
+    // NOTA: DevTools abre em janela separada, então NÃO dispara visibilitychange
     const overlay = document.getElementById('protectionOverlay');
     document.addEventListener('visibilitychange', () => {
+      // Ignora se DevTools está aberto (heurística: tempo de execução lento)
       if (document.hidden) {
         overlay.style.display = 'block';
       } else {
@@ -269,29 +271,46 @@
 
     // ── Função Rastreadora de Acessos ──
     async function registrarAcesso(receiptId) {
-      console.log("🚀 [VIEW TRACKER] Iniciando...");
+      // Log imediato — se este não aparecer, o problema é antes desta linha
+      console.log("🚀 [VIEW TRACKER] Função chamada para ID:", receiptId);
+
+      if (!receiptId) {
+        console.error("🚨 [VIEW TRACKER] receiptId está vazio/nulo. Abortando.");
+        return;
+      }
+
+      // ── Verifica se Firestore está pronto ──
+      if (!firestoreDB) {
+        console.error("🚨 [VIEW TRACKER] firestoreDB não inicializado!");
+        return;
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const isAdmin   = urlParams.get('admin') === 'true';
+
+      // ── Busca IP com timeout de 3s ──
+      let userIp = 'Desconhecido';
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const isAdmin = urlParams.get('admin');
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3000);
+        const ipResponse = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+        clearTimeout(timer);
+        const ipData = await ipResponse.json();
+        userIp = ipData.ip;
+        console.log("🌐 [VIEW TRACKER] IP obtido:", userIp);
+      } catch (e) {
+        console.warn("⚠️ [VIEW TRACKER] IP não obtido (bloqueado ou timeout):", e.message);
+      }
 
-        // Busca o IP
-        let userIp = 'Desconhecido';
-        try {
-          const ipResponse = await fetch('https://api.ipify.org?format=json');
-          const ipData = await ipResponse.json();
-          userIp = ipData.ip;
-        } catch (e) {
-          console.warn("⚠️ [VIEW TRACKER] IP bloqueado por navegador/adblock");
-        }
+      const userDevice = isAdmin
+        ? "👑 [ADMIN] Visualização via painel"
+        : navigator.userAgent;
 
-        // Define o dispositivo ou admin
-        let userDevice = navigator.userAgent;
-        if (isAdmin === 'true') {
-          userDevice = "👑 [ADMIN] Visualização via painel";
-        }
-
-        // Salva os dados de acesso no Firestore
+      // ── Tenta gravar no Firestore ──
+      try {
+        console.log("💾 [VIEW TRACKER] Gravando no Firestore...");
         const docRef = firestoreDB.collection('receipts').doc(receiptId);
+
         await docRef.update({
           views: firebase.firestore.FieldValue.increment(1),
           accessLog: firebase.firestore.FieldValue.arrayUnion({
@@ -300,10 +319,13 @@
             time: new Date()
           })
         });
-        
-        console.log("✅ [VIEW TRACKER] Acesso salvo com sucesso no banco!");
+
+        console.log("✅ [VIEW TRACKER] Views atualizado com sucesso!");
       } catch (error) {
-        console.error("🚨 [VIEW TRACKER] ERRO (Verifique as regras do Firestore):", error);
+        // Erro mais comum: regras do Firestore bloqueando escrita
+        console.error("🚨 [VIEW TRACKER] ERRO ao gravar:", error.code, error.message);
+        console.error("👉 Verifique as REGRAS do Firestore em: https://console.firebase.google.com/project/meus-recibos-vip/firestore/rules");
+        console.error("👉 Regra mínima necessária: allow write: if true;");
       }
     }
 
