@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recibo de Aposta</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Impede a seleção de texto */
+    body {
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    /* Bloqueia print */
+    @media print {
+      body * { display: none !important; }
+      body::after {
+        display: block !important;
+        content: "Impressão não permitida.";
+        font-size: 2rem;
+        text-align: center;
+        margin-top: 40vh;
+      }
+    }
+
+    /* Overlay de proteção contra screenshot */
+    #protectionOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9999;
+    }
+
+    /* Estilos Gerais */
+    html, body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #e9eef2;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+
+    .receipt-container {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      max-width: 400px;
+      background-color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      padding: 25px;
+      box-sizing: border-box;
+      display: none;
+    }
+    
+    .receipt-container.paid-stamp::before {
+      content: "PAGO";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 5rem;
+      font-weight: 900;
+      color: rgba(40, 167, 69, 0.12);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .receipt-header, .receipt-details, .receipt-summary, .receipt-footer {
+        position: relative;
+        z-index: 1;
+    }
+
+    .receipt-header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 2px dashed #ccc;
+    }
+    
+    .company-logo {
+      max-width: 180px;
+      height: auto;
+      display: block;
+      margin: 0 auto 15px auto;
+    }
+    
+    .receipt-header h1 {
+      margin: 10px 0 0;
+      font-size: 1.4rem;
+      color: #0056b3;
+      letter-spacing: 1px;
+    }
+
+    .receipt-details .detail-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #eee;
+    }
+    .receipt-details .detail-item:last-child { border-bottom: none; }
+    .receipt-details .label { font-weight: 600; color: #555; }
+    .receipt-details .value { color: #111; font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+
+    .receipt-summary {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px dashed #ccc;
+    }
+    .receipt-summary h2 { text-align: center; margin: 0 0 15px 0; font-size: 1.1rem; color: #333; }
+    #summary-content {
+      white-space: pre-wrap;
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .receipt-footer {
+      text-align: center;
+      margin-top: 25px;
+      padding-top: 20px;
+      border-top: 2px dashed #ccc;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #28a745;
+    }
+    
+    .thank-you-message {
+      font-size: 0.85rem;
+      font-style: italic;
+      font-weight: normal;
+      color: #6c757d;
+      margin-top: 15px;
+      margin-bottom: 0;
+    }
+
+    .status-message {
+      width: 100%;
+      max-width: 400px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      background-color: #fff;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+    }
+    #error-message, #expired-message {
+      color: #721c24;
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="protectionOverlay"></div>
+
+  <div id="receipt-container" class="receipt-container">
+    <div class="receipt-header">
+      <img src="https://lemiastkuosky.github.io/vipmojs/seu-logo.png" alt="Logo da Empresa" class="company-logo">
+      <h1>RECIBO DE APOSTA</h1>
+    </div>
+    <div class="receipt-details">
+      <div class="detail-item">
+        <span class="label">Código:</span>
+        <span class="value" id="receipt-code"></span>
+      </div>
+      <div class="detail-item">
+        <span class="label">Data/Hora:</span>
+        <span class="value" id="receipt-datetime"></span>
+      </div>
+      <div class="detail-item">
+        <span class="label">Extração:</span>
+        <span class="value" id="receipt-extraction"></span>
+      </div>
+      <div class="detail-item">
+        <span class="label">Valor Pago:</span>
+        <span class="value" id="receipt-value"></span>
+      </div>
+      <div class="detail-item">
+        <span class="label">Possível Prêmio:</span>
+        <span class="value" id="receipt-prize"></span>
+      </div>
+      <div class="detail-item">
+        <span class="label">Qtd. Números:</span>
+        <span class="value" id="receipt-quantity"></span>
+      </div>
+    </div>
+    <div class="receipt-summary">
+      <h2>RESUMO DETALHADO</h2>
+      <pre id="summary-content"></pre>
+    </div>
+    <div class="receipt-footer">
+      BOA SORTE! 🍀
+      <p class="thank-you-message">A Vip agradece a sua preferência!</p>
+    </div>
+  </div>
+
+  <div id="loading-message" class="status-message">Carregando recibo...</div>
+  <div id="error-message" class="status-message"></div>
+  <div id="expired-message" class="status-message">
+    🚫<br><br>Recibo expirado ou não encontrado.
+  </div>
+
+  <script>
+    // ── Proteção contra cópia e screenshot ──
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (e.key === 'PrintScreen' || (e.ctrlKey && ['p','s','c','u','a'].includes(e.key.toLowerCase())) || (e.metaKey && ['p','s','c','u','a'].includes(e.key.toLowerCase()))) {
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('cut',  e => e.preventDefault());
+
+    const overlay = document.getElementById('protectionOverlay');
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        overlay.style.display = 'block';
+      } else {
+        setTimeout(() => { overlay.style.display = 'none'; }, 300);
+      }
+    });
+    if ('onscreenshotavailable' in window) {
+      window.onscreenshotavailable = () => { overlay.style.display = 'block'; setTimeout(() => { overlay.style.display = 'none'; }, 1000); };
+    }
+
+    // ── 1. Configuração do Firebase ──
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
+      authDomain: "meus-recibos-vip.firebaseapp.com",
+      projectId: "meus-recibos-vip",
+      storageBucket: "meus-recibos-vip.firebasestorage.app",
+      messagingSenderId: "254959368683",
+      appId: "1:254959368683:web:80676a26f614040df6c1ae"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const firestoreDB = firebase.firestore();
+
+    // ── 2. Função Rastreadora de Acessos (O Motor das Views) ──
+    async function registrarAcesso(receiptId) {
+      if (!receiptId || !firestoreDB) return;
+
+      let userIp = 'Desconhecido';
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        userIp = ipData.ip;
+      } catch (e) {
+        console.warn("Falha ao pegar IP:", e.message);
+      }
+
+      try {
+        await firestoreDB.collection('receipts').doc(receiptId).update({
+          views: firebase.firestore.FieldValue.increment(1),
+          accessLog: firebase.firestore.FieldValue.arrayUnion({
+            ip: userIp,
+            ua: navigator.userAgent,
+            time: new Date()
+          })
+        });
+      } catch (error) {
+        console.error("ERRO FIREBASE:", error.message);
+      }
+    }
+
+    // ── 3. Função para popular o HTML ──
+    function populateReceipt(receiptText) {
+      const extractValue = (regex) => (receiptText.match(regex) || [])[1]?.trim() || 'N/A';
+      
+      document.getElementById('receipt-code').textContent = extractValue(/Código\.*:\s*(.*)/);
+      document.getElementById('receipt-datetime').textContent = extractValue(/Data\/Hora\.*:\s*(.*)/);
+      document.getElementById('receipt-extraction').textContent = extractValue(/Extração\.*:\s*(.*)/);
+      document.getElementById('receipt-value').textContent = extractValue(/Valor Pago\.*:\s*(.*)/);
+      document.getElementById('receipt-prize').textContent = extractValue(/Possível Prêmio:\s*(.*)/);
+      document.getElementById('receipt-quantity').textContent = extractValue(/Qtd\. Números\.*:\s*(.*)/);
+      
+      const summaryMatch = receiptText.split(/RESUMO DETALHADO\s*-+\s*/);
+      document.getElementById('summary-content').textContent = summaryMatch.length > 1 ? summaryMatch[1].split('==============================')[0].trim() : 'Nenhum detalhe encontrado.';
+    }
+
+    // ── 4. Função principal ──
+    async function fetchReceipt() {
+      const loadingEl = document.getElementById('loading-message');
+      const errorEl = document.getElementById('error-message');
+      const expiredEl = document.getElementById('expired-message');
+      const receiptContainer = document.getElementById('receipt-container');
+
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const receiptId = params.get('id');
+
+        if (!receiptId) throw new Error('ID do recibo não fornecido na URL.');
+
+        const doc = await firestoreDB.collection('receipts').doc(receiptId).get();
+
+        if (!doc.exists) {
+          loadingEl.style.display = 'none';
+          expiredEl.style.display = 'block';
+          return;
+        }
+        
+        const data = doc.data();
+        const expiresAt = data.expiresAt ? data.expiresAt.toDate() : null;
+        const now = new Date();
+
+        if (expiresAt && now > expiresAt) {
+          loadingEl.style.display = 'none';
+          expiredEl.style.display = 'block';
+        } else {
+          populateReceipt(data.content);
+          
+          if (data.isPaid === true) {
+            receiptContainer.classList.add('paid-stamp');
+          }
+          
+          loadingEl.style.display = 'none';
+          receiptContainer.style.display = 'block';
+
+          // A MÁGICA ACONTECE AQUI: Registra a view apenas se não for o Admin
+          if (params.get('admin') === 'true') {
+            try {
+              await firestoreDB.collection('receipts').doc(receiptId).update({
+                accessLog: firebase.firestore.FieldValue.arrayUnion({
+                  ip: '—',
+                  ua: '👑 [ADMIN] Visualização via painel',
+                  time: new Date()
+                })
+              });
+            } catch(e) {}
+          } else {
+            await registrarAcesso(receiptId);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar recibo:", error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Não foi possível carregar o recibo. Verifique sua conexão ou o ID do link.';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    window.onload = fetchReceipt;
+  </script>
+//teste
+</body>
+</html>
