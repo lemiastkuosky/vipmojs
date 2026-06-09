@@ -118,14 +118,41 @@
     body.select-mode .card-checkbox { display: block; }
     body.select-mode .receipt-card  { cursor: pointer; }
 
-    .milhar-atual {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(245,200,66,.08); border: 1px solid rgba(245,200,66,.2);
-      border-radius: 10px; padding: 8px 14px;
-      font-family: var(--mono); font-size: 1.2rem; color: var(--accent); font-weight: 700;
-      letter-spacing: 2px;
+    /* BICHOS VENDIDOS NO CARD */
+    .bichos-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .bicho-tag {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(245,200,66,.07); border: 1px solid rgba(245,200,66,.2);
+      border-radius: 10px; padding: 8px 12px; flex: 1; min-width: 120px;
     }
+    .bicho-tag .bt-emoji { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
+    .bicho-tag .bt-info  { display: flex; flex-direction: column; gap: 2px; }
+    .bicho-tag .bt-nome  { font-family: var(--mono); font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .bicho-tag .bt-milhar{ font-family: var(--mono); font-size: 0.7rem; color: var(--accent); letter-spacing: 2px; }
     .milhar-label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+
+    /* MULTI-MILHAR: quando tem 2 ou 3 bichos vendidos juntos */
+    .milhares-wrap {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .milhar-item {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(245,200,66,.06); border: 1px solid rgba(245,200,66,.18);
+      border-radius: 10px; padding: 8px 12px;
+    }
+    .milhar-item .mi-numero {
+      font-family: var(--mono); font-size: 1.15rem; font-weight: 700;
+      color: var(--accent); letter-spacing: 2px; min-width: 52px;
+    }
+    .milhar-item .mi-sep {
+      color: var(--border); font-size: 0.9rem;
+    }
+    .milhar-item .mi-bicho {
+      display: flex; align-items: center; gap: 5px;
+      font-family: var(--mono); font-size: 0.78rem; color: var(--text);
+    }
+    .milhar-item .mi-bicho .mi-emoji { font-size: 1.1rem; line-height: 1; }
+    .milhar-item .mi-bicho .mi-nome  { color: var(--muted); }
 
     /* VIEWS DESTAQUE */
     .views-destaque {
@@ -279,6 +306,7 @@
     .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .app-version { text-align: center; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); padding: 10px 0 40px; }
+    .app-footer { padding: 24px 20px 48px; }
 
     #toast {
       position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); left: 50%; transform: translateX(-50%) translateY(20px);
@@ -298,8 +326,110 @@
     .confirm-actions { display: flex; gap: 10px; }
     .confirm-actions .btn { flex: 1; }
 
-    
-    
+
+    /* CARD ACTIONS — melhorado */
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .card-actions .btn-alterar {
+      flex: 1;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 12px 16px;
+      min-height: 44px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background .15s, transform .1s;
+      touch-action: manipulation;
+      -webkit-appearance: none;
+    }
+    .card-actions .btn-alterar:active { transform: scale(.96); background: #ffd740; }
+
+    .card-actions .btn-del {
+      flex: 0 0 44px;
+      width: 44px;
+      height: 44px;
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: background .15s, transform .1s;
+      touch-action: manipulation;
+      -webkit-appearance: none;
+    }
+    .card-actions .btn-del:active { transform: scale(.96); background: #c62828; }
+
+    .card-actions .btn-ver {
+      flex: 0 0 auto;
+      background: transparent;
+      color: var(--muted);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: 0.82rem;
+      padding: 11px 14px;
+      min-height: 44px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      text-decoration: none;
+      transition: border-color .15s, color .15s, background .15s;
+      white-space: nowrap;
+      touch-action: manipulation;
+    }
+    .card-actions .btn-ver:active,
+    .card-actions .btn-ver:hover { border-color: #4299e1; color: #4299e1; background: rgba(66,153,225,.08); }
+
+    /* Desktop: botões maiores e com label no deletar */
+    @media (min-width: 600px) {
+      .card-actions .btn-alterar { font-size: 0.92rem; padding: 13px 20px; }
+      .card-actions .btn-del     { flex: 0 0 auto; width: auto; padding: 0 16px; gap: 6px; font-size: 0.85rem; }
+      .card-actions .btn-del::after { content: 'Apagar'; font-family: var(--sans); font-weight: 700; font-size: 0.82rem; }
+      .card-actions .btn-ver     { padding: 12px 18px; font-size: 0.88rem; }
+    }
+    /* LOGIN FOOTER */
+    .login-footer { margin-top: 28px; }
+    .login-footer-divider {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+    }
+    .lf-line {
+      flex: 1; height: 1px;
+      background: linear-gradient(to right, transparent, var(--border), transparent);
+    }
+    .lf-dot {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--accent); opacity: 0.5; flex-shrink: 0;
+    }
+    .login-footer-info {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+    }
+    .lf-version {
+      background: rgba(245,200,66,.1); color: var(--accent);
+      border: 1px solid rgba(245,200,66,.2); border-radius: 6px;
+      padding: 2px 8px; font-weight: 700; letter-spacing: 0.05em;
+    }
+    .lf-sep { opacity: 0.3; }
+    .lf-copy { opacity: 0.6; }
+
   </style>
 </head>
 <body>
@@ -327,6 +457,19 @@
     <div class="field"><label>SENHA</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" /></div>
     <div id="loginError"></div>
     <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">Entrar</button>
+
+    <div class="login-footer">
+      <div class="login-footer-divider">
+        <span class="lf-line"></span>
+        <span class="lf-dot"></span>
+        <span class="lf-line"></span>
+      </div>
+      <div class="login-footer-info">
+        <span class="lf-version">v1.6.0</span>
+        <span class="lf-sep">·</span>
+        <span class="lf-copy">VipMojs © 2025</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -353,7 +496,18 @@
     <div class="empty-state"><span class="spinner"></span></div>
   </div>
   
-  <div class="app-version">Versão 1.6.0</div>
+  <div class="app-footer">
+    <div class="login-footer-divider">
+      <span class="lf-line"></span>
+      <span class="lf-dot"></span>
+      <span class="lf-line"></span>
+    </div>
+    <div class="login-footer-info">
+      <span class="lf-version">v1.6.0</span>
+      <span class="lf-sep">&#183;</span>
+      <span class="lf-copy">VipMojs &#169; 2025</span>
+    </div>
+  </div>
 </div>
 
 <div id="deleteBar">
@@ -572,65 +726,65 @@ function renderList(list) {
     } else { badgeHtml = '<span class="badge badge-active">Ativo</span>'; }
 
     const viewsCount = data.views || 0;
-    const milhar = extractMilhar(data.content || '');
+    const todasMilhares = extractAllMilhares(data.content || '');
     const clientLink = `https://meus-recibos-vip.web.app/recibo.html?id=${id}&admin=true`;
     const checked = selectedIds.has(id) ? 'checked' : '';
 
-    // Views destaque
-    const viewsHtml = `
-      <div class="views-destaque ${viewsCount === 0 ? 'views-zero' : ''}" onclick="event.stopPropagation();openLogModal('${id}')">
-        <div>
-          <div class="views-numero">Views ${viewsCount}</div>
-          <div class="views-label">visualizações — toque para ver log</div>
-        </div>
-      </div>`;
+    // Bichos únicos vendidos (sem repetir)
+    const bichosSeen = new Set();
+    const bichosVendidos = [];
+    todasMilhares.forEach(m => {
+      const b = bichoDoMilhar(m);
+      if (b && !bichosSeen.has(b.nome)) { bichosSeen.add(b.nome); bichosVendidos.push({ milhar: m, bicho: b }); }
+    });
 
-    // Mini-Log sempre visível
+    const bichosHtml = bichosVendidos.length === 0
+      ? `<span style="font-family:var(--mono);font-size:0.8rem;color:var(--muted)">não identificado</span>`
+      : bichosVendidos.map(({ milhar, bicho }) => `
+          <div class="bicho-tag">
+            <span class="bt-emoji">${bicho.emoji}</span>
+            <div class="bt-info">
+              <span class="bt-nome">${bicho.nome}</span>
+              <span class="bt-milhar">${milhar}</span>
+            </div>
+          </div>`).join('');
+
+    // Log de acessos
     const logs = data.accessLog || [];
-    const PREVIEW = 5;
     const sortedLogs = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
+    const PREVIEW = 3;
     const previewLogs = sortedLogs.slice(0, PREVIEW);
 
-    let logItems = '';
-    if (previewLogs.length === 0) {
-      logItems = '<div class="mini-log-vazio">Nenhum acesso registrado ainda</div>';
-    } else {
-      logItems = previewLogs.map(log => {
-        const ua = log.ua || '';
-        const dateObj = toDate(log.time);
-        const timeStr = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(dateObj);
-        const isAdmin = ua.includes('👑');
-        let sysName = '🌐 Web';
-        if (isAdmin)                           sysName = '👑 Admin';
-        else if (/android/i.test(ua))          sysName = '📱 Android';
-        else if (/iphone|ipad|ipod/i.test(ua)) sysName = '📱 iOS';
-        else if (/windows/i.test(ua))          sysName = '💻 Windows';
-        else if (/mac os/i.test(ua))           sysName = '💻 Mac';
-        const ip = log.ip && log.ip !== '—' && log.ip !== 'Desconhecido' ? log.ip : '';
-        return `
-          <div class="mini-log-item ${isAdmin ? 'admin' : ''}">
+    const logRows = previewLogs.length === 0
+      ? `<div class="mini-log-vazio">Nenhum acesso ainda</div>`
+      : previewLogs.map(log => {
+          const ua = log.ua || '';
+          const isAdmin = ua.includes('👑');
+          const dateObj = toDate(log.time);
+          const timeStr = new Intl.DateTimeFormat('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).format(dateObj);
+          let sysIcon = '🌐';
+          if (isAdmin)                           sysIcon = '👑';
+          else if (/android/i.test(ua))          sysIcon = '📱';
+          else if (/iphone|ipad|ipod/i.test(ua)) sysIcon = '🍎';
+          else if (/windows/i.test(ua))          sysIcon = '💻';
+          else if (/mac os/i.test(ua))           sysIcon = '🖥️';
+          const ip = (!log.ip || log.ip === '—' || log.ip === 'Desconhecido') ? null : log.ip;
+          return `<div class="mini-log-item ${isAdmin ? 'admin' : ''}">
             <div class="ml-row">
-              <span class="ml-device">${sysName}</span>
+              <span class="ml-device">${sysIcon} ${isAdmin ? 'Admin' : (ip || 'IP oculto')}</span>
               <span class="ml-time">${timeStr}</span>
             </div>
-            ${ip ? `<span class="ml-ip">🌐 ${ip}</span>` : ''}
           </div>`;
-      }).join('');
-    }
+        }).join('');
 
     const verMais = logs.length > PREVIEW
       ? `<div class="mini-log-ver-mais" onclick="event.stopPropagation();openLogModal('${id}')">Ver todos os ${logs.length} acessos →</div>`
       : '';
 
-    const miniLogHtml = `
-      <div class="mini-log">
-        <div class="mini-log-title">ÚLTIMOS ACESSOS</div>
-        ${logItems}
-        ${verMais}
-      </div>`;
-
     return `
       <div class="receipt-card${selectedIds.has(id) ? ' selected' : ''}" id="card-${id}" onclick="onCardClick('${id}', event)">
+
+        <!-- Cabeçalho: ID + badge -->
         <div class="card-row">
           <div style="display:flex;align-items:center;gap:10px">
             <input type="checkbox" class="card-checkbox" ${checked} onclick="event.stopPropagation();toggleSelect('${id}')" />
@@ -638,20 +792,31 @@ function renderList(list) {
           </div>
           <div class="badges-wrap">${badgeHtml}</div>
         </div>
+
+        <!-- Data de criação -->
         <div class="card-date">📅 ${dateStr}</div>
 
+        <!-- Bichos vendidos -->
         <div>
-          <div class="milhar-label" style="margin-bottom:6px">MILHAR</div>
-          <div class="milhar-atual">${milhar || '<span style="color:var(--muted);font-size:.8rem">não encontrada</span>'}</div>
+          <div class="milhar-label" style="margin-bottom:8px">BICHO${bichosVendidos.length > 1 ? 'S' : ''} VENDIDO${bichosVendidos.length > 1 ? 'S' : ''}</div>
+          <div class="bichos-row">${bichosHtml}</div>
         </div>
 
-        ${viewsHtml}
-        ${miniLogHtml}
+        <!-- Views + Log -->
+        <div class="mini-log" onclick="event.stopPropagation();openLogModal('${id}')">
+          <div class="mini-log-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>👁️ ACESSOS</span>
+            <span style="color:var(--accent);font-weight:700">${viewsCount} view${viewsCount !== 1 ? 's' : ''}</span>
+          </div>
+          ${logRows}
+          ${verMais}
+        </div>
 
-        <div class="card-row" style="gap:10px;">
-          <button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
-          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();askDeleteOne('${id}')">🗑️</button>
-          <a href="${clientLink}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">🔗 Ver</a>
+        <!-- Ações -->
+        <div class="card-actions">
+          <button class="btn-alterar" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
+          <button class="btn-del" onclick="event.stopPropagation();askDeleteOne('${id}')" title="Apagar recibo">🗑️</button>
+          <a href="${clientLink}" target="_blank" class="btn-ver" onclick="event.stopPropagation()">🔗 Ver</a>
         </div>
       </div>`;
   }).join('');
@@ -852,16 +1017,43 @@ async function saveReceipt() {
   finally { btn.disabled = false; btn.textContent = '💾 Salvar'; }
 }
 
-// ── OPEN LOG MODAL ──
-function openLogModal(id) {
-  const rec = allReceipts.find(r => r.id === id); if (!rec) return;
+async function openLogModal(id) {
+  const snap = await db.collection('receipts').doc(id).get({ source: 'server' });
+  if (!snap.exists) return;
+  // Atualiza o cache local também
+  const idx = allReceipts.findIndex(r => r.id === id);
+  if (idx !== -1) allReceipts[idx].data = snap.data();
+  const rec = { id, data: snap.data() };
 
-  const created = rec.data.createdAt ? toDate(rec.data.createdAt) : null;
+  // ── 🔍 DEBUG: diagnóstico de accessLog ──
+  const rawData = rec.data;
+  const logs = rawData.accessLog || [];
+  console.group(`🔍 [accessLog] Recibo: ${id}`);
+  console.log('📦 data completo:', rawData);
+  console.log('📋 accessLog bruto:', rawData.accessLog);
+  console.log('🔢 Quantidade de logs:', logs.length);
+  if (logs.length > 0) {
+    logs.forEach((log, i) => {
+      console.group(`  ↳ log[${i}]`);
+      console.log('  ip  :', log.ip);
+      console.log('  ua  :', log.ua);
+      console.log('  time:', log.time, '→ Date:', toDate(log.time));
+      console.log('  keys disponíveis:', Object.keys(log));
+      console.log('  obj completo:', log);
+      console.groupEnd();
+    });
+  } else {
+    console.warn('⚠️ accessLog está vazio ou ausente no documento.');
+    console.log('  Campos presentes no doc:', Object.keys(rawData));
+  }
+  console.groupEnd();
+  // ── fim debug ──
+
+  const created = rawData.createdAt ? toDate(rawData.createdAt) : null;
   const dateStr = created ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created) : '—';
   
   document.getElementById('logMetaId').innerHTML = `<span><strong>${id.substring(0,16)}…</strong></span><span>📅 ${dateStr}</span>`;
 
-  const logs = rec.data.accessLog || [];
   const logContainer = document.getElementById('logBody');
 
   if (logs.length === 0) {
