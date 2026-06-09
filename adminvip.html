@@ -96,6 +96,7 @@
     }
     .toolbar input:focus { border-color: var(--accent); }
     .counter { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+    
 
     /* CARDS */
     .list { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; padding-bottom: 160px; }
@@ -206,7 +207,7 @@
     }
     .modal-handle { width: 40px; height: 5px; background: var(--border); border-radius: 3px; margin: 12px auto 0; flex-shrink: 0; }
     .modal-header { position: sticky; top: 0; background: var(--surface); padding: 20px 20px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 10; }
-    .modal-header h2 { font-size: 1.2rem; font-weight: 800; }
+    .modal-header h2 { font-size: 1rem; font-weight: 800; }
     .modal-meta { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
     .modal-meta strong { color: var(--text); }
     .modal-body { padding: 24px 20px; flex: 1; display: flex; flex-direction: column; gap: 24px; }
@@ -443,8 +444,30 @@
 }
 
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; }
-  .modal-content { position: relative; width: 95%; max-width: 450px; height: 85%; margin: 5% auto; background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
-  .modal-header { padding: 10px; background: #eee; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+  /* TRANCAR VISUAL ESCURO - NÃO ALTERAR */
+.modal-content, 
+.log-modal-content, 
+#logModal .modal-content,
+.mini-log-modal {
+    background-color: #0f111a !important; /* Fundo escuro fixo */
+    color: #ffffff !important;           /* Texto branco fixo */
+    border: 1px solid #333 !important;
+}
+
+/* Garante que qualquer texto dentro do modal fique branco */
+.modal-content span, 
+.modal-content h1, 
+.modal-content h2, 
+.modal-content p, 
+.modal-content div {
+    color: #ffffff !important;
+}
+
+/* Garante que o fundo da página atrás do modal não mude */
+.modal-overlay {
+    background-color: rgba(0, 0, 0, 0.85) !important;
+}
+  .modal-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
   .btn-close { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
   #previewIframe { width: 100%; height: 100%; border: none; }
 
@@ -771,21 +794,11 @@ function formatIP(ip) {
 }
 
 function renderList(list) {
-  // DEBUG: Vamos ver no console o que está chegando
-  console.log("Renderizando lista de recibos...", list);
-  
   document.getElementById('counter').textContent = String(list.length);
   const container = document.getElementById('receiptsList');
   if (!list.length) { container.innerHTML = '<div class="empty-state">Nenhum recibo encontrado.</div>'; return; }
 
   container.innerHTML = list.map(({ id, data }) => {
-    // DEBUG: Vamos ver os logs de cada recibo
-    if (data.accessLog) {
-        console.log(`Recibo ${id} tem ${data.accessLog.length} acessos.`);
-    } else {
-        console.log(`Recibo ${id} NÃO tem accessLog.`);
-    }
-
     const created = data.createdAt ? toDate(data.createdAt) : null;
     const dateStr = created ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created) : '—';
     const expires = data.expiresAt ? toDate(data.expiresAt) : null;
@@ -805,7 +818,7 @@ function renderList(list) {
       }
     } else { badgeHtml = '<span class="badge badge-active">Ativo</span>'; }
 
-    // Bichos Visuais (Mantido para não sumir da tela)
+    // Bichos Visuais
     const todasMilhares = extractAllMilhares(data.content || '');
     const bichosSeen = new Set();
     const bichosVendidos = [];
@@ -822,7 +835,7 @@ function renderList(list) {
         </div>
       </div>`).join('');
 
-    // Logs e Agrupamento
+    // Logs e Agrupamento (SEM IP NA TELA)
     const logs = data.accessLog || [];
     const sortedLogs = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
     const ipMap = new Map();
@@ -840,14 +853,11 @@ function renderList(list) {
           const isAdmin = ua.includes('👑');
           const { icon } = parseUserAgent(ua);
           const countBadge = log.count > 1 ? `<span class="count-pill">${log.count}x</span>` : '';
-          
-          // Formata o IP usando a função formatIP que criamos
-          const ipDisplay = log.ip && log.ip !== '—' ? `<span style="opacity:0.4; font-size:0.65rem; margin-left:6px;">(${formatIP(log.ip)})</span>` : '';
 
           if (isAdmin) {
              return `<div class="mini-log-item admin">
               <div class="ml-row" style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="display:flex; align-items:center; font-weight:700;"><span style="color:#5a6080; width:22px;">${index + 1}º</span> 👑 Admin Interno</span>
+                <span style="display:flex; align-items:center; font-weight:700;"><span style="color:#5a6080; width:22px;">${index + 1}º</span> 👑 Admin</span>
                 ${countBadge}
               </div>
             </div>`;
@@ -855,14 +865,16 @@ function renderList(list) {
 
           const t = toDate(log.time);
           const formattedDate = `${new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(t)} às ${new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(t)}`;
-          const locationText = (log.city && log.state) ? `${log.city} - ${log.state}` : formatIP(log.ip || 'IP Oculto');
+          
+          // SEM IP AQUI: Apenas Localização ou "Visitante"
+          const locationText = (log.city && log.state) ? `${log.city} - ${log.state}` : 'Visitante';
           
           return `<div class="mini-log-item" style="padding: 4px 0;">
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
               <div style="display:flex; align-items:center; overflow:hidden;">
                 <span style="color:#5a6080; width:22px; font-weight:700;">${index + 1}º</span>
                 <span style="margin-right:6px;">${icon}</span>
-                <span style="color:#fff; font-weight:600; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${locationText} ${ipDisplay}</span>
+                <span style="color:#fff; font-weight:600; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${locationText}</span>
               </div>
               <div style="display:flex; align-items:center; flex-shrink:0;">
                 ${countBadge}
@@ -883,7 +895,7 @@ function renderList(list) {
         </div>
         <div class="card-date">📅 ${dateStr}</div>
         <div>
-          <div class="milhar-label" style="margin-bottom:8px">BICHO${bichosVendidos.length > 1 ? 'S' : ''} VENDIDO${bichosVendidos.length > 1 ? 'S' : ''}</div>
+          <div class="milhar-label" style="margin-bottom:8px">BICHO${bichosVendidos.length > 1 ? 'S' : ''} VENDIDO</div>
           <div class="bichos-row">${bichosHtml}</div>
         </div>
         <div class="mini-log" onclick="event.stopPropagation();openLogModal('${id}')">
