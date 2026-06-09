@@ -9,6 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
   <style>
+    /* Impede a seleção de texto */
     body {
       -webkit-user-select: none;
       -ms-user-select: none;
@@ -28,7 +29,7 @@
       }
     }
 
-    /* Overlay de proteção contra screenshot (ativado via JS) */
+    /* Overlay de proteção contra screenshot */
     #protectionOverlay {
       display: none;
       position: fixed;
@@ -37,6 +38,7 @@
       z-index: 9999;
     }
 
+    /* Estilos Gerais */
     html, body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -77,8 +79,8 @@
     }
     
     .receipt-header, .receipt-details, .receipt-summary, .receipt-footer {
-      position: relative;
-      z-index: 1;
+        position: relative;
+        z-index: 1;
     }
 
     .receipt-header {
@@ -221,26 +223,15 @@
 
   <script>
     // ── Proteção contra cópia e screenshot ──
-
-    // Bloqueia menu de contexto (segurar no celular)
     document.addEventListener('contextmenu', e => e.preventDefault());
-
-    // Bloqueia atalhos de teclado (PrintScreen, Ctrl+P, Ctrl+S, Ctrl+C)
     document.addEventListener('keydown', e => {
-      if (
-        e.key === 'PrintScreen' ||
-        (e.ctrlKey && ['p','s','c','u','a'].includes(e.key.toLowerCase())) ||
-        (e.metaKey && ['p','s','c','u','a'].includes(e.key.toLowerCase()))
-      ) {
+      if (e.key === 'PrintScreen' || (e.ctrlKey && ['p','s','c','u','a'].includes(e.key.toLowerCase())) || (e.metaKey && ['p','s','c','u','a'].includes(e.key.toLowerCase()))) {
         e.preventDefault();
       }
     });
-
-    // Bloqueia eventos de cópia/corte
     document.addEventListener('copy', e => e.preventDefault());
     document.addEventListener('cut',  e => e.preventDefault());
 
-    // Esconde conteúdo quando a aba perde o foco (troca de app para tirar screenshot)
     const overlay = document.getElementById('protectionOverlay');
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
@@ -249,13 +240,11 @@
         setTimeout(() => { overlay.style.display = 'none'; }, 300);
       }
     });
-
-    // iOS: bloqueia screenshot via evento de captura de tela (Safari 17.4+)
     if ('onscreenshotavailable' in window) {
       window.onscreenshotavailable = () => { overlay.style.display = 'block'; setTimeout(() => { overlay.style.display = 'none'; }, 1000); };
     }
 
-    // ── Firebase ──
+    // ── 1. Configuração do Firebase ──
     const firebaseConfig = {
       apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
       authDomain: "meus-recibos-vip.firebaseapp.com",
@@ -264,29 +253,24 @@
       messagingSenderId: "254959368683",
       appId: "1:254959368683:web:80676a26f614040df6c1ae"
     };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    firebase.initializeApp(firebaseConfig);
     const firestoreDB = firebase.firestore();
 
-    // ── Função Rastreadora de Acessos ──
+    // ── 2. Função Rastreadora de Acessos (O Motor das Views) ──
     async function registrarAcesso(receiptId) {
-      console.log("🚀 [VIEW TRACKER] Função chamada para ID:", receiptId);
-
       if (!receiptId || !firestoreDB) return;
 
-      // ── Busca IP DIRETA (sem timeout) ──
       let userIp = 'Desconhecido';
       try {
         const ipResponse = await fetch('https://api.ipify.org?format=json');
         const ipData = await ipResponse.json();
         userIp = ipData.ip;
-        console.log("🌐 [VIEW TRACKER] IP obtido:", userIp);
       } catch (e) {
-        console.warn("⚠️ [VIEW TRACKER] Falha ao pegar IP:", e.message);
+        console.warn("Falha ao pegar IP:", e.message);
       }
 
-      // ── Tenta gravar no Firestore ──
       try {
-        console.log("💾 [VIEW TRACKER] Gravando no Firestore...");
         await firestoreDB.collection('receipts').doc(receiptId).update({
           views: firebase.firestore.FieldValue.increment(1),
           accessLog: firebase.firestore.FieldValue.arrayUnion({
@@ -295,59 +279,66 @@
             time: new Date()
           })
         });
-        console.log("✅ [VIEW TRACKER] Views atualizado com sucesso!");
       } catch (error) {
-        console.error("🚨 [VIEW TRACKER] ERRO FIREBASE:", error.message);
+        console.error("ERRO FIREBASE:", error.message);
       }
     }
 
+    // ── 3. Função para popular o HTML ──
     function populateReceipt(receiptText) {
       const extractValue = (regex) => (receiptText.match(regex) || [])[1]?.trim() || 'N/A';
-      document.getElementById('receipt-code').textContent       = extractValue(/Código\.*:\s*(.*)/);
-      document.getElementById('receipt-datetime').textContent   = extractValue(/Data\/Hora\.*:\s*(.*)/);
+      
+      document.getElementById('receipt-code').textContent = extractValue(/Código\.*:\s*(.*)/);
+      document.getElementById('receipt-datetime').textContent = extractValue(/Data\/Hora\.*:\s*(.*)/);
       document.getElementById('receipt-extraction').textContent = extractValue(/Extração\.*:\s*(.*)/);
-      document.getElementById('receipt-value').textContent      = extractValue(/Valor Pago\.*:\s*(.*)/);
-      document.getElementById('receipt-prize').textContent      = extractValue(/Possível Prêmio:\s*(.*)/);
-      document.getElementById('receipt-quantity').textContent   = extractValue(/Qtd\. Números\.*:\s*(.*)/);
+      document.getElementById('receipt-value').textContent = extractValue(/Valor Pago\.*:\s*(.*)/);
+      document.getElementById('receipt-prize').textContent = extractValue(/Possível Prêmio:\s*(.*)/);
+      document.getElementById('receipt-quantity').textContent = extractValue(/Qtd\. Números\.*:\s*(.*)/);
+      
       const summaryMatch = receiptText.split(/RESUMO DETALHADO\s*-+\s*/);
-      document.getElementById('summary-content').textContent = summaryMatch.length > 1
-        ? summaryMatch[1].split('==============================')[0].trim()
-        : 'Nenhum detalhe encontrado.';
+      document.getElementById('summary-content').textContent = summaryMatch.length > 1 ? summaryMatch[1].split('==============================')[0].trim() : 'Nenhum detalhe encontrado.';
     }
 
+    // ── 4. Função principal ──
     async function fetchReceipt() {
-      const loadingEl   = document.getElementById('loading-message');
-      const errorEl     = document.getElementById('error-message');
-      const expiredEl   = document.getElementById('expired-message');
+      const loadingEl = document.getElementById('loading-message');
+      const errorEl = document.getElementById('error-message');
+      const expiredEl = document.getElementById('expired-message');
       const receiptContainer = document.getElementById('receipt-container');
-      
+
       try {
-        const params    = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(window.location.search);
         const receiptId = params.get('id');
-        console.log('📋 [FETCH] receiptId:', receiptId);
-        if (!receiptId) throw new Error('ID não fornecido.');
-        
+
+        if (!receiptId) throw new Error('ID do recibo não fornecido na URL.');
+
         const doc = await firestoreDB.collection('receipts').doc(receiptId).get();
-        console.log('📋 [FETCH] doc.exists:', doc.exists);
-        if (!doc.exists) { loadingEl.style.display = 'none'; expiredEl.style.display = 'block'; return; }
+
+        if (!doc.exists) {
+          loadingEl.style.display = 'none';
+          expiredEl.style.display = 'block';
+          return;
+        }
         
         const data = doc.data();
         const expiresAt = data.expiresAt ? data.expiresAt.toDate() : null;
-        
-        if (expiresAt && new Date() > expiresAt) {
+        const now = new Date();
+
+        if (expiresAt && now > expiresAt) {
           loadingEl.style.display = 'none';
           expiredEl.style.display = 'block';
         } else {
           populateReceipt(data.content);
-          if (data.isPaid === true) receiptContainer.classList.add('paid-stamp');
+          
+          if (data.isPaid === true) {
+            receiptContainer.classList.add('paid-stamp');
+          }
           
           loadingEl.style.display = 'none';
           receiptContainer.style.display = 'block';
 
-          console.log('📋 [FETCH] Chamando registrarAcesso...');
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('admin') === 'true') {
-            // Admin visualizando
+          // A MÁGICA ACONTECE AQUI: Registra a view apenas se não for o Admin
+          if (params.get('admin') === 'true') {
             try {
               await firestoreDB.collection('receipts').doc(receiptId).update({
                 accessLog: firebase.firestore.FieldValue.arrayUnion({
@@ -356,21 +347,21 @@
                   time: new Date()
                 })
               });
-            } catch(e) { console.warn('Admin log error:', e.message); }
+            } catch(e) {}
           } else {
-            // Await crucial para dar tempo de rodar no mobile
             await registrarAcesso(receiptId);
           }
         }
       } catch (error) {
-        console.error('📋 [FETCH] ERRO:', error);
+        console.error("Erro ao buscar recibo:", error);
         loadingEl.style.display = 'none';
-        errorEl.textContent = 'Não foi possível carregar o recibo.';
+        errorEl.textContent = 'Não foi possível carregar o recibo. Verifique sua conexão ou o ID do link.';
         errorEl.style.display = 'block';
       }
     }
 
     window.onload = fetchReceipt;
   </script>
+
 </body>
 </html>
