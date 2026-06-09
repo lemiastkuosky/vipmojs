@@ -241,10 +241,8 @@
     document.addEventListener('cut',  e => e.preventDefault());
 
     // Esconde conteúdo quando a aba perde o foco (troca de app para tirar screenshot)
-    // NOTA: DevTools abre em janela separada, então NÃO dispara visibilitychange
     const overlay = document.getElementById('protectionOverlay');
     document.addEventListener('visibilitychange', () => {
-      // Ignora se DevTools está aberto (heurística: tempo de execução lento)
       if (document.hidden) {
         overlay.style.display = 'block';
       } else {
@@ -273,48 +271,33 @@
     async function registrarAcesso(receiptId) {
       console.log("🚀 [VIEW TRACKER] Função chamada para ID:", receiptId);
 
-      if (!receiptId) {
-        console.error("🚨 [VIEW TRACKER] receiptId está vazio/nulo. Abortando.");
-        return;
-      }
+      if (!receiptId || !firestoreDB) return;
 
-      if (!firestoreDB) {
-        console.error("🚨 [VIEW TRACKER] firestoreDB não inicializado!");
-        return;
-      }
-
-      // ── Busca IP com timeout de 3s ──
+      // ── Busca IP DIRETA (sem timeout) ──
       let userIp = 'Desconhecido';
       try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 3000);
-        const ipResponse = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-        clearTimeout(timer);
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
         const ipData = await ipResponse.json();
         userIp = ipData.ip;
         console.log("🌐 [VIEW TRACKER] IP obtido:", userIp);
       } catch (e) {
-        console.warn("⚠️ [VIEW TRACKER] IP não obtido (bloqueado ou timeout):", e.message);
+        console.warn("⚠️ [VIEW TRACKER] Falha ao pegar IP:", e.message);
       }
-
-      const userDevice = navigator.userAgent;
 
       // ── Tenta gravar no Firestore ──
       try {
         console.log("💾 [VIEW TRACKER] Gravando no Firestore...");
-        const docRef = firestoreDB.collection('receipts').doc(receiptId);
-        await docRef.update({
+        await firestoreDB.collection('receipts').doc(receiptId).update({
           views: firebase.firestore.FieldValue.increment(1),
           accessLog: firebase.firestore.FieldValue.arrayUnion({
             ip: userIp,
-            ua: userDevice,
+            ua: navigator.userAgent,
             time: new Date()
           })
         });
         console.log("✅ [VIEW TRACKER] Views atualizado com sucesso!");
       } catch (error) {
-        console.error("🚨 [VIEW TRACKER] ERRO ao gravar:", error.code, error.message);
-        console.error("👉 Verifique as REGRAS do Firestore em: https://console.firebase.google.com/project/meus-recibos-vip/firestore/rules");
+        console.error("🚨 [VIEW TRACKER] ERRO FIREBASE:", error.message);
       }
     }
 
@@ -333,61 +316,59 @@
     }
 
     async function fetchReceipt() {
-  const loadingEl   = document.getElementById('loading-message');
-  const errorEl     = document.getElementById('error-message');
-  const expiredEl   = document.getElementById('expired-message');
-  const receiptContainer = document.getElementById('receipt-container');
-  
-  try {
-    const params    = new URLSearchParams(window.location.search);
-    const receiptId = params.get('id');
-    console.log('📋 [FETCH] receiptId:', receiptId);
-    if (!receiptId) throw new Error('ID não fornecido.');
-    
-    const doc = await firestoreDB.collection('receipts').doc(receiptId).get();
-    console.log('📋 [FETCH] doc.exists:', doc.exists);
-    if (!doc.exists) { loadingEl.style.display = 'none'; expiredEl.style.display = 'block'; return; }
-    
-    const data = doc.data();
-    const expiresAt = data.expiresAt ? data.expiresAt.toDate() : null;
-    console.log('📋 [FETCH] expiresAt:', expiresAt, '| agora:', new Date(), '| expirado:', expiresAt && new Date() > expiresAt);
-    
-    if (expiresAt && new Date() > expiresAt) {
-      loadingEl.style.display = 'none';
-      expiredEl.style.display = 'block';
-    } else {
-      populateReceipt(data.content);
-      if (data.isPaid === true) receiptContainer.classList.add('paid-stamp');
+      const loadingEl   = document.getElementById('loading-message');
+      const errorEl     = document.getElementById('error-message');
+      const expiredEl   = document.getElementById('expired-message');
+      const receiptContainer = document.getElementById('receipt-container');
       
-      loadingEl.style.display = 'none';
-      receiptContainer.style.display = 'block';
+      try {
+        const params    = new URLSearchParams(window.location.search);
+        const receiptId = params.get('id');
+        console.log('📋 [FETCH] receiptId:', receiptId);
+        if (!receiptId) throw new Error('ID não fornecido.');
+        
+        const doc = await firestoreDB.collection('receipts').doc(receiptId).get();
+        console.log('📋 [FETCH] doc.exists:', doc.exists);
+        if (!doc.exists) { loadingEl.style.display = 'none'; expiredEl.style.display = 'block'; return; }
+        
+        const data = doc.data();
+        const expiresAt = data.expiresAt ? data.expiresAt.toDate() : null;
+        
+        if (expiresAt && new Date() > expiresAt) {
+          loadingEl.style.display = 'none';
+          expiredEl.style.display = 'block';
+        } else {
+          populateReceipt(data.content);
+          if (data.isPaid === true) receiptContainer.classList.add('paid-stamp');
+          
+          loadingEl.style.display = 'none';
+          receiptContainer.style.display = 'block';
 
-      console.log('📋 [FETCH] Chamando registrarAcesso...');
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('admin') === 'true') {
-        // Admin visualizando: registra no log mas NÃO incrementa views
-        try {
-          await firestoreDB.collection('receipts').doc(receiptId).update({
-            accessLog: firebase.firestore.FieldValue.arrayUnion({
-              ip: '—',
-              ua: '👑 [ADMIN] Visualização via painel',
-              time: new Date()
-            })
-          });
-        } catch(e) { console.warn('Admin log error:', e.message); }
-      } else {
-        // Coloque o await aqui 👇
-        await registrarAcesso(receiptId);
-      
+          console.log('📋 [FETCH] Chamando registrarAcesso...');
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('admin') === 'true') {
+            // Admin visualizando
+            try {
+              await firestoreDB.collection('receipts').doc(receiptId).update({
+                accessLog: firebase.firestore.FieldValue.arrayUnion({
+                  ip: '—',
+                  ua: '👑 [ADMIN] Visualização via painel',
+                  time: new Date()
+                })
+              });
+            } catch(e) { console.warn('Admin log error:', e.message); }
+          } else {
+            // Await crucial para dar tempo de rodar no mobile
+            await registrarAcesso(receiptId);
+          }
+        }
+      } catch (error) {
+        console.error('📋 [FETCH] ERRO:', error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Não foi possível carregar o recibo.';
+        errorEl.style.display = 'block';
       }
     }
-  } catch (error) {
-    console.error('📋 [FETCH] ERRO:', error);
-    loadingEl.style.display = 'none';
-    errorEl.textContent = 'Não foi possível carregar o recibo.';
-    errorEl.style.display = 'block';
-  }
-}
 
     window.onload = fetchReceipt;
   </script>
