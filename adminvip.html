@@ -430,6 +430,18 @@
     .lf-sep { opacity: 0.3; }
     .lf-copy { opacity: 0.6; }
 
+    .count-pill {
+  background: var(--accent);
+  color: #000;
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 800;
+  margin-right: 8px;
+  min-width: 24px;
+  text-align: center;
+}
+
   </style>
 </head>
 <body>
@@ -618,13 +630,44 @@ let selectMode    = false;
 let activeBicho   = null; 
 let allowedBichos = new Set();
 
-// Converte Firestore Timestamp, Date JS ou string para Date de forma segura
 function toDate(val) {
   if (!val) return new Date(0);
   if (typeof val.toDate === 'function') return val.toDate();
   if (val instanceof Date) return val;
   return new Date(val);
 }
+
+// ── NOVAS FUNÇÕES DIDÁTICAS ──
+function timeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 60) return "Agora mesmo";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `Há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Há ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `Há ${days} dias`;
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+}
+
+function parseUserAgent(ua) {
+  if (!ua) return { os: 'Desconhecido', app: 'Navegador Web', icon: '🌐' };
+  let os = 'Desconhecido', icon = '🌐';
+  if (/android/i.test(ua)) { os = 'Android'; icon = '📱'; }
+  else if (/iphone|ipad|ipod/i.test(ua)) { os = 'iOS'; icon = '🍎'; }
+  else if (/windows/i.test(ua)) { os = 'Windows'; icon = '💻'; }
+  else if (/mac os/i.test(ua)) { os = 'Mac'; icon = '🖥️'; }
+
+  let app = 'Navegador';
+  if (ua.includes('WhatsApp')) app = 'WhatsApp';
+  else if (ua.includes('Instagram')) app = 'Instagram';
+  else if (ua.includes('FBAN') || ua.includes('FBAV')) app = 'Facebook';
+  else if (ua.includes('Chrome')) app = 'Chrome';
+  else if (ua.includes('Safari') && !ua.includes('Chrome')) app = 'Safari';
+
+  return { os, app, icon };
+}
+// ─────────────────────────────
 
 const BICHOS = [
   { nome:'Avestruz', emoji:'🦅', dezenas:['01','02','03','04'] },
@@ -651,7 +694,7 @@ const BICHOS = [
   { nome:'Tigre',    emoji:'🐯', dezenas:['85','86','87','88'] },
   { nome:'Urso',     emoji:'🐻', dezenas:['89','90','91','92'] },
   { nome:'Veado',    emoji:'🦌', dezenas:['93','94','95','96'] },
-  { nome:'Vaca',     emoji:'🐄', dezenas:['97','98','99','00'] },
+  { nome:'Vaca',     emoji:'🐄', dezenas:['97','98','99','00'] }
 ];
 
 function bichoDoMilhar(milhar) {
@@ -725,66 +768,95 @@ function renderList(list) {
       }
     } else { badgeHtml = '<span class="badge badge-active">Ativo</span>'; }
 
+    const logs = data.accessLog || [];
+    const cidadesDistintas = new Set();
+    logs.forEach(l => { if(l.city && !l.ua.includes('👑')) cidadesDistintas.add(l.city); });
+    if (cidadesDistintas.size > 1) {
+      badgeHtml += `<span class="badge" style="background:#4a2f1a; color:#f5a642; border:1px solid #6a3f1a; margin-left: 6px;">⚠️ Compartilhado</span>`;
+    }
+
     const viewsCount = data.views || 0;
     const todasMilhares = extractAllMilhares(data.content || '');
     const clientLink = `https://meus-recibos-vip.web.app/recibo.html?id=${id}&admin=true`;
     const checked = selectedIds.has(id) ? 'checked' : '';
 
-    // Bichos únicos vendidos (sem repetir)
     const bichosSeen = new Set();
     const bichosVendidos = [];
     todasMilhares.forEach(m => {
       const b = bichoDoMilhar(m);
       if (b && !bichosSeen.has(b.nome)) { bichosSeen.add(b.nome); bichosVendidos.push({ milhar: m, bicho: b }); }
     });
+    const bichosHtml = bichosVendidos.length === 0 ? `<span style="font-family:var(--mono);font-size:0.8rem;color:var(--muted)">não identificado</span>` : bichosVendidos.map(({ milhar, bicho }) => `
+      <div class="bicho-tag">
+        <span class="bt-emoji">${bicho.emoji}</span>
+        <div class="bt-info">
+          <span class="bt-nome">${bicho.nome}</span>
+          <span class="bt-milhar">${milhar}</span>
+        </div>
+      </div>`).join('');
 
-    const bichosHtml = bichosVendidos.length === 0
-      ? `<span style="font-family:var(--mono);font-size:0.8rem;color:var(--muted)">não identificado</span>`
-      : bichosVendidos.map(({ milhar, bicho }) => `
-          <div class="bicho-tag">
-            <span class="bt-emoji">${bicho.emoji}</span>
-            <div class="bt-info">
-              <span class="bt-nome">${bicho.nome}</span>
-              <span class="bt-milhar">${milhar}</span>
-            </div>
-          </div>`).join('');
-
-    // Log de acessos
-    const logs = data.accessLog || [];
+    // Agrupamento para resumo (mantém contagem)
     const sortedLogs = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
-    const PREVIEW = 3;
-    const previewLogs = sortedLogs.slice(0, PREVIEW);
+    const ipMap = new Map();
+    sortedLogs.forEach(log => {
+      const key = log.ip || 'Desconhecido';
+      if (!ipMap.has(key)) { ipMap.set(key, { ...log, count: 1 }); }
+      else { ipMap.get(key).count++; }
+    });
+    const groupedLogs = Array.from(ipMap.values());
+    const previewLogs = groupedLogs.slice(0, 5); // Limitado a 5, mas mostrará quantos IPs únicos existirem
 
     const logRows = previewLogs.length === 0
       ? `<div class="mini-log-vazio">Nenhum acesso ainda</div>`
-      : previewLogs.map(log => {
+      : previewLogs.map((log, index) => {
           const ua = log.ua || '';
           const isAdmin = ua.includes('👑');
-          const dateObj = toDate(log.time);
-          const timeStr = new Intl.DateTimeFormat('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).format(dateObj);
-          let sysIcon = '🌐';
-          if (isAdmin)                           sysIcon = '👑';
-          else if (/android/i.test(ua))          sysIcon = '📱';
-          else if (/iphone|ipad|ipod/i.test(ua)) sysIcon = '🍎';
-          else if (/windows/i.test(ua))          sysIcon = '💻';
-          else if (/mac os/i.test(ua))           sysIcon = '🖥️';
-          const ip = (!log.ip || log.ip === '—' || log.ip === 'Desconhecido') ? null : log.ip;
-          return `<div class="mini-log-item ${isAdmin ? 'admin' : ''}">
-            <div class="ml-row">
-              <span class="ml-device">${sysIcon} ${isAdmin ? 'Admin' : (ip || 'IP oculto')}</span>
-              <span class="ml-time">${timeStr}</span>
+          const { icon } = parseUserAgent(ua);
+          
+          // Badge de frequência (contagem de acessos do mesmo IP)
+          const countBadge = log.count > 1 
+            ? `<span class="count-pill">${log.count}x</span>` 
+            : '';
+
+          if (isAdmin) {
+             return `<div class="mini-log-item admin">
+              <div class="ml-row" style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="display:flex; align-items:center; font-weight:700;">
+                   <span style="color:#5a6080; width:22px;">${index + 1}º</span> 👑 Admin Interno
+                </span>
+                ${countBadge}
+              </div>
+            </div>`;
+          }
+
+          const t = toDate(log.time);
+          const formattedDate = `${new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(t)} às ${new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(t)}`;
+          const locationText = (log.city && log.state) ? `${log.city} - ${log.state}` : (log.ip || 'IP Oculto');
+          
+          return `<div class="mini-log-item" style="padding: 4px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+              
+              <div style="display:flex; align-items:center; overflow:hidden;">
+                <span style="color:#5a6080; width:22px; font-weight:700;">${index + 1}º</span>
+                <span style="margin-right:6px;">${icon}</span>
+                <span style="color:#fff; font-weight:600; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${locationText}</span>
+              </div>
+
+              <div style="display:flex; align-items:center; flex-shrink:0;">
+                ${countBadge}
+                <span style="font-size:0.75rem; color:var(--muted); font-family:var(--mono); margin-left:8px;">${formattedDate}</span>
+              </div>
+
             </div>
           </div>`;
         }).join('');
 
-    const verMais = logs.length > PREVIEW
+    const verMais = logs.length > 5 || (groupedLogs.length > 5)
       ? `<div class="mini-log-ver-mais" onclick="event.stopPropagation();openLogModal('${id}')">Ver todos os ${logs.length} acessos →</div>`
       : '';
 
     return `
       <div class="receipt-card${selectedIds.has(id) ? ' selected' : ''}" id="card-${id}" onclick="onCardClick('${id}', event)">
-
-        <!-- Cabeçalho: ID + badge -->
         <div class="card-row">
           <div style="display:flex;align-items:center;gap:10px">
             <input type="checkbox" class="card-checkbox" ${checked} onclick="event.stopPropagation();toggleSelect('${id}')" />
@@ -792,17 +864,11 @@ function renderList(list) {
           </div>
           <div class="badges-wrap">${badgeHtml}</div>
         </div>
-
-        <!-- Data de criação -->
         <div class="card-date">📅 ${dateStr}</div>
-
-        <!-- Bichos vendidos -->
         <div>
           <div class="milhar-label" style="margin-bottom:8px">BICHO${bichosVendidos.length > 1 ? 'S' : ''} VENDIDO${bichosVendidos.length > 1 ? 'S' : ''}</div>
           <div class="bichos-row">${bichosHtml}</div>
         </div>
-
-        <!-- Views + Log -->
         <div class="mini-log" onclick="event.stopPropagation();openLogModal('${id}')">
           <div class="mini-log-title" style="display:flex;justify-content:space-between;align-items:center;">
             <span>👁️ ACESSOS</span>
@@ -811,8 +877,6 @@ function renderList(list) {
           ${logRows}
           ${verMais}
         </div>
-
-        <!-- Ações -->
         <div class="card-actions">
           <button class="btn-alterar" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
           <button class="btn-del" onclick="event.stopPropagation();askDeleteOne('${id}')" title="Apagar recibo">🗑️</button>
@@ -1020,72 +1084,68 @@ async function saveReceipt() {
 async function openLogModal(id) {
   const snap = await db.collection('receipts').doc(id).get({ source: 'server' });
   if (!snap.exists) return;
-  // Atualiza o cache local também
   const idx = allReceipts.findIndex(r => r.id === id);
   if (idx !== -1) allReceipts[idx].data = snap.data();
   const rec = { id, data: snap.data() };
 
-  // ── 🔍 DEBUG: diagnóstico de accessLog ──
   const rawData = rec.data;
   const logs = rawData.accessLog || [];
-  console.group(`🔍 [accessLog] Recibo: ${id}`);
-  console.log('📦 data completo:', rawData);
-  console.log('📋 accessLog bruto:', rawData.accessLog);
-  console.log('🔢 Quantidade de logs:', logs.length);
-  if (logs.length > 0) {
-    logs.forEach((log, i) => {
-      console.group(`  ↳ log[${i}]`);
-      console.log('  ip  :', log.ip);
-      console.log('  ua  :', log.ua);
-      console.log('  time:', log.time, '→ Date:', toDate(log.time));
-      console.log('  keys disponíveis:', Object.keys(log));
-      console.log('  obj completo:', log);
-      console.groupEnd();
-    });
-  } else {
-    console.warn('⚠️ accessLog está vazio ou ausente no documento.');
-    console.log('  Campos presentes no doc:', Object.keys(rawData));
-  }
-  console.groupEnd();
-  // ── fim debug ──
 
   const created = rawData.createdAt ? toDate(rawData.createdAt) : null;
   const dateStr = created ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created) : '—';
   
   document.getElementById('logMetaId').innerHTML = `<span><strong>${id.substring(0,16)}…</strong></span><span>📅 ${dateStr}</span>`;
-
   const logContainer = document.getElementById('logBody');
 
   if (logs.length === 0) {
     logContainer.innerHTML = `<div class="empty-state" style="padding: 20px 0;">Nenhum acesso registrado ainda.</div>`;
   } else {
-    // Ordena do mais recente para o mais antigo
+    // Mantém a ordem do mais recente para o mais antigo na janela detalhada
     const sorted = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
 
-    logContainer.innerHTML = sorted.map((log, idx) => {
+    logContainer.innerHTML = sorted.map((log, index) => {
       const ua = log.ua || '';
       const isAdmin = ua.includes('👑');
-
-      let sysName = '🌐 Navegador Web';
-      if (isAdmin)                           sysName = '👑 Painel Admin';
-      else if (/android/i.test(ua))          sysName = '📱 Android';
-      else if (/iphone|ipad|ipod/i.test(ua)) sysName = '📱 iOS (Apple)';
-      else if (/windows/i.test(ua))          sysName = '💻 Windows';
-      else if (/mac os/i.test(ua))           sysName = '💻 Mac (Apple)';
-
       const t = toDate(log.time);
       const accessDateStr = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(t);
-      const num = sorted.length - idx; // #1 = mais recente
+      const relativeTime = timeAgo(t);
+      
+      // Número real do histórico (ex: #1 para o primeiro clique da história do link)
+      const realNum = sorted.length - index; 
+
+      const isFirst = (realNum === 1);
+      const tagHtml = isFirst
+        ? `<span style="font-size: 0.6rem; background: var(--green); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">1º ACESSO</span>`
+        : `<span style="font-size: 0.6rem; background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">RETORNO</span>`;
+
+      if (isAdmin) {
+         return `
+          <div class="log-item admin-log">
+            <div class="log-row">
+              <span class="log-ip">${index + 1} - 👑 Painel Admin</span>
+              <span class="log-count">#${realNum}</span>
+            </div>
+            <div class="log-row" style="margin-top: 6px; align-items:flex-end;">
+              <span class="log-device">Visualização Interna</span>
+              <span class="log-date" title="${accessDateStr}">${relativeTime}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      const { os, app, icon } = parseUserAgent(ua);
+      let geoStr = (log.city && log.state) ? `${log.city} - ${log.state}` : (log.ip && log.ip !== 'Desconhecido' ? log.ip : 'IP Oculto');
+      let orgStr = log.org ? `<br><span style="font-size:0.65rem; color:var(--muted); opacity: 0.7;">Operadora: ${log.org}</span>` : '';
 
       return `
-        <div class="log-item ${isAdmin ? 'admin-log' : ''}">
+        <div class="log-item">
           <div class="log-row">
-            <span class="log-ip">🌐 ${log.ip || '—'}</span>
-            <span class="log-count">#${num}</span>
+            <span class="log-ip" style="display:flex;align-items:center;gap:4px;">${index + 1} - ${icon} ${geoStr} ${tagHtml}</span>
+            <span class="log-count">#${realNum}</span>
           </div>
-          <div class="log-row" style="margin-top: 6px;">
-            <span class="log-device">${sysName}</span>
-            <span class="log-date">${accessDateStr}</span>
+          <div class="log-row" style="margin-top: 6px; align-items:flex-end;">
+            <span class="log-device">${os} · ${app} <br><span style="font-size:0.65rem; color:var(--muted); opacity: 0.7;">IP: ${log.ip || '—'}</span>${orgStr}</span>
+            <span class="log-date" title="${accessDateStr}">${relativeTime}</span>
           </div>
         </div>
       `;
@@ -1106,10 +1166,8 @@ document.getElementById('editorOverlay').addEventListener('click', function(e) {
 document.getElementById('logOverlay').addEventListener('click', function(e) { if (e.target === this) closeLogModal(); });
 document.getElementById('confirmOverlay').addEventListener('click', function(e) { if (e.target === this) closeConfirm(); });
 
-setInterval(() => { if (document.getElementById('app').style.display !== 'none' && !selectMode) { filterReceipts(); } }, 60000);
-
 // ── RELÓGIO + AUTO-REFRESH ──
-const INTERVALO_REFRESH = 2 * 60; // 5 minutos em segundos
+const INTERVALO_REFRESH = 2 * 60;
 let segundosRestantes = INTERVALO_REFRESH;
 
 function atualizarRelogio() {
@@ -1126,19 +1184,15 @@ function atualizarContagem() {
 
   if (segundosRestantes <= 0) {
     segundosRestantes = INTERVALO_REFRESH;
-    // Só atualiza se não estiver em modo seleção (evita perder seleção)
     if (!selectMode) loadReceipts();
   } else {
     segundosRestantes--;
   }
 }
 
-// Remove o setInterval antigo de 60s que já existia no seu código
-// (a linha: setInterval(() => { if ... filterReceipts() }, 60000))
-// e substitui por estes dois abaixo:
 setInterval(atualizarRelogio, 1000);
 setInterval(atualizarContagem, 1000);
-atualizarRelogio(); // chama imediatamente ao carregar
+atualizarRelogio();
 
 </script>
 </body>
