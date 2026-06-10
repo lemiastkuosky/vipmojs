@@ -228,17 +228,26 @@
     #searchResult.found    { background: rgba(61,214,140,.1); color: var(--green); border: 1px solid rgba(61,214,140,.25); display: block; }
     #searchResult.notfound { background: rgba(224,92,92,.1);  color: var(--danger); border: 1px solid rgba(224,92,92,.25); display: block; }
 
-    /* CORREÇÃO: MILHAR CHIPS REDUZIDAS PARA CELULAR */
+    /* MILHAR CHIPS E GRID RESPONSIVO */
+    #milharesChips {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+      gap: 6px;
+      width: 100%;
+      min-height: 44px;
+    }
+    
     .m-chip {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 6px 10px; border-radius: 8px; cursor: pointer;
-      font-family: var(--mono); font-size: 0.82rem; font-weight: 700; letter-spacing: 1px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 8px 2px; border-radius: 8px; cursor: pointer;
+      font-family: var(--mono); font-size: 0.85rem; font-weight: 700; 
       background: var(--bg); border: 1px solid var(--border); color: var(--muted);
       transition: border-color .12s, background .12s, color .12s; user-select: none;
+      width: 100%; /* Ocupa o espaço certinho da grade */
     }
     .m-chip:hover { border-color: var(--accent); color: var(--text); }
     .m-chip.active { border-color: var(--accent); background: rgba(245,200,66,.12); color: var(--accent); }
-    .m-chip-none { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); padding: 10px 0; }
+    .m-chip-none { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); padding: 10px 0; grid-column: 1 / -1; }
 
     /* TROCA */
     .troca-box {
@@ -441,6 +450,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="searchInput" placeholder="Buscar recibo…" oninput="filterReceipts()" />
       </div>
+      <button class="btn btn-ghost btn-sm" onclick="askLimparExpirados()" title="Limpar Expirados">🧹</button>
       <button class="btn btn-ghost btn-sm" onclick="loadReceipts()">↻</button>
       <span class="counter" id="counter">—</span>
     </div>
@@ -488,7 +498,7 @@
 
         <div>
           <div class="section-label">MILHARES NO RECIBO — toque para selecionar qual alterar</div>
-          <div id="milharesChips" style="display:flex;flex-wrap:wrap;gap:8px;min-height:44px;"></div>
+          <div id="milharesChips"></div>
         </div>
 
         <div>
@@ -827,9 +837,10 @@ function renderList(list) {
           </div>
           ${logRows}
         </div>
-        <div class="card-actions">
+        <div class="card-actions" style="flex-wrap: wrap;">
           <button class="btn-alterar" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
           <button class="btn-del" onclick="event.stopPropagation();askDeleteOne('${id}')">🗑️</button>
+          <button class="btn-ver" onclick="event.stopPropagation();copiarMilhares('${id}')">📋 Copiar</button>
           <button class="btn-ver" onclick="event.stopPropagation();openPreview('${id}')">🔗 Ver</button>
         </div>
       </div>`;
@@ -931,9 +942,22 @@ function selectBicho(i) {
 }
 
 function extractAllMilhares(content) {
-  const matches = [...content.matchAll(/\b(\d{4})\b/g)];
-  const seen = new Set(); const result = [];
-  for (const m of matches) { const v = m[1]; if (/^(19|20)\d{2}$/.test(v)) continue; if (!seen.has(v)) { seen.add(v); result.push(v); } }
+  // 1. Apaga temporariamente as datas (ex: 10/06/2026) para não copiar o ano por engano
+  const textWithoutDates = content.replace(/\b\d{2}\/\d{2}\/\d{4}\b/g, '');
+  
+  // 2. Busca todos os números de 4 dígitos
+  const matches = [...textWithoutDates.matchAll(/\b(\d{4})\b/g)];
+  const seen = new Set(); 
+  const result = [];
+  
+  for (const m of matches) { 
+    const v = m[1]; 
+    // Removemos a trava que bloqueava números começando com 19 ou 20
+    if (!seen.has(v)) { 
+      seen.add(v); 
+      result.push(v); 
+    } 
+  }
   return result;
 }
 
@@ -1151,6 +1175,91 @@ function atualizarContagem() {
   } else {
     segundosRestantes--;
   }
+}
+
+// --------------------------------------------------------------------
+// FAXINA: LIMPAR RECIBOS EXPIRADOS
+// --------------------------------------------------------------------
+function askLimparExpirados() {
+  const now = new Date();
+  
+  // Filtra apenas os que já passaram da validade
+  const expirados = allReceipts.filter(r => {
+    const created = r.data.createdAt ? toDate(r.data.createdAt) : new Date();
+    let expires = null;
+    const extracaoMatch = (r.data.content || '').match(/Extração\.*:\s*(.*)/i);
+    
+    if (extracaoMatch) {
+      const extracao = extracaoMatch[1].toLowerCase();
+      if (extracao.includes('nacional')) {
+        expires = new Date(created);
+        if (expires.getHours() >= 2) expires.setDate(expires.getDate() + 1);
+        expires.setHours(2, 30, 0, 0);
+      } else if (extracao.includes('look')) {
+        expires = new Date(created);
+        if (expires.getHours() >= 7) expires.setDate(expires.getDate() + 1);
+        expires.setHours(7, 30, 0, 0);
+      }
+    }
+    
+    if (!expires) {
+      if (r.data.expiresAt) expires = toDate(r.data.expiresAt);
+      else expires = new Date(created.getTime() + (4 * 60 * 60 * 1000));
+    }
+    return now > expires; // Retorna true se já expirou
+  });
+
+  if (expirados.length === 0) {
+    showToast('Nenhum recibo expirado para limpar no momento!', 'ok');
+    return;
+  }
+  
+  // Joga os IDs para a lixeira virtual e abre o modal de confirmação que já existe
+  pendingDeleteIds = expirados.map(r => r.id);
+  document.getElementById('confirmMsg').innerHTML = `Encontramos <strong style="color:var(--danger)">${expirados.length}</strong> recibo(s) expirado(s).<br><br>Deseja apagar todos de uma vez para liberar espaço no banco de dados?`;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+// --------------------------------------------------------------------
+// COPIAR MILHARES (COM PROTEÇÃO PARA WEBVIEW)
+// --------------------------------------------------------------------
+function copiarMilhares(id) {
+  const rec = allReceipts.find(r => r.id === id);
+  if (!rec) return;
+  const milhares = extractAllMilhares(rec.data.content || '');
+  
+  if (milhares.length === 0) {
+    showToast('Nenhuma milhar encontrada neste recibo.', 'err');
+    return;
+  }
+  
+  const texto = milhares.join(', '); // Ex: 1234, 5678, 9012
+  
+  // API Moderna
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(texto)
+      .then(() => showToast(`📋 ${milhares.length} milhar(es) copiada(s)!`, 'ok'))
+      .catch(() => fallbackCopyTextToClipboard(texto, milhares.length));
+  } else {
+    // API Antiga (Garante que funcione dentro de aplicativos WebViews)
+    fallbackCopyTextToClipboard(texto, milhares.length);
+  }
+}
+
+function fallbackCopyTextToClipboard(text, count) {
+  var textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.position = "fixed";  // evita rolar a tela pro final
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    document.execCommand('copy');
+    showToast(`📋 ${count} milhar(es) copiada(s)!`, 'ok');
+  } catch (err) {
+    showToast('Erro ao copiar milhares.', 'err');
+  }
+  document.body.removeChild(textArea);
 }
 
 setInterval(atualizarRelogio, 1000);
