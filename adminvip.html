@@ -848,9 +848,11 @@ function renderList(list) {
 }
 
 function extractMilhar(content) {
-  const matches = [...content.matchAll(/\b(\d{4})\b/g)];
-  const milhar = matches.find(m => !/^(19|20)\d{2}$/.test(m[1]));
-  return milhar ? milhar[1] : null;
+  // Fazemos o mesmo truque: apaga a data primeiro para não ler o ano
+  const textWithoutDates = content.replace(/\b\d{2}\/\d{2}\/\d{4}\b/g, '');
+  const matches = [...textWithoutDates.matchAll(/\b(\d{4})\b/g)];
+  // Retorna a primeira milhar real que encontrar
+  return matches.length > 0 ? matches[0][1] : null;
 }
 
 function filterReceipts() {
@@ -1062,7 +1064,8 @@ async function saveReceipt() {
   }
   const btn = document.getElementById('saveBtn'); btn.disabled = true; btn.textContent = 'Salvando…';
   try {
-    const regex = new RegExp(`\\b${selectedMilhar}\\b`); const novoContent = currentDoc.data.content.replace(regex, nova);
+    // O (?<!/) e (?!/) garantem que ele NÃO vai alterar números que tenham uma barra "/" colada neles (como as datas)
+const regex = new RegExp(`(?<!\\/)\\b${selectedMilhar}\\b(?!\\/)`);
     await db.collection('receipts').doc(currentDoc.id).update({ 
       content: novoContent,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
