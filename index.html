@@ -23447,12 +23447,10 @@ milharesUnicas.forEach(n => {  // <- trocar milhares por milharesUnicas
         const encoded = encodeURIComponent(JSON.stringify(v.milhares));
         return `<span title="Copiar milhares de ${animal}" data-milhares="${encoded}" onclick="copiarMilharesDosBichos(this)" style="font-size:1.3rem; cursor:pointer; padding:2px 4px; border-radius:6px; transition:background 0.2s;" onmouseover="this.style.background='rgba(0,123,255,0.15)'" onmouseout="this.style.background=''">${v.emoji}</span>`;
     }).join('');
-    document.getElementById(`btn-copytudo-${item.id}`).addEventListener('click', () => {
-    const milhares = [...(item.content.matchAll(/\b(\d{4})\b/g))].map(m => m[1]);
-    const unicas = [...new Set(milhares)];
-    navigator.clipboard.writeText(unicas.join(' '));
-    showToast(`${unicas.length} milhares copiadas!`, 'success');
-});
+    return `<div style="display:flex; align-items:center; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+        <div style="letter-spacing:3px;">${emojisStr}</div>
+        <button data-milhares="${encodedTodas}" onclick="copiarMilharesDosBichos(this)" style="font-size:0.7rem; padding:3px 8px; border:1px solid rgba(0,123,255,0.4); border-radius:12px; background:rgba(0,123,255,0.1); color:#007bff; cursor:pointer; font-weight:bold; white-space:nowrap; transition:background 0.2s;" onmouseover="this.style.background='rgba(0,123,255,0.25)'" onmouseout="this.style.background='rgba(0,123,255,0.1)'">📋 Copiar Tudo</button>
+    </div>`;
 })()}
                 
                 <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: nowrap;">
@@ -23479,23 +23477,23 @@ milharesUnicas.forEach(n => {  // <- trocar milhares por milharesUnicas
         container.innerHTML = html;
 
         renderQueue.forEach(item => {
-    document.getElementById(`text-${item.id}`)?.innerHTML && (document.getElementById(`text-${item.id}`).innerHTML = item.cleanedContent);
+            document.getElementById(`text-${item.id}`).innerHTML = item.cleanedContent;
 
-    document.getElementById(`btn-view-${item.id}`)?.addEventListener('click', (e) => {
-        const contentDiv = document.getElementById(`content-${item.id}`);
-        const isHidden = contentDiv.style.display === 'none';
-        contentDiv.style.display = isHidden ? 'block' : 'none';
-        e.currentTarget.innerHTML = isHidden ? '🙈 Ocultar' : '👀 Ver Recibo';
-    });
+            document.getElementById(`btn-view-${item.id}`).addEventListener('click', (e) => {
+                const contentDiv = document.getElementById(`content-${item.id}`);
+                const isHidden = contentDiv.style.display === 'none';
+                contentDiv.style.display = isHidden ? 'block' : 'none';
+                e.currentTarget.innerHTML = isHidden ? '🙈 Ocultar' : '👀 Ver Recibo';
+            });
 
-    document.getElementById(`btn-copy-${item.id}`)?.addEventListener('click', (e) => {
-        const text = document.getElementById(`text-${item.id}`).textContent;
-        copyToClipboard(text, e.currentTarget);
-    });
+            document.getElementById(`btn-copy-${item.id}`).addEventListener('click', (e) => {
+                const text = document.getElementById(`text-${item.id}`).textContent;
+                copyToClipboard(text, e.currentTarget);
+            });
 
-    document.getElementById(`btn-resend-${item.id}`)?.addEventListener('click', () => resendReceiptLink(item.id));
-    document.getElementById(`btn-del-${item.id}`)?.addEventListener('click', () => deleteSavedReceipt(item.id));
-});
+            document.getElementById(`btn-resend-${item.id}`).addEventListener('click', () => resendReceiptLink(item.id));
+            document.getElementById(`btn-del-${item.id}`).addEventListener('click', () => deleteSavedReceipt(item.id));
+        });
 
     } catch (error) {
         console.error("Erro ao buscar recibos:", error);
