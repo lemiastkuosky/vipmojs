@@ -97,7 +97,6 @@
     .toolbar input:focus { border-color: var(--accent); }
     .counter { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
     
-
     /* CARDS */
     .list { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; padding-bottom: 160px; }
     .receipt-card {
@@ -131,19 +130,6 @@
     .bicho-tag .bt-nome  { font-family: var(--mono); font-size: 0.82rem; font-weight: 700; color: var(--text); }
     .bicho-tag .bt-milhar{ font-family: var(--mono); font-size: 0.7rem; color: var(--accent); letter-spacing: 2px; }
     .milhar-label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
-
-    /* MULTI-MILHAR */
-    .milhares-wrap { display: flex; flex-direction: column; gap: 8px; }
-    .milhar-item {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(245,200,66,.06); border: 1px solid rgba(245,200,66,.18);
-      border-radius: 10px; padding: 8px 12px;
-    }
-    .milhar-item .mi-numero { font-family: var(--mono); font-size: 1.15rem; font-weight: 700; color: var(--accent); letter-spacing: 2px; min-width: 52px; }
-    .milhar-item .mi-sep { color: var(--border); font-size: 0.9rem; }
-    .milhar-item .mi-bicho { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 0.78rem; color: var(--text); }
-    .milhar-item .mi-bicho .mi-emoji { font-size: 1.1rem; line-height: 1; }
-    .milhar-item .mi-bicho .mi-nome  { color: var(--muted); }
 
     /* VIEWS DESTAQUE */
     .views-destaque {
@@ -243,7 +229,7 @@
       font-family: var(--mono); font-size: 0.85rem; font-weight: 700; 
       background: var(--bg); border: 1px solid var(--border); color: var(--muted);
       transition: border-color .12s, background .12s, color .12s; user-select: none;
-      width: 100%; /* Ocupa o espaço certinho da grade */
+      width: 100%; 
     }
     .m-chip:hover { border-color: var(--accent); color: var(--text); }
     .m-chip.active { border-color: var(--accent); background: rgba(245,200,66,.12); color: var(--accent); }
@@ -722,23 +708,21 @@ function renderList(list) {
       const extracao = extracaoMatch[1].toLowerCase();
       if (extracao.includes('nacional')) {
         expires = new Date(created);
-        if (expires.getHours() >= 2) expires.setDate(expires.getDate() + 1); // Joga para o dia seguinte se passar das 2h
-        expires.setHours(2, 30, 0, 0); // Expira às 02:30 da manhã
+        if (expires.getHours() >= 2) expires.setDate(expires.getDate() + 1); 
+        expires.setHours(2, 30, 0, 0); 
       } else if (extracao.includes('look')) {
         expires = new Date(created);
-        if (expires.getHours() >= 7) expires.setDate(expires.getDate() + 1); // Joga para o dia seguinte se passar das 7h
-        expires.setHours(7, 30, 0, 0); // Expira às 07:30 da manhã
+        if (expires.getHours() >= 7) expires.setDate(expires.getDate() + 1); 
+        expires.setHours(7, 30, 0, 0); 
       }
     }
     
-    // Se não for Nacional/Look, usa a do banco ou o padrão de 4h
     if (!expires) {
       if (data.expiresAt) expires = toDate(data.expiresAt);
       else expires = new Date(created.getTime() + (4 * 60 * 60 * 1000));
     }
     // ----------------------------------------------------
     
-    // Status badges
     let badgeHtml = '';
     if (expires) {
       const now = new Date(); const diffMs = expires - now;
@@ -848,10 +832,8 @@ function renderList(list) {
 }
 
 function extractMilhar(content) {
-  // Fazemos o mesmo truque: apaga a data primeiro para não ler o ano
   const textWithoutDates = content.replace(/\b\d{2}\/\d{2}\/\d{4}\b/g, '');
   const matches = [...textWithoutDates.matchAll(/\b(\d{4})\b/g)];
-  // Retorna a primeira milhar real que encontrar
   return matches.length > 0 ? matches[0][1] : null;
 }
 
@@ -944,17 +926,13 @@ function selectBicho(i) {
 }
 
 function extractAllMilhares(content) {
-  // 1. Apaga temporariamente as datas (ex: 10/06/2026) para não copiar o ano por engano
   const textWithoutDates = content.replace(/\b\d{2}\/\d{2}\/\d{4}\b/g, '');
-  
-  // 2. Busca todos os números de 4 dígitos
   const matches = [...textWithoutDates.matchAll(/\b(\d{4})\b/g)];
   const seen = new Set(); 
   const result = [];
   
   for (const m of matches) { 
     const v = m[1]; 
-    // Removemos a trava que bloqueava números começando com 19 ou 20
     if (!seen.has(v)) { 
       seen.add(v); 
       result.push(v); 
@@ -974,10 +952,7 @@ function renderMilharChips(milhares, autoSelect) {
 function openPreview(id) {
   const modal = document.getElementById('previewModal');
   const iframe = document.getElementById('previewIframe');
-  
-  // Usamos o link ABSOLUTO e completo para a WebView do Kodular não se perder
   iframe.src = `https://meus-recibos-vip.web.app/recibo.html?id=${id}&admin=true`;
-  
   modal.style.display = 'block';
 }
 
@@ -1064,12 +1039,14 @@ async function saveReceipt() {
   }
   const btn = document.getElementById('saveBtn'); btn.disabled = true; btn.textContent = 'Salvando…';
   try {
-    // O (?<!/) e (?!/) garantem que ele NÃO vai alterar números que tenham uma barra "/" colada neles (como as datas)
-const regex = new RegExp(`(?<!\\/)\\b${selectedMilhar}\\b(?!\\/)`);
+    const regex = new RegExp(`(?<!\\/)\\b${selectedMilhar}\\b(?!\\/)`);
+    const novoContent = currentDoc.data.content.replace(regex, nova); // LINHA CORRIGIDA
+    
     await db.collection('receipts').doc(currentDoc.id).update({ 
       content: novoContent,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    
     const idx = allReceipts.findIndex(r => r.id === currentDoc.id); if (idx !== -1) allReceipts[idx].data.content = novoContent;
     showToast('✅ Milhar alterada!', 'ok'); closeEditor(); renderList(allReceipts); selectedMilhar = null;
   } catch(e) { showToast('Erro: ' + e.message, 'err'); } 
@@ -1180,13 +1157,9 @@ function atualizarContagem() {
   }
 }
 
-// --------------------------------------------------------------------
-// FAXINA: LIMPAR RECIBOS EXPIRADOS
-// --------------------------------------------------------------------
 function askLimparExpirados() {
   const now = new Date();
   
-  // Filtra apenas os que já passaram da validade
   const expirados = allReceipts.filter(r => {
     const created = r.data.createdAt ? toDate(r.data.createdAt) : new Date();
     let expires = null;
@@ -1209,7 +1182,7 @@ function askLimparExpirados() {
       if (r.data.expiresAt) expires = toDate(r.data.expiresAt);
       else expires = new Date(created.getTime() + (4 * 60 * 60 * 1000));
     }
-    return now > expires; // Retorna true se já expirou
+    return now > expires; 
   });
 
   if (expirados.length === 0) {
@@ -1217,15 +1190,11 @@ function askLimparExpirados() {
     return;
   }
   
-  // Joga os IDs para a lixeira virtual e abre o modal de confirmação que já existe
   pendingDeleteIds = expirados.map(r => r.id);
   document.getElementById('confirmMsg').innerHTML = `Encontramos <strong style="color:var(--danger)">${expirados.length}</strong> recibo(s) expirado(s).<br><br>Deseja apagar todos de uma vez para liberar espaço no banco de dados?`;
   document.getElementById('confirmOverlay').classList.add('open');
 }
 
-// --------------------------------------------------------------------
-// COPIAR MILHARES (COM PROTEÇÃO PARA WEBVIEW)
-// --------------------------------------------------------------------
 function copiarMilhares(id) {
   const rec = allReceipts.find(r => r.id === id);
   if (!rec) return;
@@ -1236,15 +1205,13 @@ function copiarMilhares(id) {
     return;
   }
   
-  const texto = milhares.join(', '); // Ex: 1234, 5678, 9012
+  const texto = milhares.join(', ');
   
-  // API Moderna
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(texto)
       .then(() => showToast(`📋 ${milhares.length} milhar(es) copiada(s)!`, 'ok'))
       .catch(() => fallbackCopyTextToClipboard(texto, milhares.length));
   } else {
-    // API Antiga (Garante que funcione dentro de aplicativos WebViews)
     fallbackCopyTextToClipboard(texto, milhares.length);
   }
 }
@@ -1252,7 +1219,7 @@ function copiarMilhares(id) {
 function fallbackCopyTextToClipboard(text, count) {
   var textArea = document.createElement("textarea");
   textArea.value = text;
-  textArea.style.position = "fixed";  // evita rolar a tela pro final
+  textArea.style.position = "fixed"; 
   document.body.appendChild(textArea);
   textArea.focus();
   textArea.select();
