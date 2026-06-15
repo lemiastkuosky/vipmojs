@@ -681,15 +681,6 @@ async function loadReceipts() {
   });
 }
 
-function formatIP(ip) {
-  if (!ip || ip === '—' || ip === 'Desconhecido') return '—';
-  if (ip.includes(':')) {
-    const parts = ip.split(':');
-    return parts[0] + ':' + parts[1] + ':...';
-  }
-  return ip;
-}
-
 function renderList(list) {
   document.getElementById('counter').textContent = String(list.length);
   const container = document.getElementById('receiptsList');
@@ -756,13 +747,25 @@ function renderList(list) {
 
     const logs = data.accessLog || [];
     const sortedLogs = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
-    const ipMap = new Map();
+    
+    // --- LÓGICA DE AGRUPAMENTO POR APARELHO NO MINI-LOG ---
+    const deviceMap = new Map();
+    
     sortedLogs.forEach(log => {
-      const key = log.ip || 'Desconhecido';
-      if (!ipMap.has(key)) ipMap.set(key, { ...log, count: 1 });
-      else ipMap.get(key).count++;
+      const key = log.deviceId || log.ua || log.ip || 'Desconhecido';
+      
+      if (!deviceMap.has(key)) {
+        deviceMap.set(key, { ...log, count: 1, locations: new Set() });
+      } else {
+        deviceMap.get(key).count++;
+      }
+      
+      if (log.city && log.state) {
+        deviceMap.get(key).locations.add(`${log.city} - ${log.state}`);
+      }
     });
-    const groupedLogs = Array.from(ipMap.values()).slice(0, 5);
+    
+    const groupedLogs = Array.from(deviceMap.values()).slice(0, 5);
 
     const logRows = groupedLogs.length === 0
       ? `<div class="mini-log-vazio">Nenhum acesso ainda</div>`
@@ -783,7 +786,15 @@ function renderList(list) {
 
           const t = toDate(log.time);
           const formattedDate = `${new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(t)} às ${new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(t)}`;
-          const locationText = (log.city && log.state) ? `${log.city} - ${log.state}` : 'Visitante';
+          
+          const locArray = Array.from(log.locations || []);
+          let locationText = 'Visitante';
+          
+          if (locArray.length > 1) {
+            locationText = `${locArray[0]} (+${locArray.length - 1} locais)`;
+          } else if (locArray.length === 1) {
+            locationText = locArray[0];
+          }
           
           return `<div class="mini-log-item" style="padding: 4px 0;">
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
@@ -963,16 +974,45 @@ function closePreview() {
   iframe.src = '';
 }
 
+// --- LÓGICA ATUALIZADA DE SUGESTÃO DE MILHAR ---
 function selectMilharChip(m) {
   document.querySelectorAll('.m-chip').forEach(c => c.classList.remove('active'));
   const chip = document.getElementById('mchip-' + m); if (chip) chip.classList.add('active');
   selectedMilhar = m;
-  document.getElementById('milharAtualDisplay').textContent = m; document.getElementById('novaMilharInput').value = '';
+  document.getElementById('milharAtualDisplay').textContent = m; 
+
+  const todasExistentes = extractAllMilhares(currentDoc?.data?.content || '');
+  const b = bichoDoMilhar(m);
+  let sugestao = '';
+
+  if (b) {
+    let tentativa = 0;
+    while (tentativa < 100) {
+      const dezenaSorteada = b.dezenas[Math.floor(Math.random() * b.dezenas.length)];
+      const prefixoSorteado = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+      const cand = prefixoSorteado + dezenaSorteada;
+      
+      if (!todasExistentes.includes(cand) && cand !== m) {
+        sugestao = cand;
+        break;
+      }
+      tentativa++;
+    }
+  }
+  
+  document.getElementById('novaMilharInput').value = sugestao;
   document.getElementById('milharHint').className = ''; document.getElementById('milharHint').textContent = '';
-  const b = bichoDoMilhar(m); const idx = b ? BICHOS.indexOf(b) : -1;
+  
+  const idx = b ? BICHOS.indexOf(b) : -1;
   document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
-  if (idx !== -1 && allowedBichos.has(idx)) { activeBicho = idx; document.getElementById('bicho-' + idx)?.classList.add('active'); } 
-  else { activeBicho = null; }
+  
+  if (idx !== -1 && allowedBichos.has(idx)) { 
+    activeBicho = idx; 
+    document.getElementById('bicho-' + idx)?.classList.add('active'); 
+  } else { 
+    activeBicho = null; 
+  }
+  
   onNovaMilharInput();
 }
 
@@ -1040,7 +1080,7 @@ async function saveReceipt() {
   const btn = document.getElementById('saveBtn'); btn.disabled = true; btn.textContent = 'Salvando…';
   try {
     const regex = new RegExp(`(?<!\\/)\\b${selectedMilhar}\\b(?!\\/)`);
-    const novoContent = currentDoc.data.content.replace(regex, nova); // LINHA CORRIGIDA
+    const novoContent = currentDoc.data.content.replace(regex, nova); 
     
     await db.collection('receipts').doc(currentDoc.id).update({ 
       content: novoContent,
@@ -1074,6 +1114,16 @@ async function openLogModal(id) {
   } else {
     const sorted = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
 
+    // --- MAPEAR APARELHOS E IDENTIFICAR SE PULARAM DE REDE ---
+    const deviceGroups = {};
+    let deviceCounter = 1;
+    sorted.forEach(log => {
+      const key = log.deviceId || log.ua || log.ip || 'Desconhecido';
+      if (!deviceGroups[key]) deviceGroups[key] = { id: deviceCounter++, ips: new Set(), locations: new Set() };
+      if (log.ip) deviceGroups[key].ips.add(log.ip);
+      if (log.city) deviceGroups[key].locations.add(log.city);
+    });
+
     logContainer.innerHTML = sorted.map((log, index) => {
       const ua = log.ua || '';
       const isAdmin = ua.includes('👑');
@@ -1104,13 +1154,20 @@ async function openLogModal(id) {
       }
 
       const { os, app, icon } = parseUserAgent(ua);
+      const devInfo = deviceGroups[log.deviceId || log.ua || log.ip || 'Desconhecido'];
+      
+      let alertTag = '';
+      if (devInfo && (devInfo.ips.size > 1 || devInfo.locations.size > 1)) {
+        alertTag = `<span style="font-size: 0.6rem; background: var(--danger); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">📱 MUDOU LOCAL (Aparelho #${devInfo.id})</span>`;
+      }
+
       let geoStr = (log.city && log.state) ? `${log.city} - ${log.state}` : (log.ip && log.ip !== 'Desconhecido' ? log.ip : 'IP Oculto');
       let orgStr = log.org ? `<br><span style="font-size:0.65rem; color:var(--muted); opacity: 0.7;">Operadora: ${log.org}</span>` : '';
 
       return `
         <div class="log-item">
           <div class="log-row">
-            <span class="log-ip" style="display:flex;align-items:center;gap:4px;">${index + 1} - ${icon} ${geoStr} ${tagHtml}</span>
+            <span class="log-ip" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">${index + 1} - ${icon} ${geoStr} ${alertTag} ${tagHtml}</span>
             <span class="log-count">#${realNum}</span>
           </div>
           <div class="log-row" style="margin-top: 6px; align-items:flex-end;">
