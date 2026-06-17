@@ -307,6 +307,22 @@
     .confirm-actions { display: flex; gap: 10px; }
     .confirm-actions .btn { flex: 1; }
 
+    /* BOTÃO DESFAZER NO CARD */
+    .btn-undo {
+      flex: 0 0 auto; background: transparent; color: var(--accent); border: 1.5px solid rgba(245,200,66,.4);
+      border-radius: 10px; font-family: var(--sans); font-weight: 700; font-size: 0.82rem; padding: 11px 14px;
+      min-height: 44px; cursor: pointer; display: none; align-items: center; gap: 5px;
+      text-decoration: none; transition: border-color .15s, color .15s, background .15s; white-space: nowrap; touch-action: manipulation;
+      animation: undoPulse 2s ease-in-out infinite;
+    }
+    .btn-undo.visible { display: inline-flex; }
+    .btn-undo:active,
+    .btn-undo:hover { border-color: var(--accent); background: rgba(245,200,66,.1); }
+    @keyframes undoPulse {
+      0%, 100% { border-color: rgba(245,200,66,.4); }
+      50% { border-color: rgba(245,200,66,.85); }
+    }
+
     /* CARD ACTIONS */
     .card-actions { display: flex; gap: 10px; align-items: center; }
     .card-actions .btn-alterar {
@@ -352,11 +368,10 @@
 
     .count-pill { background: var(--accent); color: #000; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 800; margin-right: 8px; min-width: 24px; text-align: center; }
 
-    /* ESTILOS DA PRÉ-VISUALIZAÇÃO CORRIGIDOS */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85) !important; z-index: 9999; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; }
     #previewModal .modal-content {
       position: relative; width: 95%; max-width: 450px; height: 82%; margin: 8vh auto;
-      background-color: #0f111a !important; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 1px solid #333 !important;
+      background-color: #0f111a; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 1px solid #333;
     }
     
     /* TRANCAR VISUAL ESCURO DO MODAL GERAL */
@@ -364,16 +379,16 @@
     .log-modal-content, 
     #logModal .modal-content,
     .mini-log-modal {
-        background-color: #0f111a !important;
-        color: #ffffff !important;
-        border: 1px solid #333 !important;
+        background-color: #0f111a;
+        color: #ffffff;
+        border: 1px solid #333;
     }
     .modal-content span, 
     .modal-content h1, 
     .modal-content h2, 
     .modal-content p, 
     .modal-content div {
-        color: #ffffff !important;
+        color: #ffffff;
     }
     .modal-header { padding: 14px; display: flex; justify-content: space-between; align-items: center; font-family: var(--sans); font-weight: bold; border-bottom: 1px solid #222; }
     .btn-close { background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-family: var(--mono); font-size: 0.75rem; font-weight: bold; cursor: pointer; }
@@ -403,7 +418,7 @@
           <span class="lf-line"></span>
         </div>
         <div class="login-footer-info">
-          <span class="lf-version">v1.6.2</span>
+          <span class="lf-version">v1.7.0</span>
           <span class="lf-sep">·</span>
           <span class="lf-copy">VipMojs © 2025</span>
         </div>
@@ -452,7 +467,7 @@
         <span class="lf-line"></span>
       </div>
       <div class="login-footer-info">
-        <span class="lf-version">v1.6.0</span>
+        <span class="lf-version">v1.7.0</span>
         <span class="lf-sep">&#183;</span>
         <span class="lf-copy">VipMojs &#169; 2025</span>
       </div>
@@ -572,6 +587,7 @@ let selectMode    = false;
 let activeBicho   = null; 
 let allowedBichos = new Set();
 let undoHistory   = {}; 
+let unsubscribeReceipts = null;
 
 function toDate(val) {
   if (!val) return new Date(0);
@@ -611,7 +627,7 @@ function parseUserAgent(ua) {
 }
 
 const BICHOS = [
-  { nome:'Avestruz', emoji:'🦅', dezenas:['01','02','03','04'] },
+  { nome:'Avestruz', emoji:'🦤', dezenas:['01','02','03','04'] },
   { nome:'Águia',    emoji:'🦅', dezenas:['05','06','07','08'] },
   { nome:'Burro',    emoji:'🫏', dezenas:['09','10','11','12'] },
   { nome:'Borboleta',emoji:'🦋', dezenas:['13','14','15','16'] },
@@ -676,9 +692,12 @@ async function loadReceipts() {
   selectedIds.clear(); 
   if (typeof updateDeleteBar === 'function') updateDeleteBar();
 
-  db.collection('receipts').orderBy('createdAt', 'desc').limit(200).onSnapshot(snap => {
+  if (unsubscribeReceipts) { unsubscribeReceipts(); unsubscribeReceipts = null; }
+
+  unsubscribeReceipts = db.collection('receipts').orderBy('createdAt', 'desc').limit(200).onSnapshot(snap => {
     allReceipts = snap.docs.map(d => ({ id: d.id, data: d.data() }));
-    renderList(allReceipts);
+    const q = document.getElementById('searchInput').value.trim();
+    if (q) filterReceipts(); else renderList(allReceipts);
   }, err => {
     container.innerHTML = `<div class="empty-state">Erro ao carregar: ${err.message}</div>`;
   });
@@ -834,6 +853,7 @@ function renderList(list) {
         </div>
         <div class="card-actions" style="flex-wrap: wrap;">
           <button class="btn-alterar" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
+          <button class="btn-undo ${undoHistory[id] ? 'visible' : ''}" id="undo-btn-${id}" onclick="event.stopPropagation();desfazerAlteracaoCard('${id}')">↩️ Desfazer</button>
           <button class="btn-del" onclick="event.stopPropagation();askDeleteOne('${id}')">🗑️</button>
           <button class="btn-ver" onclick="event.stopPropagation();copiarMilhares('${id}')">📋 Copiar</button>
           <button class="btn-ver" onclick="event.stopPropagation();openPreview('${id}')">🔗 Ver</button>
@@ -887,6 +907,7 @@ function updateDeleteBar() {
 }
 
 let pendingDeleteIds = [];
+let pendingUndoId = null;
 function askDeleteOne(id) {
   pendingDeleteIds = [id]; const rec = allReceipts.find(r => r.id === id);
   const milhar = rec ? extractMilhar(rec.data.content || '') : '—';
@@ -903,7 +924,14 @@ function askDeleteAll() {
   document.getElementById('confirmMsg').innerHTML = `Apagar <strong style="color:var(--danger)">TODOS os ${pendingDeleteIds.length} recibos</strong>?<br><br>⚠️ Isso limpará toda a base. Essa ação não pode ser desfeita.`;
   document.getElementById('confirmOverlay').classList.add('open');
 }
-function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); pendingDeleteIds = []; }
+function closeConfirm() { 
+  document.getElementById('confirmOverlay').classList.remove('open'); 
+  pendingDeleteIds = []; 
+  pendingUndoId = null;
+  const okBtn = document.getElementById('confirmOkBtn');
+  okBtn.textContent = 'Apagar';
+  okBtn.onclick = confirmDeleteNow;
+}
 
 async function confirmDeleteNow() {
   if (!pendingDeleteIds.length) return;
@@ -1132,6 +1160,42 @@ async function desfazerAlteracao(id) {
   }
 }
 
+function desfazerAlteracaoCard(id) {
+  const hist = undoHistory[id];
+  if (!hist) return;
+  pendingUndoId = id;
+  document.getElementById('confirmMsg').innerHTML = `Reverter a alteração neste recibo?<br><br>Milhar <strong style="color:var(--danger)">${hist.newM}</strong> voltará para <strong style="color:var(--green)">${hist.oldM}</strong>.<br><br>Esta ação não pode ser desfeita novamente.`;
+  const okBtn = document.getElementById('confirmOkBtn');
+  okBtn.textContent = '↩️ Reverter';
+  okBtn.onclick = confirmUndoNow;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+async function confirmUndoNow() {
+  if (!pendingUndoId) return;
+  const id = pendingUndoId;
+  const hist = undoHistory[id];
+  if (!hist) { closeConfirm(); return; }
+  const btn = document.getElementById('confirmOkBtn'); btn.disabled = true; btn.textContent = 'Revertendo…';
+  try {
+    await db.collection('receipts').doc(id).update({ 
+      content: hist.content,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const idx = allReceipts.findIndex(r => r.id === id);
+    if (idx !== -1) allReceipts[idx].data.content = hist.content;
+    delete undoHistory[id];
+    showToast('✅ Alteração revertida!', 'ok');
+    closeConfirm();
+    renderList(allReceipts);
+  } catch(e) { 
+    showToast('Erro: ' + e.message, 'err'); 
+  } finally { 
+    btn.disabled = false; btn.textContent = '↩️ Reverter';
+    pendingUndoId = null;
+  }
+}
+
 async function openLogModal(id) {
   const snap = await db.collection('receipts').doc(id).get({ source: 'server' });
   if (!snap.exists) return;
@@ -1225,7 +1289,9 @@ function closeLogModal() { document.getElementById('logOverlay').classList.remov
 let toastTimer;
 function showToast(msg, type = '') {
   const t = document.getElementById('toast'); t.textContent = msg; t.className = 'show ' + type;
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ''; }, 2800);
+  clearTimeout(toastTimer); 
+  const duration = type === 'err' ? 4200 : 2800;
+  toastTimer = setTimeout(() => { t.className = ''; }, duration);
 }
 
 document.getElementById('editorOverlay').addEventListener('click', function(e) { if (e.target === this) closeEditor(); });
@@ -1247,7 +1313,8 @@ function atualizarContagem() {
 
   if (segundosRestantes <= 0) {
     segundosRestantes = INTERVALO_REFRESH;
-    if (!selectMode) loadReceipts();
+    const editorOpen = document.getElementById('editorOverlay').classList.contains('open');
+    if (!selectMode && !editorOpen) loadReceipts();
   } else {
     segundosRestantes--;
   }
