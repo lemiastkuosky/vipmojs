@@ -652,23 +652,29 @@
                 input.dataset.banca = sigla;
                 input.dataset.index = i;
                 
-                input.addEventListener('input', function(e) {
-                    this.value = this.value.replace(/[^0-9]/g, '');
-                    localStorage.setItem(`res_${sigla}_${i}`, this.value);
-                    if(this.value.length === 2) {
-                        const next = document.querySelector(`input[data-banca="${sigla}"][data-index="${i+1}"]`);
-                        if(next) next.focus();
-                    }
-                    atualizarConferenciaEmTempoReal();
-                });
+                // Localize este trecho dentro da função gerarInputsBancas()
+input.addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+    localStorage.setItem(`res_${sigla}_${i}`, this.value);
+    
+    // Apenas avança se tiver completado 2 dígitos
+    if(this.value.length === 2) {
+        // Salva explicitamente antes de disparar a conferência
+        atualizarConferenciaEmTempoReal(); 
+        
+        const next = document.querySelector(`input[data-banca="${sigla}"][data-index="${i+1}"]`);
+        if(next) next.focus();
+    }
+});
 
-                input.onblur = function() {
-                    if(this.value.length === 1) {
-                        this.value = "0" + this.value;
-                        localStorage.setItem(`res_${sigla}_${i}`, this.value);
-                    }
-                    atualizarConferenciaEmTempoReal();
-                };
+                // Substitua o onblur atual por este:
+input.onblur = function() {
+    if(this.value.length === 1) {
+        this.value = "0" + this.value;
+        localStorage.setItem(`res_${sigla}_${i}`, this.value);
+        atualizarConferenciaEmTempoReal(); // Só atualiza se houver alteração real
+    }
+};
                 input.onfocus = function() { if(!this.readOnly) this.value = ''; };
                 container.appendChild(input);
             }
