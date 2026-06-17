@@ -299,13 +299,16 @@
     #toast.ok   { border-color: var(--green);  color: var(--green); }
     #toast.err  { border-color: var(--danger); color: var(--danger); }
 
-    #confirmOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
+    #confirmOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 600; align-items: center; justify-content: center; padding: 20px; }
     #confirmOverlay.open { display: flex; }
     .confirm-box { background: var(--surface); border: 1px solid var(--danger); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 20px; }
     .confirm-box h3 { font-size: 1.2rem; font-weight: 800; color: var(--danger); }
     .confirm-box p  { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
     .confirm-actions { display: flex; gap: 10px; }
     .confirm-actions .btn { flex: 1; }
+    .confirm-box.mode-accent { border-color: var(--accent); }
+    .confirm-box.mode-accent h3 { color: var(--accent); }
+    .btn-accent-solid { background: var(--accent); color: #000; }
 
     /* ===== CARD ACTIONS ===== */
     @keyframes undoPulse {
@@ -469,7 +472,7 @@
           <span class="lf-line"></span>
         </div>
         <div class="login-footer-info">
-          <span class="lf-version">v1.7.0</span>
+          <span class="lf-version">v1.7.1</span>
           <span class="lf-sep">·</span>
           <span class="lf-copy">VipMojs © 2025</span>
         </div>
@@ -518,7 +521,7 @@
         <span class="lf-line"></span>
       </div>
       <div class="login-footer-info">
-        <span class="lf-version">v1.7.0</span>
+        <span class="lf-version">v1.7.1</span>
         <span class="lf-sep">&#183;</span>
         <span class="lf-copy">VipMojs &#169; 2025</span>
       </div>
@@ -608,7 +611,7 @@
 
   <div id="confirmOverlay">
     <div class="confirm-box">
-      <h3>🗑️ Confirmar exclusão</h3>
+      <h3 id="confirmTitle">🗑️ Confirmar exclusão</h3>
       <p id="confirmMsg">Tem certeza?</p>
       <div class="confirm-actions">
         <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
@@ -907,12 +910,12 @@ function renderList(list) {
         <div class="card-actions">
           <div class="card-row-main">
             <button class="btn-alterar" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
-            <button class="btn-undo ${undoHistory[id] ? 'visible' : ''}" id="undo-btn-${id}" onclick="event.stopPropagation();desfazerAlteracaoCard('${id}')">↩️ Desfazer</button>
+            <button class="btn-undo ${undoHistory[id] ? 'visible' : ''}" id="undo-btn-${id}" onclick="event.stopPropagation();desfazerAlteracaoCard('${id}')">↩️ → ${undoHistory[id] ? undoHistory[id].oldM : '----'}</button>
           </div>
           <div class="card-row-secondary">
-            <button class="btn-del" onclick="event.stopPropagation();askDeleteOne('${id}')">🗑️</button>
             <button class="btn-ver" onclick="event.stopPropagation();copiarMilhares('${id}')">📋 Copiar</button>
             <button class="btn-ver" onclick="event.stopPropagation();openPreview('${id}')">🔗 Ver</button>
+            <button class="btn-del" onclick="event.stopPropagation();askDeleteOne('${id}')">🗑️</button>
           </div>
         </div>
       </div>`;
@@ -965,6 +968,7 @@ function updateDeleteBar() {
 
 let pendingDeleteIds = [];
 let pendingUndoId = null;
+let pendingSave = null;
 function askDeleteOne(id) {
   pendingDeleteIds = [id]; const rec = allReceipts.find(r => r.id === id);
   const milhar = rec ? extractMilhar(rec.data.content || '') : '—';
@@ -985,8 +989,13 @@ function closeConfirm() {
   document.getElementById('confirmOverlay').classList.remove('open'); 
   pendingDeleteIds = []; 
   pendingUndoId = null;
+  pendingSave = null;
+  document.getElementById('confirmTitle').textContent = '🗑️ Confirmar exclusão';
+  document.querySelector('.confirm-box').classList.remove('mode-accent');
   const okBtn = document.getElementById('confirmOkBtn');
+  okBtn.disabled = false;
   okBtn.textContent = 'Apagar';
+  okBtn.className = 'btn btn-danger';
   okBtn.onclick = confirmDeleteNow;
 }
 
@@ -1109,7 +1118,7 @@ function openEditor(id) {
   if (undoArea) {
     if (undoHistory[id]) {
       undoArea.style.display = 'block';
-      undoArea.innerHTML = `<button class="btn-undo-modal" onclick="desfazerAlteracao('${id}')">↩️ ${undoHistory[id].newM} → ${undoHistory[id].oldM}</button>`;
+      undoArea.innerHTML = `<button class="btn-undo-modal" onclick="desfazerAlteracaoCard('${id}')">↩️ ${undoHistory[id].newM} → ${undoHistory[id].oldM}</button>`;
     } else {
       undoArea.style.display = 'none';
       undoArea.innerHTML = '';
@@ -1165,7 +1174,7 @@ function doSearch() {
   else { result.className = 'notfound'; result.textContent = `❌ ${val} não está no recibo`; }
 }
 
-async function saveReceipt() {
+function saveReceipt() {
   if (!currentDoc) return;
   const nova = document.getElementById('novaMilharInput').value.trim();
   if (nova.length !== 4 || !/^\d{4}$/.test(nova)) { showToast('Digite exatamente 4 dígitos.', 'err'); return; }
@@ -1178,58 +1187,56 @@ async function saveReceipt() {
     const bIdx = BICHOS.indexOf(bReal);
     if (allowedBichos.size > 0 && !allowedBichos.has(bIdx)) { showToast(`❌ O ${bReal.emoji} ${bReal.nome} não está neste bilhete`, 'err'); return; }
   }
-  const btn = document.getElementById('saveBtn'); btn.disabled = true; btn.textContent = 'Salvando…';
+
+  pendingSave = { id: currentDoc.id, milharAntiga: selectedMilhar, nova };
+  document.getElementById('confirmTitle').textContent = '✏️ Confirmar alteração';
+  document.querySelector('.confirm-box').classList.add('mode-accent');
+  document.getElementById('confirmMsg').innerHTML = `Alterar a milhar <strong style="color:var(--accent)">${selectedMilhar}</strong> para <strong style="color:var(--green)">${nova}</strong>?<br><br>Confirma essa alteração?`;
+  const okBtn = document.getElementById('confirmOkBtn');
+  okBtn.textContent = '✏️ Sim, alterar';
+  okBtn.className = 'btn btn-accent-solid';
+  okBtn.onclick = confirmSaveNow;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+async function confirmSaveNow() {
+  if (!pendingSave) return;
+  const { id, milharAntiga, nova } = pendingSave;
+  const rec = allReceipts.find(r => r.id === id);
+  if (!rec) { closeConfirm(); return; }
+  const btn = document.getElementById('confirmOkBtn'); btn.disabled = true; btn.textContent = 'Salvando…';
   try {
-    const regex = new RegExp(`(?<!\\/)\\b${selectedMilhar}\\b(?!\\/)`);
-    const conteudoAnterior = currentDoc.data.content;
-    const milharAntiga = selectedMilhar;
-    
-    const novoContent = currentDoc.data.content.replace(regex, nova); 
-    
-    await db.collection('receipts').doc(currentDoc.id).update({ 
+    const regex = new RegExp(`(?<!\\/)\\b${milharAntiga}\\b(?!\\/)`);
+    const conteudoAnterior = rec.data.content;
+
+    const novoContent = conteudoAnterior.replace(regex, nova);
+
+    await db.collection('receipts').doc(id).update({ 
       content: novoContent,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    
-    undoHistory[currentDoc.id] = { content: conteudoAnterior, oldM: milharAntiga, newM: nova };
-    
-    const idx = allReceipts.findIndex(r => r.id === currentDoc.id); if (idx !== -1) allReceipts[idx].data.content = novoContent;
-    showToast('✅ Milhar alterada!', 'ok'); closeEditor(); renderList(allReceipts); selectedMilhar = null;
-  } catch(e) { showToast('Erro: ' + e.message, 'err'); } 
-  finally { btn.disabled = false; btn.textContent = '💾 Salvar'; }
-}
 
-async function desfazerAlteracao(id) {
-  const hist = undoHistory[id];
-  if (!hist) return;
-  const btn = document.querySelector('#undoArea button');
-  if(btn) { btn.textContent = 'Desfazendo...'; btn.disabled = true; }
-  try {
-    await db.collection('receipts').doc(id).update({ 
-      content: hist.content,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    
-    const idx = allReceipts.findIndex(r => r.id === id); 
-    if (idx !== -1) allReceipts[idx].data.content = hist.content;
-    
-    delete undoHistory[id];
-    showToast('✅ Alteração desfeita com sucesso!', 'ok'); 
-    closeEditor(); 
+    undoHistory[id] = { content: conteudoAnterior, oldM: milharAntiga, newM: nova };
+
+    const idx = allReceipts.findIndex(r => r.id === id); if (idx !== -1) allReceipts[idx].data.content = novoContent;
+    showToast('✅ Milhar alterada!', 'ok');
+    closeConfirm();
+    closeEditor();
     renderList(allReceipts);
-  } catch(e) { 
-    showToast('Erro: ' + e.message, 'err'); 
-    if(btn) { btn.textContent = 'Erro'; }
-  }
+    selectedMilhar = null;
+  } catch(e) { showToast('Erro: ' + e.message, 'err'); } 
+  finally { btn.disabled = false; pendingSave = null; }
 }
 
 function desfazerAlteracaoCard(id) {
   const hist = undoHistory[id];
   if (!hist) return;
   pendingUndoId = id;
+  document.getElementById('confirmTitle').textContent = '↩️ Confirmar reversão';
   document.getElementById('confirmMsg').innerHTML = `Reverter a alteração neste recibo?<br><br>Milhar <strong style="color:var(--danger)">${hist.newM}</strong> voltará para <strong style="color:var(--green)">${hist.oldM}</strong>.<br><br>Esta ação não pode ser desfeita novamente.`;
   const okBtn = document.getElementById('confirmOkBtn');
   okBtn.textContent = '↩️ Reverter';
+  okBtn.className = 'btn btn-danger';
   okBtn.onclick = confirmUndoNow;
   document.getElementById('confirmOverlay').classList.add('open');
 }
@@ -1250,6 +1257,7 @@ async function confirmUndoNow() {
     delete undoHistory[id];
     showToast('✅ Alteração revertida!', 'ok');
     closeConfirm();
+    if (document.getElementById('editorOverlay').classList.contains('open')) closeEditor();
     renderList(allReceipts);
   } catch(e) { 
     showToast('Erro: ' + e.message, 'err'); 
