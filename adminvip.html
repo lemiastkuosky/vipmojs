@@ -307,54 +307,105 @@
     .confirm-actions { display: flex; gap: 10px; }
     .confirm-actions .btn { flex: 1; }
 
-    /* BOTÃO DESFAZER NO CARD */
-    .btn-undo {
-      flex: 0 0 auto; background: transparent; color: var(--accent); border: 1.5px solid rgba(245,200,66,.4);
-      border-radius: 10px; font-family: var(--sans); font-weight: 700; font-size: 0.82rem; padding: 11px 14px;
-      min-height: 44px; cursor: pointer; display: none; align-items: center; gap: 5px;
-      text-decoration: none; transition: border-color .15s, color .15s, background .15s; white-space: nowrap; touch-action: manipulation;
-      animation: undoPulse 2s ease-in-out infinite;
-    }
-    .btn-undo.visible { display: inline-flex; }
-    .btn-undo:active,
-    .btn-undo:hover { border-color: var(--accent); background: rgba(245,200,66,.1); }
+    /* ===== CARD ACTIONS ===== */
     @keyframes undoPulse {
-      0%, 100% { border-color: rgba(245,200,66,.4); }
-      50% { border-color: rgba(245,200,66,.85); }
+      0%, 100% { border-color: rgba(245,200,66,.35); box-shadow: none; }
+      50%       { border-color: var(--accent); box-shadow: 0 0 8px rgba(245,200,66,.25); }
     }
 
-    /* CARD ACTIONS */
-    .card-actions { display: flex; gap: 10px; align-items: center; }
+    /* base de todos os botões do card */
+    .card-actions {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* LINHA 1: Alterar (cresce) + Desfazer (some se não houver histórico) */
+    .card-row-main {
+      display: flex; gap: 8px; align-items: center;
+    }
+    /* LINHA 2: Apagar + Copiar + Ver */
+    .card-row-secondary {
+      display: flex; gap: 8px; align-items: center;
+    }
+
+    /* ── Alterar ── */
     .card-actions .btn-alterar {
       flex: 1; background: var(--accent); color: #000; border: none; border-radius: 10px;
-      font-family: var(--sans); font-weight: 700; font-size: 0.88rem; padding: 12px 16px; min-height: 44px;
+      font-family: var(--sans); font-weight: 700; font-size: 0.9rem; padding: 12px 16px; min-height: 46px;
       cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
       transition: background .15s, transform .1s; touch-action: manipulation; -webkit-appearance: none;
     }
     .card-actions .btn-alterar:active { transform: scale(.96); background: #ffd740; }
 
+    /* ── Desfazer (fica na linha 1, ao lado do Alterar) ── */
+    .btn-undo {
+      flex: 0 0 auto; background: transparent; color: var(--accent); border: 1.5px solid rgba(245,200,66,.35);
+      border-radius: 10px; font-family: var(--sans); font-weight: 700; font-size: 0.82rem; padding: 11px 14px;
+      min-height: 46px; cursor: pointer; display: none; align-items: center; gap: 5px;
+      transition: border-color .15s, background .15s; white-space: nowrap; touch-action: manipulation;
+      animation: undoPulse 2s ease-in-out infinite;
+    }
+    .btn-undo.visible { display: inline-flex; }
+    .btn-undo:active,
+    .btn-undo:hover { border-color: var(--accent); background: rgba(245,200,66,.12); animation: none; }
+
+    /* ── Apagar ── */
     .card-actions .btn-del {
-      flex: 0 0 44px; width: 44px; height: 44px; background: var(--danger); color: #fff; border: none;
+      flex: 0 0 46px; height: 46px; background: var(--danger); color: #fff; border: none;
       border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-      font-size: 1rem; transition: background .15s, transform .1s; touch-action: manipulation; -webkit-appearance: none;
+      font-size: 1.05rem; transition: background .15s, transform .1s; touch-action: manipulation; -webkit-appearance: none;
     }
     .card-actions .btn-del:active { transform: scale(.96); background: #c62828; }
 
+    /* ── Copiar / Ver ── */
     .card-actions .btn-ver {
-      flex: 0 0 auto; background: transparent; color: var(--muted); border: 1.5px solid var(--border);
-      border-radius: 10px; font-family: var(--sans); font-weight: 600; font-size: 0.82rem; padding: 11px 14px;
-      min-height: 44px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
-      text-decoration: none; transition: border-color .15s, color .15s, background .15s; white-space: nowrap; touch-action: manipulation;
+      flex: 1; background: transparent; color: var(--muted); border: 1.5px solid var(--border);
+      border-radius: 10px; font-family: var(--sans); font-weight: 600; font-size: 0.82rem; padding: 11px 10px;
+      min-height: 46px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      transition: border-color .15s, color .15s, background .15s; white-space: nowrap; touch-action: manipulation;
     }
     .card-actions .btn-ver:active,
     .card-actions .btn-ver:hover { border-color: #4299e1; color: #4299e1; background: rgba(66,153,225,.08); }
 
+    /* Desktop: tudo numa linha só */
     @media (min-width: 600px) {
-      .card-actions .btn-alterar { font-size: 0.92rem; padding: 13px 20px; }
-      .card-actions .btn-del     { flex: 0 0 auto; width: auto; padding: 0 16px; gap: 6px; font-size: 0.85rem; }
+      .card-actions { flex-direction: row; flex-wrap: nowrap; }
+      .card-row-main, .card-row-secondary { display: contents; }
+      .card-actions .btn-alterar { font-size: 0.92rem; padding: 13px 20px; flex: 2; }
+      .card-actions .btn-del {
+        flex: 0 0 auto; width: auto; padding: 0 16px; gap: 6px; font-size: 0.85rem;
+      }
       .card-actions .btn-del::after { content: 'Apagar'; font-family: var(--sans); font-weight: 700; font-size: 0.82rem; }
-      .card-actions .btn-ver     { padding: 12px 18px; font-size: 0.88rem; }
+      .card-actions .btn-ver { flex: 0 0 auto; padding: 12px 16px; font-size: 0.88rem; }
     }
+
+    /* BOTÃO SALVAR FLUTUANTE — sobe com o teclado no mobile */
+    #floatingSaveBtn {
+      display: none;
+      position: fixed;
+      left: 16px; right: 16px;
+      bottom: 16px;
+      z-index: 500;
+      background: var(--green); color: #000;
+      border: none; border-radius: 14px;
+      font-family: var(--sans); font-weight: 800; font-size: 1rem;
+      padding: 16px; min-height: 52px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5);
+      cursor: pointer; touch-action: manipulation;
+      align-items: center; justify-content: center; gap: 8px;
+      transition: bottom .15s ease, background .15s, transform .1s;
+    }
+    #floatingSaveBtn.open { display: flex; }
+    #floatingSaveBtn:active { transform: scale(.97); background: #2fc47a; }
+
+    /* botão desfazer inline no modal (ao lado do label de busca) */
+    #undoArea .btn-undo-modal {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent; color: var(--accent); border: 1.5px solid rgba(245,200,66,.5);
+      border-radius: 8px; font-family: var(--sans); font-weight: 700; font-size: 0.78rem;
+      padding: 5px 12px; cursor: pointer; touch-action: manipulation;
+      animation: undoPulse 2s ease-in-out infinite;
+    }
+    #undoArea .btn-undo-modal:active { background: rgba(245,200,66,.12); animation: none; }
 
     /* LOGIN FOOTER */
     .login-footer { margin-top: 28px; }
@@ -491,8 +542,6 @@
         <div class="modal-meta" id="modalMeta"></div>
       </div>
       <div class="modal-body">
-        
-        <div id="undoArea" style="display:none; margin-bottom: 16px;"></div>
 
         <div style="margin-bottom: 12px;">
           <div class="section-label">BICHOS NESTE BILHETE</div>
@@ -505,7 +554,10 @@
         </div>
 
         <div>
-          <div class="section-label">BUSCAR MILHAR NO RECIBO</div>
+          <div class="section-label" style="justify-content:space-between;align-items:center;display:flex;">
+            <span>BUSCAR MILHAR NO RECIBO</span>
+            <div id="undoArea" style="display:none;"></div>
+          </div>
           <div class="search-milhar-wrap" style="margin-bottom: 12px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="text" id="milharSearch" maxlength="4" placeholder="0000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,''); doSearch()" />
@@ -566,6 +618,7 @@
   </div>
 
   <div id="toast"></div>
+  <button id="floatingSaveBtn" onclick="saveReceipt()">💾 Salvar</button>
 
 <script>
 const firebaseConfig = {
@@ -851,12 +904,16 @@ function renderList(list) {
           </div>
           ${logRows}
         </div>
-        <div class="card-actions" style="flex-wrap: wrap;">
-          <button class="btn-alterar" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
-          <button class="btn-undo ${undoHistory[id] ? 'visible' : ''}" id="undo-btn-${id}" onclick="event.stopPropagation();desfazerAlteracaoCard('${id}')">↩️ Desfazer</button>
-          <button class="btn-del" onclick="event.stopPropagation();askDeleteOne('${id}')">🗑️</button>
-          <button class="btn-ver" onclick="event.stopPropagation();copiarMilhares('${id}')">📋 Copiar</button>
-          <button class="btn-ver" onclick="event.stopPropagation();openPreview('${id}')">🔗 Ver</button>
+        <div class="card-actions">
+          <div class="card-row-main">
+            <button class="btn-alterar" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
+            <button class="btn-undo ${undoHistory[id] ? 'visible' : ''}" id="undo-btn-${id}" onclick="event.stopPropagation();desfazerAlteracaoCard('${id}')">↩️ Desfazer</button>
+          </div>
+          <div class="card-row-secondary">
+            <button class="btn-del" onclick="event.stopPropagation();askDeleteOne('${id}')">🗑️</button>
+            <button class="btn-ver" onclick="event.stopPropagation();copiarMilhares('${id}')">📋 Copiar</button>
+            <button class="btn-ver" onclick="event.stopPropagation();openPreview('${id}')">🔗 Ver</button>
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -1052,9 +1109,10 @@ function openEditor(id) {
   if (undoArea) {
     if (undoHistory[id]) {
       undoArea.style.display = 'block';
-      undoArea.innerHTML = `<button class="btn btn-ghost" style="width:100%; border-color:var(--accent); color:var(--accent)" onclick="desfazerAlteracao('${id}')">↩️ Desfazer: ${undoHistory[id].newM} ➔ ${undoHistory[id].oldM}</button>`;
+      undoArea.innerHTML = `<button class="btn-undo-modal" onclick="desfazerAlteracao('${id}')">↩️ ${undoHistory[id].newM} → ${undoHistory[id].oldM}</button>`;
     } else {
       undoArea.style.display = 'none';
+      undoArea.innerHTML = '';
     }
   }
   
@@ -1076,9 +1134,14 @@ function openEditor(id) {
 
   document.getElementById('editorOverlay').classList.add('open');
   document.getElementById('editorModal').scrollTop = 0;
+  document.getElementById('floatingSaveBtn').classList.add('open');
   setTimeout(() => document.getElementById('novaMilharInput').focus(), 300);
 }
-function closeEditor() { document.getElementById('editorOverlay').classList.remove('open'); currentDoc = null; }
+function closeEditor() { 
+  document.getElementById('editorOverlay').classList.remove('open'); 
+  document.getElementById('floatingSaveBtn').classList.remove('open');
+  currentDoc = null; 
+}
 
 function onNovaMilharInput() {
   const el = document.getElementById('novaMilharInput'); el.value = el.value.replace(/\D/g, '');
@@ -1394,6 +1457,16 @@ function fallbackCopyTextToClipboard(text, count) {
 setInterval(atualizarRelogio, 1000);
 setInterval(atualizarContagem, 1000);
 atualizarRelogio();
+
+// Sobe o botão Salvar junto com o teclado virtual no mobile
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const btn = document.getElementById('floatingSaveBtn');
+    if (!btn.classList.contains('open')) return;
+    const keyboardHeight = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+    btn.style.bottom = (keyboardHeight > 20 ? keyboardHeight + 8 : 16) + 'px';
+  });
+}
 
 </script>
 </body>
