@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Recibo de Aposta</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #e9eef2;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+
+    @media print {
+      body * { display: none !important; }
+      body::after {
+        display: block !important;
+        content: "Impressão não permitida.";
+        font-size: 2rem;
+        text-align: center;
+        margin-top: 40vh;
+      }
+    }
+
+    #protectionOverlay { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; }
+
+    /* Container principal ajustado para celular com opacidade */
+    .receipt-container {
+      display: none; 
+      opacity: 0; 
+      pointer-events: none; 
+      /* Transição suave removida para o recibo aparecer instantaneamente após os 10s */
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    /* O bloco de texto do recibo */
+    pre {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      
+      white-space: pre-wrap;       
+      word-wrap: break-word;       
+      word-break: break-all;       
+      
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85rem;          
+      line-height: 1.5;
+      text-align: left;            
+      margin: 0;
+    }
+
+    @media (max-width: 350px) {
+      .receipt-container pre {
+        white-space: pre-wrap;       
+        word-break: break-all;       
+        
+        display: block;
+        width: 100%;
+        margin: 0;
+        
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9rem;          
+        line-height: 1.5;
+        text-align: left;           
+        
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #eee;
+        box-sizing: border-box;
+      }
+    }
+    
+    .receipt-container.paid-stamp::before {
+      content: "PAGO";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 5rem;
+      font-weight: 900;
+      color: rgba(40, 167, 69, 0.12);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .receipt-header, .receipt-details, .receipt-summary, .receipt-footer { position: relative; z-index: 1; }
+    
+    .security-seal {
+      text-align: center;
+      font-size: 0.7rem;
+      color: #28a745;
+      margin-top: 10px;
+      font-family: monospace;
+      transition: all 0.5s ease;
+    }
+
+    .syncing { color: #0056b3 !important; font-weight: bold; }
+    
+    .receipt-header { text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px dashed #ccc; }
+    .company-logo { max-width: 180px; height: auto; display: block; margin: 0 auto 15px auto; }
+    .receipt-header h1 { margin: 10px 0 0; font-size: 1.4rem; color: #0056b3; letter-spacing: 1px; }
+
+    .receipt-details .detail-item { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95rem; border-bottom: 1px solid #eee; }
+    .receipt-details .detail-item:last-child { border-bottom: none; }
+    .receipt-details .label { font-weight: 600; color: #555; }
+    .receipt-details .value { color: #111; font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+
+    .receipt-summary { margin-top: 20px; padding-top: 20px; border-top: 2px dashed #ccc; }
+    .receipt-summary h2 { text-align: center; margin: 0 0 15px 0; font-size: 1.1rem; color: #333; }
+    
+    #summary-content {
+      white-space: pre-wrap;       
+      word-break: normal;          
+      overflow-wrap: break-word;   
+      
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #eee;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      
+      text-align: justify; 
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .receipt-footer { text-align: center; margin-top: 25px; padding-top: 20px; border-top: 2px dashed #ccc; font-size: 1.2rem; font-weight: bold; color: #28a745; }
+    .thank-you-message { font-size: 0.85rem; font-style: italic; font-weight: normal; color: #6c757d; margin-top: 15px; }
+
+    .status-message { width: 100%; max-width: 400px; font-size: 1.1rem; font-weight: bold; padding: 20px; border-radius: 8px; text-align: center; background-color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); box-sizing: border-box; }
+    
+    /* Ocultamos o "Carregando" para criar a tela limpa exigida */
+    #loading-message { display: none !important; }
+    #error-message, #expired-message { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; display: none; }
+  </style>
+</head>
+<body>
+
+  <div id="protectionOverlay"></div>
+
+  <div id="receipt-container" class="receipt-container">
+    <div class="receipt-header">
+      <img src="https://lemiastkuosky.github.io/vipmojs/seu-logo.png" alt="Logo da Empresa" class="company-logo">
+      <h1>RECIBO DE APOSTA</h1>
+    </div>
+    <div class="receipt-details">
+      <div class="detail-item"><span class="label">Código:</span><span class="value" id="receipt-code"></span></div>
+      <div class="detail-item"><span class="label">Data/Hora:</span><span class="value" id="receipt-datetime"></span></div>
+      <div class="detail-item"><span class="label">Extração:</span><span class="value" id="receipt-extraction"></span></div>
+      <div class="detail-item"><span class="label">Valor Pago:</span><span class="value" id="receipt-value"></span></div>
+      <div class="detail-item"><span class="label">Possível Prêmio:</span><span class="value" id="receipt-prize"></span></div>
+      <div class="detail-item"><span class="label">Qtd. Números:</span><span class="value" id="receipt-quantity"></span></div>
+    </div>
+    <div class="receipt-summary">
+      <h2>RESUMO DETALHADO</h2>
+      <pre id="summary-content"></pre>
+    </div>
+    <div class="receipt-footer">
+      BOA SORTE! 🍀
+      <p class="thank-you-message">A Vip agradece a sua preferência!</p>
+      <div class="security-seal" id="security-seal">
+        <span id="seal-text">● Bilhete Autêntico</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading-message" class="status-message">Carregando recibo...</div>
+  <div id="error-message" class="status-message"></div>
+  <div id="expired-message" class="status-message">🚫<br><br>Recibo expirado ou não encontrado.</div>
+
+  <script>
+    // ── Proteções de interface ──
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (e.key === 'PrintScreen' || (e.ctrlKey && ['p','s','c','u','a'].includes(e.key.toLowerCase()))) e.preventDefault();
+    });
+    document.addEventListener('copy', e => e.preventDefault());
+    const overlay = document.getElementById('protectionOverlay');
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) overlay.style.display = 'block'; 
+      else setTimeout(() => { overlay.style.display = 'none'; }, 300);
+    });
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7tyWt4UlivjnJVevkXDZ1wwgPrzV1hvc",
+      authDomain: "meus-recibos-vip.firebaseapp.com",
+      projectId: "meus-recibos-vip",
+      storageBucket: "meus-recibos-vip.firebasestorage.app",
+      messagingSenderId: "254959368683",
+      appId: "1:254959368683:web:80676a26f614040df6c1ae"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const firestoreDB = firebase.firestore();
+
+    async function registrarAcesso(receiptId) {
+      if (!receiptId || !firestoreDB) return;
+
+      let logData = {
+        ip: 'Desconhecido',
+        city: '',
+        state: '',
+        org: '',
+        ua: navigator.userAgent,
+        time: new Date()
+      };
+
+      try {
+        const ipResponse = await fetch('https://get.geojs.io/v1/ip/geo.json');
+        const ipData = await ipResponse.json();
+        
+        logData.ip = ipData.ip || 'Desconhecido';
+        logData.city = ipData.city || '';
+        logData.state = ipData.region || '';
+        logData.org = ipData.organization || '';
+      } catch (e) {
+        console.warn("Geo falhou, gravando apenas IP disponível...");
+      }
+
+      try {
+        await firestoreDB.collection('receipts').doc(receiptId).update({
+          views: firebase.firestore.FieldValue.increment(1),
+          accessLog: firebase.firestore.FieldValue.arrayUnion(logData)
+        });
+        console.log("Log registrado com sucesso!");
+      } catch (error) {
+        console.error("ERRO AO SALVAR LOG:", error.message);
+      }
+    }
+
+    function populateReceipt(receiptText) {
+      const extractValue = (regex) => (receiptText.match(regex) || [])[1]?.trim() || 'N/A';
+      document.getElementById('receipt-code').textContent = extractValue(/Código\.*:\s*(.*)/);
+      document.getElementById('receipt-datetime').textContent = extractValue(/Data\/Hora\.*:\s*(.*)/);
+      document.getElementById('receipt-extraction').textContent = extractValue(/Extração\.*:\s*(.*)/);
+      document.getElementById('receipt-value').textContent = extractValue(/Valor Pago\.*:\s*(.*)/);
+      document.getElementById('receipt-prize').textContent = extractValue(/Possível Prêmio:\s*(.*)/);
+      document.getElementById('receipt-quantity').textContent = extractValue(/Qtd\. Números\.*:\s*(.*)/);
+      const summaryMatch = receiptText.split(/RESUMO DETALHADO\s*-+\s*/);
+      document.getElementById('summary-content').textContent = summaryMatch.length > 1 ? summaryMatch[1].split('==============================')[0].trim() : 'Nenhum detalhe encontrado.';
+    }
+
+    async function fetchReceipt() {
+      const expiredEl = document.getElementById('expired-message');
+      const receiptContainer = document.getElementById('receipt-container');
+      const seal = document.getElementById('security-seal');
+      const sealText = document.getElementById('seal-text');
+      
+      const params = new URLSearchParams(window.location.search);
+      const receiptId = params.get('id');
+      const isAdmin = params.get('admin') === 'true';
+      
+      if (!receiptId) {
+        if (expiredEl) expiredEl.style.display = 'block';
+        return;
+      }
+
+      if (!isAdmin) {
+        await registrarAcesso(receiptId);
+      }
+
+      let isFirstLoad = true;
+
+      firestoreDB.collection('receipts').doc(receiptId).onSnapshot(doc => {
+        if (!doc.exists) {
+          if (expiredEl) expiredEl.style.display = 'block';
+          if (receiptContainer) receiptContainer.style.display = 'none'; 
+          return;
+        }
+        
+        const data = doc.data();
+        const now = new Date();
+        const creationTime = data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date();
+
+        let expirationTime = null;
+        const extracaoMatch = (data.content || '').match(/Extração\.*:\s*(.*)/i);
+        
+        // Nacional removida. Agora apenas a look tem regra especial
+        if (extracaoMatch) {
+          const extracao = extracaoMatch[1].toLowerCase();
+          if (extracao.includes('look')) {
+            expirationTime = new Date(creationTime);
+            if (expirationTime.getHours() >= 7) expirationTime.setDate(expirationTime.getDate() + 1);
+            expirationTime.setHours(7, 30, 0, 0);
+          }
+        }
+        
+        if (!expirationTime) {
+          if (data.expiresAt) {
+            expirationTime = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+          } else {
+            expirationTime = new Date(creationTime.getTime() + (4 * 60 * 60 * 1000));
+          }
+        }
+
+        if (now > expirationTime) {
+          if (expiredEl) expiredEl.style.display = 'block';
+          if (receiptContainer) receiptContainer.style.display = 'none';
+        } else {
+          populateReceipt(data.content);
+          
+          // Adiciona a marca d'água de pago para todos os recibos
+          if (receiptContainer) receiptContainer.classList.add('paid-stamp');
+          
+          if (receiptContainer) receiptContainer.style.display = 'block';
+          
+          if (isFirstLoad) {
+            if (isAdmin) {
+              // Admin vê imediatamente
+              receiptContainer.style.opacity = '1';
+              receiptContainer.style.pointerEvents = 'auto';
+            } else {
+              // Cliente aguarda 10 segundos na tela em branco (cor de fundo)
+              setTimeout(() => {
+                if (receiptContainer) {
+                  receiptContainer.style.opacity = '1';
+                  receiptContainer.style.pointerEvents = 'auto';
+                }
+              }, 10000);
+            }
+
+            if (seal && sealText) {
+              seal.classList.add('syncing');
+              sealText.textContent = "● Verificando segurança...";
+              
+              setTimeout(() => {
+                seal.classList.remove('syncing');
+                sealText.textContent = "● Bilhete Autêntico";
+              }, 1000);
+            }
+            isFirstLoad = false; 
+          }
+        }
+      }, err => {
+        console.error("Erro na sincronização:", err);
+      });
+    }
+
+    window.onload = fetchReceipt;
+  </script>
+</body>
+</html>

@@ -477,6 +477,8 @@
       </div>
       <div class="modal-body">
         
+        <div id="undoArea" style="display:none; margin-bottom: 16px;"></div>
+
         <div style="margin-bottom: 12px;">
           <div class="section-label">BICHOS NESTE BILHETE</div>
           <div class="bicho-grid" id="bichoGrid"></div>
@@ -569,6 +571,7 @@ let selectedIds   = new Set();
 let selectMode    = false;
 let activeBicho   = null; 
 let allowedBichos = new Set();
+let undoHistory   = {}; 
 
 function toDate(val) {
   if (!val) return new Date(0);
@@ -697,11 +700,7 @@ function renderList(list) {
     const extracaoMatch = (data.content || '').match(/Extração\.*:\s*(.*)/i);
     if (extracaoMatch) {
       const extracao = extracaoMatch[1].toLowerCase();
-      if (extracao.includes('nacional')) {
-        expires = new Date(created);
-        if (expires.getHours() >= 2) expires.setDate(expires.getDate() + 1); 
-        expires.setHours(2, 30, 0, 0); 
-      } else if (extracao.includes('look')) {
+      if (extracao.includes('look')) {
         expires = new Date(created);
         if (expires.getHours() >= 7) expires.setDate(expires.getDate() + 1); 
         expires.setHours(7, 30, 0, 0); 
@@ -765,7 +764,8 @@ function renderList(list) {
       }
     });
     
-    const groupedLogs = Array.from(deviceMap.values()).slice(0, 5);
+    // Mostra apenas o top 3 no card principal
+    const groupedLogs = Array.from(deviceMap.values()).slice(0, 3);
 
     const logRows = groupedLogs.length === 0
       ? `<div class="mini-log-vazio">Nenhum acesso ainda</div>`
@@ -1020,6 +1020,16 @@ function openEditor(id) {
   const rec = allReceipts.find(r => r.id === id); if (!rec) return;
   currentDoc = rec; activeBicho = null; selectedMilhar = null; allowedBichos.clear();
   
+  const undoArea = document.getElementById('undoArea');
+  if (undoArea) {
+    if (undoHistory[id]) {
+      undoArea.style.display = 'block';
+      undoArea.innerHTML = `<button class="btn btn-ghost" style="width:100%; border-color:var(--accent); color:var(--accent)" onclick="desfazerAlteracao('${id}')">↩️ Desfazer: ${undoHistory[id].newM} ➔ ${undoHistory[id].oldM}</button>`;
+    } else {
+      undoArea.style.display = 'none';
+    }
+  }
+  
   const todas = extractAllMilhares(rec.data.content || '');
   todas.forEach(m => { const b = bichoDoMilhar(m); if (b) allowedBichos.add(BICHOS.indexOf(b)); });
   document.querySelectorAll('.bicho-chip').forEach((c, idx) => {
@@ -1080,6 +1090,9 @@ async function saveReceipt() {
   const btn = document.getElementById('saveBtn'); btn.disabled = true; btn.textContent = 'Salvando…';
   try {
     const regex = new RegExp(`(?<!\\/)\\b${selectedMilhar}\\b(?!\\/)`);
+    const conteudoAnterior = currentDoc.data.content;
+    const milharAntiga = selectedMilhar;
+    
     const novoContent = currentDoc.data.content.replace(regex, nova); 
     
     await db.collection('receipts').doc(currentDoc.id).update({ 
@@ -1087,10 +1100,36 @@ async function saveReceipt() {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     
+    undoHistory[currentDoc.id] = { content: conteudoAnterior, oldM: milharAntiga, newM: nova };
+    
     const idx = allReceipts.findIndex(r => r.id === currentDoc.id); if (idx !== -1) allReceipts[idx].data.content = novoContent;
     showToast('✅ Milhar alterada!', 'ok'); closeEditor(); renderList(allReceipts); selectedMilhar = null;
   } catch(e) { showToast('Erro: ' + e.message, 'err'); } 
   finally { btn.disabled = false; btn.textContent = '💾 Salvar'; }
+}
+
+async function desfazerAlteracao(id) {
+  const hist = undoHistory[id];
+  if (!hist) return;
+  const btn = document.querySelector('#undoArea button');
+  if(btn) { btn.textContent = 'Desfazendo...'; btn.disabled = true; }
+  try {
+    await db.collection('receipts').doc(id).update({ 
+      content: hist.content,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    const idx = allReceipts.findIndex(r => r.id === id); 
+    if (idx !== -1) allReceipts[idx].data.content = hist.content;
+    
+    delete undoHistory[id];
+    showToast('✅ Alteração desfeita com sucesso!', 'ok'); 
+    closeEditor(); 
+    renderList(allReceipts);
+  } catch(e) { 
+    showToast('Erro: ' + e.message, 'err'); 
+    if(btn) { btn.textContent = 'Erro'; }
+  }
 }
 
 async function openLogModal(id) {
@@ -1129,7 +1168,7 @@ async function openLogModal(id) {
       const isAdmin = ua.includes('👑');
       const t = toDate(log.time);
       const accessDateStr = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(t);
-      const relativeTime = timeAgo(t);
+      const relativeTime = new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short' }).format(t); 
       
       const realNum = sorted.length - index; 
 
@@ -1224,11 +1263,7 @@ function askLimparExpirados() {
     
     if (extracaoMatch) {
       const extracao = extracaoMatch[1].toLowerCase();
-      if (extracao.includes('nacional')) {
-        expires = new Date(created);
-        if (expires.getHours() >= 2) expires.setDate(expires.getDate() + 1);
-        expires.setHours(2, 30, 0, 0);
-      } else if (extracao.includes('look')) {
+      if (extracao.includes('look')) {
         expires = new Date(created);
         if (expires.getHours() >= 7) expires.setDate(expires.getDate() + 1);
         expires.setHours(7, 30, 0, 0);
