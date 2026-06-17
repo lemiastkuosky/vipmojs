@@ -7672,7 +7672,7 @@ header, footer, .bottom-bar {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V32.20</strong>
+            <strong>V32.10</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -8966,8 +8966,7 @@ max-width: 100%;
       <div class="generator-step-card" style="padding: 15px; margin-bottom: 15px;">
     <div class="step-title" style="margin: -15px -15px 15px -15px; font-size: 1.1rem;">🐾 Bichos Base (400 un)</div>
     <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: nowrap;">
-        <button id="btn-view-${id}" class="save-button" style="flex: 1; min-width: 0; padding: 9px 4px; font-size: 0.78rem; font-weight: bold; margin: 0; background-color: ${btnVerCor}; color: ${btnVerTxt}; box-shadow: 0 2px 0 rgba(0,0,0,0.1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👀 Ver Recibo</button>
-        <button id="btn-resend-${id}" class="view-button" style="flex: 1; min-width: 0; padding: 9px 4px; font-size: 0.78rem; font-weight: bold; margin: 0; background-color: #25D366; color: white; white-space: nowrap;" title="Reenviar Link no WhatsApp">📲 Zap</button>
+<button id="btn-view-${id}" onclick="viewReceipt('${id}')" class="save-button" style="flex: 1; min-width: 0; padding: 9px 4px; font-size: 0.78rem; font-weight: bold; margin: 0; background-color: ${btnVerCor}; color: ${btnVerTxt}; box-shadow: 0 2px 0 rgba(0,0,0,0.1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👀 Ver Recibo</button>        <button id="btn-resend-${id}" class="view-button" style="flex: 1; min-width: 0; padding: 9px 4px; font-size: 0.78rem; font-weight: bold; margin: 0; background-color: #25D366; color: white; white-space: nowrap;" title="Reenviar Link no WhatsApp">📲 Zap</button>
         <button id="btn-copytudo-${id}" class="view-button" style="flex: 0 0 38px; padding: 9px 0; font-size: 1rem; margin: 0; background-color: #007bff;" title="Copiar Milhares">📋</button>
         <button id="btn-copy-${id}" class="view-button" style="flex: 0 0 38px; padding: 9px 0; font-size: 1rem; margin: 0; background-color: #6f42c1;" title="Copiar Texto">📄</button>
         <button id="btn-del-${id}" class="import-btn" style="flex: 0 0 38px; padding: 9px 0; font-size: 1rem; margin: 0;" title="Apagar da Nuvem">🗑️</button>
@@ -12102,14 +12101,22 @@ if (eraInvisivel && grupo !== grupos[grupos.length - 1]) receiptModal.classList.
         msgFinal += `Obrigado e Boa sorte! 🍀\n\n`;
         msgFinal += `📲 _VIP - I.A in Real-Time_`;
 
-        window.location.assign(`https://wa.me/?text=${encodeURIComponent(msgFinal)}`);
+        // 👇 SUBSTITUA DAQUI PARA BAIXO 👇
+
+        // Método Anti-Bloqueio (Clique Fantasma)
+        const a = document.createElement('a');
+        a.href = `https://wa.me/?text=${encodeURIComponent(msgFinal)}`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         
-        // NOVO: Gatilho de limpeza com delay para dar tempo do Zap abrir
+        // Delay maior (1500ms) para garantir que o WhatsApp abra antes de limpar a tela!
         setTimeout(() => {
             if (typeof window.finalizarELimparTudo === 'function') {
                 window.finalizarELimparTudo();
             }
-        }, 1000);
+        }, 1500);
         const todosNumerosCart = grupos.flatMap(g => g.jogos.flatMap(j => j.numeros));
 const histEntryCart = {
     id: Date.now(),
@@ -20433,27 +20440,88 @@ function toggleParityOptions() {
     }
 }
 
-// --- NOVA FUNÇÃO PARA REENVIAR O LINK DO RECIBO ---
+// --- FUNÇÃO CORRIGIDA PARA REENVIAR O LINK DO RECIBO ---
 function resendReceiptLink(receiptId) {
     if (!receiptId) {
         showToast('ID do recibo inválido.', 'error');
         return;
     }
 
-    // 1. Cria o link permanente para o recibo usando o ID salvo
+    const textContainer = document.getElementById(`text-${receiptId}`);
+    if (!textContainer) {
+        showToast('Não foi possível ler o recibo.', 'error');
+        return;
+    }
+    
+    const receiptContent = textContainer.textContent || textContainer.innerText;
+
+    const codigo = (receiptContent.match(/Código\.*:\s*(\S+)/) || [])[1] || 'N/A';
+    const valor = (receiptContent.match(/Valor Pago\.*:\s*(R\$\s*[\d,.]+)/) || [])[1] || 'R$ 0,00';
+    const extracaoLinha = (receiptContent.match(/Extração\.*:\s*(.*)/) || [])[1] || 'Não especificada - --:--';
+    
+    const extracaoParts = extracaoLinha.split('-');
+    const extracaoNome = extracaoParts[0] ? extracaoParts[0].trim() : 'Extração';
+    const horarioSelecionado = extracaoParts[1] ? extracaoParts[1].trim() : '';
+
     const link = `https://meus-recibos-vip.web.app/recibo.html?id=${receiptId}`;
 
-    // 2. Prepara a mesma mensagem padrão do WhatsApp
-    const message = `Olá! Segue o recibo da sua aposta:\n\n` +
-                    `${link}\n\n` +
-                    `*⚠️ Aviso: O link de visualização é válido por 2 horas.*\n\n` +
-                    `Boa sorte! 🍀`;
+    const hora = new Date().getHours();
+    let saudacao = "Bom dia";
+    if (hora >= 12 && hora < 18) saudacao = "Boa tarde";
+    else if (hora >= 18 || hora < 5) saudacao = "Boa noite";
 
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+    const divisor = "━━━━━━━━━━━━━━━";
+    const linhaSecao = "-----------------------------------";
 
-    // 3. Abre o WhatsApp para o reenvio
-    window.open(whatsappUrl, '_blank');
+    let msg = `${saudacao}, Segue suas milhares da sorte! *(2ª Via)*\n\n`;
+    msg += `🍀 *SEU RECIBO FOI REGISTRADO COM SUCESSO!* 🍀\n\n`;
+    msg += `${divisor}\n\n`;
+    
+    msg += `🔑 *ID:* \`${codigo}\`\n`;
+    msg += `💰 *VALOR:* *${valor}*\n`;
+    msg += `🎯 *EXTRAÇÃO:* ${extracaoNome} - ${horarioSelecionado}\n\n`;
+    
+    msg += `${linhaSecao}\n\n`;
+    msg += `🐾 *RESUMO POR BICHO:*\n`;
+    
+    // 👇 A MÁGICA FOI FEITA AQUI (NOVO REGEX BLINDADO) 👇
+    const bichoRegex = /Gr\.\s(\d+)\s-\s(?:.*?\s)?([A-Za-zçãáéíóúâêôûà\s]+):\s(.*?)(?=\n|Milhares:|Centenas:|Dezenas:|Gr\.)/gi;
+    let match;
+    let encontrouBicho = false;
+
+    while ((match = bichoRegex.exec(receiptContent)) !== null) {
+        const grupoNum = match[1];
+        const animal = match[2].trim().toUpperCase();
+        const detalhes = match[3].trim().toLowerCase();
+        
+        const emoji = bichoNameToEmoji[animal.toLowerCase().replace(/á/g, 'a').replace(/ã/g, 'a').replace(/é/g, 'e')] || '🎲';
+        
+        msg += `${emoji} *G${grupoNum} - ${animal}* ➔ _${detalhes}_\n`;
+        encontrouBicho = true;
+    }
+
+    // Prevenção extra de segurança
+    if (!encontrouBicho) {
+       msg += `📋 _Resumo de bichos no link oficial abaixo._\n`;
+    }
+
+    msg += `\n${linhaSecao}\n\n`;
+    msg += `🔗 *PARA VER SUAS MILHARES CLIQUE NO LINK ABAIXO:*\n${link}\n\n`;
+    msg += `${divisor}\n`;
+    msg += `⚠️ _O link acima expira após o sorteio._\n\n`;
+    msg += `Obrigado e Boa sorte! 🍀\n\n`;
+    msg += `📲 _VIP - I.A in Real-Time_`;
+
+    const encodedMessage = encodeURIComponent(msg);
+    
+    // Método Anti-Bloqueio de Celular para redirecionamento
+    const a = document.createElement('a');
+    a.href = `https://wa.me/?text=${encodedMessage}`;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
     showToast('Preparando para reenviar...', 'success');
 }
 
@@ -23431,8 +23499,11 @@ async function updateSavedReceiptsContainer() {
     💰 Valor: ${value} <span style="margin: 0 5px;">|</span> 📦 Método: ${pacote}
 </div>
 ${(() => {
-    const milhares = [...(item.content.matchAll(/\b(\d{4})\b/g))].map(m => m[1]);
-const milharesUnicas = [...new Set(milhares)];  // <- adicionar esta linha
+    let milhares = [...(item.content.matchAll(/\b(\d{4})\b/g))].map(m => m[1]);
+    console.log("🕵️‍♂️ Números capturados no recibo:", milhares);
+// 👇 A barreira que impede a data de virar bicho:
+milhares = milhares.filter(num => num !== '2026' && num !== new Date().getFullYear().toString());
+const milharesUnicas = [...new Set(milhares)];
 const emojisMap = {};
 milharesUnicas.forEach(n => {  // <- trocar milhares por milharesUnicas
         const bd = getBichoDataFromNumber(n);
