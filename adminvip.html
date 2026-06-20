@@ -1270,6 +1270,8 @@ function openEditor(id) {
 function closeEditor() { 
   document.getElementById('editorOverlay').classList.remove('open'); 
   document.getElementById('floatingActionBar').classList.remove('open');
+  const saveBtn = document.getElementById('floatingSaveBtn');
+  if (saveBtn) saveBtn.innerHTML = '💾 Salvar';
   currentDoc = null; 
 }
 
@@ -1305,15 +1307,38 @@ function closeEditorWithCheck() {
 function onNovaMilharInput() {
   const el = document.getElementById('novaMilharInput'); el.value = el.value.replace(/\D/g, '');
   const val = el.value; const hint = document.getElementById('milharHint');
-  if (val.length < 4) { hint.className = ''; hint.textContent = ''; return; }
+  const saveBtn = document.getElementById('floatingSaveBtn');
+
+  if (val.length < 4) {
+    hint.className = ''; hint.textContent = '';
+    if (saveBtn) saveBtn.innerHTML = '💾 Salvar';
+    return;
+  }
   const todasExistentes = extractAllMilhares(currentDoc?.data?.content || '');
-  if (todasExistentes.includes(val) && val !== selectedMilhar) { hint.className = 'err'; hint.textContent = `❌ ${val} já existe neste recibo`; return; }
+  if (todasExistentes.includes(val) && val !== selectedMilhar) {
+    hint.className = 'err'; hint.textContent = `❌ ${val} já existe neste recibo`;
+    if (saveBtn) saveBtn.innerHTML = '💾 Salvar';
+    return;
+  }
   const bReal = bichoDoMilhar(val);
+  let valido = false;
   if (bReal) {
     const bIdx = BICHOS.indexOf(bReal);
-    if (allowedBichos.size > 0 && !allowedBichos.has(bIdx)) { hint.className = 'err'; hint.textContent = `❌ O ${bReal.emoji} ${bReal.nome} não foi gerado neste bilhete`; } 
-    else { hint.className = 'ok'; hint.textContent = `✅ ${val} é do ${bReal.emoji} ${bReal.nome}`; }
-  } else { hint.className = ''; hint.textContent = ''; }
+    if (allowedBichos.size > 0 && !allowedBichos.has(bIdx)) {
+      hint.className = 'err'; hint.textContent = `❌ O ${bReal.emoji} ${bReal.nome} não foi gerado neste bilhete`;
+    } else {
+      hint.className = 'ok'; hint.textContent = `✅ ${val} é do ${bReal.emoji} ${bReal.nome}`;
+      valido = true;
+    }
+  } else {
+    hint.className = ''; hint.textContent = '';
+  }
+
+  if (saveBtn) {
+    saveBtn.innerHTML = (valido && selectedMilhar && selectedMilhar !== val)
+      ? '🔁 Substituir e Salvar'
+      : '💾 Salvar';
+  }
 }
 
 function doSearch() {
