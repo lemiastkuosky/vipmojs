@@ -146,6 +146,14 @@
     }
     .m-chip.changed { animation: chipChangedBlink 1.1s ease-in-out infinite; font-weight: 800; }
 
+    @keyframes saveBtnReadyBlink {
+      0%, 100%  { background: var(--green); box-shadow: 0 4px 24px rgba(0,0,0,.5); }
+      50%       { background: #ffb443; box-shadow: 0 4px 24px rgba(0,0,0,.5), 0 0 14px rgba(255,180,67,.6); }
+    }
+    #floatingSaveBtn.ready-to-save {
+      animation: saveBtnReadyBlink 1s ease-in-out infinite;
+    }
+
     /* VIEWS DESTAQUE */
     .views-destaque {
       display: flex; align-items: center; justify-content: space-between;
@@ -1271,7 +1279,7 @@ function closeEditor() {
   document.getElementById('editorOverlay').classList.remove('open'); 
   document.getElementById('floatingActionBar').classList.remove('open');
   const saveBtn = document.getElementById('floatingSaveBtn');
-  if (saveBtn) saveBtn.innerHTML = '💾 Salvar';
+  if (saveBtn) { saveBtn.innerHTML = '💾 Salvar'; saveBtn.classList.remove('ready-to-save'); }
   currentDoc = null; 
 }
 
@@ -1311,33 +1319,27 @@ function onNovaMilharInput() {
 
   if (val.length < 4) {
     hint.className = ''; hint.textContent = '';
-    if (saveBtn) saveBtn.innerHTML = '💾 Salvar';
+    if (saveBtn) { saveBtn.innerHTML = '💾 Salvar'; saveBtn.classList.remove('ready-to-save'); }
     return;
   }
   const todasExistentes = extractAllMilhares(currentDoc?.data?.content || '');
   if (todasExistentes.includes(val) && val !== selectedMilhar) {
     hint.className = 'err'; hint.textContent = `❌ ${val} já existe neste recibo`;
-    if (saveBtn) saveBtn.innerHTML = '💾 Salvar';
+    if (saveBtn) { saveBtn.innerHTML = '💾 Salvar'; saveBtn.classList.remove('ready-to-save'); }
     return;
   }
   const bReal = bichoDoMilhar(val);
   let valido = false;
   if (bReal) {
     const bIdx = BICHOS.indexOf(bReal);
-    if (allowedBichos.size > 0 && !allowedBichos.has(bIdx)) {
-      hint.className = 'err'; hint.textContent = `❌ O ${bReal.emoji} ${bReal.nome} não foi gerado neste bilhete`;
-    } else {
-      hint.className = 'ok'; hint.textContent = `✅ ${val} é do ${bReal.emoji} ${bReal.nome}`;
-      valido = true;
-    }
-  } else {
-    hint.className = ''; hint.textContent = '';
-  }
+    if (allowedBichos.size > 0 && !allowedBichos.has(bIdx)) { hint.className = 'err'; hint.textContent = `❌ O ${bReal.emoji} ${bReal.nome} não foi gerado neste bilhete`; } 
+    else { hint.className = 'ok'; hint.textContent = `✅ ${val} é do ${bReal.emoji} ${bReal.nome}`; valido = true; }
+  } else { hint.className = ''; hint.textContent = ''; }
 
+  const pronto = valido && selectedMilhar && selectedMilhar !== val;
   if (saveBtn) {
-    saveBtn.innerHTML = (valido && selectedMilhar && selectedMilhar !== val)
-      ? '🔁 Substituir e Salvar'
-      : '💾 Salvar';
+    saveBtn.innerHTML = pronto ? '🔁 Substituir e Salvar' : '💾 Salvar';
+    saveBtn.classList.toggle('ready-to-save', pronto);
   }
 }
 
