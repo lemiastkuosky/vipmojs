@@ -221,7 +221,23 @@
       gap: 6px;
       width: 100%;
       min-height: 44px;
+      max-height: 96px;
+      overflow: hidden;
+      transition: max-height .2s ease;
     }
+    #milharesChips.expanded {
+      max-height: 2000px;
+    }
+    .milhares-toggle-wrap { display: flex; justify-content: center; margin-top: 6px; }
+    .btn-toggle-milhares {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+      padding: 6px 14px; border-radius: 8px; cursor: pointer; touch-action: manipulation;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-toggle-milhares:active { border-color: var(--accent); color: var(--accent); }
+    .btn-toggle-milhares .chev { transition: transform .2s ease; }
+    .btn-toggle-milhares.open .chev { transform: rotate(180deg); }
     
     .m-chip {
       display: flex; align-items: center; justify-content: center;
@@ -381,23 +397,40 @@
       .card-actions .btn-ver { flex: 0 0 auto; padding: 12px 16px; font-size: 0.88rem; }
     }
 
-    /* BOTÃO SALVAR FLUTUANTE — sobe com o teclado no mobile */
-    #floatingSaveBtn {
+    /* BARRA FLUTUANTE (Fechar + Salvar) — sobe com o teclado no mobile */
+    #floatingActionBar {
       display: none;
       position: fixed;
       left: 16px; right: 16px;
       bottom: 16px;
       z-index: 500;
+      gap: 10px;
+      transition: bottom .15s ease;
+    }
+    #floatingActionBar.open { display: flex; }
+    #floatingCloseBtn {
+      flex: 0 0 auto;
+      background: var(--card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 14px;
+      font-family: var(--sans); font-weight: 800; font-size: 1rem;
+      padding: 16px 18px; min-height: 52px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5);
+      cursor: pointer; touch-action: manipulation;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, transform .1s;
+    }
+    #floatingCloseBtn:active { transform: scale(.97); background: #20242f; }
+    #floatingSaveBtn {
+      flex: 1;
       background: var(--green); color: #000;
       border: none; border-radius: 14px;
       font-family: var(--sans); font-weight: 800; font-size: 1rem;
       padding: 16px; min-height: 52px;
       box-shadow: 0 4px 24px rgba(0,0,0,.5);
       cursor: pointer; touch-action: manipulation;
-      align-items: center; justify-content: center; gap: 8px;
-      transition: bottom .15s ease, background .15s, transform .1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background .15s, transform .1s;
     }
-    #floatingSaveBtn.open { display: flex; }
     #floatingSaveBtn:active { transform: scale(.97); background: #2fc47a; }
 
     /* botão desfazer inline no modal (ao lado do label de busca) */
@@ -554,6 +587,12 @@
         <div>
           <div class="section-label">MILHARES NO RECIBO — toque para selecionar qual alterar</div>
           <div id="milharesChips"></div>
+          <div class="milhares-toggle-wrap" id="milharesToggleWrap" style="display:none;">
+            <button type="button" class="btn-toggle-milhares" id="milharesToggleBtn" onclick="toggleMilharesExpand()">
+              <span id="milharesToggleLabel">Ver todas</span>
+              <span class="chev">▾</span>
+            </button>
+          </div>
         </div>
 
         <div>
@@ -621,7 +660,10 @@
   </div>
 
   <div id="toast"></div>
-  <button id="floatingSaveBtn" onclick="saveReceipt()">💾 Salvar</button>
+  <div id="floatingActionBar">
+    <button id="floatingCloseBtn" onclick="closeEditor()" aria-label="Fechar sem salvar">✕</button>
+    <button id="floatingSaveBtn" onclick="saveReceipt()">💾 Salvar</button>
+  </div>
 
 <script>
 const firebaseConfig = {
@@ -644,6 +686,7 @@ let activeBicho   = null;
 let allowedBichos = new Set();
 let undoHistory   = {}; 
 let unsubscribeReceipts = null;
+let unsubscribeLog = null;
 
 function toDate(val) {
   if (!val) return new Date(0);
@@ -1047,11 +1090,44 @@ function extractAllMilhares(content) {
 }
 
 let selectedMilhar = null; 
+const MILHARES_COMPACT_LIMIT = 8; // ~2 linhas antes de precisar expandir
 function renderMilharChips(milhares, autoSelect) {
   const container = document.getElementById('milharesChips');
-  if (!milhares.length) { container.innerHTML = '<span class="m-chip-none">Nenhuma milhar encontrada no recibo.</span>'; return; }
+  const toggleWrap = document.getElementById('milharesToggleWrap');
+  const toggleBtn = document.getElementById('milharesToggleBtn');
+  const toggleLabel = document.getElementById('milharesToggleLabel');
+
+  container.classList.remove('expanded');
+  if (toggleBtn) toggleBtn.classList.remove('open');
+
+  if (!milhares.length) {
+    container.innerHTML = '<span class="m-chip-none">Nenhuma milhar encontrada no recibo.</span>';
+    toggleWrap.style.display = 'none';
+    return;
+  }
   container.innerHTML = milhares.map(m => `<div class="m-chip" id="mchip-${m}" onclick="selectMilharChip('${m}')">${m}</div>`).join('');
+
+  if (milhares.length > MILHARES_COMPACT_LIMIT) {
+    toggleWrap.style.display = 'flex';
+    toggleLabel.textContent = `Ver todas (${milhares.length})`;
+  } else {
+    toggleWrap.style.display = 'none';
+  }
+
   const toSelect = autoSelect || milhares[0]; if (toSelect) selectMilharChip(toSelect);
+}
+
+function toggleMilharesExpand() {
+  const container = document.getElementById('milharesChips');
+  const toggleBtn = document.getElementById('milharesToggleBtn');
+  const toggleLabel = document.getElementById('milharesToggleLabel');
+  const isOpen = container.classList.toggle('expanded');
+  toggleBtn.classList.toggle('open', isOpen);
+  toggleLabel.textContent = isOpen ? 'Ver menos' : toggleLabel.textContent.replace('Ver menos', 'Ver todas');
+  if (!isOpen) {
+    const count = document.querySelectorAll('#milharesChips .m-chip').length;
+    toggleLabel.textContent = `Ver todas (${count})`;
+  }
 }
 
 function openPreview(id) {
@@ -1143,12 +1219,12 @@ function openEditor(id) {
 
   document.getElementById('editorOverlay').classList.add('open');
   document.getElementById('editorModal').scrollTop = 0;
-  document.getElementById('floatingSaveBtn').classList.add('open');
-  setTimeout(() => document.getElementById('novaMilharInput').focus(), 300);
+  document.getElementById('floatingActionBar').classList.add('open');
+  setTimeout(() => document.getElementById('milharSearch').focus(), 300);
 }
 function closeEditor() { 
   document.getElementById('editorOverlay').classList.remove('open'); 
-  document.getElementById('floatingSaveBtn').classList.remove('open');
+  document.getElementById('floatingActionBar').classList.remove('open');
   currentDoc = null; 
 }
 
@@ -1267,14 +1343,23 @@ async function confirmUndoNow() {
   }
 }
 
-async function openLogModal(id) {
-  const snap = await db.collection('receipts').doc(id).get({ source: 'server' });
-  if (!snap.exists) return;
-  const idx = allReceipts.findIndex(r => r.id === id);
-  if (idx !== -1) allReceipts[idx].data = snap.data();
-  const rec = { id, data: snap.data() };
+function openLogModal(id) {
+  if (unsubscribeLog) { unsubscribeLog(); unsubscribeLog = null; }
 
-  const rawData = rec.data;
+  document.getElementById('logBody').innerHTML = '<div class="empty-state"><span class="spinner"></span></div>';
+  document.getElementById('logOverlay').classList.add('open');
+
+  unsubscribeLog = db.collection('receipts').doc(id).onSnapshot(snap => {
+    if (!snap.exists) return;
+    const idx = allReceipts.findIndex(r => r.id === id);
+    if (idx !== -1) allReceipts[idx].data = snap.data();
+    renderLogModalContent(id, snap.data());
+  }, err => {
+    document.getElementById('logBody').innerHTML = `<div class="empty-state">Erro ao carregar acessos: ${err.message}</div>`;
+  });
+}
+
+function renderLogModalContent(id, rawData) {
   const logs = rawData.accessLog || [];
 
   const created = rawData.createdAt ? toDate(rawData.createdAt) : null;
@@ -1352,10 +1437,11 @@ async function openLogModal(id) {
       `;
     }).join('');
   }
-
-  document.getElementById('logOverlay').classList.add('open');
 }
-function closeLogModal() { document.getElementById('logOverlay').classList.remove('open'); }
+function closeLogModal() {
+  document.getElementById('logOverlay').classList.remove('open');
+  if (unsubscribeLog) { unsubscribeLog(); unsubscribeLog = null; }
+}
 
 let toastTimer;
 function showToast(msg, type = '') {
@@ -1466,13 +1552,13 @@ setInterval(atualizarRelogio, 1000);
 setInterval(atualizarContagem, 1000);
 atualizarRelogio();
 
-// Sobe o botão Salvar junto com o teclado virtual no mobile
+// Sobe a barra Fechar/Salvar junto com o teclado virtual no mobile
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', () => {
-    const btn = document.getElementById('floatingSaveBtn');
-    if (!btn.classList.contains('open')) return;
+    const bar = document.getElementById('floatingActionBar');
+    if (!bar.classList.contains('open')) return;
     const keyboardHeight = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
-    btn.style.bottom = (keyboardHeight > 20 ? keyboardHeight + 8 : 16) + 'px';
+    bar.style.bottom = (keyboardHeight > 20 ? keyboardHeight + 8 : 16) + 'px';
   });
 }
 
