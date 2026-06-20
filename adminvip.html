@@ -355,17 +355,27 @@
     }
     .card-actions .btn-alterar:active { transform: scale(.96); background: #ffd740; }
 
-    /* ── Desfazer (fica na linha 1, ao lado do Alterar) ── */
-    .btn-undo {
-      flex: 0 0 auto; background: transparent; color: var(--accent); border: 1.5px solid rgba(245,200,66,.35);
-      border-radius: 10px; font-family: var(--sans); font-weight: 700; font-size: 0.82rem; padding: 11px 14px;
-      min-height: 46px; cursor: pointer; display: none; align-items: center; gap: 5px;
-      transition: border-color .15s, background .15s; white-space: nowrap; touch-action: manipulation;
+    /* ── Banner de troca recente (substitui o antigo btn-undo pequeno) ── */
+    .undo-banner {
+      display: none;
+      align-items: center; justify-content: space-between; gap: 10px;
+      background: rgba(245,200,66,.08); border: 1.5px solid rgba(245,200,66,.4);
+      border-radius: 12px; padding: 10px 12px; margin-bottom: 2px;
       animation: undoPulse 2s ease-in-out infinite;
     }
-    .btn-undo.visible { display: inline-flex; }
-    .btn-undo:active,
-    .btn-undo:hover { border-color: var(--accent); background: rgba(245,200,66,.12); animation: none; }
+    .undo-banner.visible { display: flex; }
+    .undo-banner-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .undo-banner-label { font-family: var(--sans); font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
+    .undo-banner-swap { font-family: var(--mono); font-size: 0.95rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .undo-banner-swap .old { color: var(--muted); text-decoration: line-through; opacity: .8; }
+    .undo-banner-swap .new { color: var(--accent); }
+    .undo-banner-btn {
+      flex: 0 0 auto; background: var(--accent); color: #000; border: none;
+      border-radius: 10px; font-family: var(--sans); font-weight: 800; font-size: 0.85rem;
+      padding: 11px 16px; min-height: 44px; cursor: pointer; touch-action: manipulation;
+      display: inline-flex; align-items: center; gap: 6px; transition: background .15s, transform .1s;
+    }
+    .undo-banner-btn:active { transform: scale(.95); background: #ffd740; }
 
     /* ── Apagar ── */
     .card-actions .btn-del {
@@ -410,16 +420,16 @@
     #floatingActionBar.open { display: flex; }
     #floatingCloseBtn {
       flex: 0 0 auto;
-      background: var(--card); color: var(--text);
-      border: 1px solid var(--border); border-radius: 14px;
-      font-family: var(--sans); font-weight: 800; font-size: 1rem;
+      background: rgba(224,92,92,.12); color: var(--danger);
+      border: 1.5px solid var(--danger); border-radius: 14px;
+      font-family: var(--sans); font-weight: 800; font-size: 1.1rem;
       padding: 16px 18px; min-height: 52px;
       box-shadow: 0 4px 24px rgba(0,0,0,.5);
       cursor: pointer; touch-action: manipulation;
       display: flex; align-items: center; justify-content: center;
       transition: background .15s, transform .1s;
     }
-    #floatingCloseBtn:active { transform: scale(.97); background: #20242f; }
+    #floatingCloseBtn:active { transform: scale(.97); background: rgba(224,92,92,.28); }
     #floatingSaveBtn {
       flex: 1;
       background: var(--green); color: #000;
@@ -505,7 +515,7 @@
           <span class="lf-line"></span>
         </div>
         <div class="login-footer-info">
-          <span class="lf-version">v1.7.1</span>
+          <span class="lf-version">v1.7.2</span>
           <span class="lf-sep">·</span>
           <span class="lf-copy">VipMojs © 2025</span>
         </div>
@@ -626,7 +636,7 @@
       </div>
       
       <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeEditor()">Cancelar</button>
+        <button class="btn btn-ghost" onclick="closeEditorWithCheck()">Cancelar</button>
         <button class="btn btn-green" id="saveBtn" onclick="saveReceipt()">💾 Salvar</button>
       </div>
     </div>
@@ -653,7 +663,7 @@
       <h3 id="confirmTitle">🗑️ Confirmar exclusão</h3>
       <p id="confirmMsg">Tem certeza?</p>
       <div class="confirm-actions">
-        <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+        <button class="btn btn-ghost" id="confirmCancelBtn" onclick="closeConfirm()">Cancelar</button>
         <button class="btn btn-danger" id="confirmOkBtn" onclick="confirmDeleteNow()">Apagar</button>
       </div>
     </div>
@@ -661,8 +671,8 @@
 
   <div id="toast"></div>
   <div id="floatingActionBar">
-    <button id="floatingCloseBtn" onclick="closeEditor()" aria-label="Fechar sem salvar">✕</button>
     <button id="floatingSaveBtn" onclick="saveReceipt()">💾 Salvar</button>
+    <button id="floatingCloseBtn" onclick="closeEditorWithCheck()" aria-label="Fechar sem salvar">✕</button>
   </div>
 
 <script>
@@ -939,6 +949,13 @@ function renderList(list) {
           <div class="badges-wrap">${badgeHtml}</div>
         </div>
         <div class="card-date">📅 ${dateStr}</div>
+        <div class="undo-banner ${undoHistory[id] ? 'visible' : ''}" id="undo-banner-${id}">
+          <div class="undo-banner-info">
+            <span class="undo-banner-label">↩️ Troca recente</span>
+            <span class="undo-banner-swap"><span class="old">${undoHistory[id] ? undoHistory[id].oldM : '----'}</span> → <span class="new">${undoHistory[id] ? undoHistory[id].newM : '----'}</span></span>
+          </div>
+          <button class="undo-banner-btn" onclick="event.stopPropagation();desfazerAlteracaoCard('${id}')">↩️ Desfazer</button>
+        </div>
         <div>
           <div class="milhar-label" style="margin-bottom:8px">BICHO${bichosVendidos.length > 1 ? 'S' : ''} VENDIDO</div>
           <div class="bichos-row">${bichosHtml}</div>
@@ -953,7 +970,6 @@ function renderList(list) {
         <div class="card-actions">
           <div class="card-row-main">
             <button class="btn-alterar" onclick="event.stopPropagation();openEditor('${id}')">✏️ Alterar</button>
-            <button class="btn-undo ${undoHistory[id] ? 'visible' : ''}" id="undo-btn-${id}" onclick="event.stopPropagation();desfazerAlteracaoCard('${id}')">↩️ → ${undoHistory[id] ? undoHistory[id].oldM : '----'}</button>
           </div>
           <div class="card-row-secondary">
             <button class="btn-ver" onclick="event.stopPropagation();copiarMilhares('${id}')">📋 Copiar</button>
@@ -1040,6 +1056,9 @@ function closeConfirm() {
   okBtn.textContent = 'Apagar';
   okBtn.className = 'btn btn-danger';
   okBtn.onclick = confirmDeleteNow;
+  const cancelBtn = document.getElementById('confirmCancelBtn');
+  cancelBtn.textContent = 'Cancelar';
+  cancelBtn.onclick = closeConfirm;
 }
 
 async function confirmDeleteNow() {
@@ -1226,6 +1245,35 @@ function closeEditor() {
   document.getElementById('editorOverlay').classList.remove('open'); 
   document.getElementById('floatingActionBar').classList.remove('open');
   currentDoc = null; 
+}
+
+function hasUnsavedEditorChanges() {
+  if (!currentDoc) return false;
+  const nova = document.getElementById('novaMilharInput').value.trim();
+  if (nova.length !== 4 || !/^\d{4}$/.test(nova)) return false;
+  if (!selectedMilhar) return false;
+  if (selectedMilhar === nova) return false;
+  return true;
+}
+
+function closeEditorWithCheck() {
+  if (!hasUnsavedEditorChanges()) { closeEditor(); return; }
+
+  const nova = document.getElementById('novaMilharInput').value.trim();
+  document.getElementById('confirmTitle').textContent = '⚠️ Sair sem salvar?';
+  document.querySelector('.confirm-box').classList.remove('mode-accent');
+  document.getElementById('confirmMsg').innerHTML = `Você estava trocando <strong style="color:var(--accent)">${selectedMilhar}</strong> por <strong style="color:var(--green)">${nova}</strong>, mas ainda não salvou.<br><br>Se sair agora, essa alteração será perdida.`;
+
+  const okBtn = document.getElementById('confirmOkBtn');
+  okBtn.textContent = '🚪 Sair sem salvar';
+  okBtn.className = 'btn btn-danger';
+  okBtn.onclick = function() { closeConfirm(); closeEditor(); };
+
+  const cancelBtn = document.getElementById('confirmCancelBtn');
+  cancelBtn.textContent = '💾 Continuar editando';
+  cancelBtn.onclick = closeConfirm;
+
+  document.getElementById('confirmOverlay').classList.add('open');
 }
 
 function onNovaMilharInput() {
@@ -1451,7 +1499,7 @@ function showToast(msg, type = '') {
   toastTimer = setTimeout(() => { t.className = ''; }, duration);
 }
 
-document.getElementById('editorOverlay').addEventListener('click', function(e) { if (e.target === this) closeEditor(); });
+document.getElementById('editorOverlay').addEventListener('click', function(e) { if (e.target === this) closeEditorWithCheck(); });
 document.getElementById('logOverlay').addEventListener('click', function(e) { if (e.target === this) closeLogModal(); });
 document.getElementById('confirmOverlay').addEventListener('click', function(e) { if (e.target === this) closeConfirm(); });
 
