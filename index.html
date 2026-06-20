@@ -7057,7 +7057,7 @@ body.dark-mode .paltitao-dez.sinal-dia  { background: rgba(25,135,84,0.1); }
         </label>
         <div class="quantity-control quantity-control-small">
             <button type="button" class="quantity-btn" onclick="changeNumericInput('expirationTimeInput', -5, 1, 1440)">-</button>
-            <input type="number" id="expirationTimeInput" class="save-dialog-input" value="15" placeholder="Ex: 15">
+            <input type="number" id="expirationTimeInput" class="save-dialog-input" value="10" placeholder="Ex: 15">
             <button type="button" class="quantity-btn" onclick="changeNumericInput('expirationTimeInput', 5, 1, 1440)">+</button>
         </div>
       </fieldset>
@@ -7672,7 +7672,7 @@ header, footer, .bottom-bar {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V35.55</strong>
+            <strong>V32.10</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -8963,15 +8963,14 @@ max-width: 100%;
     </label>
 </div>
 
-      <div class="generator-step-card" style="padding: 15px; margin-bottom: 15px;">
-    <div class="step-title" style="margin: -15px -15px 15px -15px; font-size: 1.1rem;">🐾 Bichos Base (400 un)</div>
-    <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: nowrap;">
-<button id="btn-view-${id}" onclick="viewReceipt('${id}')" class="save-button" style="flex: 1; min-width: 0; padding: 9px 4px; font-size: 0.78rem; font-weight: bold; margin: 0; background-color: ${btnVerCor}; color: ${btnVerTxt}; box-shadow: 0 2px 0 rgba(0,0,0,0.1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👀 Ver Recibo</button>        <button id="btn-resend-${id}" class="view-button" style="flex: 1; min-width: 0; padding: 9px 4px; font-size: 0.78rem; font-weight: bold; margin: 0; background-color: #25D366; color: white; white-space: nowrap;" title="Reenviar Link no WhatsApp">📲 Zap</button>
-        <button id="btn-copytudo-${id}" class="view-button" style="flex: 0 0 38px; padding: 9px 0; font-size: 1rem; margin: 0; background-color: #007bff;" title="Copiar Milhares">📋</button>
-        <button id="btn-copy-${id}" class="view-button" style="flex: 0 0 38px; padding: 9px 0; font-size: 1rem; margin: 0; background-color: #6f42c1;" title="Copiar Texto">📄</button>
-        <button id="btn-del-${id}" class="import-btn" style="flex: 0 0 38px; padding: 9px 0; font-size: 1rem; margin: 0;" title="Apagar da Nuvem">🗑️</button>
-    </div>
-</div>
+            <div class="generator-step-card" style="padding: 15px; margin-bottom: 15px;">
+                <div class="step-title" style="margin: -15px -15px 15px -15px; font-size: 1.1rem;">🐾 Bichos Base (400 un)</div>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <button onclick="selecionarTodosBichosKits(true)" class="load-button" style="flex: 1; padding: 6px; font-size: 0.8rem;">Todos</button>
+                    <button onclick="selecionarTodosBichosKits(false)" class="import-btn" style="flex: 1; padding: 6px; font-size: 0.8rem;">Limpar</button>
+                </div>
+                <div id="kitsBichosSelector" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; max-height: 180px; overflow-y: auto; padding: 10px; border: 1px solid rgba(128,128,128,0.2); border-radius: 8px;"></div>
+            </div>
 
             <div class="generator-step-card" style="padding: 15px; margin-bottom: 15px;" id="kitFixoCard">
                 <div class="step-title" style="margin: -15px -15px 15px -15px; font-size: 1.1rem;">🔒 Kits Fixos <span style="font-size:0.75rem; font-weight:normal; opacity:0.7;">(Opcional)</span></div>
@@ -10925,30 +10924,17 @@ async function renderIntegratedHistory() {
             let detailsStr = details.length > 0 ? details.join(' • ') : 'Sem números válidos';
 
 // Mostra emojis dos bichos encontrados nas milhares
-// Mostra emojis clicáveis dos bichos encontrados nas milhares
-let emojisBichoHtml = '';
 if (item.results && item.results.milhar && item.results.milhar.length > 0) {
     const emojisMap = {};
     item.results.milhar.forEach(n => {
-        if (String(n) === new Date().getFullYear().toString()) return;
         const bd = getBichoDataFromNumber(String(n));
-        if (bd) {
-            if (!emojisMap[bd.animal]) emojisMap[bd.animal] = { emoji: bd.emoji, milhares: [] };
-            emojisMap[bd.animal].milhares.push(n);
-        }
+        if (bd) emojisMap[bd.animal] = bd.emoji;
     });
-    const entries = Object.entries(emojisMap);
-    const todasMilhares = entries.flatMap(([, v]) => v.milhares);
-    const encodedTodas = encodeURIComponent(JSON.stringify(todasMilhares));
-    const emojisStr = entries.map(([animal, v]) => {
-        const encoded = encodeURIComponent(JSON.stringify(v.milhares));
-        return `<span title="Copiar milhares de ${animal}" data-milhares="${encoded}" onclick="copiarMilharesDosBichos(this)" style="font-size:1.3rem; cursor:pointer; padding:2px 4px; border-radius:6px; transition:background 0.2s;" onmouseover="this.style.background='rgba(0,123,255,0.15)'" onmouseout="this.style.background=''">${v.emoji}</span>`;
-    }).join('');
+    const emojisStr = Object.entries(emojisMap)
+        .map(([animal, emoji]) => `<span title="${animal}" style="font-size:1.1rem;">${emoji}</span>`)
+        .join(' ');
     if (emojisStr) {
-        emojisBichoHtml = `<div style="display:flex; align-items:center; gap:6px; margin-top:8px; flex-wrap:wrap;">
-            <div style="letter-spacing:3px;">${emojisStr}</div>
-            <button data-milhares="${encodedTodas}" onclick="copiarMilharesDosBichos(this)" style="font-size:0.7rem; padding:3px 8px; border:1px solid rgba(0,123,255,0.4); border-radius:12px; background:rgba(0,123,255,0.1); color:#007bff; cursor:pointer; font-weight:bold; white-space:nowrap; transition:background 0.2s;" onmouseover="this.style.background='rgba(0,123,255,0.25)'" onmouseout="this.style.background='rgba(0,123,255,0.1)'">📋 Copiar Tudo</button>
-        </div>`;
+        detailsStr += `<div style="margin-top:6px; letter-spacing:3px;">${emojisStr}</div>`;
     }
 }
 
@@ -10960,16 +10946,14 @@ if (item.results && item.results.milhar && item.results.milhar.length > 0) {
                     <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">📅 ${dataFormatada} às ${horaFormatada}</span>
                 </div>
                 
-                <div style="font-size: 0.9rem; margin-bottom: 10px; color: inherit; opacity: 0.9;">
+                <div style="font-size: 0.9rem; margin-bottom: 15px; color: inherit; opacity: 0.9;">
                     ${detailsStr}
                 </div>
-
-                ${emojisBichoHtml}
                 
-                <div style="display: flex; gap: 6px; margin-top: 12px;">
-                    <button onclick="openFoundReceipt(${item.id})" class="save-button" style="flex: 2; min-width:0; padding: 9px 6px; font-size: 0.78rem; font-weight: bold; margin: 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">👁️ Ver Números</button>
-                    <button onclick="copyHistoryItem(${item.id}, this)" class="view-button" style="flex: 0 0 38px; padding: 9px 0; font-size: 1rem; margin: 0;" title="Copiar">📋</button>
-                    <button onclick="deleteHistoryItem(${item.id})" class="import-btn" style="flex: 0 0 38px; padding: 9px 0; font-size: 1rem; margin: 0;" title="Apagar">🗑️</button>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="openFoundReceipt(${item.id})" class="save-button" style="flex: 2; padding: 10px; font-size: 0.85rem; font-weight: bold; margin: 0;">👁️ Ver Números</button>
+                    <button onclick="copyHistoryItem(${item.id}, this)" class="view-button" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Copiar">📋</button>
+                    <button onclick="deleteHistoryItem(${item.id})" class="import-btn" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Apagar">🗑️</button>
                 </div>
             </div>`;
         });
@@ -12101,22 +12085,14 @@ if (eraInvisivel && grupo !== grupos[grupos.length - 1]) receiptModal.classList.
         msgFinal += `Obrigado e Boa sorte! 🍀\n\n`;
         msgFinal += `📲 _VIP - I.A in Real-Time_`;
 
-        // 👇 SUBSTITUA DAQUI PARA BAIXO 👇
-
-        // Método Anti-Bloqueio (Clique Fantasma)
-        const a = document.createElement('a');
-        a.href = `https://wa.me/?text=${encodeURIComponent(msgFinal)}`;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        window.location.assign(`https://wa.me/?text=${encodeURIComponent(msgFinal)}`);
         
-        // Delay maior (1500ms) para garantir que o WhatsApp abra antes de limpar a tela!
+        // NOVO: Gatilho de limpeza com delay para dar tempo do Zap abrir
         setTimeout(() => {
             if (typeof window.finalizarELimparTudo === 'function') {
                 window.finalizarELimparTudo();
             }
-        }, 1500);
+        }, 1000);
         const todosNumerosCart = grupos.flatMap(g => g.jogos.flatMap(j => j.numeros));
 const histEntryCart = {
     id: Date.now(),
@@ -12222,19 +12198,15 @@ const histEntryCart = {
         msg += `📲 _VIP - I.A in Real-Time_`;
 
         // Disparo direto via wa.me para abrir instantaneamente no mobile
-        // Disparo direto via wa.me para abrir instantaneamente no mobile
         const encodedMessage = encodeURIComponent(msg);
         window.location.assign(`https://wa.me/?text=${encodedMessage}`);
         
         showToast('Comprovante enviado com sucesso!', 'success');
         setTimeout(closeReceiptModal, 800);
 
-        // Reseta a tela de geração por completo (evita reenviar com a mesma milhar)
-        setTimeout(() => {
-            if (typeof window.finalizarELimparTudo === 'function') {
-                window.finalizarELimparTudo();
-            }
-        }, 1500);
+        // Limpa o carrinho após a venda ser concluída
+    window.mcdCart = []; 
+    if (typeof renderCartItems === 'function') renderCartItems();
 
     } catch (error) {
         console.error("Erro no envio:", error);
@@ -20444,88 +20416,27 @@ function toggleParityOptions() {
     }
 }
 
-// --- FUNÇÃO CORRIGIDA PARA REENVIAR O LINK DO RECIBO ---
+// --- NOVA FUNÇÃO PARA REENVIAR O LINK DO RECIBO ---
 function resendReceiptLink(receiptId) {
     if (!receiptId) {
         showToast('ID do recibo inválido.', 'error');
         return;
     }
 
-    const textContainer = document.getElementById(`text-${receiptId}`);
-    if (!textContainer) {
-        showToast('Não foi possível ler o recibo.', 'error');
-        return;
-    }
-    
-    const receiptContent = textContainer.textContent || textContainer.innerText;
-
-    const codigo = (receiptContent.match(/Código\.*:\s*(\S+)/) || [])[1] || 'N/A';
-    const valor = (receiptContent.match(/Valor Pago\.*:\s*(R\$\s*[\d,.]+)/) || [])[1] || 'R$ 0,00';
-    const extracaoLinha = (receiptContent.match(/Extração\.*:\s*(.*)/) || [])[1] || 'Não especificada - --:--';
-    
-    const extracaoParts = extracaoLinha.split('-');
-    const extracaoNome = extracaoParts[0] ? extracaoParts[0].trim() : 'Extração';
-    const horarioSelecionado = extracaoParts[1] ? extracaoParts[1].trim() : '';
-
+    // 1. Cria o link permanente para o recibo usando o ID salvo
     const link = `https://meus-recibos-vip.web.app/recibo.html?id=${receiptId}`;
 
-    const hora = new Date().getHours();
-    let saudacao = "Bom dia";
-    if (hora >= 12 && hora < 18) saudacao = "Boa tarde";
-    else if (hora >= 18 || hora < 5) saudacao = "Boa noite";
+    // 2. Prepara a mesma mensagem padrão do WhatsApp
+    const message = `Olá! Segue o recibo da sua aposta:\n\n` +
+                    `${link}\n\n` +
+                    `*⚠️ Aviso: O link de visualização é válido por 2 horas.*\n\n` +
+                    `Boa sorte! 🍀`;
 
-    const divisor = "━━━━━━━━━━━━━━━";
-    const linhaSecao = "-----------------------------------";
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
 
-    let msg = `${saudacao}, Segue suas milhares da sorte! *(2ª Via)*\n\n`;
-    msg += `🍀 *SEU RECIBO FOI REGISTRADO COM SUCESSO!* 🍀\n\n`;
-    msg += `${divisor}\n\n`;
-    
-    msg += `🔑 *ID:* \`${codigo}\`\n`;
-    msg += `💰 *VALOR:* *${valor}*\n`;
-    msg += `🎯 *EXTRAÇÃO:* ${extracaoNome} - ${horarioSelecionado}\n\n`;
-    
-    msg += `${linhaSecao}\n\n`;
-    msg += `🐾 *RESUMO POR BICHO:*\n`;
-    
-    // 👇 A MÁGICA FOI FEITA AQUI (NOVO REGEX BLINDADO) 👇
-    const bichoRegex = /Gr\.\s(\d+)\s-\s(?:.*?\s)?([A-Za-zçãáéíóúâêôûà\s]+):\s(.*?)(?=\n|Milhares:|Centenas:|Dezenas:|Gr\.)/gi;
-    let match;
-    let encontrouBicho = false;
-
-    while ((match = bichoRegex.exec(receiptContent)) !== null) {
-        const grupoNum = match[1];
-        const animal = match[2].trim().toUpperCase();
-        const detalhes = match[3].trim().toLowerCase();
-        
-        const emoji = bichoNameToEmoji[animal.toLowerCase().replace(/á/g, 'a').replace(/ã/g, 'a').replace(/é/g, 'e')] || '🎲';
-        
-        msg += `${emoji} *G${grupoNum} - ${animal}* ➔ _${detalhes}_\n`;
-        encontrouBicho = true;
-    }
-
-    // Prevenção extra de segurança
-    if (!encontrouBicho) {
-       msg += `📋 _Resumo de bichos no link oficial abaixo._\n`;
-    }
-
-    msg += `\n${linhaSecao}\n\n`;
-    msg += `🔗 *PARA VER SUAS MILHARES CLIQUE NO LINK ABAIXO:*\n${link}\n\n`;
-    msg += `${divisor}\n`;
-    msg += `⚠️ _O link acima expira após o sorteio._\n\n`;
-    msg += `Obrigado e Boa sorte! 🍀\n\n`;
-    msg += `📲 _VIP - I.A in Real-Time_`;
-
-    const encodedMessage = encodeURIComponent(msg);
-    
-    // Método Anti-Bloqueio de Celular para redirecionamento
-    const a = document.createElement('a');
-    a.href = `https://wa.me/?text=${encodedMessage}`;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
+    // 3. Abre o WhatsApp para o reenvio
+    window.open(whatsappUrl, '_blank');
     showToast('Preparando para reenviar...', 'success');
 }
 
@@ -23173,26 +23084,6 @@ async function showReceiptModal() {
     modal.classList.add('active');
 }
 
-function copiarMilharesDosBichos(el) {
-    try {
-        const milhares = JSON.parse(decodeURIComponent(el.dataset.milhares || '[]'));
-        if (!milhares.length) { showToast('Nenhuma milhar encontrada.', 'error'); return; }
-        const texto = milhares.join(' ');
-        navigator.clipboard.writeText(texto).then(() => {
-            const original = el.innerHTML;
-            el.innerHTML = el.tagName === 'BUTTON' ? '✅ Copiado!' : '✅';
-            el.style.background = 'rgba(40,167,69,0.25)';
-            setTimeout(() => { el.innerHTML = original; el.style.background = ''; }, 1500);
-        }).catch(() => {
-            const ta = document.createElement('textarea');
-            ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
-            document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-            document.body.removeChild(ta);
-        });
-        showToast(milhares.length + ' milhar(es) copiada(s)!', 'success');
-    } catch(e) { showToast('Erro ao copiar.', 'error'); }
-}
-
 async function revealReceiptInputs() {
     document.getElementById('receiptModalTitle').innerHTML = '✍️ Preencha os Dados da Aposta';
     document.getElementById('receipt-instruction').style.display = 'block';
@@ -23434,122 +23325,132 @@ async function showSavedReceiptsModal(filtro = 'mcd') {
     document.getElementById('savedReceiptsModal').classList.add('active');
 }
 
-let unsubscribeReceipts = null;
-
-function updateSavedReceiptsContainer() {
+async function updateSavedReceiptsContainer() {
     const container = document.getElementById('savedReceiptsContainer');
     if (!container) return;
-
-    if (container.innerHTML === '') {
-        container.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner-border" style="color:#007bff;"></div><p style="margin-top:10px;">Buscando recibos...</p></div>';
-    }
+    container.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner-border" style="color:#007bff;"></div><p style="margin-top:10px;">Buscando recibos...</p></div>';
 
     try {
-        if (unsubscribeReceipts) unsubscribeReceipts();
+        const querySnapshot = await firestoreDB.collection('receipts').orderBy('createdAt', 'desc').limit(200).get();        
+        
+        if (querySnapshot.empty) {
+            container.innerHTML = '<div class="no-saved-items">Nenhum recibo salvo na nuvem.</div>';
+            return;
+        }
 
-        unsubscribeReceipts = firestoreDB.collection('receipts')
-            .orderBy('createdAt', 'desc')
-            .limit(200)
-            .onSnapshot((querySnapshot) => {
-                if (querySnapshot.empty) {
-                    container.innerHTML = '<div class="no-saved-items">Nenhum recibo salvo na nuvem.</div>';
-                    return;
-                }
+        let html = '<div style="display: flex; flex-direction: column; gap: 12px; max-height: 60vh; overflow-y: auto; padding-right: 5px;">';
+        const renderQueue = [];
+        let countExibidos = 0;
 
-                let html = '<div style="display: flex; flex-direction: column; gap: 12px; max-height: 60vh; overflow-y: auto; padding-right: 5px;">';
-                const renderQueue = [];
+        querySnapshot.forEach(doc => {
+            const item = doc.data();
+            const id = doc.id;
 
-                querySnapshot.forEach(doc => {
-                    const item = doc.data();
-                    const id = doc.id;
-                    const isKit = item.tipo === 'kit' || (item.content && item.content.includes('Pacote.........: Kit'));
-                    
-                    if (currentReceiptsFilter === 'kit' && !isKit) return;
-                    if (currentReceiptsFilter === 'mcd' && isKit) return; 
+            const isKit = item.tipo === 'kit' || (item.content && item.content.includes('Pacote.........: Kit'));
+            
+            if (currentReceiptsFilter === 'kit' && !isKit) return;
+            if (currentReceiptsFilter === 'mcd' && isKit) return; 
 
-                    const creationDate = item.createdAt ? item.createdAt.toDate() : new Date();
-                    const dataFormatada = creationDate.toLocaleDateString('pt-BR');
-                    const horaFormatada = creationDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    const codeMatch = item.content.match(/Código\.*:\s*(\S+)/);
-                    const code = codeMatch ? codeMatch[1] : 'S/C';
-                    const extractionMatch = item.content.match(/Extração\.*:\s*(.*)/);
-                    let extraction = extractionMatch && extractionMatch[1] ? extractionMatch[1].trim() : 'N/A';
-                    const valueMatch = item.content.match(/Valor Pago\.*:\s*(R\$\s*[\d,.]+)/);
-                    const value = valueMatch ? valueMatch[1] : '';
-                    const pacoteMatch = item.content.match(/Pacote\.*:\s*(.*)/);
-                    const pacote = pacoteMatch ? pacoteMatch[1].trim() : 'Avulso';
-                    
-                    const cleanedContent = (item.content || '').replace(/<button[^>]*>.*?<\/button>/g, '');
+            countExibidos++;
 
-                    const bgCor = isKit ? 'rgba(255, 193, 7, 0.05)' : 'rgba(128,128,128,0.05)';
-                    const borderCor = isKit ? 'rgba(255, 193, 7, 0.4)' : 'rgba(128,128,128,0.2)';
-                    const txtCor = isKit ? '#b47b00' : '#007bff';
-                    const btnVerCor = isKit ? '#ffc107' : '#17a2b8';
-                    const btnVerTxt = isKit ? '#333' : '#fff';
+            const creationDate = item.createdAt ? item.createdAt.toDate() : new Date();
+            const dataFormatada = creationDate.toLocaleDateString('pt-BR');
+            const horaFormatada = creationDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-                    html += `
-                    <div class="saved-item" style="background-color: ${bgCor}; border: 1px solid ${borderCor}; border-radius: 8px; padding: 15px; text-align: left; margin-bottom: 0;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed ${borderCor}; padding-bottom: 8px; margin-bottom: 10px;">
-                            <strong style="color: ${txtCor}; font-size: 1.05rem;">Cód: ${code}</strong>
-                            <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">📅 ${dataFormatada} às ${horaFormatada}</span>
-                        </div>
-                        <div style="font-size: 0.95rem; margin-bottom: 5px; color: inherit; font-weight: bold;">🎯 ${extraction}</div>
-                        <div style="font-size: 0.85rem; margin-bottom: 10px; color: inherit; opacity: 0.9;">💰 Valor: ${value} | 📦 Método: ${pacote}</div>
-                        ${(() => {
-                            let milhares = [...(item.content.matchAll(/\b(\d{4})\b/g))].map(m => m[1]);
-                            milhares = milhares.filter(num => num !== '2026' && num !== new Date().getFullYear().toString());
-                            const milharesUnicas = [...new Set(milhares)];
-                            const emojisMap = {};
-                            milharesUnicas.forEach(n => {
-                                const bd = getBichoDataFromNumber(n);
-                                if (bd) {
-                                    if (!emojisMap[bd.animal]) emojisMap[bd.animal] = { emoji: bd.emoji, milhares: [] };
-                                    emojisMap[bd.animal].milhares.push(n);
-                                }
-                            });
-                            const entries = Object.entries(emojisMap);
-                            if (!entries.length) return '';
-                            const encodedTodas = encodeURIComponent(JSON.stringify(entries.flatMap(([, v]) => v.milhares)));
-                            const emojisStr = entries.map(([animal, v]) => {
-                                const encoded = encodeURIComponent(JSON.stringify(v.milhares));
-                                return `<span title="Copiar ${animal}" data-milhares="${encoded}" onclick="copiarMilharesDosBichos(this)" style="font-size:1.3rem; cursor:pointer; padding:2px 4px; border-radius:6px; transition:background 0.2s;">${v.emoji}</span>`;
-                            }).join('');
-                            return `<div style="display:flex; align-items:center; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
-                                <div style="letter-spacing:3px;">${emojisStr}</div>
-                                <button data-milhares="${encodedTodas}" onclick="copiarMilharesDosBichos(this)" style="font-size:0.7rem; padding:3px 8px; border:1px solid rgba(0,123,255,0.4); border-radius:12px; background:rgba(0,123,255,0.1); color:#007bff; cursor:pointer; font-weight:bold;">📋 Copiar Tudo</button>
-                            </div>`;
-                        })()}
-                        <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: nowrap;">
-    <button id="btn-view-${id}" class="save-button" style="flex: 2; min-width: 0; padding: 9px 6px; background-color: ${btnVerCor}; color: ${btnVerTxt}; border:none; border-radius:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👀 Ver Recibo</button>
-    <button id="btn-resend-${id}" class="view-button" style="flex: 1.5; min-width: 0; padding: 9px 6px; background-color: #25D366; color: white; border:none; border-radius:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📲 Zap</button>
-    <button id="btn-copy-${id}" class="view-button" style="flex: 0 0 38px; padding: 9px 0; background-color: #6f42c1; color: white; border:none; border-radius:4px;">📋</button>
-    <button id="btn-del-${id}" class="import-btn" style="flex: 0 0 38px; padding: 9px 0; border:none; border-radius:4px;">🗑️</button>
+            const codeMatch = item.content.match(/Código\.*:\s*(\S+)/);
+            const code = codeMatch ? codeMatch[1] : 'S/C';
+
+            const extractionMatch = item.content.match(/Extração\.*:\s*(.*)/);
+            let extraction = 'N/A';
+            if (extractionMatch && extractionMatch[1]) extraction = extractionMatch[1].trim();
+
+            const valueMatch = item.content.match(/Valor Pago\.*:\s*(R\$\s*[\d,.]+)/);
+            const value = valueMatch ? valueMatch[1] : '';
+
+            const pacoteMatch = item.content.match(/Pacote\.*:\s*(.*)/);
+            const pacote = pacoteMatch ? pacoteMatch[1].trim() : 'Avulso';
+
+            const rawContent = item.content || '';
+            const cleanedContent = rawContent.replace(/<button[^>]*>.*?<\/button>/g, '');
+
+            // CORES AMARELADAS PARA DESTACAR SE FOR KIT DE VENDA!
+            const bgCor = isKit ? 'rgba(255, 193, 7, 0.05)' : 'rgba(128,128,128,0.05)';
+            const borderCor = isKit ? 'rgba(255, 193, 7, 0.4)' : 'rgba(128,128,128,0.2)';
+            const txtCor = isKit ? '#b47b00' : '#007bff';
+            const btnVerCor = isKit ? '#ffc107' : '#17a2b8';
+            const btnVerTxt = isKit ? '#333' : '#fff';
+
+            html += `
+            <div class="saved-item" style="background-color: ${bgCor}; border: 1px solid ${borderCor}; border-radius: 8px; padding: 15px; text-align: left; margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed ${borderCor}; padding-bottom: 8px; margin-bottom: 10px;">
+                    <strong style="color: ${txtCor}; font-size: 1.05rem;">Cód: ${code}</strong>
+                    <span style="font-size: 0.8rem; color: #6c757d; font-weight: bold;">📅 ${dataFormatada} às ${horaFormatada}</span>
+                </div>
+                
+                <div style="font-size: 0.95rem; margin-bottom: 5px; color: inherit; font-weight: bold;">
+                    🎯 ${extraction}
+                </div>
+                <div style="font-size: 0.85rem; margin-bottom: 10px; color: inherit; opacity: 0.9;">
+    💰 Valor: ${value} <span style="margin: 0 5px;">|</span> 📦 Método: ${pacote}
 </div>
-                        <div id="content-${id}" style="display: none; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; margin-top: 10px;">
-                            <div id="text-${id}" style="white-space: pre-wrap; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto;"></div>
-                        </div>
-                    </div>`;
-                    renderQueue.push({ id, cleanedContent });
-                });
+${(() => {
+    const milhares = [...(item.content.matchAll(/\b(\d{4})\b/g))].map(m => m[1]);
+    const emojisMap = {};
+    milhares.forEach(n => {
+        const bd = getBichoDataFromNumber(n);
+        if (bd) emojisMap[bd.animal] = bd.emoji;
+    });
+    const emojisStr = Object.entries(emojisMap).map(([animal, emoji]) => 
+        `<span title="${animal}" style="font-size:1.1rem;">${emoji}</span>`
+    ).join(' ');
+    return emojisStr ? `<div style="margin-bottom:12px; letter-spacing:3px;">${emojisStr}</div>` : '';
+})()}
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <button id="btn-view-${id}" class="save-button" style="flex: 2; padding: 10px; font-size: 0.85rem; font-weight: bold; margin: 0; background-color: ${btnVerCor}; color: ${btnVerTxt}; box-shadow: 0 2px 0 rgba(0,0,0,0.1);">👀 Ver Recibo</button>
+                    <button id="btn-resend-${id}" class="view-button" style="flex: 2; padding: 10px; font-size: 0.85rem; font-weight: bold; margin: 0; background-color: #25D366; color: white;" title="Reenviar Link no WhatsApp">📲 Zap</button>
+                    <button id="btn-copy-${id}" class="view-button" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0; background-color: #6f42c1;" title="Copiar Texto">📋</button>
+                    <button id="btn-del-${id}" class="import-btn" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Apagar da Nuvem">🗑️</button>
+                </div>
+                
+                <div id="content-${id}" style="display: none; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); margin-top: 10px;">
+                    <div id="text-${id}" style="white-space: pre-wrap; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            </div>`;
 
-                html += '</div>';
-                container.innerHTML = html;
+            renderQueue.push({ id, cleanedContent });
+        });
 
-                renderQueue.forEach(item => {
-                    document.getElementById(`text-${item.id}`).innerHTML = item.cleanedContent;
-                    document.getElementById(`btn-view-${item.id}`).onclick = () => {
-                        const d = document.getElementById(`content-${item.id}`);
-                        d.style.display = d.style.display === 'none' ? 'block' : 'none';
-                    };
-                    document.getElementById(`btn-copy-${item.id}`).onclick = (e) => copyToClipboard(document.getElementById(`text-${item.id}`).textContent, e.currentTarget);
-                    document.getElementById(`btn-resend-${item.id}`).onclick = () => resendReceiptLink(item.id);
-                    document.getElementById(`btn-del-${item.id}`).onclick = () => deleteSavedReceipt(item.id);
-                });
-            }, (error) => {
-                console.error("Erro no Listener:", error);
+        if (countExibidos === 0) {
+            container.innerHTML = `<div class="no-saved-items">Nenhum histórico encontrado para ${currentReceiptsFilter === 'kit' ? 'Kits' : 'MCD'}.</div>`;
+            return;
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        renderQueue.forEach(item => {
+            document.getElementById(`text-${item.id}`).innerHTML = item.cleanedContent;
+
+            document.getElementById(`btn-view-${item.id}`).addEventListener('click', (e) => {
+                const contentDiv = document.getElementById(`content-${item.id}`);
+                const isHidden = contentDiv.style.display === 'none';
+                contentDiv.style.display = isHidden ? 'block' : 'none';
+                e.currentTarget.innerHTML = isHidden ? '🙈 Ocultar' : '👀 Ver Recibo';
             });
+
+            document.getElementById(`btn-copy-${item.id}`).addEventListener('click', (e) => {
+                const text = document.getElementById(`text-${item.id}`).textContent;
+                copyToClipboard(text, e.currentTarget);
+            });
+
+            document.getElementById(`btn-resend-${item.id}`).addEventListener('click', () => resendReceiptLink(item.id));
+            document.getElementById(`btn-del-${item.id}`).addEventListener('click', () => deleteSavedReceipt(item.id));
+        });
+
     } catch (error) {
-        console.error("Erro ao configurar recibos:", error);
+        console.error("Erro ao buscar recibos:", error);
+        container.innerHTML = '<div class="no-saved-items" style="color: #dc3545;">Erro ao carregar histórico. Verifique sua conexão.</div>';
     }
 }
 
@@ -23595,26 +23496,6 @@ function selectAllReceipts(state) {
             item.querySelector('.receipt-select-checkbox').checked = state;
         }
     });
-}
-
-function copiarMilharesDosBichos(el) {
-    try {
-        const milhares = JSON.parse(decodeURIComponent(el.dataset.milhares || '[]'));
-        if (!milhares.length) { showToast('Nenhuma milhar encontrada.', 'error'); return; }
-        const texto = milhares.join(' ');
-        navigator.clipboard.writeText(texto).then(() => {
-            const original = el.innerHTML;
-            el.innerHTML = el.tagName === 'BUTTON' ? '✅ Copiado!' : '✅';
-            el.style.background = 'rgba(40,167,69,0.25)';
-            setTimeout(() => { el.innerHTML = original; el.style.background = ''; }, 1500);
-        }).catch(() => {
-            const ta = document.createElement('textarea');
-            ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
-            document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-            document.body.removeChild(ta);
-        });
-        showToast(milhares.length + ' milhar(es) copiada(s)!', 'success');
-    } catch(e) { showToast('Erro ao copiar.', 'error'); }
 }
 
 async function deleteSelectedReceipts() {
@@ -27461,11 +27342,21 @@ ${resumoTextoArr.join('\n\n')}
     // 3. Salva na Nuvem para gerar o Link do Recibo
     let linkOficial = "";
     try {
+        // --- CÁLCULO DE EXPIRAÇÃO (baseado no horário do sorteio, não em 4h fixas) ---
+        const timeMatchKit = String(horario).match(/(\d{2}):(\d{2})/);
+        const dataExpiracaoKit = new Date();
+        if (timeMatchKit) {
+            dataExpiracaoKit.setHours(parseInt(timeMatchKit[1], 10), parseInt(timeMatchKit[2], 10), 0, 0);
+        }
+        const expirationMinutesKit = parseInt(document.getElementById('expirationTimeInput')?.value, 10) || 10;
+        dataExpiracaoKit.setMinutes(dataExpiracaoKit.getMinutes() + expirationMinutesKit);
+        // ------------------------------
+
         const docRef = await firestoreDB.collection('receipts').add({
             content: rawReceiptContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: false,
-            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000), // Expira em 4h
+            expiresAt: dataExpiracaoKit,
             tipo: 'kit'
         });
         linkOficial = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
@@ -27877,16 +27768,25 @@ ${numerosTextoInternoArr.join('\n\n')}
 
     let linkOficial = "";
     try {
-        showToast("Gerando recibo online...", "info");
+        // --- CÁLCULO DE EXPIRAÇÃO (baseado no horário do sorteio, não em 4h fixas) ---
+        const timeMatchKit = String(horario).match(/(\d{2}):(\d{2})/);
+        const dataExpiracaoKit = new Date();
+        if (timeMatchKit) {
+            dataExpiracaoKit.setHours(parseInt(timeMatchKit[1], 10), parseInt(timeMatchKit[2], 10), 0, 0);
+        }
+        const expirationMinutesKit = parseInt(document.getElementById('expirationTimeInput')?.value, 10) || 10;
+        dataExpiracaoKit.setMinutes(dataExpiracaoKit.getMinutes() + expirationMinutesKit);
+        // ------------------------------
+
         const docRef = await firestoreDB.collection('receipts').add({
             content: rawReceiptContent,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPaid: false,
-            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+            expiresAt: dataExpiracaoKit,
             tipo: 'kit'
         });
         linkOficial = `https://meus-recibos-vip.web.app/recibo.html?id=${docRef.id}`;
-    } catch (e) { console.error("Erro ao salvar recibo online:", e); }
+    } catch (e) { console.error("Erro ao salvar recibo:", e); }
 
     // 4. Monta a mensagem do WhatsApp (NOVO FORMATO MULTI)
     const horaStr = new Date().getHours();
@@ -30254,8 +30154,10 @@ function gerar100MilharesBicho(dezenasDoBicho) {
 
     return milhares;
 }
-})();
 
+
+})();
+// ===== FIM CALCULADORA DE PALPITES =====
 
 </script> 
 
