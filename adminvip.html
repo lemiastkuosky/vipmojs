@@ -30,27 +30,10 @@
       --r:       12px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
-  height: auto; /* Alterado de min-height: 100vh para height: auto */
-  min-height: 100%;
-}
-
-body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--text);
-  overflow-y: auto; /* Garante que a rolagem vertical seja permitida */
-  overscroll-behavior-y: auto; /* Permite o comportamento natural de scroll */
-}
-
-#app {
-  display: none;
-  flex-direction: column;
-  min-height: 100vh;
-  height: auto; /* Permite que o app cresça conforme o conteúdo */
-}
+    
+    /* CORREÇÃO DO SCROLL */
+    html, body { overflow-x: hidden; max-width: 100vw; height: auto; min-height: 100%; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); overflow-y: auto; overscroll-behavior-y: auto; }
 
     /* LOGIN */
     #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
@@ -85,7 +68,7 @@ body {
     .btn-xs      { padding: 6px 12px; font-size: 0.75rem; min-height: 32px; }
 
     /* SHELL */
-    #app { display: none; flex-direction: column; min-height: 100vh; }
+    #app { display: none; flex-direction: column; min-height: 100vh; height: auto; }
 
     header {
       position: sticky; top: 0; z-index: 20;
@@ -151,7 +134,6 @@ body {
     .bicho-tag .bt-milhar{ font-family: var(--mono); font-size: 0.7rem; color: var(--accent); letter-spacing: 2px; }
     .milhar-label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
 
-    /* MILHAR RECÉM-TROCADA — pisca em vermelho para chamar atenção */
     @keyframes milharChangedBlink {
       0%, 100% { border-color: rgba(224,92,92,.3); background: rgba(245,200,66,.07); box-shadow: none; }
       50%      { border-color: var(--danger); background: rgba(224,92,92,.16); box-shadow: 0 0 10px rgba(224,92,92,.35); }
@@ -172,18 +154,6 @@ body {
     #floatingSaveBtn.ready-to-save {
       animation: saveBtnReadyBlink 1s ease-in-out infinite;
     }
-
-    /* VIEWS DESTAQUE */
-    .views-destaque {
-      display: flex; align-items: center; justify-content: space-between;
-      background: linear-gradient(135deg, rgba(61,214,140,.1), rgba(61,214,140,.05));
-      border: 1px solid rgba(61,214,140,.3); border-radius: 12px;
-      padding: 12px 16px; margin-top: 4px;
-    }
-    .views-numero { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; color: var(--green); line-height: 1; }
-    .views-label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
-    .views-zero .views-numero { color:#ad1f1f; }
-    .views-zero { border-color: var(--border); background: var(--bg); }
 
     /* MINI LOG DENTRO DO CARD */
     .mini-log { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
@@ -226,6 +196,25 @@ body {
 
     .section-label { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
+    /* CONTAINERS COLAPSÁVEIS */
+    .collapsible-container {
+      max-height: 48px;
+      overflow: hidden;
+      transition: max-height 0.3s ease-in-out;
+    }
+    .collapsible-container.expanded {
+      max-height: 2000px;
+    }
+    .toggle-wrapper { display: flex; justify-content: center; margin: 4px 0 0 0; }
+    .btn-toggle-section {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      font-family: var(--mono); font-size: 0.7rem; padding: 6px 14px;
+      border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;
+    }
+    .btn-toggle-section:active { border-color: var(--accent); color: var(--accent); }
+    .btn-toggle-section .chev { transition: transform 0.3s; }
+    .btn-toggle-section.open .chev { transform: rotate(180deg); }
+
     /* BICHO CHIPS COMPACTOS */
     .bicho-grid { 
       display: grid; 
@@ -256,38 +245,20 @@ body {
     #searchResult.found    { background: rgba(61,214,140,.1); color: var(--green); border: 1px solid rgba(61,214,140,.25); display: block; }
     #searchResult.notfound { background: rgba(224,92,92,.1);  color: var(--danger); border: 1px solid rgba(224,92,92,.25); display: block; }
 
-    /* MILHAR CHIPS E GRID RESPONSIVO */
+    /* MILHARES GRID RESPONSIVO */
     #milharesChips {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
       gap: 6px;
       width: 100%;
-      min-height: 44px;
-      max-height: 96px;
-      overflow: hidden;
-      transition: max-height .2s ease;
     }
-    #milharesChips.expanded {
-      max-height: 2000px;
-    }
-    .milhares-toggle-wrap { display: flex; justify-content: center; margin-top: 6px; }
-    .btn-toggle-milhares {
-      background: transparent; border: 1px solid var(--border); color: var(--muted);
-      font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
-      padding: 6px 14px; border-radius: 8px; cursor: pointer; touch-action: manipulation;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .btn-toggle-milhares:active { border-color: var(--accent); color: var(--accent); }
-    .btn-toggle-milhares .chev { transition: transform .2s ease; }
-    .btn-toggle-milhares.open .chev { transform: rotate(180deg); }
-    
     .m-chip {
       display: flex; align-items: center; justify-content: center;
       padding: 8px 2px; border-radius: 8px; cursor: pointer;
       font-family: var(--mono); font-size: 0.85rem; font-weight: 700; 
       background: var(--bg); border: 1px solid var(--border); color: var(--muted);
       transition: border-color .12s, background .12s, color .12s; user-select: none;
-      width: 100%; 
+      width: 100%; height: 44px;
     }
     .m-chip:hover { border-color: var(--accent); color: var(--text); }
     .m-chip.active { border-color: var(--accent); background: rgba(245,200,66,.12); color: var(--accent); }
@@ -374,21 +345,10 @@ body {
       50%       { border-color: var(--accent); box-shadow: 0 0 8px rgba(245,200,66,.25); }
     }
 
-    /* base de todos os botões do card */
-    .card-actions {
-      display: flex; flex-direction: column; gap: 8px;
-    }
+    .card-actions { display: flex; flex-direction: column; gap: 8px; }
+    .card-row-main { display: flex; gap: 8px; align-items: center; }
+    .card-row-secondary { display: flex; gap: 8px; align-items: center; }
 
-    /* LINHA 1: Alterar (cresce) + Desfazer (some se não houver histórico) */
-    .card-row-main {
-      display: flex; gap: 8px; align-items: center;
-    }
-    /* LINHA 2: Apagar + Copiar + Ver */
-    .card-row-secondary {
-      display: flex; gap: 8px; align-items: center;
-    }
-
-    /* ── Alterar ── */
     .card-actions .btn-alterar {
       flex: 1; background: var(--accent); color: #000; border: none; border-radius: 10px;
       font-family: var(--sans); font-weight: 700; font-size: 0.9rem; padding: 12px 16px; min-height: 46px;
@@ -397,7 +357,6 @@ body {
     }
     .card-actions .btn-alterar:active { transform: scale(.96); background: #ffd740; }
 
-    /* ── Banner de troca recente (substitui o antigo btn-undo pequeno) ── */
     .undo-banner {
       display: none;
       align-items: center; justify-content: space-between; gap: 10px;
@@ -419,7 +378,6 @@ body {
     }
     .undo-banner-btn:active { transform: scale(.95); background: #ffd740; }
 
-    /* ── Apagar ── */
     .card-actions .btn-del {
       flex: 0 0 46px; height: 46px; background: var(--danger); color: #fff; border: none;
       border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
@@ -427,7 +385,6 @@ body {
     }
     .card-actions .btn-del:active { transform: scale(.96); background: #c62828; }
 
-    /* ── Copiar / Ver ── */
     .card-actions .btn-ver {
       flex: 1; background: transparent; color: var(--muted); border: 1.5px solid var(--border);
       border-radius: 10px; font-family: var(--sans); font-weight: 600; font-size: 0.82rem; padding: 11px 10px;
@@ -437,64 +394,36 @@ body {
     .card-actions .btn-ver:active,
     .card-actions .btn-ver:hover { border-color: #4299e1; color: #4299e1; background: rgba(66,153,225,.08); }
 
-    /* Desktop: tudo numa linha só */
     @media (min-width: 600px) {
       .card-actions { flex-direction: row; flex-wrap: nowrap; }
       .card-row-main, .card-row-secondary { display: contents; }
       .card-actions .btn-alterar { font-size: 0.92rem; padding: 13px 20px; flex: 2; }
-      .card-actions .btn-del {
-        flex: 0 0 auto; width: auto; padding: 0 16px; gap: 6px; font-size: 0.85rem;
-      }
+      .card-actions .btn-del { flex: 0 0 auto; width: auto; padding: 0 16px; gap: 6px; font-size: 0.85rem; }
       .card-actions .btn-del::after { content: 'Apagar'; font-family: var(--sans); font-weight: 700; font-size: 0.82rem; }
       .card-actions .btn-ver { flex: 0 0 auto; padding: 12px 16px; font-size: 0.88rem; }
     }
 
-    /* BARRA FLUTUANTE (Fechar + Salvar) — sobe com o teclado no mobile */
+    /* BARRA FLUTUANTE */
     #floatingActionBar {
-      display: none;
-      position: fixed;
-      inset: auto 16px 16px 16px;
-      width: auto;
-      z-index: 500;
-      gap: 10px;
-      box-sizing: border-box;
-      transition: bottom .15s ease;
+      display: none; position: fixed; inset: auto 16px 16px 16px; width: auto; z-index: 500;
+      gap: 10px; box-sizing: border-box; transition: bottom .15s ease;
     }
     #floatingActionBar.open { display: flex; }
     #floatingCloseBtn {
-      flex: 0 0 52px;
-      width: 52px;
-      min-width: 52px;
-      background: rgba(224,92,92,.12); color: var(--danger);
-      border: 1.5px solid var(--danger); border-radius: 14px;
-      font-family: var(--sans); font-weight: 800; font-size: 1.1rem;
-      padding: 0; min-height: 52px;
-      box-shadow: 0 4px 24px rgba(0,0,0,.5);
-      cursor: pointer; touch-action: manipulation;
-      display: flex; align-items: center; justify-content: center;
-      transition: background .15s, transform .1s;
-      box-sizing: border-box;
+      flex: 0 0 52px; width: 52px; min-width: 52px; background: rgba(224,92,92,.12); color: var(--danger);
+      border: 1.5px solid var(--danger); border-radius: 14px; font-family: var(--sans); font-weight: 800; font-size: 1.1rem;
+      padding: 0; min-height: 52px; box-shadow: 0 4px 24px rgba(0,0,0,.5); cursor: pointer; touch-action: manipulation;
+      display: flex; align-items: center; justify-content: center; transition: background .15s, transform .1s; box-sizing: border-box;
     }
     #floatingCloseBtn:active { transform: scale(.97); background: rgba(224,92,92,.28); }
     #floatingSaveBtn {
-      flex: 1 1 0%;
-      min-width: 0;
-      width: 0;
-      background: var(--green); color: #000;
-      border: none; border-radius: 14px;
-      font-family: var(--sans); font-weight: 800; font-size: 1rem;
-      padding: 16px 12px; min-height: 52px;
-      box-shadow: 0 4px 24px rgba(0,0,0,.5);
-      cursor: pointer; touch-action: manipulation;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      transition: background .15s, transform .1s;
-      box-sizing: border-box;
-      white-space: nowrap;
-      overflow: hidden;
+      flex: 1 1 0%; min-width: 0; width: 0; background: var(--green); color: #000; border: none; border-radius: 14px;
+      font-family: var(--sans); font-weight: 800; font-size: 1rem; padding: 16px 12px; min-height: 52px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5); cursor: pointer; touch-action: manipulation; display: flex; align-items: center;
+      justify-content: center; gap: 8px; transition: background .15s, transform .1s; box-sizing: border-box; white-space: nowrap; overflow: hidden;
     }
     #floatingSaveBtn:active { transform: scale(.97); background: #2fc47a; }
 
-    /* botão desfazer inline no modal (ao lado do label de busca) */
     #undoArea .btn-undo-modal {
       display: inline-flex; align-items: center; gap: 5px;
       background: transparent; color: var(--accent); border: 1.5px solid rgba(245,200,66,.5);
@@ -513,7 +442,6 @@ body {
     .lf-version { background: rgba(245,200,66,.1); color: var(--accent); border: 1px solid rgba(245,200,66,.2); border-radius: 6px; padding: 2px 8px; font-weight: 700; letter-spacing: 0.05em; }
     .lf-sep { opacity: 0.3; }
     .lf-copy { opacity: 0.6; }
-
     .count-pill { background: var(--accent); color: #000; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 800; margin-right: 8px; min-width: 24px; text-align: center; }
 
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; }
@@ -522,22 +450,8 @@ body {
       background-color: #0f111a; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 1px solid #333;
     }
     
-    /* TRANCAR VISUAL ESCURO DO MODAL GERAL */
-    .modal-content, 
-    .log-modal-content, 
-    #logModal .modal-content,
-    .mini-log-modal {
-        background-color: #0f111a;
-        color: #ffffff;
-        border: 1px solid #333;
-    }
-    .modal-content span, 
-    .modal-content h1, 
-    .modal-content h2, 
-    .modal-content p, 
-    .modal-content div {
-        color: #ffffff;
-    }
+    .modal-content, .log-modal-content, #logModal .modal-content, .mini-log-modal { background-color: #0f111a; color: #ffffff; border: 1px solid #333; }
+    .modal-content span, .modal-content h1, .modal-content h2, .modal-content p, .modal-content div { color: #ffffff; }
     .modal-header { padding: 14px; display: flex; justify-content: space-between; align-items: center; font-family: var(--sans); font-weight: bold; border-bottom: 1px solid #222; }
     .btn-close { background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-family: var(--mono); font-size: 0.75rem; font-weight: bold; cursor: pointer; }
     #previewIframe { width: 100%; height: 100%; border: none; background: #e9eef2; }
@@ -561,14 +475,10 @@ body {
 
       <div class="login-footer">
         <div class="login-footer-divider">
-          <span class="lf-line"></span>
-          <span class="lf-dot"></span>
-          <span class="lf-line"></span>
+          <span class="lf-line"></span><span class="lf-dot"></span><span class="lf-line"></span>
         </div>
         <div class="login-footer-info">
-          <span class="lf-version">v1.7.1</span>
-          <span class="lf-sep">·</span>
-          <span class="lf-copy">VipMojs © 2025</span>
+          <span class="lf-version">v1.7.1</span><span class="lf-sep">·</span><span class="lf-copy">VipMojs © 2025</span>
         </div>
       </div>
     </div>
@@ -610,14 +520,10 @@ body {
     
     <div class="app-footer">
       <div class="login-footer-divider">
-        <span class="lf-line"></span>
-        <span class="lf-dot"></span>
-        <span class="lf-line"></span>
+        <span class="lf-line"></span><span class="lf-dot"></span><span class="lf-line"></span>
       </div>
       <div class="login-footer-info">
-        <span class="lf-version">v1.7.1</span>
-        <span class="lf-sep">&#183;</span>
-        <span class="lf-copy">VipMojs &#169; 2025</span>
+        <span class="lf-version">v1.7.1</span><span class="lf-sep">&#183;</span><span class="lf-copy">VipMojs &#169; 2025</span>
       </div>
     </div>
   </div>
@@ -640,25 +546,9 @@ body {
       </div>
       <div class="modal-body">
 
-        <div style="margin-bottom: 12px;">
-          <div class="section-label">BICHOS NESTE BILHETE</div>
-          <div class="bicho-grid" id="bichoGrid"></div>
-        </div>
-
-        <div>
-          <div class="section-label">MILHARES NO RECIBO — toque para selecionar qual alterar</div>
-          <div id="milharesChips"></div>
-          <div class="milhares-toggle-wrap" id="milharesToggleWrap" style="display:none;">
-            <button type="button" class="btn-toggle-milhares" id="milharesToggleBtn" onclick="toggleMilharesExpand()">
-              <span id="milharesToggleLabel">Ver todas</span>
-              <span class="chev">▾</span>
-            </button>
-          </div>
-        </div>
-
         <div>
           <div class="section-label" style="justify-content:space-between;align-items:center;display:flex;">
-            <span>BUSCAR MILHAR NO RECIBO</span>
+            <span>🔍 BUSCAR MILHAR</span>
             <div id="undoArea" style="display:none;"></div>
           </div>
           <div class="search-milhar-wrap" style="margin-bottom: 12px;">
@@ -666,8 +556,10 @@ body {
             <input type="text" id="milharSearch" maxlength="4" placeholder="0000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,''); doSearch()" />
           </div>
           <div id="searchResult" style="margin-bottom: 16px;"></div>
+        </div>
 
-          <div class="section-label">ALTERAR MILHAR SELECIONADA</div>
+        <div>
+          <div class="section-label">ALTERAR SELECIONADA</div>
           <div class="troca-box">
             <div class="troca-labels">
               <span>ATUAL</span>
@@ -684,6 +576,31 @@ body {
           </div>
           <div id="milharHint"></div>
         </div>
+
+        <div>
+          <div class="section-label">MILHARES NO RECIBO — toque para selecionar</div>
+          <div id="milharesContainer" class="collapsible-container">
+            <div id="milharesChips"></div>
+          </div>
+          <div class="toggle-wrapper" id="milharesToggleWrap" style="display:none;">
+            <button type="button" class="btn-toggle-section" id="milharesToggleBtn" onclick="toggleSection('milharesContainer', this)">
+              <span id="milharesToggleLabel">Ver todas milhares</span> <span class="chev">▾</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label">BICHOS NESTE BILHETE</div>
+          <div id="bichoContainer" class="collapsible-container">
+            <div class="bicho-grid" id="bichoGrid"></div>
+          </div>
+          <div class="toggle-wrapper">
+            <button type="button" class="btn-toggle-section" onclick="toggleSection('bichoContainer', this)">
+              <span>Ver todos os bichos</span> <span class="chev">▾</span>
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -864,9 +781,6 @@ function renderList(list) {
   if (!list.length) { container.innerHTML = '<div class="empty-state">Nenhum recibo encontrado.</div>'; return; }
 
   container.innerHTML = list.map(({ id, data }) => {
-    // ----------------------------------------------------
-    // CÁLCULO INTELIGENTE DE EXPIRAÇÃO (ADMIN)
-    // ----------------------------------------------------
     const created = data.createdAt ? toDate(data.createdAt) : new Date();
     const dateStr = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created);
     
@@ -885,7 +799,6 @@ function renderList(list) {
       if (data.expiresAt) expires = toDate(data.expiresAt);
       else expires = new Date(created.getTime() + (4 * 60 * 60 * 1000));
     }
-    // ----------------------------------------------------
     
     let badgeHtml = '';
     if (expires) {
@@ -911,38 +824,27 @@ function renderList(list) {
     });
   
     const milharTrocadaRecente = undoHistory[id] ? undoHistory[id].newM : null;
-const bichosHtml = bichosVendidos.length === 0 ? `<span style="font-family:var(--mono);font-size:0.8rem;color:var(--muted)">não identificado</span>` : bichosVendidos.map(({ milhar, bicho }) => `
-  <div class="bicho-tag ${milhar === milharTrocadaRecente ? 'changed' : ''}">
-    <span class="bt-emoji">${bicho.emoji}</span>
-    <div class="bt-info">
-      <span class="bt-nome">${bicho.nome}</span>
-      <span class="bt-milhar">${milhar}${milhar === milharTrocadaRecente ? ' 🔴' : ''}</span>
-    </div>
-  </div>`).join('');
+    const bichosHtml = bichosVendidos.length === 0 ? `<span style="font-family:var(--mono);font-size:0.8rem;color:var(--muted)">não identificado</span>` : bichosVendidos.map(({ milhar, bicho }) => `
+      <div class="bicho-tag ${milhar === milharTrocadaRecente ? 'changed' : ''}">
+        <span class="bt-emoji">${bicho.emoji}</span>
+        <div class="bt-info">
+          <span class="bt-nome">${bicho.nome}</span>
+          <span class="bt-milhar">${milhar}${milhar === milharTrocadaRecente ? ' 🔴' : ''}</span>
+        </div>
+      </div>`).join('');
 
     const logs = data.accessLog || [];
     const sortedLogs = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
     
-    // --- LÓGICA DE AGRUPAMENTO POR APARELHO NO MINI-LOG ---
     const deviceMap = new Map();
-    
     sortedLogs.forEach(log => {
       const key = log.deviceId || log.ua || log.ip || 'Desconhecido';
-      
-      if (!deviceMap.has(key)) {
-        deviceMap.set(key, { ...log, count: 1, locations: new Set() });
-      } else {
-        deviceMap.get(key).count++;
-      }
-      
-      if (log.city && log.state) {
-        deviceMap.get(key).locations.add(`${log.city} - ${log.state}`);
-      }
+      if (!deviceMap.has(key)) { deviceMap.set(key, { ...log, count: 1, locations: new Set() }); }
+      else { deviceMap.get(key).count++; }
+      if (log.city && log.state) { deviceMap.get(key).locations.add(`${log.city} - ${log.state}`); }
     });
     
-    // Mostra apenas o top 3 no card principal
     const groupedLogs = Array.from(deviceMap.values()).slice(0, 3);
-
     const logRows = groupedLogs.length === 0
       ? `<div class="mini-log-vazio">Nenhum acesso ainda</div>`
       : groupedLogs.map((log, index) => {
@@ -962,15 +864,10 @@ const bichosHtml = bichosVendidos.length === 0 ? `<span style="font-family:var(-
 
           const t = toDate(log.time);
           const formattedDate = `${new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(t)} às ${new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(t)}`;
-          
           const locArray = Array.from(log.locations || []);
           let locationText = 'Visitante';
-          
-          if (locArray.length > 1) {
-            locationText = `${locArray[0]} (+${locArray.length - 1} locais)`;
-          } else if (locArray.length === 1) {
-            locationText = locArray[0];
-          }
+          if (locArray.length > 1) { locationText = `${locArray[0]} (+${locArray.length - 1} locais)`; }
+          else if (locArray.length === 1) { locationText = locArray[0]; }
           
           return `<div class="mini-log-item" style="padding: 4px 0;">
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
@@ -1076,6 +973,7 @@ function updateDeleteBar() {
 let pendingDeleteIds = [];
 let pendingUndoId = null;
 let pendingSave = null;
+
 function askDeleteOne(id) {
   pendingDeleteIds = [id]; const rec = allReceipts.find(r => r.id === id);
   const milhar = rec ? extractMilhar(rec.data.content || '') : '—';
@@ -1094,19 +992,13 @@ function askDeleteAll() {
 }
 function closeConfirm() { 
   document.getElementById('confirmOverlay').classList.remove('open'); 
-  pendingDeleteIds = []; 
-  pendingUndoId = null;
-  pendingSave = null;
+  pendingDeleteIds = []; pendingUndoId = null; pendingSave = null;
   document.getElementById('confirmTitle').textContent = '🗑️ Confirmar exclusão';
   document.querySelector('.confirm-box').classList.remove('mode-accent');
   const okBtn = document.getElementById('confirmOkBtn');
-  okBtn.disabled = false;
-  okBtn.textContent = 'Apagar';
-  okBtn.className = 'btn btn-danger';
-  okBtn.onclick = confirmDeleteNow;
+  okBtn.disabled = false; okBtn.textContent = 'Apagar'; okBtn.className = 'btn btn-danger'; okBtn.onclick = confirmDeleteNow;
   const cancelBtn = document.getElementById('confirmCancelBtn');
-  cancelBtn.textContent = 'Cancelar';
-  cancelBtn.onclick = closeConfirm;
+  cancelBtn.textContent = 'Cancelar'; cancelBtn.onclick = closeConfirm;
 }
 
 async function confirmDeleteNow() {
@@ -1145,26 +1037,39 @@ function extractAllMilhares(content) {
   const matches = [...textWithoutDates.matchAll(/\b(\d{4})\b/g)];
   const seen = new Set(); 
   const result = [];
-  
   for (const m of matches) { 
     const v = m[1]; 
-    if (!seen.has(v)) { 
-      seen.add(v); 
-      result.push(v); 
-    } 
+    if (!seen.has(v)) { seen.add(v); result.push(v); } 
   }
   return result;
 }
 
+// LÓGICA DE TOGGLE DAS SEÇÕES
+function toggleSection(containerId, btnElement) {
+  const container = document.getElementById(containerId);
+  const isExpanded = container.classList.toggle('expanded');
+  btnElement.classList.toggle('open', isExpanded);
+  
+  const span = btnElement.querySelector('span');
+  if (containerId === 'milharesContainer') {
+      const count = document.querySelectorAll('#milharesChips .m-chip').length;
+      span.textContent = isExpanded ? 'Recolher' : `Ver todas milhares (${count})`;
+  } else {
+      span.textContent = isExpanded ? 'Recolher' : 'Ver todos os bichos';
+  }
+}
+
 let selectedMilhar = null; 
-const MILHARES_COMPACT_LIMIT = 8; // ~2 linhas antes de precisar expandir
+const MILHARES_COMPACT_LIMIT = 8; 
+
 function renderMilharChips(milhares, autoSelect) {
   const container = document.getElementById('milharesChips');
+  const collapseContainer = document.getElementById('milharesContainer');
   const toggleWrap = document.getElementById('milharesToggleWrap');
   const toggleBtn = document.getElementById('milharesToggleBtn');
   const toggleLabel = document.getElementById('milharesToggleLabel');
 
-  container.classList.remove('expanded');
+  collapseContainer.classList.remove('expanded');
   if (toggleBtn) toggleBtn.classList.remove('open');
 
   if (!milhares.length) {
@@ -1172,6 +1077,7 @@ function renderMilharChips(milhares, autoSelect) {
     toggleWrap.style.display = 'none';
     return;
   }
+  
   container.innerHTML = milhares.map(m => {
     const isChanged = currentDoc && undoHistory[currentDoc.id] && undoHistory[currentDoc.id].newM === m;
     return `<div class="m-chip ${isChanged ? 'changed' : ''}" id="mchip-${m}" onclick="selectMilharChip('${m}')" title="${isChanged ? 'Trocada recentemente' : ''}">${m}</div>`;
@@ -1179,27 +1085,12 @@ function renderMilharChips(milhares, autoSelect) {
 
   if (milhares.length > MILHARES_COMPACT_LIMIT) {
     toggleWrap.style.display = 'flex';
-    toggleLabel.textContent = `Ver todas (${milhares.length})`;
+    toggleLabel.textContent = `Ver todas milhares (${milhares.length})`;
   } else {
     toggleWrap.style.display = 'none';
   }
 
-  // Só seleciona automaticamente se for explicitamente pedido (ex: busca encontrou a milhar).
-  // Ao abrir o editor, fica sem seleção/sugestão até o usuário escolher uma.
   if (autoSelect) selectMilharChip(autoSelect);
-}
-
-function toggleMilharesExpand() {
-  const container = document.getElementById('milharesChips');
-  const toggleBtn = document.getElementById('milharesToggleBtn');
-  const toggleLabel = document.getElementById('milharesToggleLabel');
-  const isOpen = container.classList.toggle('expanded');
-  toggleBtn.classList.toggle('open', isOpen);
-  toggleLabel.textContent = isOpen ? 'Ver menos' : toggleLabel.textContent.replace('Ver menos', 'Ver todas');
-  if (!isOpen) {
-    const count = document.querySelectorAll('#milharesChips .m-chip').length;
-    toggleLabel.textContent = `Ver todas (${count})`;
-  }
 }
 
 function openPreview(id) {
@@ -1216,7 +1107,6 @@ function closePreview() {
   iframe.src = '';
 }
 
-// --- LÓGICA ATUALIZADA DE SUGESTÃO DE MILHAR ---
 function selectMilharChip(m) {
   document.querySelectorAll('.m-chip').forEach(c => c.classList.remove('active'));
   const chip = document.getElementById('mchip-' + m); if (chip) chip.classList.add('active');
@@ -1233,11 +1123,7 @@ function selectMilharChip(m) {
       const dezenaSorteada = b.dezenas[Math.floor(Math.random() * b.dezenas.length)];
       const prefixoSorteado = Math.floor(Math.random() * 100).toString().padStart(2, '0');
       const cand = prefixoSorteado + dezenaSorteada;
-      
-      if (!todasExistentes.includes(cand) && cand !== m) {
-        sugestao = cand;
-        break;
-      }
+      if (!todasExistentes.includes(cand) && cand !== m) { sugestao = cand; break; }
       tentativa++;
     }
   }
@@ -1249,11 +1135,8 @@ function selectMilharChip(m) {
   document.querySelectorAll('.bicho-chip').forEach(c => c.classList.remove('active'));
   
   if (idx !== -1 && allowedBichos.has(idx)) { 
-    activeBicho = idx; 
-    document.getElementById('bicho-' + idx)?.classList.add('active'); 
-  } else { 
-    activeBicho = null; 
-  }
+    activeBicho = idx; document.getElementById('bicho-' + idx)?.classList.add('active'); 
+  } else { activeBicho = null; }
   
   onNovaMilharInput();
 }
@@ -1268,8 +1151,7 @@ function openEditor(id) {
       undoArea.style.display = 'block';
       undoArea.innerHTML = `<button class="btn-undo-modal" onclick="desfazerAlteracaoCard('${id}')">↩️ ${undoHistory[id].newM} → ${undoHistory[id].oldM}</button>`;
     } else {
-      undoArea.style.display = 'none';
-      undoArea.innerHTML = '';
+      undoArea.style.display = 'none'; undoArea.innerHTML = '';
     }
   }
   
@@ -1287,6 +1169,12 @@ function openEditor(id) {
   document.getElementById('milharSearch').value = ''; document.getElementById('searchResult').className = ''; document.getElementById('searchResult').textContent = '';
   document.getElementById('milharHint').className = ''; document.getElementById('milharHint').textContent = '';
   
+  // Reseta os toggles das seções minimizadas
+  const bContainer = document.getElementById('bichoContainer');
+  bContainer.classList.remove('expanded');
+  const bBtn = bContainer.nextElementSibling.querySelector('.btn-toggle-section');
+  if(bBtn) { bBtn.classList.remove('open'); bBtn.querySelector('span').textContent = 'Ver todos os bichos'; }
+  
   renderMilharChips(todas);
 
   document.getElementById('editorOverlay').classList.add('open');
@@ -1294,6 +1182,7 @@ function openEditor(id) {
   document.getElementById('floatingActionBar').classList.add('open');
   setTimeout(() => document.getElementById('milharSearch').focus(), 300);
 }
+
 function closeEditor() { 
   document.getElementById('editorOverlay').classList.remove('open'); 
   document.getElementById('floatingActionBar').classList.remove('open');
@@ -1313,7 +1202,6 @@ function hasUnsavedEditorChanges() {
 
 function closeEditorWithCheck() {
   if (!hasUnsavedEditorChanges()) { closeEditor(); return; }
-
   const nova = document.getElementById('novaMilharInput').value.trim();
   document.getElementById('confirmTitle').textContent = '⚠️ Sair sem salvar?';
   document.querySelector('.confirm-box').classList.remove('mode-accent');
@@ -1327,7 +1215,6 @@ function closeEditorWithCheck() {
   const cancelBtn = document.getElementById('confirmCancelBtn');
   cancelBtn.textContent = '💾 Continuar editando';
   cancelBtn.onclick = closeConfirm;
-
   document.getElementById('confirmOverlay').classList.add('open');
 }
 
@@ -1404,7 +1291,6 @@ async function confirmSaveNow() {
   try {
     const regex = new RegExp(`(?<!\\/)\\b${milharAntiga}\\b(?!\\/)`);
     const conteudoAnterior = rec.data.content;
-
     const novoContent = conteudoAnterior.replace(regex, nova);
 
     await db.collection('receipts').doc(id).update({ 
@@ -1413,8 +1299,8 @@ async function confirmSaveNow() {
     });
 
     undoHistory[id] = { content: conteudoAnterior, oldM: milharAntiga, newM: nova };
-
     const idx = allReceipts.findIndex(r => r.id === id); if (idx !== -1) allReceipts[idx].data.content = novoContent;
+    
     showToast('✅ Milhar alterada!', 'ok');
     closeConfirm();
     closeEditor();
@@ -1481,7 +1367,6 @@ function openLogModal(id) {
 
 function renderLogModalContent(id, rawData) {
   const logs = rawData.accessLog || [];
-
   const created = rawData.createdAt ? toDate(rawData.createdAt) : null;
   const dateStr = created ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(created) : '—';
   
@@ -1492,8 +1377,6 @@ function renderLogModalContent(id, rawData) {
     logContainer.innerHTML = `<div class="empty-state" style="padding: 20px 0;">Nenhum acesso registrado ainda.</div>`;
   } else {
     const sorted = [...logs].sort((a, b) => toDate(b.time) - toDate(a.time));
-
-    // --- MAPEAR APARELHOS E IDENTIFICAR SE PULARAM DE REDE ---
     const deviceGroups = {};
     let deviceCounter = 1;
     sorted.forEach(log => {
@@ -1511,7 +1394,6 @@ function renderLogModalContent(id, rawData) {
       const relativeTime = new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short' }).format(t); 
       
       const realNum = sorted.length - index; 
-
       const isFirst = (realNum === 1);
       const tagHtml = isFirst
         ? `<span style="font-size: 0.6rem; background: var(--green); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">1º ACESSO</span>`
@@ -1558,6 +1440,7 @@ function renderLogModalContent(id, rawData) {
     }).join('');
   }
 }
+
 function closeLogModal() {
   document.getElementById('logOverlay').classList.remove('open');
   if (unsubscribeLog) { unsubscribeLog(); unsubscribeLog = null; }
@@ -1672,7 +1555,6 @@ setInterval(atualizarRelogio, 1000);
 setInterval(atualizarContagem, 1000);
 atualizarRelogio();
 
-// Sobe a barra Fechar/Salvar junto com o teclado virtual no mobile
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', () => {
     const bar = document.getElementById('floatingActionBar');
