@@ -75,6 +75,82 @@
       color: #fff;
       border: 1px solid #444;
     }
+
+    .clear-input-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: none;
+      color: #dc3545;
+      font-size: 0.9rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.55;
+      transition: opacity 0.15s;
+    }
+
+    #clearInputButton {
+      position: absolute;
+      top: 5px;
+      right: -36px;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: none;
+      color: #dc3545;
+      font-size: 0.95rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.85;
+      transition: opacity 0.15s;
+    }
+
+    #clearInputButton:hover,
+    #clearInputButton:active {
+      opacity: 1;
+      background: none;
+    }
+
+    body.dark-mode #clearInputButton {
+      background: none;
+      color: #ff6b6b;
+    }
+
+    .clear-input-btn:hover,
+    .clear-input-btn:active {
+      opacity: 1;
+      background: none;
+    }
+
+    .textarea-wrapper {
+      position: relative;
+      max-width: 500px;
+      margin: 5px auto 0 auto;
+    }
+
+    .textarea-wrapper textarea {
+      margin-top: 0;
+      padding-right: 36px;
+    }
+
+    body.dark-mode .clear-input-btn {
+      background: none;
+      color: #ff6b6b;
+    }
+
+    body.dark-mode .clear-input-btn:hover,
+    body.dark-mode .clear-input-btn:active {
+      background: none;
+    }
     
     .below-textarea-actions {
       display: flex;
@@ -7401,7 +7477,10 @@ header, footer, .bottom-bar {
     <label id="input-label" for="input"><br>
     Entrada de números: <small style="font-weight: normal; color: #6c757d; font-size: 0.85em;">(conversão em emojis)</small>
 </label>
-    <textarea id="input" placeholder="Digite ou cole os números, grupos ou bichos aqui. Use espaço ou enter para separar." aria-describedby="errorMessage"></textarea>
+    <div class="textarea-wrapper">
+    <textarea id="input" inputmode="numeric" placeholder="Digite ou cole os números, grupos ou bichos aqui. Use espaço ou enter para separar." aria-describedby="errorMessage"></textarea>
+    <button id="clearInputButton" class="clear-input-btn" title="Limpar Apenas o Campo de Entrada">✕</button>
+    </div>
     <div id="errorMessage" class="error" role="alert" aria-live="polite"></div>
     
     <div class="below-textarea-actions">
@@ -7410,8 +7489,6 @@ header, footer, .bottom-bar {
     <button id="toggleShortcutsBtn" class="toggle-btn" onclick="toggleQuickShortcuts()" aria-expanded="false">
         🔽 Mostrar Bichos 
     </button>
-    
-    <button id="clearInputButton" class="shortcut-btn" title="Limpar Apenas o Campo de Entrada">❌</button>
     
     <button id="pasteButton" class="shortcut-btn" title="Colar da Área de Transferência">📋</button>
     
@@ -7652,6 +7729,14 @@ header, footer, .bottom-bar {
                     <small style="font-weight: normal;">(Comprovantes enviados e salvos na nuvem)</small>
                 </div>
             </button>
+
+            <button onclick="abrirConsultaRecibo()" class="view-button" style="background-color: #17a2b8;">
+                <span style="font-size: 1.5rem; line-height: 1;">🔎</span>
+                <div>
+                    <strong>Consultar Recibo</strong>
+                    <small style="font-weight: normal;">(Buscar por código ou nome do cliente)</small>
+                </div>
+            </button>
             
             <button onclick="clearAllHistories()" class="import-btn" style="margin-top: 20px;">
                 <span style="font-size: 1.5rem; line-height: 1;">🔥</span>
@@ -7672,7 +7757,7 @@ header, footer, .bottom-bar {
     <div class="footer-info-wrapper" style="display: flex; justify-content: center; gap: 15px; align-items: center;">
         <div class="footer-info-item">
             <span>📌 Versão:</span>
-            <strong>V32.10</strong>
+            <strong>V32.44</strong>
         </div>
         <div class="footer-info-item">
             <span>Database:</span>
@@ -10950,10 +11035,10 @@ if (item.results && item.results.milhar && item.results.milhar.length > 0) {
                     ${detailsStr}
                 </div>
                 
-                <div style="display: flex; gap: 8px;">
-                    <button onclick="openFoundReceipt(${item.id})" class="save-button" style="flex: 2; padding: 10px; font-size: 0.85rem; font-weight: bold; margin: 0;">👁️ Ver Números</button>
-                    <button onclick="copyHistoryItem(${item.id}, this)" class="view-button" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Copiar">📋</button>
-                    <button onclick="deleteHistoryItem(${item.id})" class="import-btn" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Apagar">🗑️</button>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <button onclick="openFoundReceipt(${item.id})" class="save-button" style="flex: 1 1 100%; padding: 10px; font-size: 0.85rem; font-weight: bold; margin: 0; min-width: 0;">👁️ Ver Números</button>
+                    <button onclick="copyHistoryItem(${item.id}, this)" class="view-button" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0; min-width: 0;" title="Copiar">📋</button>
+                    <button onclick="deleteHistoryItem(${item.id})" class="import-btn" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0; min-width: 0;" title="Apagar">🗑️</button>
                 </div>
             </div>`;
         });
@@ -11937,7 +12022,7 @@ function toggleRegistrationForm(event) {
     }
 }
 
-async function shareReceiptToWhatsApp() {
+async function _shareReceiptToWhatsAppOriginal() {
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) {
         showToast('Erro: Você não está logado.', 'error');
@@ -12211,6 +12296,33 @@ const histEntryCart = {
     } catch (error) {
         console.error("Erro no envio:", error);
         showToast(`Erro ao gerar link de compartilhamento.`, 'error');
+    }
+}
+
+// --- TRAVA CONTRA CLIQUE DUPLO/TRIPLO NO BOTÃO DE ENVIAR ---
+// Evita abrir o WhatsApp mais de uma vez e criar recibos duplicados na nuvem
+async function shareReceiptToWhatsApp() {
+    if (window._enviandoRecibo) return; // Já está processando, ignora cliques extras
+    window._enviandoRecibo = true;
+
+    const btnEnviar = document.getElementById('receiptBottomActionButton');
+    if (btnEnviar) {
+        btnEnviar.disabled = true;
+        btnEnviar.style.opacity = '0.6';
+        btnEnviar.style.pointerEvents = 'none';
+        btnEnviar.textContent = '⏳ Enviando...';
+    }
+
+    try {
+        await _shareReceiptToWhatsAppOriginal();
+    } finally {
+        window._enviandoRecibo = false;
+        if (btnEnviar) {
+            btnEnviar.disabled = false;
+            btnEnviar.style.opacity = '1';
+            btnEnviar.style.pointerEvents = 'auto';
+            btnEnviar.textContent = '✅ Confirmar e Enviar';
+        }
     }
 }
 // --- Funções para o Modal de Compartilhamento de Resultados ---
@@ -18618,7 +18730,7 @@ await firestoreDB.collection('config').doc('placar_ia').set({
     }
     
     // Usado apenas para COPIAR, removendo os títulos.
-    function getFormattedOutputForCopying() {
+    function getFormattedOutputForCopying(onlyMilhares = false) {
         const outputElement = document.getElementById('emojiOutput');
         
         if (!outputElement.querySelector('.section-title')) {
@@ -18632,6 +18744,8 @@ await firestoreDB.collection('config').doc('placar_ia').set({
             const contentElement = section.querySelector('.emoji-content');
 
             if (contentElement) {
+                if (onlyMilhares && contentElement.dataset.contentType !== 'milhares') return;
+
                 let sectionContent = '';
                 if (contentElement.dataset.contentType === 'bichos') {
                     const tempDiv = document.createElement('div');
@@ -19109,7 +19223,21 @@ async function copyOnlyEmojisToClipboard() {
 
     } else {
         // --- LÓGICA PADRÃO (Milhar, Centena, etc.) ---
-        const textToCopy = getFormattedOutputForCopying();
+        const secoes = Array.from(document.querySelectorAll('#emojiOutput .emoji-content'));
+        const temMilhares = secoes.some(el => el.dataset.contentType === 'milhares');
+        const temOutrasSecoes = secoes.some(el => el.dataset.contentType !== 'milhares');
+
+        let onlyMilhares = false;
+        if (temMilhares && temOutrasSecoes) {
+            const copiarTudo = await showCustomConfirm(
+                'O que você deseja copiar?',
+                '📋 Copiar Tudo',
+                '🔢 Só as Milhares'
+            );
+            onlyMilhares = !copiarTudo;
+        }
+
+        const textToCopy = getFormattedOutputForCopying(onlyMilhares);
         copyToClipboard(textToCopy, document.querySelector('#copyButtons button'));
     }
 }
@@ -20417,27 +20545,27 @@ function toggleParityOptions() {
 }
 
 // --- NOVA FUNÇÃO PARA REENVIAR O LINK DO RECIBO ---
+// --- FUNÇÃO ZAP: ENVIA O TEXTO COMPLETO DO RECIBO (IGUAL AO BOTÃO NORMAL) ---
 function resendReceiptLink(receiptId) {
     if (!receiptId) {
         showToast('ID do recibo inválido.', 'error');
         return;
     }
 
-    // 1. Cria o link permanente para o recibo usando o ID salvo
-    const link = `https://meus-recibos-vip.web.app/recibo.html?id=${receiptId}`;
+    // Pega o texto completo do recibo (o mesmo que o botão 📋 Copiar usa)
+    const textElement = document.getElementById(`text-${receiptId}`);
+    const fullText = textElement ? textElement.textContent.trim() : '';
 
-    // 2. Prepara a mesma mensagem padrão do WhatsApp
-    const message = `Olá! Segue o recibo da sua aposta:\n\n` +
-                    `${link}\n\n` +
-                    `*⚠️ Aviso: O link de visualização é válido por 2 horas.*\n\n` +
-                    `Boa sorte! 🍀`;
+    if (!fullText) {
+        showToast('Não foi possível carregar o texto do recibo.', 'error');
+        return;
+    }
 
-    const encodedMessage = encodeURIComponent(message);
+    const encodedMessage = encodeURIComponent(fullText);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
 
-    // 3. Abre o WhatsApp para o reenvio
     window.open(whatsappUrl, '_blank');
-    showToast('Preparando para reenviar...', 'success');
+    showToast('Abrindo WhatsApp...', 'success');
 }
 
 // Salva o estado atual dos pools no armazenamento
@@ -22659,7 +22787,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const hiddenInputPrincipal = document.getElementById('nomePessoaSelect');
     const autocompleteListPrincipal = document.getElementById('mainNameAutocompleteList');
 
+    let nomesSalvosTentouCarregar = false;
+    let avisoNomesVazioMostrado = false;
+
     if (inputNomePrincipal && autocompleteListPrincipal) {
+
+        // Se o campo ganha foco e a lista de nomes ainda não carregou, tenta carregar UMA vez
+        inputNomePrincipal.addEventListener('focus', () => {
+            if (!nomesSalvosTentouCarregar && (typeof nomesSalvos === 'undefined' || nomesSalvos.length === 0) && typeof carregarNomesSalvos === 'function') {
+                nomesSalvosTentouCarregar = true;
+                carregarNomesSalvos();
+            }
+        });
+
         inputNomePrincipal.addEventListener('input', function() {
             const val = this.value.toLowerCase().trim();
             autocompleteListPrincipal.innerHTML = '';
@@ -22669,6 +22809,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!val || typeof nomesSalvos === 'undefined' || nomesSalvos.length === 0) {
                 autocompleteListPrincipal.style.display = 'none';
+                if (val && !avisoNomesVazioMostrado) {
+                    avisoNomesVazioMostrado = true;
+                    showToast('Nenhum nome salvo encontrado. Verifique se há nomes cadastrados.', 'info');
+                }
                 return;
             }
 
@@ -23312,6 +23456,19 @@ function openReceiptsFromSubmenu() {
     }, 200);
 }
 
+// Atalho de "Consultar Recibo": abre direto na busca, pronto pra digitar o código/nome
+function abrirConsultaRecibo() {
+    closeConsultasModal();
+    setTimeout(async () => {
+        await showSavedReceiptsModal('mcd');
+        const searchInput = document.getElementById('searchReceiptsInput');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
+    }, 200);
+}
+
 async function showSavedReceiptsModal(filtro = 'mcd') {
     currentReceiptsFilter = filtro;
     
@@ -23323,6 +23480,18 @@ async function showSavedReceiptsModal(filtro = 'mcd') {
 
     await updateSavedReceiptsContainer(); 
     document.getElementById('savedReceiptsModal').classList.add('active');
+}
+
+function filterSavedReceipts() {
+    const termo = document.getElementById('searchReceiptsInput').value.trim().toLowerCase();
+    const items = document.querySelectorAll('#savedReceiptsContainer .saved-item');
+
+    items.forEach(item => {
+        // Busca em todo o texto do card, incluindo o conteúdo oculto do recibo
+        // (código, nome, extração, valor e as próprias milhares)
+        const texto = item.textContent.toLowerCase();
+        item.style.display = (termo === '' || texto.includes(termo)) ? '' : 'none';
+    });
 }
 
 async function updateSavedReceiptsContainer() {
@@ -23394,7 +23563,17 @@ async function updateSavedReceiptsContainer() {
     💰 Valor: ${value} <span style="margin: 0 5px;">|</span> 📦 Método: ${pacote}
 </div>
 ${(() => {
-    const milhares = [...(item.content.matchAll(/\b(\d{4})\b/g))].map(m => m[1]);
+
+    // Extrai as milhares SÓ de dentro das linhas "Milhares: 1234, 5678"
+    // (evita pegar o ano da data, tipo "2026", como se fosse milhar)
+    const milhares = [];
+    const milharLineRegex = /Milhares:\s*([\d,\s]+)/g;
+    let matchLinha;
+    while ((matchLinha = milharLineRegex.exec(item.content)) !== null) {
+        const numsDaLinha = matchLinha[1].match(/\d{4}/g);
+        if (numsDaLinha) milhares.push(...numsDaLinha);
+    }
+
     const emojisMap = {};
     milhares.forEach(n => {
         const bd = getBichoDataFromNumber(n);
@@ -24565,19 +24744,20 @@ window.renderCartItems = function() {
                     <span style="font-size: 0.8rem; color:#28a745; font-weight:bold;">${grupo.jogos.length} jogo(s) = R$ ${totalGrupo.toFixed(2).replace('.',',')}</span>
                 </div>
                 ${grupo.jogos.map((item, i) => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:8px 10px; border-radius:7px; margin-bottom:4px; border:1px solid #ddd;">
-                                            <div style="flex:1;">
-                        <div style="font-size:0.8rem; color:#888; margin-bottom:4px;">🎯 <strong style="color:#333;">${item.numeros.length} números</strong></div>
-                        <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                            ${item.resumo.split(' | ').map(b => `<span style="background:rgba(0,123,255,0.1); border:1px solid rgba(0,123,255,0.25); border-radius:20px; padding:2px 8px; font-size:0.78rem; color:#333; white-space:nowrap;">${b}</span>`).join('')}
-                        </div>
-                    </div>
-
-<div style="display:flex; gap: 4px; flex-shrink:0;">
-    <button onclick="editCartItemValue(${item.id})" style="background:none; border:none; color:#007bff; font-size:1.1rem; cursor:pointer; padding:3px 6px;" title="Editar Valor">✏️</button>
-    <button onclick="removeCartItem(${item.id})" style="background:none; border:none; color:#dc3545; font-size:1.1rem; cursor:pointer; padding:3px 6px;" title="Excluir Jogo">❌</button>
-</div>                    </div>
-                `).join('')}
+    <div style="background:#fff; border-radius:7px; margin-bottom:6px; border:1px solid #ddd; overflow:hidden;">
+        <div style="padding:8px 10px;">
+            <div style="font-size:0.8rem; color:#888; margin-bottom:4px;">🎯 <strong style="color:#333;">${item.numeros.length} números</strong></div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                ${item.resumo.split(' | ').map(b => `<span style="background:rgba(0,123,255,0.1); border:1px solid rgba(0,123,255,0.25); border-radius:20px; padding:2px 8px; font-size:0.78rem; color:#333; white-space:nowrap;">${b}</span>`).join('')}
+            </div>
+        </div>
+        <div style="display:flex; border-top:1px solid #eee;">
+            <button onclick="copyCartItemMilhares(${item.id})" style="flex:1; display:flex; align-items:center; justify-content:center; gap:4px; background:none; border:none; color:#6f42c1; font-size:0.78rem; font-weight:600; cursor:pointer; padding:8px 0;" title="Copiar Milhares">📋 Copiar</button>
+            <button onclick="editCartItemValue(${item.id})" style="flex:1; display:flex; align-items:center; justify-content:center; gap:4px; background:none; border:none; border-left:1px solid #eee; color:#007bff; font-size:0.78rem; font-weight:600; cursor:pointer; padding:8px 0;" title="Editar Valor">✏️ Editar</button>
+            <button onclick="removeCartItem(${item.id})" style="flex:1; display:flex; align-items:center; justify-content:center; gap:4px; background:none; border:none; border-left:1px solid #eee; color:#dc3545; font-size:0.78rem; font-weight:600; cursor:pointer; padding:8px 0;" title="Excluir Jogo">❌ Excluir</button>
+        </div>
+    </div>
+`).join('')}
             </div>
         `;
     });
@@ -24627,6 +24807,25 @@ window.showCartReceiptModal = async function() {
 window.removeCartItem = function(id) {
     window.mcdCart = window.mcdCart.filter(item => item.id !== id);
     renderCartItems();
+};
+
+window.copyCartItemMilhares = function(id) {
+    const item = window.mcdCart.find(i => i.id === id);
+    if (!item) {
+        showToast('Jogo não encontrado no carrinho.', 'error');
+        return;
+    }
+
+    // As milhares são os números de 4 dígitos dentro do jogo salvo
+    const milhares = item.numeros.filter(n => String(n).length === 4);
+
+    if (milhares.length === 0) {
+        showToast('Este jogo não tem milhares para copiar.', 'info');
+        return;
+    }
+
+    copyToClipboard(milhares.join(' '));
+    showToast('Milhares copiadas!', 'success');
 };
 
 // 1. Função chamada pelo botão "Compartilhar" na tela (apenas abre o modal)
