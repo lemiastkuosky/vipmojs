@@ -24,6 +24,10 @@
       box-sizing: border-box;
     }
 
+    .top-button-menu, .button-group.main-buttons {
+    display: none !important;
+}
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
       text-align: center;
@@ -36,6 +40,8 @@
       /* As duas linhas de user-select foram removidas */
       overflow-x: hidden;
     }
+
+    
 
     body.dark-mode {
       background-color: #121212;
@@ -9554,6 +9560,7 @@ const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
         if(logoutButton) logoutButton.style.display = 'none';
         localStorage.removeItem('app_authenticated');
         checkAuth();
+        hideSplashScreen(); // já sabemos que é visitante: tira a tela preta e mostra o login direto
     }
 });
 
@@ -16093,7 +16100,6 @@ const nomeSelectModal = document.getElementById('nomePessoaSelectModal');
 
     }
 
-    hideSplashScreen();
     convertToEmojisRealTime();
     
     document.getElementById('input').focus();
@@ -16218,19 +16224,20 @@ if (mcdSearchInput && clearMcdSearchBtn) {
     console.log("Sistema de botões de quantidade ativado.");
 }
 
+    let _splashAlreadyHidden = false;
     function hideSplashScreen() {
+    if (_splashAlreadyHidden) return; // evita disparar de novo (onSnapshot pode chamar isso várias vezes)
+    _splashAlreadyHidden = true;
+
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (!loadingOverlay) return;
 
-    // Pequeno respiro só pra evitar "flash" em conexões muito rápidas
+    loadingOverlay.style.opacity = '0';
+    loadingOverlay.style.transform = 'scale(1.2)';
+
     setTimeout(() => {
-        loadingOverlay.style.opacity = '0';
-        loadingOverlay.style.transform = 'scale(1.2)';
-        
-        setTimeout(() => {
-            loadingOverlay.style.display = 'none';
-        }, 400); // fade mais rápido também
-    }, 700); // era 3500
+        loadingOverlay.style.display = 'none';
+    }, 400);
 }
 
      async function loadPersistedData() {
@@ -17942,18 +17949,34 @@ function aplicarPermissoesIndividuais(user) {
     if (!user) return;
     if (permissaoListener) permissaoListener(); 
 
+    const todosBotaoIds = [
+        'btnMenuMCD', 'btnMenuFechamento', 'btnMenuBolao', 'btnMenuTabela', 'btnMenuAnalises', 'btnMenuKitsMCD', 'btnMenuSettings',
+        'btnMenuCalculadora', 'mainChunkBtn',
+        'btnMainClear', 'btnMainSave', 'btnMainLists', 'btnMainCheckWinner', 'btnMainAddNames', 'btnMainCount',
+        'btnSubAtrasados', 'btnSubMcdSearch', 'btnSubResultadosLive', 'btnSubPalpitesIA', 'btnSubHistoricoIA', 'btnSubAuditoriaIA', 'resultChunkBtn', 'btnSubBoletimGlobal'
+    ];
+
+    const revelarContainers = () => {
+        const menuTopo = document.querySelector('.top-button-menu');
+        const menuPrincipal = document.querySelector('.button-group.main-buttons');
+        if (menuTopo) menuTopo.style.setProperty('display', 'flex', 'important');
+        if (menuPrincipal) menuPrincipal.style.setProperty('display', 'flex', 'important');
+        hideSplashScreen(); // já sabemos o que mostrar: agora sim tira a tela preta
+    };
+
+    const revelarTodosBotoes = () => {
+        revelarContainers();
+        todosBotaoIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.setProperty('display', '', 'important');
+        });
+    };
+
     permissaoListener = firestoreDB.collection('users').doc(user.uid).onSnapshot((doc) => {
         if (doc.exists) {
             const perms = doc.data().permissions || {};
 
             // 1. Visibilidade de Botões e Menus (REMOVIDO OS BANNERS DAQUI)
-           const todosBotaoIds = [
-    'btnMenuMCD', 'btnMenuFechamento', 'btnMenuBolao', 'btnMenuTabela', 'btnMenuAnalises', 'btnMenuKitsMCD', 'btnMenuSettings',
-    'btnMenuCalculadora', 'mainChunkBtn',
-    'btnMainClear', 'btnMainSave', 'btnMainLists', 'btnMainCheckWinner', 'btnMainAddNames', 'btnMainCount',
-    'btnSubAtrasados', 'btnSubMcdSearch', 'btnSubResultadosLive', 'btnSubPalpitesIA', 'btnSubHistoricoIA', 'btnSubAuditoriaIA', 'resultChunkBtn', 'btnSubBoletimGlobal'
-];
-
             todosBotaoIds.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -17961,6 +17984,8 @@ function aplicarPermissoesIndividuais(user) {
                     el.style.setProperty('display', isVisible ? '' : 'none', 'important');
                 }
             });
+
+            revelarContainers(); // libera os blocos agora que já sabemos o que mostrar/esconder
 
             // ==============================================================
             // 1.5. CONTROLE SEGURO E BLINDADO PARA OS BANNERS DINÂMICOS
@@ -18018,7 +18043,14 @@ function aplicarPermissoesIndividuais(user) {
                 }
             }
             styleBlock.innerHTML = cssRules;
+        } else {
+            // Documento não existe: libera tudo pra não travar escondido pra sempre
+            revelarTodosBotoes();
         }
+    }, (error) => {
+        // Erro na leitura (offline, sem permissão etc.): libera tudo como fallback
+        console.error("Erro ao carregar permissões:", error);
+        revelarTodosBotoes();
     });
 }
 
