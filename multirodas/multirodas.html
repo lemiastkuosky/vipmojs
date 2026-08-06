@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gerador Multirodas - V15 Master</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,900&family=Oswald:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --yellow: #ffb703;
+            --green: #06d6a0; /* Verde Neon para valores abaixo de 2k */
+            --dark: #0f1115;
+            --gray: #1a1a1d;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            display: flex;
+            gap: 20px;
+            background: #111;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 50px rgba(255, 183, 3, 0.1);
+            max-width: 1200px;
+            width: 100%;
+            border: 1px solid #333;
+            flex-direction: column; 
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 900px) {
+            .app-container { flex-direction: row; padding: 30px; }
+        }
+
+        /* ----- FORMULÁRIO ----- */
+        .form-section { flex: 1; width: 100%; }
+        .form-section h2 {
+            margin-top: 0; color: var(--yellow); font-style: italic; font-weight: 900;
+            font-size: 26px; border-bottom: 2px solid #333; padding-bottom: 10px; text-transform: uppercase;
+        }
+        .row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .form-group { margin-bottom: 15px; flex: 1; min-width: 45%; }
+        .form-group label { display: block; font-weight: 900; margin-bottom: 5px; font-size: 11px; color: #ccc; text-transform: uppercase; }
+        
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px; background: #222; border: 1px solid #444;
+            color: white; border-radius: 6px; font-family: 'Montserrat', sans-serif;
+            font-size: 14px; font-weight: 700; outline: none; transition: 0.3s;
+            cursor: pointer;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--yellow); background: #000; }
+
+        .format-grid {
+            display: flex; gap: 10px;
+        }
+        .format-grid label {
+            flex: 1; background: #222; border: 2px solid #444; padding: 12px; border-radius: 6px;
+            text-align: center; cursor: pointer; font-weight: 700; font-size: 13px; color: #fff;
+            display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; margin: 0; text-transform: none;
+        }
+        .format-grid input[type="radio"] { accent-color: var(--yellow); width: 16px; height: 16px; margin: 0; }
+        .format-grid label.selected { border-color: var(--yellow); background: #000; color: var(--yellow); }
+
+        .upload-buttons {
+            display: flex; gap: 10px; width: 100%;
+        }
+        .upload-buttons label {
+            flex: 1; background-color: #222; border: 1px solid #444; color: #fff;
+            padding: 12px; text-align: center; border-radius: 6px; cursor: pointer;
+            font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700;
+            text-transform: none; transition: 0.3s; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .upload-buttons label:hover { background-color: #333; border-color: var(--yellow); }
+        .upload-buttons input[type="file"] { display: none; }
+
+        .tags-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+            background: #1a1a1a; padding: 12px; border-radius: 6px; border: 1px dashed #444;
+        }
+        .tags-grid label {
+            display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; margin: 0; text-transform: none;
+        }
+        .tags-grid input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--yellow); margin: 0; padding: 0; }
+
+        /* ----- PREVIEW E BOTÕES NO FINAL ----- */
+        .preview-section {
+            flex: 1.2; display: flex; flex-direction: column; align-items: center;
+            background: #0a0a0a; border-radius: 10px; padding: 20px; border: 1px dashed #444; overflow: hidden;
+            overflow-y: auto; 
+        }
+
+        .preview-wrapper {
+            display: flex; justify-content: center; width: 100%;
+        }
+
+        .ad-card {
+            width: 540px; 
+            height: 675px; 
+            background: #050505;
+            position: relative; overflow: hidden; display: flex; flex-direction: column; color: white; transform-origin: top center;
+            border: 1px solid #333;
+            transition: height 0.4s ease;
+        }
+        
+        .ad-card.format-story {
+            height: 960px;
+        }
+
+        @media (max-width: 600px) { 
+            .ad-card { transform: scale(0.55); margin-bottom: -300px; } 
+            .ad-card.format-story { margin-bottom: -430px; } 
+        }
+
+        .action-buttons {
+            display: flex; gap: 10px; width: 100%; max-width: 540px; margin-top: 20px;
+        }
+        .btn-action {
+            flex: 1; border: none; padding: 16px 10px; font-size: 15px; font-weight: 900;
+            text-transform: uppercase; border-radius: 6px; cursor: pointer; transition: 0.3s;
+            font-family: 'Oswald', sans-serif; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-save { background-color: var(--yellow); color: #000; }
+        .btn-save:hover { background-color: #fff; transform: translateY(-2px); }
+        .btn-wpp { background-color: #25D366; color: #fff; }
+        .btn-wpp:hover { background-color: #1ebd5a; transform: translateY(-2px); }
+
+        /* 1. TOPO */
+        .ad-top {
+            padding: 25px 20px 15px 20px; text-align: center; z-index: 20; background: #050505;
+        }
+        .main-title {
+            font-family: 'Montserrat', sans-serif; font-size: 55px; font-weight: 900; font-style: italic;
+            color: #fff; line-height: 1.1; text-transform: uppercase; text-shadow: 0px 5px 15px rgba(0,0,0,0.8);
+            letter-spacing: 1px; margin: 0; border-bottom: 3px solid var(--yellow); display: inline-block; padding-bottom: 2px;
+        }
+
+        /* 2. MEIO */
+        .ad-image-wrapper {
+            flex: 1; width: 100%; position: relative; overflow: hidden; background: #111;
+        }
+        .wheel-img {
+            width: 100%; height: 100%; object-fit: cover; z-index: 10;
+        }
+        
+        /* Logo aumentada para 170px x 70px */
+        .logo-floating {
+            position: absolute; top: 15px; left: 15px; max-width: 170px; max-height: 70px;
+            object-fit: contain; z-index: 30; filter: drop-shadow(0px 3px 8px rgba(0,0,0,0.9));
+        }
+
+        .badges-container {
+            position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 30;
+        }
+        .badge-tag {
+            background: var(--yellow); color: #000; padding: 5px 12px; font-weight: 900; font-style: italic;
+            font-size: 14px; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.8); border-radius: 3px;
+        }
+        
+        /* 3. ESPECIFICAÇÕES */
+        .specs-ribbon {
+            display: flex; justify-content: center; gap: 10px; padding: 15px; background: #0a0a0a; border-top: 2px solid var(--yellow); z-index: 20;
+        }
+        .s-box {
+            background: #111; border: 1px solid #333; border-left: 4px solid var(--yellow);
+            padding: 6px 15px; text-align: center; border-radius: 4px; min-width: 110px;
+        }
+        .s-box span { display: block; font-size: 9px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px;}
+        .s-box strong { display: block; font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; color: #fff; line-height: 1.2; }
+
+        /* 4. BASE (PREÇO MAIOR E CONTATO MAIS DESTACADO) */
+        .ad-bot {
+            background: #0a0a0a; display: flex; flex-direction: column; z-index: 25; 
+        }
+        
+        .price-container {
+            text-align: center; padding: 12px 0 10px 0; display: flex; flex-direction: column; align-items: center;
+        }
+        .price-label { font-size: 13px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: var(--yellow); margin-bottom: 2px;}
+        
+        /* Preço maior e com suporte a mudança de cor */
+        .price-value { 
+            font-family: 'Montserrat', sans-serif; 
+            font-weight: 900; 
+            font-style: italic; 
+            font-size: 68px; /* Aumentado para dar impacto */
+            line-height: 1; 
+            color: #fff; 
+            text-shadow: 0px 4px 15px rgba(0,0,0,0.8);
+        }
+        .price-value.baixo-preco {
+            color: var(--green); /* Fica verde neon se for abaixo de 2k */
+            text-shadow: 0px 0px 20px rgba(6, 214, 160, 0.4);
+        }
+
+        /* Contatos Super Destacados */
+        .contact-bar {
+            display: flex; justify-content: center; gap: 25px; align-items: center; padding: 12px 0 22px 0; background: #050505; border-top: 1px solid #222;
+        }
+        .contact-item { display: flex; align-items: center; gap: 8px; font-size: 19px; font-weight: 900; font-family: 'Oswald', sans-serif; color: #fff; text-shadow: 2px 2px 5px #000; letter-spacing: 0.5px;}
+        .contact-item i { color: var(--yellow); font-size: 24px; }
+        .contact-item i.fa-whatsapp { color: #25D366; }
+
+        .site-footer {
+            text-align: center; color: #555; font-size: 12px; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 2px; padding: 30px; width: 100%; border-top: 1px solid #222;
+        }
+        .site-footer span { color: var(--yellow); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="form-section">
+        <h2>Setup do Anúncio</h2>
+
+        <div class="form-group" style="background: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px dashed var(--yellow); margin-bottom: 20px;">
+            <label style="color: var(--yellow); margin-bottom: 10px;">Formato da Arte</label>
+            <div class="format-grid">
+                <label id="lbl-feed" class="selected">
+                    <input type="radio" name="formato" value="feed" checked onchange="mudarFormato()"> Feed / Marketplace
+                </label>
+                <label id="lbl-story">
+                    <input type="radio" name="formato" value="story" onchange="mudarFormato()"> Stories / Status Wpp
+                </label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Foto da Roda</label>
+            <div class="upload-buttons">
+                <label for="inp-camera"><i class="fa-solid fa-camera"></i> Tirar Foto</label>
+                <input type="file" id="inp-camera" accept="image/*" capture="environment">
+
+                <label for="inp-imagem"><i class="fa-regular fa-image"></i> Galeria</label>
+                <input type="file" id="inp-imagem" accept="image/*">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Modelo (Nome da Roda)</label>
+            <input type="text" id="inp-titulo" value="BBS ESTILOS" oninput="atualizar()">
+        </div>
+
+        <div class="form-group">
+            <label>Logo Extra (Opcional - Substitui a nativa)</label>
+            <div class="upload-buttons" style="width: 50%;">
+                <label for="inp-logo" style="padding: 8px;"><i class="fa-solid fa-upload"></i> Subir Logo</label>
+                <input type="file" id="inp-logo" accept="image/*">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Cards de Destaque</label>
+            <div class="tags-grid">
+                <label><input type="checkbox" class="chk-badge" value="RODA NOVA" onchange="atualizar()"> Roda Nova</label>
+                <label><input type="checkbox" class="chk-badge" value="SEMI-NOVA" onchange="atualizar()" checked> Semi-Nova</label>
+                <label><input type="checkbox" class="chk-badge" value="NO PIX" onchange="atualizar()" checked> No Pix</label>
+                <label><input type="checkbox" class="chk-badge" value="EM ATÉ 10X" onchange="atualizar()"> Em até 10x</label>
+                <label><input type="checkbox" class="chk-badge" value="JOGO COMPLETO" onchange="atualizar()"> Jogo Completo</label>
+                <label><input type="checkbox" class="chk-badge" value="USADA" onchange="atualizar()"> Usada</label>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>Aro</label>
+                <select id="inp-aro" onchange="atualizar()">
+                    <option value="13&quot;">13"</option>
+                    <option value="14&quot;">14"</option>
+                    <option value="15&quot;">15"</option>
+                    <option value="17&quot;" selected>17"</option>
+                    <option value="18&quot;">18"</option>
+                    <option value="19&quot;">19"</option>
+                    <option value="20&quot;">20"</option>
+                    <option value="22&quot;">22"</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Furação</label>
+                <select id="inp-furacao" onchange="atualizar()">
+                    <option value="4x98">4x98</option>
+                    <option value="4x100" selected>4x100</option>
+                    <option value="4x108">4x108</option>
+                    <option value="5x100">5x100</option>
+                    <option value="5x112">5x112</option>
+                    <option value="5x114.3">5x114.3</option>
+                    <option value="6x139.7">6x139.7</option>
+                    <option value="Multifuro">Multifuro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tala</label>
+                <select id="inp-tala" onchange="atualizar()">
+                    <option value="5.5">5.5</option>
+                    <option value="6.0">6.0</option>
+                    <option value="6.5">6.5</option>
+                    <option value="7.0" selected>7.0</option>
+                    <option value="7.5">7.5</option>
+                    <option value="8.0">8.0</option>
+                    <option value="8.5">8.5</option>
+                    <option value="9.0">9.0</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>Valor (R$)</label>
+                <input type="number" id="inp-valor" value="1800" oninput="atualizar()">
+            </div>
+            <div class="form-group">
+                <label>Texto de Promoção</label>
+                <select id="inp-promo" onchange="atualizar()">
+                    <option value="PROMOÇÃO EXCLUSIVA">PROMOÇÃO EXCLUSIVA</option>
+                    <option value="OFERTA IMPERDÍVEL">OFERTA IMPERDÍVEL</option>
+                    <option value="QUEIMA DE ESTOQUE">QUEIMA DE ESTOQUE</option>
+                    <option value="LANÇAMENTO">LANÇAMENTO</option>
+                    <option value="APENAS 1 JOGO">APENAS 1 JOGO</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>WhatsApp</label>
+                <input type="text" id="inp-whatsapp" value="(12) 97403-8085" oninput="atualizar()">
+            </div>
+            <div class="form-group">
+                <label>Instagram</label>
+                <input type="text" id="inp-insta" value="@multirodassjc" oninput="atualizar()">
+            </div>
+        </div>
+    </div>
+
+    <!-- PREVIEW E BOTÕES NO FINAL -->
+    <div class="preview-section">
+        <div class="preview-wrapper">
+            <div class="ad-card" id="ad-card">
+                
+                <div class="ad-top">
+                    <h1 class="main-title" id="out-titulo">BBS ESTILOS</h1>
+                </div>
+
+                <div class="ad-image-wrapper">
+                    <img id="out-logo" class="logo-floating" src="https://github.com/lemiastkuosky/vipmojs/blob/main/multirodas/multirodaslogo.png?raw=true" alt="Logo Multirodas">
+                    <div class="badges-container" id="out-badges"></div>
+                    <img id="out-imagem" class="wheel-img" src="https://images.unsplash.com/photo-1616886576135-2630ce4f7a55?auto=format&fit=crop&q=80&w=800&h=800" alt="Roda">
+                </div>
+
+                <div class="specs-ribbon">
+                    <div class="s-box"><span>ARO</span><strong id="out-aro">17"</strong></div>
+                    <div class="s-box"><span>FURAÇÃO</span><strong id="out-furacao">4x100</strong></div>
+                    <div class="s-box"><span>TALA</span><strong id="out-tala">7.0</strong></div>
+                </div>
+
+                <div class="ad-bot">
+                    <div class="price-container">
+                        <span class="price-label" id="out-promo">PROMOÇÃO EXCLUSIVA</span>
+                        <!-- Adicionado id e classe para o valor dinâmico -->
+                        <div class="price-value" id="out-valor">R$ 1.800</div>
+                    </div>
+
+                    <div class="contact-bar">
+                        <div class="contact-item"><i class="fa-brands fa-whatsapp"></i> <span id="out-whatsapp">(12) 97403-8085</span></div>
+                        <div class="contact-item"><i class="fa-brands fa-instagram"></i> <span id="out-insta">@multirodassjc</span></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn-action btn-save" onclick="baixarImagem()"><i class="fa-solid fa-download"></i> Salvar Arte</button>
+            <button class="btn-action btn-wpp" id="btn-wpp" onclick="compartilharWhatsApp()"><i class="fa-brands fa-whatsapp"></i> Enviar Wpp</button>
+        </div>
+    </div>
+</div>
+
+<footer class="site-footer">
+    CRIADO BY <span>LE MIASTKUOSKY</span> V1.0
+</footer>
+
+<script>
+    window.onload = function() {
+        const savedWhats = localStorage.getItem('multi_wpp_v15');
+        const savedInsta = localStorage.getItem('multi_inst_v15');
+        
+        if(savedWhats) document.getElementById('inp-whatsapp').value = savedWhats;
+        if(savedInsta) document.getElementById('inp-insta').value = savedInsta;
+        
+        if(!document.getElementById('inp-whatsapp').value) document.getElementById('inp-whatsapp').value = '(12) 97403-8085';
+        if(!document.getElementById('inp-insta').value) document.getElementById('inp-insta').value = '@multirodassjc';
+        
+        atualizar();
+    }
+
+    function mudarFormato() {
+        const formatoSelecionado = document.querySelector('input[name="formato"]:checked').value;
+        const adCard = document.getElementById('ad-card');
+        const lblFeed = document.getElementById('lbl-feed');
+        const lblStory = document.getElementById('lbl-story');
+        
+        if(formatoSelecionado === 'story') {
+            adCard.classList.add('format-story');
+            lblStory.classList.add('selected');
+            lblFeed.classList.remove('selected');
+        } else {
+            adCard.classList.remove('format-story');
+            lblFeed.classList.add('selected');
+            lblStory.classList.remove('selected');
+        }
+    }
+
+    function carregarImagemPrincipal(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('out-imagem').src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+    document.getElementById('inp-imagem').addEventListener('change', carregarImagemPrincipal);
+    document.getElementById('inp-camera').addEventListener('change', carregarImagemPrincipal);
+
+    document.getElementById('inp-logo').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('out-logo').src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function atualizar() {
+        document.getElementById('out-titulo').innerText = document.getElementById('inp-titulo').value;
+        document.getElementById('out-aro').innerText = document.getElementById('inp-aro').value;
+        document.getElementById('out-furacao').innerText = document.getElementById('inp-furacao').value;
+        document.getElementById('out-tala').innerText = document.getElementById('inp-tala').value;
+        document.getElementById('out-promo').innerText = document.getElementById('inp-promo').value;
+        
+        const badgesContainer = document.getElementById('out-badges');
+        badgesContainer.innerHTML = ''; 
+        
+        const checkboxes = document.querySelectorAll('.chk-badge:checked');
+        checkboxes.forEach(chk => {
+            const div = document.createElement('div');
+            div.className = 'badge-tag';
+            div.innerText = chk.value; 
+            badgesContainer.appendChild(div);
+        });
+        
+        const valorInput = document.getElementById('inp-valor').value;
+        const outValor = document.getElementById('out-valor');
+
+        if(valorInput) {
+            const numValor = parseFloat(valorInput);
+            outValor.innerText = numValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+            
+            // Lógica automática de cor: Abaixo de 2000 fica verde neon, acima fica branco
+            if (numValor < 2000) {
+                outValor.classList.add('baixo-preco');
+            } else {
+                outValor.classList.remove('baixo-preco');
+            }
+        } else {
+            outValor.innerText = 'R$ 0';
+            outValor.classList.remove('baixo-preco');
+        }
+
+        const wpp = document.getElementById('inp-whatsapp').value;
+        const insta = document.getElementById('inp-insta').value;
+
+        document.getElementById('out-whatsapp').innerText = wpp;
+        document.getElementById('out-insta').innerText = insta;
+
+        localStorage.setItem('multi_wpp_v15', wpp);
+        localStorage.setItem('multi_inst_v15', insta);
+    }
+
+    function baixarImagem() {
+        const adCard = document.getElementById('ad-card');
+        
+        html2canvas(adCard, {
+            scale: 2, 
+            useCORS: true,
+            backgroundColor: '#050505'
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'anuncio-multirodas.png';
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+        });
+    }
+
+    function compartilharWhatsApp() {
+        const adCard = document.getElementById('ad-card');
+        const btnWpp = document.getElementById('btn-wpp');
+        
+        btnWpp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aguarde...';
+
+        html2canvas(adCard, {
+            scale: 2, 
+            useCORS: true,
+            backgroundColor: '#050505'
+        }).then(canvas => {
+            canvas.toBlob(function(blob) {
+                const file = new File([blob], "anuncio-multirodas.png", { type: "image/png" });
+                
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        title: 'Anúncio Multirodas',
+                        text: 'Confira esta oferta na Multirodas!',
+                        files: [file]
+                    }).then(() => {
+                        btnWpp.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Enviar Wpp';
+                    }).catch(err => {
+                        console.error("Erro no compartilhamento:", err);
+                        btnWpp.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Enviar Wpp';
+                    });
+                } else {
+                    alert("Seu navegador atual não suporta compartilhamento direto de imagens. Use o botão 'Salvar Arte' e envie pelo WhatsApp.");
+                    btnWpp.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Enviar Wpp';
+                }
+            }, 'image/png');
+        });
+    }
+</script>
+</body>
+</html>
