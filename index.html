@@ -8569,6 +8569,7 @@ header, footer, .bottom-bar {
 
     <button onclick="generateSelectedNumbers()" class="btn-primary" style="width: 100%; margin-top: 10px;">Gerar Números</button>
 
+<button onclick="confirmarRepetirJogo()" style="width: 100%; margin-top: 10px; background-color: #fd7e14; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer;">🔁 Repetir Jogo</button>
     <button onclick="showSearchHistoryModal()" id="checkMilharBtn" class="btn-warning" style="width: 100%; margin-top: 10px;">🏆 Procurar Milhar Premiada</button>
 
     <div class="button-group" style="gap: 8px; margin-top: 10px;"> <button onclick="showAdvancedFiltersModal()" style="flex: 1;">⚙️ Configurações</button>
@@ -20688,8 +20689,7 @@ async function checkMilharInHistory() {
             resultContainer.className = 'success';
             resultContainer.innerHTML = `<span class="main-result">🎉 ${typeLabel} Encontrada (Online)!</span>
                                          <span class="details">Encontrado <strong>${sourceLabel}</strong> do recibo online de ${foundDate}.</span>
-                                         <button type="button" onclick="window.open('https://meus-recibos-vip.web.app/recibo.html?id=${docId}', '_blank')" class="save-button" style="width: 100%; margin-top: 12px;">Ver Recibo Online</button>`;
-            resultContainer.style.display = 'block';
+<button type="button" onclick="window.open('https://meus-recibos-vip.web.app/recibo.html?id=${docId}&admin=true', '_blank')" class="save-button" style="width: 100%; margin-top: 12px;">Ver Recibo Online</button>`;            resultContainer.style.display = 'block';
         } else {
             resultContainer.className = 'error';
             resultContainer.innerHTML = `<span class="main-result">❌ Não Encontrada</span><span class="details">O número <strong>${termToSearch}</strong> não está ${sourceLabel} do seu histórico.</span>`;
@@ -23313,6 +23313,66 @@ function getBichoDataFromNumber(numStr) {
     return _bichoMapPorDezena.get(numStr.slice(-2)) || null;
 }
 
+// Repete um jogo salvo: identifica os bichos do recibo, pré-seleciona
+// no gerador, sorteia números NOVOS para esses bichos e já abre a tela
+// de escolha de horário/extração (igual ao fluxo manual).
+
+function repetirJogoDoRecibo(id) {
+    const textEl = document.getElementById(`text-${id}`);
+    if (!textEl) { showToast('Não foi possível repetir este recibo.', 'error'); return; }
+    const conteudo = textEl.textContent || textEl.innerText || '';
+
+    const milhares = [];
+    const milharLineRegex = /Milhares:\s*([\d,\s]+)/g;
+    let matchLinha;
+    while ((matchLinha = milharLineRegex.exec(conteudo)) !== null) {
+        const numsDaLinha = matchLinha[1].match(/\d{4}/g);
+        if (numsDaLinha) milhares.push(...numsDaLinha);
+    }
+
+    const gruposSet = new Set();
+    milhares.forEach(n => {
+        const bd = getBichoDataFromNumber(n);
+        if (bd) gruposSet.add(bd.grupo);
+    });
+
+    if (gruposSet.size === 0) {
+        showToast('Não foi possível identificar os bichos deste recibo.', 'error');
+        return;
+    }
+
+    closeSavedReceiptsModal();
+
+    setTimeout(async () => {
+        await showRandomGeneratorModal();
+
+        // Garante o modo "GP Bichos" (não I.A.)
+        const radioBichos = document.querySelector('input[name="generationMode"][value="bichos"]');
+        if (radioBichos) radioBichos.checked = true;
+        toggleBichosSelector('bichos');
+        populateBichosSelector();
+
+        // Marca só os bichos deste recibo
+        selectAllBichos(false);
+        gruposSet.forEach(grupo => {
+            const cb = document.querySelector(`input[name="selectedBichos"][value="${grupo}"]`);
+            if (cb) cb.checked = true;
+        });
+
+        // Gera números novos (vai pedir a confirmação normal "Sim, Gerar")
+        await generateSelectedNumbers();
+
+        const temNumeros = (originalGeneratedNumbers.milhar && originalGeneratedNumbers.milhar.length > 0) ||
+                            (originalGeneratedNumbers.centena && originalGeneratedNumbers.centena.length > 0) ||
+                            (originalGeneratedNumbers.dezena && originalGeneratedNumbers.dezena.length > 0);
+
+        // Se gerou (não cancelou), já abre a tela de horário/extração
+        if (temNumeros) {
+            await showReceiptModal();
+        }
+    }, 250);
+}
+
 // 3. FUNÇÃO MODIFICADA PARA LIMPAR OS "ESCUTADORES"
 
 function closeReceiptModal() {
@@ -23365,6 +23425,32 @@ function closeReceiptModal() {
     // 👇 NOVA LINHA ADICIONADA AQUI 👇
     selectAllBichos(false); // Desmarca todos os bichos ao fechar o recibo e voltar pra tela anterior
     // --- FIM DA ADIÇÃO ---
+}
+
+async function confirmarRepetirJogo() {
+    const confirmado = await showCustomConfirm(
+        'Deseja realmente repetir um jogo anterior?<br><br>Você vai escolher um recibo salvo e serão gerados números novos com os mesmos bichos.',
+        'Sim, Repetir',
+        'Cancelar',
+        'randomGeneratorModal'
+    );
+
+    if (confirmado) {
+        showSavedReceiptsModal('mcd');
+    }
+}
+
+window.confirmarRepetirJogo = async function() {
+    const confirmado = await showCustomConfirm(
+        'Deseja realmente repetir um jogo anterior?<br><br>Você vai escolher um recibo salvo e serão gerados números novos com os mesmos bichos.',
+        'Sim, Repetir',
+        'Cancelar',
+        'randomGeneratorModal'
+    );
+
+    if (confirmado) {
+        showSavedReceiptsModal('mcd');
+    }
 }
 
 function autoSelecionarExtracaoIA() {
@@ -23617,6 +23703,10 @@ ${(() => {
                     <button id="btn-copy-${id}" class="view-button" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0; background-color: #6f42c1;" title="Copiar Texto">📋</button>
                     <button id="btn-del-${id}" class="import-btn" style="flex: 1; padding: 10px; font-size: 1rem; margin: 0;" title="Apagar da Nuvem">🗑️</button>
                 </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <button id="btn-repeat-${id}" class="save-button" style="flex: 3; background-color: #fd7e14; box-shadow: 0 4px 0 #c05e00; font-size: 1rem;" title="Repetir jogo com números novos, mesmos bichos">🔁 Repetir Jogo</button>
+                    <button id="btn-online-${id}" class="save-button" style="flex: 1; background-color: #20c997; box-shadow: 0 4px 0 #148a6f; font-size: 1.2rem;" title="Ver recibo online, mesmo expirado (só admin)">🌐</button>
+                </div>
                 
                 <div id="content-${id}" style="display: none; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); margin-top: 10px;">
                     <div id="text-${id}" style="white-space: pre-wrap; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto;"></div>
@@ -23644,13 +23734,41 @@ ${(() => {
                 e.currentTarget.innerHTML = isHidden ? '🙈 Ocultar' : '👀 Ver Recibo';
             });
 
-            document.getElementById(`btn-copy-${item.id}`).addEventListener('click', (e) => {
-                const text = document.getElementById(`text-${item.id}`).textContent;
-                copyToClipboard(text, e.currentTarget);
+            document.getElementById(`btn-copy-${item.id}`).addEventListener('click', async (e) => {
+                const fullText = document.getElementById(`text-${item.id}`).textContent;
+
+                // Extrai as milhares do recibo pra oferecer a opção "só números"
+                const milhares = [];
+                const milharLineRegex = /Milhares:\s*([\d,\s]+)/g;
+                let matchLinha;
+                while ((matchLinha = milharLineRegex.exec(fullText)) !== null) {
+                    const numsDaLinha = matchLinha[1].match(/\d{4}/g);
+                    if (numsDaLinha) milhares.push(...numsDaLinha);
+                }
+
+                // Se não tiver milhares pra separar, copia direto o texto todo
+                if (milhares.length === 0) {
+                    copyToClipboard(fullText, e.currentTarget);
+                    return;
+                }
+
+                const soMilhares = await showCustomConfirm(
+                    'O que você deseja copiar?',
+                    '🔢 Só Milhares',
+                    '📄 Texto Completo',
+                    'savedReceiptsModal'
+                );
+
+                const textoParaCopiar = soMilhares ? milhares.join(' ') : fullText;
+                copyToClipboard(textoParaCopiar, e.currentTarget);
             });
 
             document.getElementById(`btn-resend-${item.id}`).addEventListener('click', () => resendReceiptLink(item.id));
             document.getElementById(`btn-del-${item.id}`).addEventListener('click', () => deleteSavedReceipt(item.id));
+            document.getElementById(`btn-repeat-${item.id}`).addEventListener('click', () => repetirJogoDoRecibo(item.id));
+            document.getElementById(`btn-online-${item.id}`).addEventListener('click', () => {
+                window.open(`https://meus-recibos-vip.web.app/recibo.html?id=${item.id}&admin=true`, '_blank');
+            });
         });
 
     } catch (error) {
