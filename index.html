@@ -3358,6 +3358,7 @@ body.dark-mode #sortResultsBtn:active {
 
 .modal-top { z-index: 1450 !important; } 
 .modal-super-top { z-index: 1600 !important; }
+#chunkCopyModal { z-index: 1700 !important; } /* Garante que fique acima mesmo quando aberto de dentro de outro modal (ex: Recibos Salvos) */
 
 #shareResultsModalBody .lottery-selection-grid {
     display: flex;          /* <-- MUDADO DE 'grid' */
@@ -4922,9 +4923,15 @@ body.dark-mode #clear-input-inline {
 }
 
 #mcdSearchContainer {
-    position: relative; /* Essencial para posicionar o botão X */
     display: flex;
     gap: 8px;
+    align-items: center;
+}
+
+.mcd-search-input-wrapper {
+    position: relative; /* Essencial para posicionar o botão X só em relação ao input */
+    flex-grow: 1;
+    display: flex;
     align-items: center;
 }
 
@@ -4934,17 +4941,15 @@ body.dark-mode #clear-input-inline {
 
 #clear-mcd-search {
     position: absolute;
-    
-    /* Centralização Vertical */
-    top: 22%; 
-    transform: translateY(-50%); 
-    
-    right: -33px; 
-    
+    top: 50%;
+    transform: translateY(-50%);
+    right: 8px;
+
     padding: 0;
     width: 20px;
     height: 20px;
-    font-size: 1.1rem;
+    font-size: 1rem;
+    line-height: 1;
     cursor: pointer;
     border: none;
     background: none;
@@ -4952,12 +4957,20 @@ body.dark-mode #clear-input-inline {
     opacity: 0.7;
     transition: opacity 0.2s;
     display: none; 
+    align-items: center;
+    justify-content: center;
     z-index: 5;
 }
-@media (max-width: 480px) {
-    #clear-mcd-search {
-        right: 108px; 
-    }
+
+/* Destaque pulsante para deixar bem visível onde a milhar/centena foi encontrada */
+.mcd-search-highlight {
+    border-radius: 5px;
+    padding: 2px 4px;
+    animation: mcdSearchPulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes mcdSearchPulse {
+    from { box-shadow: 0 0 6px rgba(255, 193, 7, 0.6); }
+    to   { box-shadow: 0 0 16px rgba(255, 193, 7, 1); }
 }
 
 #nomeModalTitle {
@@ -8650,17 +8663,21 @@ max-width: 100%;
     </div>
     </div>
     <div id="mcdSearchContainer" class="button-group" style="display: none; margin-top: 15px; gap: 8px;">
-    <input type="tel" 
+    <div class="mcd-search-input-wrapper">
+    <input type="text" 
            inputmode="numeric" 
+           pattern="[0-9]*"
+           autocomplete="off"
            id="mcdSearchInput" 
            class="save-dialog-input" 
            placeholder="Buscar nos resultados gerados..." 
            maxlength="4"
            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-           style="margin: 0; flex-grow: 1; text-align: center;">
-    
+           style="margin: 0; width: 100%; text-align: center;">
+
     <button id="clear-mcd-search" type="button" title="Limpar Busca">❌</button>
-    
+</div>
+ 
     <button onclick="searchAndHighlightMCD()" class="view-button" style="min-width: 100px; flex-shrink: 0;">🔎 Buscar</button>
 </div>
 
@@ -8828,8 +8845,10 @@ max-width: 100%;
 
 <div id="customConfirmModal" class="modal modal-top" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <span class="close-modal" id="customConfirmClose" aria-label="Fechar">×</span>
         <h3 class="modal-title" style="margin-bottom: 15px;">⚠️ Atenção</h3>
         <p id="customConfirmModalMessage" style="margin-bottom: 25px; font-size: 1rem; line-height: 1.5;"></p>
+        <button id="customConfirmExtra" class="save-button" style="width: 100%; margin-bottom: 10px; background-color: #fd7e14; display: none;">✂️ Dividir Lotes</button>
         <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
             <button id="customConfirmCancel" class="import-btn" style="flex: 1;">Cancelar</button>
             <button id="customConfirmOk" class="save-button" style="flex: 1;">Confirmar</button>
@@ -8883,11 +8902,11 @@ max-width: 100%;
             Evite travar o WhatsApp copiando partes menores.
         </p>
         
-        <div class="generator-step-card" style="padding: 15px; margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <label for="chunkExternalInput" style="font-weight: bold; display: block; font-size: 0.9rem; color: #007bff; margin: 0;">
-                    📝 Colar de fora:
-                </label>
+        <div id="chunkExternalPasteCard" class="generator-step-card" style="padding: 15px; margin-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <label for="chunkExternalInput" style="font-weight: bold; display: block; font-size: 0.9rem; color: #007bff; margin: 0;">
+            📝 Colar de fora:
+        </label>
                 <div style="display: flex; gap: 5px;">
                     <button type="button" title="Limpar" onclick="document.getElementById('chunkExternalInput').value = ''; if(typeof processExternalChunkInput === 'function') processExternalChunkInput();" style="background: #dc3545; color: white; border: none; border-radius: 5px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer; min-width: auto; height: auto;">🗑️</button>
                     <button type="button" title="Colar Texto" onclick="navigator.clipboard.readText().then(t => { document.getElementById('chunkExternalInput').value = t; if(typeof processExternalChunkInput === 'function') processExternalChunkInput(); }).catch(() => alert('Seu navegador bloqueou o acesso automático. Cole segurando o dedo no campo!'))" style="background: #007bff; color: white; border: none; border-radius: 5px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer; min-width: auto; height: auto;">📋</button>
@@ -9884,18 +9903,14 @@ async function loadVisualPreferences() {
 }
 
 function loadMcdSearchTerm() {
+    // Agora a busca sempre abre limpa — não restaura mais o último termo salvo
     const searchInput = document.getElementById('mcdSearchInput');
-    const lastSearchTerm = localStorage.getItem('lastMcdSearchTerm');
-    
-    if (searchInput && lastSearchTerm) {
-        // Garante que o termo salvo tenha 3 ou 4 dígitos
-        if (/^\d{3,4}$/.test(lastSearchTerm)) {
-             searchInput.value = lastSearchTerm;
-        } else {
-             // Se for inválido, limpa a memória para evitar bugs
-             localStorage.removeItem('lastMcdSearchTerm');
-        }
-    }
+    if (searchInput) searchInput.value = '';
+
+    const clearBtn = document.getElementById('clear-mcd-search');
+    if (clearBtn) clearBtn.style.display = 'none';
+
+    localStorage.removeItem('lastMcdSearchTerm');
 }
 
 // Variável para armazenar os favoritos na memória (Padrão inicial: 10 e 20 reais)
@@ -13133,13 +13148,13 @@ function checkCentenaRepetition(numStr, rule) {
     return false;
 }
 
-function searchAndHighlightMCD() {
+function searchAndHighlightMCD(options = {}) {
+    const { silent = false } = options; // silent=true = chamada automática ao digitar
     const searchInput = document.getElementById('mcdSearchInput');
     
-    // VERIFICAÇÃO EXTRA: Garante que o elemento existe antes de tentar ler o valor
     if (!searchInput) {
         console.error("ERRO CRÍTICO: Elemento 'mcdSearchInput' não encontrado no DOM.");
-        showToast('Erro interno: Campo de busca não encontrado.', 'error');
+        if (!silent) showToast('Erro interno: Campo de busca não encontrado.', 'error');
         return;
     }
 
@@ -13149,47 +13164,37 @@ function searchAndHighlightMCD() {
     let firstFoundElement = null;
     const isDarkMode = document.body.classList.contains('dark-mode');
 
-    // LOG DE DEBUG: Se o problema persistir, verifique o console do navegador!
-    console.log(`>>> searchAndHighlightMCD: Valor lido do campo: "${searchTerm}" (Comprimento: ${searchTerm.length})`);
-
-    // Define as cores de destaque com base no tema
     const highlightBgColor = isDarkMode ? '#e0a800' : '#ffc107';
     const highlightTextColor = isDarkMode ? '#212529' : '#343a40';
 
-    // Remove destaques e seleções de buscas anteriores
+    // Limpa destaques anteriores
     allNumbers.forEach(span => {
         span.style.backgroundColor = '';
         span.style.color = '';
-        span.style.borderRadius = '';
-        span.style.padding = '';
-        span.style.boxShadow = '';
+        span.classList.remove('mcd-search-highlight');
     });
-    window.getSelection().removeAllRanges();
 
-    // 2. VERIFICAÇÃO DE TERMO VAZIO (Onde o erro está caindo)
-   if (searchTerm === '') {
-        showToast('Busca limpa.', 'info');
-        // REMOVA OU COMENTE A LINHA ABAIXO:
-        localStorage.removeItem('lastMcdSearchTerm'); // <--- REMOVER ESTA LINHA
-        return; // Sai da função
+    if (searchTerm === '') {
+        if (!silent) showToast('Busca limpa.', 'info');
+        localStorage.removeItem('lastMcdSearchTerm');
+        return;
     }
 
-    // 3. VALIDAÇÃO DO TERMO 
+    // Enquanto digita (1-2 dígitos) só limpa o destaque, sem avisar com toast de erro
     if (searchTerm.length !== 3 && searchTerm.length !== 4) {
-        showToast('Busca inválida. Digite 3 (Centena) ou 4 (Milhar) dígitos.', 'error');
+        if (!silent) {
+            showToast('Busca inválida. Digite 3 (Centena) ou 4 (Milhar) dígitos.', 'error');
+        }
         return;
     }
     
-    // 4. EXECUÇÃO DA BUSCA (Se chegou até aqui, o searchTerm é válido)
     allNumbers.forEach(span => {
         const rawNumber = span.dataset.number;
         
         if (rawNumber.endsWith(searchTerm)) {
             span.style.backgroundColor = highlightBgColor;
             span.style.color = highlightTextColor;
-            span.style.borderRadius = '5px';
-            span.style.padding = '2px 4px';
-            span.style.boxShadow = '0 0 10px rgba(255, 193, 7, 0.5)';
+            span.classList.add('mcd-search-highlight');
 
             foundCount++;
             if (!firstFoundElement) {
@@ -13198,33 +13203,19 @@ function searchAndHighlightMCD() {
         }
     });
 
+    // Define o rótulo certo pra mensagem: 4 dígitos = Milhar, 3 dígitos = Centena
+    const tipoBusca = searchTerm.length === 4 ? 'Milhar' : 'Centena';
+
     if (firstFoundElement) {
-        // Salva o termo de busca para a próxima vez (só salva se deu certo)
         localStorage.setItem('lastMcdSearchTerm', searchTerm);
-        
-        const scrollContainer = firstFoundElement.closest('.modal-content');
-        if (scrollContainer) {
-            const elementTop = firstFoundElement.offsetTop;
-            const elementHeight = firstFoundElement.offsetHeight;
-            const containerHeight = scrollContainer.clientHeight;
-            const newScrollTop = elementTop - (containerHeight / 2) + (elementHeight / 2);
 
-            scrollContainer.scrollTo({
-                top: newScrollTop,
-                behavior: 'smooth'
-            });
-        }
+        // Scroll direto ao elemento — mais confiável que calcular offset manualmente
+        firstFoundElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        const range = document.createRange();
-        range.selectNodeContents(firstFoundElement);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        showToast(`${foundCount} resultado(s) encontrado(s) para "${searchTerm}".`, 'success');
+        showToast(`${foundCount} ${tipoBusca}(s) encontrada(s) para "${searchTerm}".`, 'success');
     } else {
-        showToast(`Nenhum resultado encontrado para "${searchTerm}".`, 'error');
-        }
+        showToast(`Nenhuma ${tipoBusca} encontrada para "${searchTerm}".`, 'error');
+    }
 }
 
 function searchForMilhar(milhar, clickedElement) {
@@ -14063,6 +14054,10 @@ function openChunkCopyModal() {
 
 function closeChunkCopyModal() {
     document.getElementById('chunkCopyModal').classList.remove('active');
+
+    // Restaura o campo "Colar de fora" para os outros fluxos (ex: botão Dividir Lotes do gerador)
+    const pasteCard = document.getElementById('chunkExternalPasteCard');
+    if (pasteCard) pasteCard.style.display = '';
 }
 
 function renderChunkButtons() {
@@ -15765,18 +15760,18 @@ function setupCutoffTimeSetting() {
     });
 }
 
-// VERSÃO CORRIGIDA: Garante que o Confirm sempre vença a tela preta
-function showCustomConfirm(message, okText = 'Confirmar', cancelText = 'Cancelar', callingModalId = null) {
+function showCustomConfirm(message, okText = 'Confirmar', cancelText = 'Cancelar', callingModalId = null, extraOptions = null) {
     return new Promise(resolve => {
         const modal = document.getElementById('customConfirmModal');
         const messageEl = document.getElementById('customConfirmModalMessage');
         const okBtn = document.getElementById('customConfirmOk');
         const cancelBtn = document.getElementById('customConfirmCancel');
+        const extraBtn = document.getElementById('customConfirmExtra');
+        const closeX = document.getElementById('customConfirmClose');
 
         messageEl.innerHTML = message.replace(/\n/g, '<br>');
         okBtn.textContent = okText;
 
-        // 1. DEFINE A CAMADA BASE COMO 10000 (Sempre acima do loading que é 8000)
         modal.style.zIndex = "10000"; 
 
         if (cancelText === null) {
@@ -15788,7 +15783,14 @@ function showCustomConfirm(message, okText = 'Confirmar', cancelText = 'Cancelar
             okBtn.style.flexGrow = '';
         }
 
-        // 2. Se houver um modal chamando, ele sobe ainda mais (Ex: Kits chamando Confirm)
+        // Botão extra opcional (ex: "Dividir Lotes") — só aparece quando pedido
+        if (extraOptions && extraOptions.text) {
+            extraBtn.textContent = extraOptions.text;
+            extraBtn.style.display = 'block';
+        } else {
+            extraBtn.style.display = 'none';
+        }
+
         if (callingModalId) {
              const callingModal = document.getElementById(callingModalId);
              if (callingModal) {
@@ -15806,21 +15808,28 @@ function showCustomConfirm(message, okText = 'Confirmar', cancelText = 'Cancelar
 
         const cleanupAndResolve = (value) => {
              modal.classList.remove('active');
-             // Limpa o z-index inline ao fechar para não bugar outros modais
              setTimeout(() => { modal.style.zIndex = ''; }, 300);
              
              okBtn.removeEventListener('click', onOkClick);
              cancelBtn.removeEventListener('click', onCancelClick);
+             extraBtn.removeEventListener('click', onExtraClick);
+             closeX.removeEventListener('click', onCloseClick);
              resolve(value);
         };
 
         const onOkClick = () => cleanupAndResolve(true);
         const onCancelClick = () => cleanupAndResolve(false);
+        const onExtraClick = () => cleanupAndResolve('extra');
+        const onCloseClick = () => cleanupAndResolve(false); // X fecha igual Cancelar
 
         okBtn.addEventListener('click', onOkClick, { once: true });
         if (cancelText !== null) {
             cancelBtn.addEventListener('click', onCancelClick, { once: true });
         }
+        if (extraOptions && extraOptions.text) {
+            extraBtn.addEventListener('click', onExtraClick, { once: true });
+        }
+        closeX.addEventListener('click', onCloseClick, { once: true });
     });
 }
 
@@ -16139,27 +16148,29 @@ if (clearInputButton) {
     });
 }
 
-// Localize a função setupEventListeners() e adicione o bloco abaixo
-
-// --- LÓGICA PARA O BOTÃO X DENTRO DO CAMPO DE BUSCA MCD ---
 const mcdSearchInput = document.getElementById('mcdSearchInput');
 const clearMcdSearchBtn = document.getElementById('clear-mcd-search');
+let mcdSearchDebounceTimer = null;
 
 if (mcdSearchInput && clearMcdSearchBtn) {
     
-    // Função que lida com a visibilidade e a limpeza
     const handleMcdClear = () => {
-        // 1. Mostrar/Esconder o X
         if (mcdSearchInput.value.trim() !== '') {
-            clearMcdSearchBtn.style.display = 'block';
+            clearMcdSearchBtn.style.display = 'flex';
         } else {
             clearMcdSearchBtn.style.display = 'none';
         }
     };
 
-    // 2. Evento de INPUT (mostra/esconde o X ao digitar)
     mcdSearchInput.addEventListener('input', handleMcdClear);
-    
+
+    mcdSearchInput.addEventListener('input', () => {
+        clearTimeout(mcdSearchDebounceTimer);
+        mcdSearchDebounceTimer = setTimeout(() => {
+            searchAndHighlightMCD({ silent: true });
+        }, 250);
+    });
+
     // 3. Evento de CLIQUE no X (limpa o campo e a busca)
     clearMcdSearchBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -22308,6 +22319,27 @@ let lastChunkedNumbersStr = "";
 let lastChunkSize = 50; 
 let pendingHistoryItemForChunk = null; 
 
+function openChunkCopyModalFromList(numbersArray, label = '') {
+    pendingHistoryItemForChunk = null;
+    currentNumbersToChunk = [...numbersArray];
+    sourceNumbersToChunk = [...numbersArray];
+    lastChunkedNumbersStr = `external_${numbersArray.join(',')}`;
+    copiedChunksStatus.clear();
+
+    const externalInput = document.getElementById('chunkExternalInput');
+    if (externalInput) externalInput.value = ''; // Não precisa colar, já veio pronto
+
+    // Esconde o campo "Colar de fora" — as milhares já foram passadas prontas
+    const pasteCard = document.getElementById('chunkExternalPasteCard');
+    if (pasteCard) pasteCard.style.display = 'none';
+
+    const titleEl = document.querySelector('#chunkCopyModal .modal-title');
+    if (titleEl) titleEl.innerHTML = label ? `✂️ Dividir Lotes: ${label}` : `✂️ Copiar em Lotes`;
+
+    document.getElementById('chunkCopyModal').classList.add('active');
+    renderChunkButtons();
+}
+
 function initiateChunkCopy() {
     pendingHistoryItemForChunk = null; 
     
@@ -23751,15 +23783,21 @@ ${(() => {
                     return;
                 }
 
-                const soMilhares = await showCustomConfirm(
-                    'O que você deseja copiar?',
-                    '🔢 Só Milhares',
-                    '📄 Texto Completo',
-                    'savedReceiptsModal'
-                );
+                const escolha = await showCustomConfirm(
+    'O que você deseja Copiar?',
+    '🔢 Só Milhares',
+    '📄 Texto Completo',
+    'savedReceiptsModal',
+    { text: '✂️ Copiar Lotes' }
+);
 
-                const textoParaCopiar = soMilhares ? milhares.join(' ') : fullText;
-                copyToClipboard(textoParaCopiar, e.currentTarget);
+if (escolha === 'extra') {
+    openChunkCopyModalFromList(milhares, 'Milhares do Recibo');
+    return;
+}
+
+const textoParaCopiar = escolha ? milhares.join(' ') : fullText;
+copyToClipboard(textoParaCopiar, e.currentTarget);
             });
 
             document.getElementById(`btn-resend-${item.id}`).addEventListener('click', () => resendReceiptLink(item.id));
@@ -23811,6 +23849,8 @@ function toggleReceiptSelectionMode(enable) {
         el.style.display = enable ? 'none' : 'flex';
     });
 }
+
+
 
 function selectAllReceipts(state) {
     document.querySelectorAll('#savedReceiptsContainer .saved-item').forEach(item => {
