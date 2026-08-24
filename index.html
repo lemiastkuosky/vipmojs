@@ -15547,7 +15547,7 @@ if (valorPagoNumerico > 0) {
         linhas.push(`1º + 2 outros prêmios: ${formatarReal(premioPorAcerto * 3 + bonusPrimeiro)}`);
         linhas.push(`Os 5 prêmios: ${formatarReal(premioPorAcerto * 5 + bonusPrimeiro)}`);
 
-        premioFormatado = `*Possível prêmio, você pode ganhar:*\n` +
+        premioFormatado = `*Verificar na tabela do grupo:*\n` +
     `Cada acerto (1º ao 5º) vale ${formatarReal(premioPorAcerto)} · 1º prêmio soma +${formatarReal(bonusPrimeiro)}\n` +
     linhas.map(l => `                 • ${l}`).join('\n');
     }
@@ -15586,67 +15586,6 @@ ${numerosTexto}
 
     if (receiptContent) {
         receiptContent.innerHTML = reciboCompleto.trim();
-    }
-}
-
-function generateReceiptText() {
-    // 1. Pega o valor digitado no input do recibo e converte para centavos (ex: "R$ 50,00" -> 5000)
-    const receiptValueInput = document.getElementById('receiptValueInput');
-    let valorEmCentavos = 0;
-    if (receiptValueInput && receiptValueInput.value) {
-        valorEmCentavos = parseInt(receiptValueInput.value.replace(/\D/g, ''), 10) || 0;
-    }
-
-    // 2. Identifica qual método de prêmio está selecionado
-    const metodoPremioEl = document.querySelector('input[name="metodoPremio"]:checked');
-    const metodoPremio = metodoPremioEl ? metodoPremioEl.value : (window.selectedMetodoPremio || 'padrao');
-
-    let possivelPremioTexto = "";
-
-    // 3. Calcula o prêmio dinamicamente conforme o método escolhido
-    if (metodoPremio === '1_e_1a5') {
-        // Regra do 1º e 1º ao 5º: 5x do 1º ao 5º + bônus de 25x no 1º prêmio
-        let premioPrimeiro = (valorEmCentavos * 25) / 100;
-        let premioUmAoCinco = (valorEmCentavos * 5) / 100;
-
-        let formatadoPrimeiro = "R$ " + premioPrimeiro.toFixed(2).replace('.', ',');
-        let formatadoUmAoCinco = "R$ " + premioUmAoCinco.toFixed(2).replace('.', ',');
-
-        possivelPremioTexto = `${formatadoPrimeiro} (no 1º) / ${formatadoUmAoCinco} (1º ao 5º)`;
-    } else {
-        // Método Padrão (Ex: 50x)
-        let premioPadrao = (valorEmCentavos * 50) / 100;
-        possivelPremioTexto = "R$ " + premioPadrao.toFixed(2).replace('.', ',');
-    }
-
-    // 4. Pega os dados de extração e horário selecionados nos selects do modal
-    const extracao = document.getElementById('receiptExtractionSelect')?.value || 'Rio de Janeiro';
-    const horario = document.getElementById('receiptTimeSelect')?.value || '';
-    
-    // 5. Conta a quantidade de números gerados na lista atual
-    let qtdNumeros = 0;
-    if (typeof originalGeneratedNumbers !== 'undefined') {
-        qtdNumeros = (originalGeneratedNumbers.milhar?.length || 0) + 
-                     (originalGeneratedNumbers.centena?.length || 0) + 
-                     (originalGeneratedNumbers.dezena?.length || 0);
-    }
-    if (qtdNumeros === 0) qtdNumeros = 100; // Valor padrão caso venha vazio
-
-    // 6. Formata a data e hora atual do recibo
-    const dataHoraFormatada = new Date().toLocaleString('pt-BR');
-
-    // 7. Monta o texto final do recibo alinhado e correto
-    let texto = `Código:          ${currentReceiptCode || '------'}
-Data/Hora:       ${dataHoraFormatada}
-Extração:        ${extracao} ${horario ? '- ' + horario : ''}
-Valor Pago:      ${receiptValueInput ? receiptValueInput.value : 'R$ 0,00'}
-Possível Prêmio: ${possivelPremioTexto}
-Qtd. Números:    ${qtdNumeros}`;
-
-    // 8. Joga o resultado dentro da div do recibo na tela
-    const contentDiv = document.getElementById('receiptContent');
-    if (contentDiv) {
-        contentDiv.innerText = texto;
     }
 }
 
