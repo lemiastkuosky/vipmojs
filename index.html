@@ -7885,13 +7885,13 @@ header, footer, .bottom-bar {
                 </div>
             </button>
 
-            <button disabled class="bolao-button" style="background-color: #6c757d; cursor: not-allowed; opacity: 0.6;">
-                <span style="font-size: 1.5rem; line-height: 1;">🎟️</span>
-                <div>
-                    <strong>Bolão Especial</strong>
-                    <small style="font-weight: normal;">(Indisponível)</small>
-                </div>
-            </button>
+            <button onclick="handlePaymentMethodSelection('1_e_1a5')" class="view-button">
+    <span style="font-size: 1.5rem; line-height: 1;">🎟️</span>
+    <div>
+        <strong>1º e 1º ao 5º</strong>
+        <small style="font-weight: normal;">(5x + bônus 25x no 1º)</small>
+    </div>
+</button>
       </div>
 
       <button onclick="closePaymentMethodModal()" class="load-button" style="width: 100%; margin-top: 20px;">Cancelar</button>
@@ -9509,8 +9509,9 @@ const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
             { display: '21:00', corteMinutos: 1 }
         ],
         'Loteria Federal': [
-            { display: '20:00', corteMinutos: 1 }
-        ],
+    { display: '20:00 (Quarta)', corteMinutos: 1 },
+    { display: '12:00 (Domingo)', corteMinutos: 1 }
+],
 
         'Loteria Federal': [
             { display: '20:00', corteMinutos: 1 }
@@ -11817,24 +11818,27 @@ function updateIaSuggestionCountsDisplay(lottery) {
         const bichoNome = bichoData.animal.toLowerCase();
         
         // Busca a posição do bicho no ranking de atrasados reais
-        const idxAtrasadoReal = analise.atrasadosRealTime.findIndex(b => b.nome.toLowerCase() === bichoNome);
-        
-        let forcaRealTime = 0;
-        if (idxAtrasadoReal !== -1) {
-            // Cálculo da porcentagem de 99% a 10% dependendo da posição
-            forcaRealTime = Math.round(99 - (idxAtrasadoReal * 3.5));
-        }
+        const bichoAtrasado = analise.atrasadosRealTime.find(b => b.nome.toLowerCase() === bichoNome);
 
-        // Define a cor e o ícone baseado no "calor"
-        let icon = '⬇️'; let color = '#6c757d'; 
-        if (forcaRealTime >= 90) { icon = '🚨 🔥'; color = '#dc3545'; }
-        else if (forcaRealTime >= 75) { icon = '⬆️ 🔥'; color = '#fd7e14'; }
-        else if (forcaRealTime >= 50) { icon = '↗️'; color = '#28a745'; }
-        else if (forcaRealTime >= 30) { icon = '↘️'; color = '#17a2b8'; }
+if (!bichoAtrasado || bichoAtrasado.dias === undefined) {
+    span.innerHTML = '';
+    return;
+}
 
-        // Escreve no span que criamos no populateBichosSelector
-        span.innerHTML = `${icon} ${forcaRealTime}%`;
-        span.style.color = color;
+const dias = bichoAtrasado.dias;
+
+// Mostra o dado real (dias/sorteios sem sair), sem simular "força" ou "chance"
+let label = `${dias} sorteio${dias === 1 ? '' : 's'} sem sair`;
+let color = '#6c757d'; // cor neutra por padrão
+
+// A cor aqui é só informativa (quão atrasado está), não indica probabilidade de saída
+if (dias >= 20) color = '#dc3545';
+else if (dias >= 12) color = '#fd7e14';
+else if (dias >= 6) color = '#17a2b8';
+
+span.innerHTML = `📊 ${label}`;
+span.style.color = color;
+span.title = 'Dado histórico de frequência — sorteios são independentes e isso não indica maior chance de sair';
     });
 }
 
@@ -12012,6 +12016,37 @@ async function handleRegistration() {
 }
 
 
+function getDataHoraSorteioCorrigida(horarioSelecionado, extracaoNome) {
+    const timeMatch = (horarioSelecionado || '').match(/(\d{2}):(\d{2})/);
+    let hora = timeMatch ? parseInt(timeMatch[1], 10) : 0;
+    let minuto = timeMatch ? parseInt(timeMatch[2], 10) : 0;
+
+    const agora = new Date();
+    const diaSemana = agora.getDay();
+    const nome = (extracaoNome || '').toLowerCase();
+    const selecionado = (horarioSelecionado || '').toLowerCase();
+
+    // --- FEDERAL: respeita a opção escolhida (Quarta ou Domingo) ---
+    if (nome.includes('federal')) {
+        const diaAlvo = selecionado.includes('domingo') ? 0 : 3; // 0=Domingo, 3=Quarta
+        const d = new Date(agora);
+        let diff = (diaAlvo - diaSemana + 7) % 7;
+        d.setHours(hora, minuto, 0, 0);
+        if (diff === 0 && agora > d) diff = 7; // já passou hoje, pula pra semana que vem
+        d.setDate(agora.getDate() + diff);
+        return d;
+    }
+
+    // --- RIO / LOOK: aos sábados, 18:20 vira 19:20 ---
+    if ((nome.includes('rio') || nome.includes('look')) && diaSemana === 6 && hora === 18 && minuto === 20) {
+        hora = 19;
+        minuto = 20;
+    }
+
+    const dataSorteio = new Date();
+    dataSorteio.setHours(hora, minuto, 0, 0);
+    return dataSorteio;
+}
 
 function toggleRegistrationForm(event) {
     event.preventDefault();
@@ -12098,9 +12133,7 @@ async function _shareReceiptToWhatsAppOriginal() {
                 const now = new Date();
                 const dataHora = now.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
                 const codigo = generateReceiptCode();
-                const timeMatch = horarioSelecionado.match(/(\d{2}):(\d{2})/);
-                const dataSorteio = new Date();
-                if (timeMatch) dataSorteio.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
+                const dataSorteioFinal = getDataHoraSorteioCorrigida(horarioSelecionado, extracaoNome);
                 let expirationMinutes = parseInt(document.getElementById('expirationTimeInput')?.value, 10) || 15;
                 const dataExpiracao = new Date(dataSorteio);
                 dataExpiracao.setMinutes(dataSorteio.getMinutes() + expirationMinutes);
@@ -12242,13 +12275,10 @@ const histEntryCart = {
     const receiptContent = receiptClone.textContent;
 
     try {
-        const timeMatch = horarioSelecionado.match(/(\d{2}):(\d{2})/);
-        const dataSorteioFinal = new Date();
-        if (timeMatch) dataSorteioFinal.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
-
-        let expirationMinutes = parseInt(document.getElementById('expirationTimeInput').value, 10) || 15;
-        const dataExpiracao = new Date(dataSorteioFinal);
-        dataExpiracao.setMinutes(dataSorteioFinal.getMinutes() + expirationMinutes);
+        const dataSorteio = getDataHoraSorteioCorrigida(horarioSelecionado, extracaoNome);
+let expirationMinutes = parseInt(document.getElementById('expirationTimeInput')?.value, 10) || 15;
+const dataExpiracao = new Date(dataSorteio);
+dataExpiracao.setMinutes(dataSorteio.getMinutes() + expirationMinutes);
 
         const docRef = await firestoreDB.collection('receipts').add({
             content: receiptContent,
@@ -14656,11 +14686,12 @@ firebase.auth().onAuthStateChanged(user => {
          statusIndicator.className = 'status-logged-out'; // Indica problema
          // Não força logout aqui, mas mantém o aviso visual
       } else {
-         console.log("Usuário logado e ativo.");
-         getMilharCount(); // <-- ADICIONE A CHAMADA AQUI
-         // O status já está correto (verde)
-      }
-    }).catch(error => {
+   console.log("Usuário logado e ativo.");
+   getMilharCount();
+   loadIAScoreboard(); // <-- agora chamada aqui, com auth garantido
+    }
+}
+).catch(error => {
         console.error("Erro ao verificar status do usuário no Firestore:", error);
         statusIndicator.textContent += ' (Erro DB)';
         statusIndicator.className = 'status-logged-out';
@@ -15467,32 +15498,58 @@ function generateReceiptText(metodoCalculoOverride = null) {
     }
 
     const custoTotalCalculado = totalNumeros * 0.25;
-    const valorCalculadoFormatado = 'R$ ' + custoTotalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const valorPagoNumerico = parseFloat(valorPago.replace(/\D/g, '')) / 100;
-    const metodoCalculo = metodoCalculoOverride || document.querySelector('input[name="metodoPremio"]:checked')?.value || 'padrao';
-    let multiplicador = metodoCalculo === 'bolao_40x' ? 40 : 50; 
+const valorCalculadoFormatado = 'R$ ' + custoTotalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const valorPagoNumerico = parseFloat(valorPago.replace(/\D/g, '')) / 100;
+const metodoCalculo = metodoCalculoOverride || document.querySelector('input[name="metodoPremio"]:checked')?.value || 'padrao';
+let multiplicador = metodoCalculo === 'bolao_40x' ? 40 : 50;
 
-    let possivelPremio = 0;
-    if (valorPagoNumerico > 0) {
-        if (metodoCalculo === 'padrao') {
-            switch (valorPagoNumerico) {
-                case 25: possivelPremio = 1250; break;
-                case 50: possivelPremio = 2500; break; 
-                case 75: possivelPremio = 3750; break;
-                case 100: possivelPremio = 5000; break; 
-                case 150: possivelPremio = 7500; break;
-                case 200: possivelPremio = 10000; break;
-                default: possivelPremio = valorPagoNumerico * multiplicador; break; 
-            }
-        } else if (metodoCalculo === 'bolao_40x') {
-            switch (valorPagoNumerico) {
-                case 15: possivelPremio = 600; break; 
-                default: possivelPremio = valorPagoNumerico * multiplicador; break; 
-            }
+const formatarReal = (valor) => 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+let possivelPremio = 0;
+let premioFormatado = 'N/A';
+
+if (valorPagoNumerico > 0) {
+    if (metodoCalculo === 'padrao') {
+        switch (valorPagoNumerico) {
+            case 25: possivelPremio = 1250; break;
+            case 50: possivelPremio = 2500; break;
+            case 75: possivelPremio = 3750; break;
+            case 100: possivelPremio = 5000; break;
+            case 150: possivelPremio = 7500; break;
+            case 200: possivelPremio = 10000; break;
+            default: possivelPremio = valorPagoNumerico * multiplicador; break;
         }
+        premioFormatado = possivelPremio > 0 ? formatarReal(possivelPremio) : 'N/A';
+
+    } else if (metodoCalculo === 'bolao_40x') {
+        switch (valorPagoNumerico) {
+            case 15: possivelPremio = 600; break;
+            default: possivelPremio = valorPagoNumerico * multiplicador; break;
+        }
+        premioFormatado = possivelPremio > 0 ? formatarReal(possivelPremio) : 'N/A';
+
+    } else if (metodoCalculo === '1_e_1a5') {
+        // Modalidade composta: paga por CADA posição (1º ao 5º) que acertar,
+        // com bônus extra exclusivo se uma das posições for o 1º prêmio.
+        const premioPorAcerto = valorPagoNumerico * 5;    // vale por CADA acerto de 1º a 5º
+        const bonusPrimeiro = valorPagoNumerico * 25;     // bônus adicional só se sair no 1º
+
+        possivelPremio = premioPorAcerto; // referência numérica (não é o valor final)
+
+        const linhas = [];
+        for (let qtd = 1; qtd <= 4; qtd++) {
+            linhas.push(`${qtd} acerto${qtd > 1 ? 's' : ''} (2º ao 5º): ${formatarReal(premioPorAcerto * qtd)}`);
+        }
+        linhas.push(`Só o 1º prêmio: ${formatarReal(premioPorAcerto + bonusPrimeiro)}`);
+        linhas.push(`1º + 1 outro prêmio: ${formatarReal(premioPorAcerto * 2 + bonusPrimeiro)}`);
+        linhas.push(`1º + 2 outros prêmios: ${formatarReal(premioPorAcerto * 3 + bonusPrimeiro)}`);
+        linhas.push(`Os 5 prêmios: ${formatarReal(premioPorAcerto * 5 + bonusPrimeiro)}`);
+
+        premioFormatado = `*Possível prêmio, você pode ganhar:*\n` +
+    `Cada acerto (1º ao 5º) vale ${formatarReal(premioPorAcerto)} · 1º prêmio soma +${formatarReal(bonusPrimeiro)}\n` +
+    linhas.map(l => `                 • ${l}`).join('\n');
     }
-    
-    const premioFormatado = possivelPremio > 0 ? 'R$ ' + possivelPremio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A';
+}
     currentReceiptCode = lastGeneratedCode || generateReceiptCode(); 
 
     const keyCodigo = "Código".padEnd(15, '.');
@@ -16079,7 +16136,6 @@ if (lastBichoMode) {
     await loadFavoriteReceiptValues();
     await loadBannerPreferences();
     await loadMcdSmartQuantities();
-    loadIAScoreboard();
     setupPWA();
     verificarStatusRoboIA();
 
@@ -23554,13 +23610,9 @@ async function generateReceiptLink() {
 
   
 try {
-        // --- CÁLCULO DE EXPIRAÇÃO ---
         const horario = document.getElementById('receiptTimeSelect').value || "";
-        const timeMatch = horario.match(/(\d{2}):(\d{2})/);
-        const dataExpiracao = new Date();
-        if (timeMatch) {
-            dataExpiracao.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
-        }
+const extracaoNome = document.getElementById('receiptExtractionSelect').value || "";
+const dataExpiracao = getDataHoraSorteioCorrigida(horario, extracaoNome);
         let expirationMinutes = parseInt(document.getElementById('expirationTimeInput').value, 10) || 15;
         dataExpiracao.setMinutes(dataExpiracao.getMinutes() + expirationMinutes);
         // ------------------------------
@@ -27726,7 +27778,7 @@ ${resumoTextoArr.join('\n\n')}
     try {
         // --- CÁLCULO DE EXPIRAÇÃO (baseado no horário do sorteio, não em 4h fixas) ---
         const timeMatchKit = String(horario).match(/(\d{2}):(\d{2})/);
-        const dataExpiracaoKit = new Date();
+        const dataExpiracaoKit = getDataHoraSorteioCorrigida(horario, extracao);
         if (timeMatchKit) {
             dataExpiracaoKit.setHours(parseInt(timeMatchKit[1], 10), parseInt(timeMatchKit[2], 10), 0, 0);
         }
@@ -28152,7 +28204,7 @@ ${numerosTextoInternoArr.join('\n\n')}
     try {
         // --- CÁLCULO DE EXPIRAÇÃO (baseado no horário do sorteio, não em 4h fixas) ---
         const timeMatchKit = String(horario).match(/(\d{2}):(\d{2})/);
-        const dataExpiracaoKit = new Date();
+        const dataExpiracaoKit = getDataHoraSorteioCorrigida(horario, extracao);
         if (timeMatchKit) {
             dataExpiracaoKit.setHours(parseInt(timeMatchKit[1], 10), parseInt(timeMatchKit[2], 10), 0, 0);
         }
