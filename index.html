@@ -8802,7 +8802,8 @@ max-width: 100%;
         </div>
 
         <div id="quick-values-buttons" class="quick-values-container">
-            <button class="quick-value-btn" onclick="addReceiptValue(500)">+ R$ 5,00</button>
+    <button type="button" id="btnLastReceiptValue" class="quick-value-btn" style="background-color: #17a2b8; color: white; display: none;" onclick="useLastReceiptValue()">🔄 Último</button>
+    <button class="quick-value-btn" onclick="addReceiptValue(500)">+ R$ 5,00</button>
             <button class="quick-value-btn" onclick="addReceiptValue(1000)">+ R$ 10,00</button>
             <button class="quick-value-btn" onclick="addReceiptValue(2000)">+ R$ 20,00</button>
             <button class="quick-value-btn" onclick="addReceiptValue(5000)">+ R$ 50,00</button>
@@ -8813,7 +8814,7 @@ max-width: 100%;
         <div style="flex: 1; min-width: 100%; margin-top: 15px; text-align: center;">
             <label style="font-weight: bold; margin-bottom: 8px; display: block; text-align: center;">Valor Total da Aposta:</label>
             <span id="displaySelectedExtractionBadge" class="badge-missing">⚠️ Escolha a Extração</span>
-            <input type="text" id="receiptValueInput" class="password-display" style="color: #28a745 !important; width: 100%; text-align: center !important; font-size: 2rem !important; height: 60px !important; margin-top: 15px; margin-bottom: 15px;" readonly value="R$ 0,00" />
+            <input type="tel" inputmode="numeric" id="receiptValueInput" class="password-display" style="color: #28a745 !important; width: 100%; text-align: center !important; font-size: 2rem !important; height: 60px !important; margin-top: 15px; margin-bottom: 15px;" value="R$ 0,00" oninput="formatCurrency(this); handleReceiptInputChange();" />
         </div>
 
         <div id="final-action-buttons" class="button-group" style="margin-top: 20px; display: none;">
@@ -12261,6 +12262,9 @@ const histEntryCart = {
         showToast('Por favor, preencha o valor da aposta.', 'error');
         return;
     }
+    
+    // Salva o último valor utilizado
+    saveData('lastReceiptValue', valor);
 
     const chosenMethod = await showPaymentMethodModal();
     if (!chosenMethod) return;
@@ -23366,6 +23370,15 @@ async function revealReceiptInputs() {
          copyButton.style.display = 'none'; // Esconde
     }
 
+    // Puxa o último valor salvo para o botão
+    getData('lastReceiptValue').then(val => {
+        const btnLast = document.getElementById('btnLastReceiptValue');
+        if (btnLast && val && val !== 'R$ 0,00') {
+            btnLast.textContent = '🔄 ' + val;
+            btnLast.style.display = 'inline-block';
+        }
+    });
+
     const valueInput = document.getElementById('receiptValueInput');
     const extractionSelect = document.getElementById('receiptExtractionSelect');
     const timeSelect = document.getElementById('receiptTimeSelect');
@@ -23396,6 +23409,16 @@ async function revealReceiptInputs() {
     showBottomSendButton(); // Mostra botões secundários (Confirmar/Zerar), se existirem
 }
 
+function useLastReceiptValue() {
+    getData('lastReceiptValue').then(val => {
+        if (val) {
+            const input = document.getElementById('receiptValueInput');
+            input.value = val;
+            formatCurrency(input);
+            if (typeof handleReceiptInputChange === 'function') handleReceiptInputChange();
+        }
+    });
+}
 
 function getBichoDataFromNumber(numStr) {
     if (!numStr || numStr.length < 2) return null;
