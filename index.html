@@ -3740,9 +3740,9 @@ header h1 {
 
 #bichoMilharMethodContainer .button-style-radios {
     display: flex;
-    flex-direction: column; /* Empilha os botões verticalmente */
-    gap: 10px; /* Espaço entre os botões */
-    justify-content: flex-start; /* Alinha no início */
+    flex-wrap: wrap; /* 🪄 A MÁGICA: Permite quebrar a linha automaticamente */
+    gap: 8px; /* Espaço uniforme entre os botões */
+    justify-content: center; 
 }
 
 #bichoMilharMethodContainer .button-style-radios label {
@@ -3759,17 +3759,25 @@ header h1 {
 }
 
 #bichoMilharMethodContainer .button-style-radios label {
-    flex: 1; /* <-- Mantém: Faz os 3 botões terem a mesma largura */
+    flex: 1 1 30%; /* Tenta usar 1/3 do espaço... */
+    min-width: 95px; /* ...mas se ficar menor que 95px, pula para a linha de baixo! */
+    
     text-align: center;
     font-weight: 500;
-    font-size: 0.9rem; /* <-- NOVO: Reduz um pouco a fonte para caber melhor */
-    padding: 12px 8px; /* <-- NOVO: Ajusta o padding */
+    font-size: 0.85rem; /* Fonte ligeiramente ajustada para nomes duplos */
+    padding: 12px 6px; 
     border-radius: 10px;
     border: 2px solid #444;
     background-color: #2a2a2a;
     color: #f0f0f0;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
+    
+    /* Garante que o texto fique sempre centralizado mesmo se pular linha */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
 }
 
 #bichoMilharMethodContainer .button-style-radios label:not(:has(input:checked)):hover {
@@ -8593,11 +8601,16 @@ header, footer, .bottom-bar {
            onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
     Original
 </label>
+<label>
+        <input type="radio" name="bichoMilharMethod" value="cercar_0049" 
+           onchange="saveData('LAST_BICHO_MILHAR_MODE', this.value); document.getElementById('bichoMethodDescription').innerHTML = 'Gera 100 milhares: Sorteia 50 inícios entre 00 e 99 e combina cada um com 2 finais diferentes do bicho.'; if(typeof updateGeneratorOptions==='function') updateGeneratorOptions();">
+    Duplo Espalhado
+</label>
     <label>
-        <input type="radio" name="bichoMilharMethod" value="fechamento_mc" 
-               onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
-        Fechar M-C
-    </label>
+    <input type="radio" name="bichoMilharMethod" value="cercar_0099" 
+           onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
+    Cercar 00-99
+</label>
     <label>
         <input type="radio" name="bichoMilharMethod" value="cercar_completo" 
                onchange="saveData(STORAGE_KEYS.LAST_BICHO_MILHAR_MODE, this.value); updateBichoMethodDescription(); updateGeneratorOptions();">
@@ -11927,9 +11940,12 @@ function updateBichoMethodDescription() {
     case 'original':
         descriptionText = 'Modo clássico: usa os dígitos iniciais configurados nos filtros como prefixo. Mais preciso quando os filtros estão preenchidos.';
         break;
-    case 'fechamento_mc':
-        descriptionText = 'Gera milhares usando apenas os dígitos das dezenas do bicho como prefixos. (Ex: Tigre [85,88] usa 88, 85, 58, 55).';
-        break;
+    case 'cercar_0099':
+    desc.innerHTML = 'Gera exatas 100 milhares, usando todos os inícios de 00 a 99 com o final do bicho selecionado (Distribuição Perfeita).';
+    break;
+case 'cercar_0049':
+    desc.innerHTML = 'Gera exatas 100 milhares usando inícios de 00 a 49 (Distribui 2 dezenas finais diferentes do bicho para cada início).';
+    break;
     case 'cercar_completo':
         descriptionText = 'Gera TODAS as 400 milhares (prefixos 00-99) do bicho, sem repetição, até esgotar.';
         break;
@@ -20957,9 +20973,10 @@ async function generateSelectedNumbers() {
     const isVIP = (perms.isVIP === true) || (userData?.isVIP === true);
     const isPrivileged = isAdmin || isVIP;
 
+    const hoje = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+
     // 3. VERIFICAÇÃO DE COTA
     if (!isPrivileged) {
-        new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-')
         const contagemAtual = userData.geracoesHoje || 0;
         const dataUltimaGeracao = userData.dataUltimaGeracao || "";
         let contagemEfetiva = (dataUltimaGeracao === hoje) ? contagemAtual : 0;
@@ -20979,7 +20996,7 @@ async function generateSelectedNumbers() {
     const quantityInput = document.getElementById('randomQuantityInput');
     let totalQuantity = parseInt(quantityInput.value, 10);
     currentSortOrder = 'original';
-    await loadAndIncrementAttemptCount();
+    if(typeof loadAndIncrementAttemptCount === 'function') await loadAndIncrementAttemptCount();
 
     if (isNaN(totalQuantity) || totalQuantity <= 0 || totalQuantity > 10000) {
         showToast('Por favor, insira uma quantidade válida (1-10000).', 'error');
@@ -20994,8 +21011,8 @@ async function generateSelectedNumbers() {
     const mode = checkedModeRadio ? checkedModeRadio.value : 'offline';
     let checkedTypesElement = Array.from(document.querySelectorAll('input[name="generationType"]:checked'));
     let typeKeys = checkedTypesElement.map(cb => cb.value.toLowerCase());
+    const originalTypeKeys = [...typeKeys]; // Guarda os originais para restaurar depois
 
-    // Pega os tipos escolhidos (ex: "Milhar", "Centena") e os formata
     const tiposFormatados = typeKeys.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' e ');
 
     if (typeKeys.length === 0) {
@@ -21087,6 +21104,7 @@ async function generateSelectedNumbers() {
                             }
                         }
                     }
+                    
 
                     // Prioriza dezenas do 1º prêmio deste bicho específico
                     const dezenasOrdenadas = (dadosIA.dezenaPorBicho1Premio && dadosIA.dezenaPorBicho1Premio[bicho.grupo])
@@ -21183,10 +21201,76 @@ async function generateSelectedNumbers() {
         
         // 👇 AQUI MUDA O CABEÇALHO PARA FICAR IGUAL À SUA IMAGEM 👇
         summaryParts.push(`- <strong>Modo:</strong> Grupo Bichos`);
-        
+
+        // =================================================================
+        // 🚀 O MODO: CERCAR 00-99 
+        // =================================================================
+        if (bichoMilharMethod === 'cercar_0099' && typeKeys.includes('milhar')) {
+            const quantidadePerfeita = selectedBichos.length * 100;
+            totalQuantity = quantidadePerfeita; 
+
+            summaryParts.push(`<div style="font-size:0.85rem; color:#ffc107; margin-bottom: 5px;">(Distribuição Perfeita 00-99)</div>`);
+            
+            let milharesDistribuidas = [];
+            selectedBichos.forEach(bicho => {
+                summaryParts.push(`&bull; G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: 100x <small>(00 a 99)</small>`);
+                for (let i = 0; i <= 99; i++) {
+                    let inicioCentena = String(i).padStart(2, '0');
+                    let dezenaSorteada = bicho.dezenas[Math.floor(Math.random() * bicho.dezenas.length)];
+                    milharesDistribuidas.push(inicioCentena + dezenaSorteada);
+                }
+            });
+            milharesDistribuidas.sort(() => Math.random() - 0.5);
+            finalResults.milhar = milharesDistribuidas;
+            typeKeys = typeKeys.filter(t => t !== 'milhar');
+        }
+
+        // =================================================================
+        // 🚀 O NOVO MODO: DUPLO ESPALHADO (Sorteia 50 inícios de 00 a 99 e duplica)
+        // =================================================================
+        else if (bichoMilharMethod === 'cercar_0049' && typeKeys.includes('milhar')) {
+            // Força a quantidade a ser exatamente 100 (50 inícios x 2 dezenas = 100)
+            const quantidadePerfeita = selectedBichos.length * 100;
+            totalQuantity = quantidadePerfeita; 
+
+            summaryParts.push(`<div style="font-size:0.85rem; color:#ffc107; margin-bottom: 5px;">(Distribuição Dupla Espalhada)</div>`);
+            
+            let milharesDistribuidas = [];
+            
+            selectedBichos.forEach(bicho => {
+                summaryParts.push(`&bull; G${bicho.grupo} ${bicho.animal} ${bicho.emoji}: 100x <small>(2 finais para 50 inícios sorteados)</small>`);
+                
+                // 1. Cria uma lista com todos os inícios possíveis (00 a 99)
+                let todosInicios = [];
+                for (let i = 0; i <= 99; i++) {
+                    todosInicios.push(String(i).padStart(2, '0'));
+                }
+                
+                // 2. Embaralha essa lista (como se fosse um globo de bingo)
+                todosInicios.sort(() => Math.random() - 0.5);
+                
+                // 3. Pega apenas as 50 primeiras "bolas" sorteadas
+                let iniciosSorteados = todosInicios.slice(0, 50);
+                
+                // 4. Para cada um dos 50 inícios, puxa 2 finais diferentes do bicho
+                iniciosSorteados.forEach(inicioCentena => {
+                    let dezenasMisturadas = [...bicho.dezenas].sort(() => Math.random() - 0.5);
+                    
+                    milharesDistribuidas.push(inicioCentena + dezenasMisturadas[0]);
+                    milharesDistribuidas.push(inicioCentena + dezenasMisturadas[1]);
+                });
+            });
+
+            // Mistura tudo e injeta no resultado final
+            milharesDistribuidas.sort(() => Math.random() - 0.5);
+            finalResults.milhar = milharesDistribuidas;
+            
+            // Remove 'milhar' da lista de processamento padrão para não gerar duas vezes
+            typeKeys = typeKeys.filter(t => t !== 'milhar');
+        }
 
         // --- MODO CERCAR BICHO 400 (MÃO NA URNA) ---
-        if (bichoMilharMethod === 'cercar_completo' && typeKeys.includes('milhar')) {
+        else if (bichoMilharMethod === 'cercar_completo' && typeKeys.includes('milhar')) {
             summaryParts.push(`<div style="font-size:0.85rem; color:#ffc107; margin-bottom: 5px;">(Modo Cercar 400)</div>`);
             
             for (let i = selectedBichos.length - 1; i > 0; i--) {
@@ -21229,8 +21313,6 @@ async function generateSelectedNumbers() {
         
         // --- OUTROS SUB-MODOS (FECHAMENTO E PADRÃO) ---
         else {
-            if(bichoMilharMethod === 'fechamento_mc') summaryParts.push(`<div style="font-size:0.85rem; color:#ffc107; margin-bottom: 5px;">(Fechamento M-C)</div>`);
-            
             selectedBichos.forEach((bicho, index) => {
                 const qtd = baseQuantity + (index < remainder ? 1 : 0);
                 if (qtd > 0) {
@@ -21243,114 +21325,90 @@ async function generateSelectedNumbers() {
                 const qtd = baseQuantity + (index < remainder ? 1 : 0);
                 if (qtd === 0) return;
 
-                if (bichoMilharMethod === 'fechamento_mc' && typeKeys.includes('milhar')) {
-                    const hotDigits = new Set();
-                    bicho.dezenas.forEach(d => { hotDigits.add(d[0]); hotDigits.add(d[1]); });
-                    const arrDigits = Array.from(hotDigits);
-                    
-                    // POR ISTO:
-                    const uniqueSet = new Set();
-                    arrDigits.forEach(d1 => {
-                        arrDigits.forEach(d2 => {
-                            bicho.dezenas.forEach(dez => {
-                                const combo = d1 + d2 + dez;
-                                if (applyAdvancedFilters(combo, 'milhar')) uniqueSet.add(combo);
-                            });
-                        });
-                    });
-                    if (qtd > uniqueSet.size) {
+                const dezenasPool = bicho.dezenas;
+                typeKeys.forEach(typeKey => {
+                    const set = new Set();
+
+                   if (typeKey === 'milhar') {
+                    if (bichoMilharMethod === 'original') {
+                        const useStartDigitsFilter = document.getElementById('toggleStartDigitsCheck')?.checked;
+                        const milharStartDigits = useStartDigitsFilter
+                            ? Array.from(document.querySelectorAll('#milharStartOptions input:checked')).map(cb => cb.value)
+                            : [];
+                        const centenaStartDigits = useStartDigitsFilter
+                            ? Array.from(document.querySelectorAll('#centenaStartOptions input:checked')).map(cb => cb.value)
+                            : [];
+
+                        const maxAttempts = qtd * 50;
                         let attempts = 0;
-                        while (uniqueSet.size < qtd && attempts < (qtd * 50)) {
+                        while (set.size < qtd && attempts < maxAttempts) {
+                            attempts++;
+                            const randomDezena = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+                            const prefixoMilhar = milharStartDigits.length > 0
+                                ? milharStartDigits[getSecureRandomInt(milharStartDigits.length)]
+                                : String(getSecureRandomInt(10));
+                            const prefixoCentena = centenaStartDigits.length > 0
+                                ? centenaStartDigits[getSecureRandomInt(centenaStartDigits.length)]
+                                : String(getSecureRandomInt(10));
+                            const finalNumber = prefixoMilhar + prefixoCentena + randomDezena;
+                            if (applyAdvancedFilters(finalNumber, 'milhar')) set.add(finalNumber);
+                        }
+                    } else if (bichoMilharMethod === 'fechamento_mc') {
+                        // Lógica de Fechar M-C estava oculta aqui no código original, deixarei o padrão para caso ative
+                        let attempts = 0;
+                        const maxAttempts = qtd * 100;
+                        while (set.size < qtd && attempts < maxAttempts) {
                             attempts++;
                             const prefixo = String(getSecureRandomInt(100)).padStart(2, '0');
                             const dezena = bicho.dezenas[getSecureRandomInt(bicho.dezenas.length)];
-                            uniqueSet.add(prefixo + dezena);
+                            const finalNumber = prefixo + dezena;
+                            if (applyAdvancedFilters(finalNumber, 'milhar')) set.add(finalNumber);
                         }
-                    }
-
-                    let arrTemp = Array.from(uniqueSet);
-                    const selecionados = [];
-                    const qtdParaPegar = Math.min(qtd, arrTemp.length);
-
-                    for (let i = 0; i < qtdParaPegar; i++) {
-                        const randomIndex = getSecureRandomInt(arrTemp.length);
-                        selecionados.push(arrTemp[randomIndex]);
-                        arrTemp[randomIndex] = arrTemp[arrTemp.length - 1];
-                        arrTemp.pop();
-                    }
-                    finalResults.milhar.push(...selecionados);
-                }
-                else {
-    const dezenasPool = bicho.dezenas;
-    typeKeys.forEach(typeKey => {
-        const set = new Set();
-
-       if (typeKey === 'milhar') {
-        if (bichoMilharMethod === 'original') {
-    const useStartDigitsFilter = document.getElementById('toggleStartDigitsCheck')?.checked;
-    const milharStartDigits = useStartDigitsFilter
-        ? Array.from(document.querySelectorAll('#milharStartOptions input:checked')).map(cb => cb.value)
-        : [];
-    const centenaStartDigits = useStartDigitsFilter
-        ? Array.from(document.querySelectorAll('#centenaStartOptions input:checked')).map(cb => cb.value)
-        : [];
-
-    const maxAttempts = qtd * 50;
-    let attempts = 0;
-    while (set.size < qtd && attempts < maxAttempts) {
-        attempts++;
-        const randomDezena = dezenasPool[getSecureRandomInt(dezenasPool.length)];
-        const prefixoMilhar = milharStartDigits.length > 0
-            ? milharStartDigits[getSecureRandomInt(milharStartDigits.length)]
-            : String(getSecureRandomInt(10));
-        const prefixoCentena = centenaStartDigits.length > 0
-            ? centenaStartDigits[getSecureRandomInt(centenaStartDigits.length)]
-            : String(getSecureRandomInt(10));
-        const finalNumber = prefixoMilhar + prefixoCentena + randomDezena;
-        if (applyAdvancedFilters(finalNumber, 'milhar')) set.add(finalNumber);
-    }
-} else {
-            // MODO PADRÃO: prefixos embaralhados em blocos
-            const numPrefixos = Math.round(qtd / dezenasPool.length);
-            const todosPrefixos = Array.from({length: 100}, (_, i) => String(i).padStart(2, '0'));
-            for (let i = todosPrefixos.length - 1; i > 0; i--) {
-                const j = getSecureRandomInt(i + 1);
-                [todosPrefixos[i], todosPrefixos[j]] = [todosPrefixos[j], todosPrefixos[i]];
-            }
-            let count = 0;
-            for (const p of todosPrefixos) {
-                if (set.size >= qtd) break;
-                if (count >= numPrefixos) break;
-                for (const dezena of dezenasPool) {
-                    if (set.size >= qtd) break;
-                    const n = p + dezena;
-                    if (applyAdvancedFilters(n, 'milhar')) set.add(n);
-                }
-                count++;
-            }
-        }
-                        
-                        } else {
-                            let attempts = 0;
-                            const maxAttempts = qtd * 100;
-                            while (set.size < qtd && attempts < maxAttempts) {
-                                attempts++;
-                                const d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
-                                let num = '';
-                                if (typeKey === 'centena') num = String(getSecureRandomInt(10)) + d;
-                                else if (typeKey === 'dezena') num = d;
-                                if (applyAdvancedFilters(num, typeKey)) set.add(num);
+                    } else {
+                        // MODO PADRÃO: prefixos embaralhados em blocos
+                        const numPrefixos = Math.round(qtd / dezenasPool.length);
+                        const todosPrefixos = Array.from({length: 100}, (_, i) => String(i).padStart(2, '0'));
+                        for (let i = todosPrefixos.length - 1; i > 0; i--) {
+                            const j = getSecureRandomInt(i + 1);
+                            [todosPrefixos[i], todosPrefixos[j]] = [todosPrefixos[j], todosPrefixos[i]];
+                        }
+                        let count = 0;
+                        for (const p of todosPrefixos) {
+                            if (set.size >= qtd) break;
+                            if (count >= numPrefixos) break;
+                            for (const dezena of dezenasPool) {
+                                if (set.size >= qtd) break;
+                                const n = p + dezena;
+                                if (applyAdvancedFilters(n, 'milhar')) set.add(n);
                             }
+                            count++;
                         }
+                    }
+                                            
+                    } else {
+                        let attempts = 0;
+                        const maxAttempts = qtd * 100;
+                        while (set.size < qtd && attempts < maxAttempts) {
+                            attempts++;
+                            const d = dezenasPool[getSecureRandomInt(dezenasPool.length)];
+                            let num = '';
+                            if (typeKey === 'centena') num = String(getSecureRandomInt(10)) + d;
+                            else if (typeKey === 'dezena') num = d;
+                            if (applyAdvancedFilters(num, typeKey)) set.add(num);
+                        }
+                    }
 
-                        const resultadoDoBicho = Array.from(set);
-                        shuffleArray(resultadoDoBicho);
-                        finalResults[typeKey].push(...resultadoDoBicho);
-                    });
-                }
+                    const resultadoDoBicho = Array.from(set);
+                    shuffleArray(resultadoDoBicho);
+                    finalResults[typeKey].push(...resultadoDoBicho);
+                });
             });
         }
-        typeKeys.forEach(k => shuffleArray(finalResults[k]));
+        
+        // Garante o embaralhamento final nos arrays do modo original/padrão
+        if (typeKeys.includes('milhar')) shuffleArray(finalResults['milhar']);
+        if (typeKeys.includes('centena')) shuffleArray(finalResults['centena']);
+        if (typeKeys.includes('dezena')) shuffleArray(finalResults['dezena']);
     }
     
     else {
@@ -21392,42 +21450,57 @@ async function generateSelectedNumbers() {
                 const pool = cercarBichoPools[item.group];
                 if (pool) item.numbers.forEach(num => pool.delete(num));
             });
-            await saveCercarPools();
+            if(typeof saveCercarPools === 'function') await saveCercarPools();
         }
 
-        updateBichoCycleBadges();
-        saveNewMcdQuantity(totalQuantity);
-        clearRandomResults();
+        if(typeof updateBichoCycleBadges === 'function') updateBichoCycleBadges();
+        if(typeof saveNewMcdQuantity === 'function') saveNewMcdQuantity(totalQuantity);
+        if(typeof clearRandomResults === 'function') clearRandomResults();
         
+        // Restaura typeKeys original caso tenhamos removido 'milhar' no cercar_0099
+        typeKeys = originalTypeKeys;
+
         originalGeneratedNumbers = { milhar: [], centena: [], dezena: [] }; 
         typeKeys.forEach(tk => {
             if (finalResults[tk]?.length > 0) {
                 originalGeneratedNumbers[tk] = [...finalResults[tk]]; 
-                displayResultsWithSummary(tk, originalGeneratedNumbers[tk]); 
+                if(typeof displayResultsWithSummary === 'function') displayResultsWithSummary(tk, originalGeneratedNumbers[tk]); 
             }
         });
 
-        document.getElementById('generatorActionButtons').style.display = 'flex';
-document.getElementById('mcdCartPanel').style.display = 'block'; // ESSA É A LINHA QUE MOSTRA O CARRINHO
-        document.getElementById('mcdSearchContainer').style.display = 'flex'; 
-        if (document.getElementById('sortResultsBtn')) document.getElementById('sortResultsBtn').style.display = 'block';
+        const actionBtns = document.getElementById('generatorActionButtons');
+        if (actionBtns) actionBtns.style.display = 'flex';
+        
+        const cartPanel = document.getElementById('mcdCartPanel');
+        if (cartPanel) cartPanel.style.display = 'block'; 
+        
+        const searchContainer = document.getElementById('mcdSearchContainer');
+        if (searchContainer) searchContainer.style.display = 'flex'; 
+        
+        const sortBtn = document.getElementById('sortResultsBtn');
+        if (sortBtn) sortBtn.style.display = 'block';
         
         // Histórico local — só salva se não estiver usando o carrinho
         if (!window.mcdCart || window.mcdCart.length === 0) {
-            const historyEntry = { id: Date.now(), code: generateReceiptCode(), date: new Date().toISOString(), results: finalResults };
+            const historyEntry = { 
+                id: Date.now(), 
+                code: (typeof generateReceiptCode === 'function' ? generateReceiptCode() : Date.now()), 
+                date: new Date().toISOString(), 
+                results: finalResults 
+            };
             const h = await getData('generationHistory') || [];
             h.unshift(historyEntry);
             await saveData('generationHistory', h.slice(0, 50));
         }
         
         // 👇 ADICIONE ESTA LINHA AQUI 👇
-        selectAllBichos(false); // Limpa os bichos selecionados após gerar com sucesso!
+        if(typeof selectAllBichos === 'function') selectAllBichos(false); 
         if (typeof updateIaSuggestionCountsDisplay === 'function') {
             //updateIaSuggestionCountsDisplay(null);
         }
 
     } else {
-        showToast('Geração cancelada.', 'info');
+        if(typeof showToast === 'function') showToast('Geração cancelada.', 'info');
     }
 }
 
