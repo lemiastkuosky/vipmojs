@@ -4923,54 +4923,88 @@ body.dark-mode #clear-input-inline {
 }
 
 #mcdSearchContainer {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+    flex-direction: column !important;
+    width: 100%;
 }
 
-.mcd-search-input-wrapper {
-    position: relative; /* Essencial para posicionar o botão X só em relação ao input */
-    flex-grow: 1;
+.mcd-search-bar {
     display: flex;
     align-items: center;
+    gap: 8px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 30px;
+    padding: 6px 8px 6px 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mcd-search-bar:focus-within {
+    border-color: #17a2b8;
+    box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.15);
+}
+
+body.dark-mode .mcd-search-bar {
+    background-color: #1e1e1e;
+    border-color: #444;
+}
+
+.mcd-search-icon {
+    font-size: 1rem;
+    opacity: 0.55;
+    flex-shrink: 0;
 }
 
 #mcdSearchInput {
-    padding-right: 30px !important; 
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 10px 0;
+    font-size: 1rem;
+    text-align: left;
+    color: inherit;
+}
+
+#mcdSearchInput:not(:placeholder-shown) {
+    flex: 0 1 60px;
 }
 
 #clear-mcd-search {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    right: 8px;
-
-    padding: 0;
+    position: static;
+    flex-shrink: 0;
     width: 20px;
     height: 20px;
-    font-size: 1rem;
+    padding: 0;
+    font-size: 0.9rem;
     line-height: 1;
     cursor: pointer;
     border: none;
     background: none;
-    color: #dc3545; 
+    color: #dc3545;
     opacity: 0.7;
     transition: opacity 0.2s;
-    display: none; 
+    display: none;
     align-items: center;
     justify-content: center;
-    z-index: 5;
 }
 
-/* Destaque pulsante para deixar bem visível onde a milhar/centena foi encontrada */
-.mcd-search-highlight {
-    border-radius: 5px;
-    padding: 2px 4px;
-    animation: mcdSearchPulse 0.9s ease-in-out infinite alternate;
+.mcd-search-submit {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    background-color: #17a2b8;
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    padding: 12px;
+    font-weight: bold;
+    font-size: 0.95rem;
+    cursor: pointer;
 }
-@keyframes mcdSearchPulse {
-    from { box-shadow: 0 0 6px rgba(255, 193, 7, 0.6); }
-    to   { box-shadow: 0 0 16px rgba(255, 193, 7, 1); }
+
+.mcd-search-submit:active {
+    background-color: #117a8b;
 }
 
 #nomeModalTitle {
@@ -7764,10 +7798,20 @@ header, footer, .bottom-bar {
                     <small style="font-weight: normal;">(Ação irreversível no aparelho e na nuvem)</small>
                 </div>
             </button>
+
+            <!-- NOVO BOTÃO DE TRAVAR O MODO NINJA -->
+            <button onclick="bloquearBotaoNinja()" class="import-btn" style="background-color: #343a40; margin-top: 10px; border: 1px solid #495057;">
+                <span style="font-size: 1.5rem; line-height: 1;">🔒</span>
+                <div>
+                    <strong>Bloquear Acesso Ninja</strong>
+                    <small style="font-weight: normal;">(Ocultar menu e travar botão novamente)</small>
+                </div>
+            </button>
+            <!-- FIM DO NOVO BOTÃO -->
+
         </div>
     </div>
 </div>
-
     </section>
 
   </main>
@@ -8328,8 +8372,8 @@ header, footer, .bottom-bar {
         <div class="generator-body">
             <div id="generatorPanel">
 
-    <div class="generator-step-card">
-    <div class="step-title">1️⃣ Passo 1: Configuração</div>
+    <div class="generator-step-card" style="margin-top: 20px;">
+    <div class="step-title">3️⃣ Passo 3: Ações e Resultado</div>
 
     <div class="form-group">
     <div class="form-group-title">Modo de Geração</div>
@@ -8586,7 +8630,36 @@ header, footer, .bottom-bar {
     <button onclick="showSearchHistoryModal()" id="checkMilharBtn" class="btn-warning" style="width: 100%; margin-top: 10px;">🏆 Procurar Milhar Premiada</button>
 
     <div class="button-group" style="gap: 8px; margin-top: 10px;"> <button onclick="showAdvancedFiltersModal()" style="flex: 1;">⚙️ Configurações</button>
-        <button id="mcd-consultas-btn" onclick="showConsultasModal()" style="flex: 1;">📜 Consultas e Registros</button>
+        <!-- O Botão com LED Discreto -->
+<button id="mcd-consultas-btn" 
+    onmousedown="iniciarTravaNinja()" 
+    onmouseup="cancelarTravaNinja()" 
+    onmouseleave="cancelarTravaNinja()"
+    ontouchstart="iniciarTravaNinja()" 
+    ontouchend="cancelarTravaNinja()"
+    oncontextmenu="return false;"
+    style="flex: 1; position: relative; user-select: none; -webkit-touch-callout: none;">
+    
+    <!-- LED Invisível (Fica verde quando liberado) -->
+    <span id="ninja-status-led" style="position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background-color: transparent; transition: background-color 0.3s ease;"></span>
+    
+    📜 Consultas e Registros
+</button>
+
+<!-- O Modal de Senha (Padrão do Sistema) -->
+<div id="ninjaAuthModal" class="modal modal-super-top" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width: 350px; text-align: center;">
+        <h3 class="modal-title">🔐 Acesso Restrito</h3>
+        <p style="color: #6c757d; font-size: 0.9rem; margin-bottom: 15px;">Digite o código de autorização:</p>
+        
+        <input type="password" id="ninjaAuthInput" class="save-dialog-input" inputmode="numeric" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; font-weight: bold; margin-bottom: 20px;" placeholder="••••••">
+        
+        <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
+            <button onclick="cancelarNinjaModal()" class="import-btn" style="flex: 1;">Cancelar</button>
+            <button onclick="confirmarNinjaModal()" class="save-button" style="flex: 1;">Confirmar</button>
+        </div>
+    </div>
+</div>
     </div>
 
     <button id="sortResultsBtn" onclick="toggleSortOrder()" title="Alternar Ordem dos Resultados" class="view-button" style="display: none; width: 100%; margin-top: 10px; background-color: #17a2b8;">
@@ -8658,29 +8731,25 @@ max-width: 100%;
         <button type="button" onclick="abrirModalConfirmacao('carrinho')" style="width: 100%; min-width: 0 !important; background: rgba(220, 53, 69, 0.08); color: #dc3545; border: 1px solid #dc3545; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.85rem;">
             🗑️ Limpar Carrinho
         </button>
-    </div>
+        </div>
 </div>
     </div>
+    <div id="mcdSearchContainer" style="display: none; margin-top: 15px;">
+    <div class="mcd-search-bar">
+        <span class="mcd-search-icon">🔎</span>
+        <input type="text" 
+               inputmode="numeric" 
+               pattern="[0-9]*"
+               autocomplete="off"
+               id="mcdSearchInput" 
+               placeholder="Buscar nos resultados gerados..." 
+               maxlength="4"
+               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <button id="clear-mcd-search" type="button" title="Limpar Busca">✕</button>
     </div>
-    <div id="mcdSearchContainer" class="button-group" style="display: none; margin-top: 15px; gap: 8px;">
-    <div class="mcd-search-input-wrapper">
-    <input type="text" 
-           inputmode="numeric" 
-           pattern="[0-9]*"
-           autocomplete="off"
-           id="mcdSearchInput" 
-           class="save-dialog-input" 
-           placeholder="Buscar nos resultados gerados..." 
-           maxlength="4"
-           oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-           style="margin: 0; width: 100%; text-align: center;">
-
-    <button id="clear-mcd-search" type="button" title="Limpar Busca">❌</button>
+    <button onclick="searchAndHighlightMCD()" class="mcd-search-submit" type="button">🔎 Buscar</button>
 </div>
- 
-    <button onclick="searchAndHighlightMCD()" class="view-button" style="min-width: 100px; flex-shrink: 0;">🔎 Buscar</button>
 </div>
-
 </div>
               <div id="whatsappConfigPanel" style="display: none; text-align: left;">
                 <h4>3. Configurar Mensagem do WhatsApp</h4>
@@ -20166,7 +20235,89 @@ function getNextDrawName(loteria) {
         container.appendChild(table);
     }
 
-    // --- FUNÇÕES DA TABELA DE BICHOS E PUXADAS ---
+let timerNinja;
+
+function criptografarSenha(texto) {
+    return btoa(texto).split('').reverse().join('');
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    verificarStatusBotaoNinja();
+    
+    // Permite apertar "Enter" no teclado para confirmar a senha
+    const inputSenha = document.getElementById('ninjaAuthInput');
+    if(inputSenha) {
+        inputSenha.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') confirmarNinjaModal();
+        });
+    }
+});
+
+function verificarStatusBotaoNinja() {
+    const btn = document.getElementById('mcd-consultas-btn');
+    const led = document.getElementById('ninja-status-led');
+    
+    const estaLiberado = localStorage.getItem('consultas_destravado') === 'true';
+
+    if (estaLiberado) {
+        // MODO LIBERADO: 1 Clique abre a tela normal. LED fica verde.
+        btn.onclick = () => showConsultasModal();
+        if(led) {
+            led.style.backgroundColor = '#28a745'; // Verde
+            led.style.boxShadow = '0 0 5px rgba(40, 167, 69, 0.5)';
+        }
+    } else {
+        // MODO TRAVADO: Clique normal não faz nada. LED fica invisível.
+        btn.onclick = (e) => { e.preventDefault(); };
+        if(led) {
+            led.style.backgroundColor = 'transparent'; // Invisível
+            led.style.boxShadow = 'none';
+        }
+    }
+}
+
+function iniciarTravaNinja() {
+    if (localStorage.getItem('consultas_destravado') === 'true') return;
+
+    // Timer de 3 segundos
+    timerNinja = setTimeout(() => {
+        // Limpa o campo e abre o Modal customizado
+        document.getElementById('ninjaAuthInput').value = '';
+        document.getElementById('ninjaAuthModal').classList.add('active');
+        
+        // Foca no campo de senha automaticamente
+        setTimeout(() => document.getElementById('ninjaAuthInput').focus(), 100);
+    }, 3000); 
+}
+
+function cancelarTravaNinja() {
+    clearTimeout(timerNinja);
+}
+
+function cancelarNinjaModal() {
+    document.getElementById('ninjaAuthModal').classList.remove('active');
+}
+
+function confirmarNinjaModal() {
+    const senhaDigitada = document.getElementById('ninjaAuthInput').value;
+    
+    // A criptografia de 121212 resulta em 'yEjMxITM'
+    if (criptografarSenha(senhaDigitada) === 'yEjMxITM') {
+        localStorage.setItem('consultas_destravado', 'true');
+        
+        verificarStatusBotaoNinja();
+        cancelarNinjaModal();
+        showConsultasModal(); 
+        
+        if(typeof showToast === 'function') showToast("Acesso Liberado!", "success");
+    } else {
+        if(typeof showToast === 'function') showToast("Código inválido.", "error");
+        
+        // Limpa o campo para tentar de novo
+        document.getElementById('ninjaAuthInput').value = '';
+        document.getElementById('ninjaAuthInput').focus();
+    }
+}
 
 function getTabelaFormatada() {
     const isGruposVisible = document.getElementById('tabelaBichosContainer').style.display !== 'none';
@@ -20391,6 +20542,24 @@ function populateTabelaPuxadas() {
     table.appendChild(tbody);
     container.appendChild(table);
     tabelaPuxadasPopulated = true; // Marca como populada
+}
+
+function bloquearBotaoNinja() {
+    // 1. Remove a permissão salva na memória do navegador
+    localStorage.removeItem('consultas_destravado');
+    
+    // 2. Roda a verificação de novo. Como a memória foi apagada, 
+    // ela vai travar o botão e esconder o LED verde automaticamente.
+    verificarStatusBotaoNinja();
+    
+    // 3. Fecha a janela de consultas
+    const modal = document.getElementById('consultasModal');
+    if (modal) modal.classList.remove('active');
+    
+    // 4. Mostra um aviso na tela confirmando o bloqueio
+    if(typeof showToast === 'function') {
+        showToast("Modo Admin Bloqueado! Botão travado.", "info");
+    }
 }
 
 function toggleHistoryPanel() {
@@ -20618,7 +20787,6 @@ function toggleBichosSelector(mode) {
     } else {
         wrapper.style.display = 'none';
     }
-    // --- FIM DA CORREÇÃO ---
 }
 
 function toggleDezenaFinalOptions() {
@@ -21119,13 +21287,25 @@ async function generateSelectedNumbers() {
 
        if (typeKey === 'milhar') {
         if (bichoMilharMethod === 'original') {
+    const useStartDigitsFilter = document.getElementById('toggleStartDigitsCheck')?.checked;
+    const milharStartDigits = useStartDigitsFilter
+        ? Array.from(document.querySelectorAll('#milharStartOptions input:checked')).map(cb => cb.value)
+        : [];
+    const centenaStartDigits = useStartDigitsFilter
+        ? Array.from(document.querySelectorAll('#centenaStartOptions input:checked')).map(cb => cb.value)
+        : [];
+
     const maxAttempts = qtd * 50;
     let attempts = 0;
     while (set.size < qtd && attempts < maxAttempts) {
         attempts++;
         const randomDezena = dezenasPool[getSecureRandomInt(dezenasPool.length)];
-        const prefixoMilhar = String(getSecureRandomInt(10));
-        const prefixoCentena = String(getSecureRandomInt(10));
+        const prefixoMilhar = milharStartDigits.length > 0
+            ? milharStartDigits[getSecureRandomInt(milharStartDigits.length)]
+            : String(getSecureRandomInt(10));
+        const prefixoCentena = centenaStartDigits.length > 0
+            ? centenaStartDigits[getSecureRandomInt(centenaStartDigits.length)]
+            : String(getSecureRandomInt(10));
         const finalNumber = prefixoMilhar + prefixoCentena + randomDezena;
         if (applyAdvancedFilters(finalNumber, 'milhar')) set.add(finalNumber);
     }
