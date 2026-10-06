@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>GT2 Racers | Central de Competição</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+:root{--blue:#00d2ff;--red:#ff3333;--gold:#ffd700;--silver:#c0c0c0;--bronze:#cd7f32;--panel:rgba(15,15,20,.88);--line:rgba(0,210,255,.3);--dim:#8a8a8a}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100dvh;display:flex;flex-direction:column;color:#e0e0e0;font-family:'Roboto',sans-serif;
+background:linear-gradient(27deg,#111 5px,transparent 5px) 0 5px,linear-gradient(207deg,#111 5px,transparent 5px) 10px 0,linear-gradient(27deg,#1a1a1a 5px,transparent 5px) 0 10px,linear-gradient(207deg,#1a1a1a 5px,transparent 5px) 10px 5px,#050505;background-size:20px 20px;background-attachment:fixed}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+button{font:inherit;color:inherit}
+
+/* Cabeçalho */
+header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;padding-top:max(12px,env(safe-area-inset-top));background:linear-gradient(90deg,#000,#0b1a30 50%,#000);border-bottom:2px solid var(--blue);box-shadow:0 4px 24px rgba(0,210,255,.2)}
+.logo{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:#fff;letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+.logo span{color:var(--red)}
+.hd-right{display:flex;align-items:center;gap:10px}
+.live{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid rgba(255,51,51,.5);border-radius:20px;background:rgba(255,51,51,.1);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:pulso 1.4s infinite}
+@keyframes pulso{50%{opacity:.35}}
+
+/* Botões estilo corrida */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border:1px solid #555;border-radius:3px;background:transparent;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;transform:skewX(-10deg);transition:.2s}
+.btn>*{transform:skewX(10deg)}
+.btn:hover{background:#222;border-color:#fff}
+.btn-blue{background:rgba(0,210,255,.12);border-color:var(--blue);color:var(--blue)}
+.btn-blue:hover{background:var(--blue);color:#000;box-shadow:0 0 18px var(--blue)}
+.btn-red{background:var(--red);border-color:var(--red);color:#fff}
+.btn-red:hover{background:#ff5555;box-shadow:0 0 18px var(--red)}
+
+/* Ticker */
+.ticker{overflow:hidden;white-space:nowrap;background:var(--red);color:#fff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:17px;letter-spacing:1px;text-transform:uppercase}
+.ticker div{display:inline-block;padding:6px 0;animation:rola 32s linear infinite}
+.ticker span{padding:0 28px}
+@keyframes rola{to{transform:translateX(-50%)}}
+
+/* Estrutura */
+.dash{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;width:100%;max-width:1600px;margin:0 auto;padding:20px;flex:1;align-items:start}
+.card{position:relative;overflow:hidden;background:var(--panel);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.card::before{content:'';position:absolute;inset:0 auto 0 0;width:4px;background:var(--blue)}
+.game{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px;background:radial-gradient(circle,rgba(20,20,30,.8),rgba(0,0,0,.9));border:1px solid #222;border-radius:8px;box-shadow:inset 0 0 50px rgba(0,0,0,.8)}
+#game-wrapper{position:relative;width:min(100%,calc((100dvh - 330px)*4/3));min-width:min(100%,320px);aspect-ratio:4/3;background:#000;border:2px solid #333;box-shadow:0 0 30px #000;overflow:hidden}
+#game-container{width:100%;height:100%}
+
+/* BARRA DE TELEMETRIA */
+.telemetria-bar {
+    width: min(100%, calc((100dvh - 330px)*4/3));
+    background: #0b1a30;
+    border: 1px solid var(--blue);
+    border-radius: 4px;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    box-shadow: 0 4px 15px rgba(0, 210, 255, 0.1);
+}
+.telemetria-bar div { display: flex; align-items: center; gap: 8px; }
+.telemetria-bar span { color: var(--blue); font-weight: bold; font-size: 18px; letter-spacing: 1px;}
+.tel-status-icon { color: var(--red); animation: pulso 1.4s infinite; }
+
+.actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.hint{margin:0;color:#6b6b6b;font-family:'Rajdhani',sans-serif;font-size:14px;text-align:center}
+
+/* Carregamento */
+#loader{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;background:radial-gradient(circle,#0b1a30,#000 75%);font-family:'Rajdhani',sans-serif;text-align:center}
+#lt{font-size:22px;font-weight:600;letter-spacing:2px;color:#fff}
+#ls{font-size:15px;color:var(--dim);min-height:1.4em}
+.bar{width:min(70%,360px);height:6px;background:#1b1b1b;border-radius:3px;overflow:hidden}
+#lb{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--red));transition:width .2s linear}
+.bar.ind #lb{width:35%;animation:vv 1.1s ease-in-out infinite alternate}
+@keyframes vv{to{transform:translateX(185%)}}
+#loader.erro #lt{color:var(--red)}#loader.erro .bar{display:none}
+#retry{display:none}#loader.erro #retry{display:inline-flex}
+
+/* Painel lateral */
+.side{display:flex;flex-direction:column;height:calc(100dvh - 150px);min-height:520px;position:sticky;top:84px}
+.tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.1)}
+.tab{flex:1;padding:14px 6px;background:none;border:0;border-bottom:3px solid transparent;cursor:pointer;color:var(--dim);font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase}
+.tab[aria-selected=true]{color:var(--blue);border-bottom-color:var(--blue);background:rgba(0,210,255,.07)}
+.pane{flex:1;min-height:0;display:flex;flex-direction:column}
+.pane[hidden]{display:none}
+.scroll{flex:1;overflow-y:auto;padding:16px}
+
+/* Chat e Ranking */
+#msgs{display:flex;flex-direction:column;gap:12px}
+.m{display:flex;gap:10px;align-items:flex-start}
+.m.eu{flex-direction:row-reverse}
+.av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:'Rajdhani',sans-serif;font-weight:700;color:#fff}
+.bub{max-width:80%;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.07);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.m.eu .bub{background:rgba(0,210,255,.15);border:1px solid var(--line)}
+.bub b{display:block;font-family:'Rajdhani',sans-serif;font-size:14px;color:var(--blue)}
+.bub small{color:#666;margin-left:6px;font-weight:400}
+.sys{align-self:center;color:#6b6b6b;font-size:12px;text-align:center}
+.emojis{display:flex;gap:6px;padding:8px 16px 0}
+.emojis button{background:rgba(255,255,255,.06);border:0;border-radius:6px;padding:4px 10px;font-size:18px;cursor:pointer}
+.emojis button:hover{background:rgba(0,210,255,.2)}
+.send{display:flex;gap:8px;padding:10px 16px 16px}
+.send input{flex:1;min-width:0;padding:11px;background:#000;border:1px solid #333;border-radius:4px;color:#fff;font-size:15px}
+.send input:focus{outline:none;border-color:var(--blue)}
+.modo{padding:6px 16px;font-size:12px;color:#c9b458;background:rgba(255,215,0,.07)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding-bottom:10px;color:#888;font-family:'Rajdhani',sans-serif}
+td{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+tr:last-child td{border:0}
+td:first-child{width:36px;color:#666}
+.p1{color:var(--gold)!important;font-weight:700}.p2{color:var(--silver)!important;font-weight:700}.p3{color:var(--bronze)!important;font-weight:700}
+.car{display:block;font-size:12px;color:#aaa}
+.t{font-family:monospace;font-size:15px;color:var(--blue);text-align:right}th:last-child{text-align:right}
+.note{margin:14px 0 0;font-size:12px;color:#666}
+.trk{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:#fff;margin:0 0 6px}
+.rules{color:#aaa;font-size:14px;line-height:1.8;margin-bottom:16px}
+.rules i{width:20px;text-align:center;color:var(--red)}
+.box{padding:12px;margin-bottom:12px;background:rgba(255,0,0,.1);border-radius:4px;text-align:center}
+.box small{display:block;font-size:12px;color:#ff6666}
+.box strong{font-family:monospace;font-size:26px;color:#fff}
+
+dialog{padding:24px;width:min(92vw,360px);background:#0d0d12;color:#fff;border:1px solid var(--blue);border-radius:8px;box-shadow:0 0 40px rgba(0,210,255,.25)}
+dialog::backdrop{background:rgba(0,0,0,.75)}
+dialog h2{margin:0 0 6px;font-family:'Rajdhani',sans-serif;font-size:24px}
+dialog p{margin:0 0 14px;color:#aaa;font-size:14px}
+dialog input{width:100%;padding:12px;margin-bottom:14px;background:#000;border:1px solid #333;border-radius:4px;color:#fff;font-size:16px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99;padding:12px 22px;background:#111;border:1px solid var(--blue);border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:16px;box-shadow:0 0 20px rgba(0,210,255,.3)}
+
+@media(max-width:1100px){.dash{grid-template-columns:minmax(0,1fr) 340px}}
+@media(max-width:900px){
+.dash{grid-template-columns:minmax(0,1fr);padding:12px;gap:14px}
+header{padding:10px 14px}.logo{font-size:22px}
+#nick-txt{display:none}
+.game{padding:10px}#game-wrapper{width:100%}
+.side{position:static;height:560px;min-height:0}
+.telemetria-bar { flex-direction: column; gap: 10px; align-items: flex-start; }
+}
+@media(prefers-reduced-motion:reduce){.ticker div,.dot,.bar.ind #lb{animation:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><i class="fa-solid fa-flag-checkered"></i> GT2 <span>RACERS</span></div>
+  <div class="hd-right">
+    <div class="live"><span class="dot"></span><span>AO VIVO · <span id="online">1</span> online</span></div>
+    <button class="btn btn-blue" id="btn-nick" type="button"><span><i class="fa-solid fa-helmet-safety"></i> <span id="nick-txt">Piloto Visitante</span></span></button>
+  </div>
+</header>
+
+<div class="ticker" aria-hidden="true"><div id="ticker"></div></div>
+
+<div class="dash">
+  <main class="game">
+    <div id="game-wrapper">
+      <div id="game-container"></div>
+      <div id="loader" role="status" aria-live="polite">
+        <div id="lt">Aquecendo os pneus</div>
+        <div id="ls">Preparando o jogo...</div>
+        <div class="bar" id="lbar"><div id="lb"></div></div>
+        <button class="btn btn-blue" id="retry" type="button"><span>Tentar de novo</span></button>
+      </div>
+    </div>
+    
+    <!-- BARRA DE TELEMETRIA COM AUTO-CALIBRADOR -->
+    <div class="telemetria-bar">
+        <div style="flex:1;"><i class="fa-solid fa-satellite-dish tel-status-icon" id="tel-icon"></i> <span style="color:#aaa; font-size:14px;" id="tel-status">Aguardando Corrida...</span></div>
+        <div style="flex:1;"><i class="fa-solid fa-car-side" style="color:#888;"></i> <span id="tel-carro" style="color:#e0e0e0;">Desconhecido</span></div>
+        <div>
+            <button onclick="autoCalibrar()" class="btn btn-blue" style="padding: 6px 12px; font-size: 13px; margin:0; border-radius: 4px;">
+                <i class="fa-solid fa-radar"></i> Sincronizar Carro
+            </button>
+        </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-red" id="b-convidar" type="button"><span><i class="fa-solid fa-user-plus"></i> Convidar amigos</span></button>
+      <button class="btn btn-blue" id="b-desafio" type="button"><span><i class="fa-solid fa-share-nodes"></i> Compartilhar desafio</span></button>
+      <button class="btn" id="b-chat" type="button"><span><i class="fa-solid fa-comments"></i> Ir para o chat</span></button>
+    </div>
+    <p class="hint"><i class="fa-solid fa-gamepad"></i> O controle é reconhecido ao pressionar qualquer botão.</p>
+  </main>
+
+  <aside class="card side" id="side">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="t-chat" aria-selected="true" aria-controls="p-chat"><i class="fa-solid fa-comments"></i> Chat</button>
+      <button class="tab" role="tab" id="t-rank" aria-selected="false" aria-controls="p-rank"><i class="fa-solid fa-list-ol"></i> Ranking</button>
+      <button class="tab" role="tab" id="t-des" aria-selected="false" aria-controls="p-des"><i class="fa-solid fa-trophy"></i> Desafio</button>
+    </div>
+
+    <section class="pane" id="p-chat" role="tabpanel">
+      <div class="modo" id="modo" hidden></div>
+      <div class="scroll" id="scroll"><div id="msgs"></div></div>
+      <div class="emojis" id="emojis"></div>
+      <form class="send" id="form" autocomplete="off">
+        <input id="txt" maxlength="200" placeholder="Fale com a galera..." aria-label="Mensagem">
+        <button class="btn btn-blue" type="submit" aria-label="Enviar"><span><i class="fa-solid fa-paper-plane"></i></span></button>
+      </form>
+    </section>
+
+    <section class="pane" id="p-rank" role="tabpanel" hidden>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Pos</th><th>Piloto / Carro</th><th>Tempo</th></tr></thead>
+          <tbody>
+            <tr><td class="p1">1º</td><td>Leandro<span class="car">Integra Type R (DC2)</span></td><td class="t">1:21.340</td></tr>
+            <tr><td class="p2">2º</td><td>DK_Drift<span class="car">Civic Type R (EK)</span></td><td class="t">1:22.100</td></tr>
+            <tr><td class="p3">3º</td><td>VtecBoy<span class="car">FTO GP Version R</span></td><td class="t">1:23.050</td></tr>
+            <tr><td>4º</td><td>Guest_99<span class="car">Celica SS-II</span></td><td class="t">1:24.110</td></tr>
+          </tbody>
+        </table>
+        <p class="note">Tempos de exemplo. O ranking real chega junto com o login.</p>
+      </div>
+    </section>
+
+    <section class="pane" id="p-des" role="tabpanel" hidden>
+      <div class="scroll">
+        <h2 class="trk">Trial Mountain Circuit</h2>
+        <div class="rules"><i class="fa-solid fa-car"></i> Categoria FF (Tração Dianteira)<br><i class="fa-solid fa-gauge-high"></i> Limite: 250 HP</div>
+        <div class="box"><small>TEMPO ALVO (OURO)</small><strong>1:24.500</strong></div>
+        <div class="box" style="background:rgba(0,210,255,.08)"><small style="color:var(--blue)">O DESAFIO TERMINA EM</small><strong id="count">--</strong></div>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="nick-form">
+    <h2>Qual o seu apelido, piloto?</h2>
+    <p>É assim que a galera vai te ver no chat.</p>
+    <input id="nick-in" maxlength="20" required aria-label="Apelido" placeholder="Ex: DK_Drift">
+    <button class="btn btn-red" type="submit" style="width:100%"><span>Entrar nos boxes</span></button>
+  </form>
+</dialog>
+
+<!-- IMPORTAÇÃO DA LISTA EXTERNA DE CARROS -->
+<script src="carros.js"></script>
+
+<script>
+(function(){'use strict';
+var $=function(i){return document.getElementById(i)};
+
+var FIREBASE_CONFIG = null; 
+
+/* ============ EMULADOR ============ */
+var BASE=new URL('./',location.href).href,GAME=BASE+'gt2.zip',CACHE='garagem-gt2-cache-v1';
+window.EJS_player='#game-container';
+window.EJS_core='psx';
+window.EJS_pathtodata='https://cdn.emulatorjs.org/stable/data/';
+window.EJS_biosUrl=BASE+'scph1001.bin';
+window.EJS_startOnLoaded=true;
+window.EJS_volume=0.8;
+window.EJS_webgl=true;
+
+window.EJS_buttons = {
+    settings: false, cheat: false, saveState: false, loadState: false,
+    quickSave: false, quickLoad: false, pause: false, screenRecord: false, 
+    screenshot: false, cacheManager: false, menu: false,
+    controls: true, restart: true, mute: true, fullscreen: true
+};
+
+var loader=$('loader'),lt=$('lt'),ls=$('ls'),lbar=$('lbar'),lb=$('lb');
+function prog(b,t){var mb=(b/1048576).toFixed(1);
+  if(t){lbar.classList.remove('ind');lb.style.width=Math.min(100,b/t*100).toFixed(0)+'%';ls.textContent='Baixando o jogo: '+mb+' de '+(t/1048576).toFixed(1)+' MB'}
+  else{lbar.classList.add('ind');ls.textContent='Baixando o jogo: '+mb+' MB'}}
+function erro(m){loader.classList.add('erro');lt.textContent='Não foi possível iniciar';ls.textContent=m}
+async function abrirCache(){try{return 'caches' in window?await caches.open(CACHE):null}catch(e){return null}}
+async function baixar(url){
+  var r=await fetch(url);
+  if(!r.ok){var e=new Error('HTTP '+r.status);e.status=r.status;throw e}
+  var total=Number(r.headers.get('Content-Length'))||0;
+  if(!r.body||!r.body.getReader)return r.blob();
+  var rd=r.body.getReader(),parts=[],got=0;
+  for(;;){var x=await rd.read();if(x.done)break;parts.push(x.value);got+=x.value.length;prog(got,total)}
+  return new Blob(parts)}
+async function carregar(url){
+  var c=await abrirCache();
+  if(c){var s=await c.match(url);if(s){ls.textContent='Carregando do cache...';return URL.createObjectURL(await s.blob())}}
+  var b=await baixar(url);
+  if(c){try{await c.put(url,new Response(b))}catch(e){}}
+  return URL.createObjectURL(b)}
+function iniciar(u){
+  window.EJS_gameUrl=u;lt.textContent='Ligando o PlayStation';ls.textContent='Iniciando o emulador...';
+  var s=document.createElement('script');s.src='https://cdn.emulatorjs.org/stable/data/loader.js';
+  s.onload=function(){loader.remove(); iniciarMonitoramentoMemoria(); };
+  s.onerror=function(){erro('Falha ao carregar o emulador.')};
+  document.body.appendChild(s)}
+function boot(){
+  loader.classList.remove('erro');lt.textContent='Aquecendo os pneus';ls.textContent='Preparando o jogo...';lb.style.width='0';lbar.classList.remove('ind');
+  carregar(GAME).then(iniciar).catch(function(e){console.error(e); erro('Falha no download. Verifique a pasta local e a conexão.')})}
+$('retry').onclick=boot;boot();
+
+window.ENDERECO_CORRIDA_CARRO = null;
+
+function lerEnderecosHex(ram, offset1, offset2) {
+    let code1 = (ram[offset1 + 1] << 8) | ram[offset1];
+    let code2 = (ram[offset2 + 1] << 8) | ram[offset2];
+    return code1.toString(16).toUpperCase().padStart(4, '0') + " " + code2.toString(16).toUpperCase().padStart(4, '0');
+}
+
+// Auto-Calibrador focado na Zona de Física da Corrida (0x100000 a 0x200000)
+window.autoCalibrar = function() {
+    $('tel-status').textContent = "Escaneando Física...";
+    $('tel-status').style.color = "var(--gold)";
+
+    setTimeout(() => {
+        try {
+            const ram = window.EJS_emulator.Module.HEAPU8;
+            let achou = false;
+            const inicioBloco = 0x100000;
+            const fimBloco = 0x200000;
+
+            for(let i = inicioBloco; i < fimBloco; i += 2) {
+                let hex = lerEnderecosHex(ram, i, i + 2);
+
+                if (typeof DADOS_GT2 !== 'undefined' && DADOS_GT2.carros[hex]) {
+                    window.ENDERECO_CORRIDA_CARRO = i;
+                    achou = true;
+                    
+                    $('tel-status').textContent = "Modo In-Race Ativo";
+                    $('tel-status').style.color = "#00ff00";
+                    $('tel-icon').style.color = "#00ff00";
+                    break;
+                }
+            }
+
+            if (!achou) {
+                $('tel-status').textContent = "Não encontrado";
+                $('tel-status').style.color = "var(--red)";
+                alert("Carro não encontrado no bloco de física. Certifique-se de que a corrida já começou e clique de novo.");
+            }
+        } catch(e) {
+            alert("O emulador ainda não carregou a memória RAM.");
+        }
+    }, 100);
+}
+
+function iniciarMonitoramentoMemoria() {
+    let checkInterval = setInterval(function() {
+        if (window.EJS_emulator && window.EJS_emulator.Module && window.EJS_emulator.Module.HEAPU8) {
+            clearInterval(checkInterval);
+            
+            setInterval(function() {
+                try {
+                    const ram = window.EJS_emulator.Module.HEAPU8;
+                    
+                    if (window.ENDERECO_CORRIDA_CARRO !== null && typeof DADOS_GT2 !== 'undefined') {
+                        let hex = lerEnderecosHex(ram, window.ENDERECO_CORRIDA_CARRO, window.ENDERECO_CORRIDA_CARRO + 2);
+                        let nomeCarro = DADOS_GT2.carros[hex];
+                        
+                        if (nomeCarro) {
+                            $('tel-carro').textContent = nomeCarro;
+                        } else {
+                            $('tel-carro').textContent = "Carro ID: " + hex;
+                        }
+                    } else {
+                        $('tel-carro').textContent = "Clique em Sincronizar Carro";
+                    }
+                } catch(e) {}
+            }, 500);
+        }
+    }, 2000);
+}
+
+/* ============ RESTANTE DOS SCRIPTS (Chat, UI, etc) ============ */
+function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove()},2800)}
+function cor(n){var h=0;for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%360;return 'hsl('+h+',65%,42%)'}
+function hora(t){return new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+var ID=Math.random().toString(36).slice(2,10);
+
+var nick=localStorage.getItem('gt2_nick')||'';
+var dlg=$('dlg');
+function showNick(){$('nick-txt').textContent=nick||'Piloto Visitante'}
+function pedirNick(){$('nick-in').value=nick;dlg.showModal();$('nick-in').focus()}
+$('nick-form').addEventListener('submit',function(){
+  var n=$('nick-in').value.trim().slice(0,20);if(!n)return;
+  var primeira=!nick;nick=n;localStorage.setItem('gt2_nick',n);showNick();
+  if(primeira)sistema(n+' entrou nos boxes')});
+$('btn-nick').onclick=pedirNick;showNick();
+
+var msgs=$('msgs'),scroll=$('scroll');
+function sistema(t){var d=document.createElement('div');d.className='sys';d.textContent=t;msgs.appendChild(d);scroll.scrollTop=scroll.scrollHeight}
+function render(m){
+  var w=document.createElement('div');w.className='m'+(m.n===nick?' eu':'');
+  var a=document.createElement('div');a.className='av';a.style.background=cor(m.n);a.textContent=m.n.charAt(0).toUpperCase();
+  var b=document.createElement('div');b.className='bub';
+  var nm=document.createElement('b');nm.textContent=m.n;
+  var sm=document.createElement('small');sm.textContent=hora(m.t);nm.appendChild(sm);
+  b.appendChild(nm);b.appendChild(document.createTextNode(m.x));
+  w.appendChild(a);w.appendChild(b);msgs.appendChild(w);
+  while(msgs.children.length>120)msgs.removeChild(msgs.firstChild);
+  scroll.scrollTop=scroll.scrollHeight}
+
+function adaptadorLocal(){
+  var bc=('BroadcastChannel' in window)?new BroadcastChannel('gt2-chat'):null,vistos={},cbM=function(){},cbP=function(){};
+  var KEY='gt2_hist';
+  function hist(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+  function conta(){var n=Date.now(),c=1;for(var k in vistos)if(n-vistos[k]<25000)c++;cbP(c)}
+  if(bc)bc.onmessage=function(e){var d=e.data;if(d.k==='m')cbM(d.m);else if(d.k==='hb'){vistos[d.id]=Date.now();conta()}};
+  return{
+    modo:'Modo teste: o chat só aparece entre abas deste navegador.',
+    iniciar:function(m,p){cbM=m;cbP=p;hist().forEach(m);conta();
+      setInterval(function(){if(bc)bc.postMessage({k:'hb',id:ID});conta()},10000);if(bc)bc.postMessage({k:'hb',id:ID})},
+    enviar:function(m){var h=hist();h.push(m);localStorage.setItem(KEY,JSON.stringify(h.slice(-50)));if(bc)bc.postMessage({k:'m',m:m})}}}
+
+var chat=FIREBASE_CONFIG?adaptadorFirebase(FIREBASE_CONFIG):adaptadorLocal();
+if(chat.modo){$('modo').hidden=false;$('modo').textContent=chat.modo}
+chat.iniciar(render,function(n){$('online').textContent=n});
+sistema('Bem-vindo aos boxes! Respeite a galera e boa corrida.');
+
+var ultimo=0;
+$('form').addEventListener('submit',function(e){
+  e.preventDefault();
+  var x=$('txt').value.trim();if(!x)return;
+  if(!nick){pedirNick();return}
+  if(Date.now()-ultimo<1500){toast('Calma, piloto! Espere um instante.');return}
+  ultimo=Date.now();$('txt').value='';
+  var m={n:nick,x:x.slice(0,200),t:Date.now()};
+  chat.enviar(m);if(!FIREBASE_CONFIG)render(m)});
+['🏁','🔥','👏','😂','🚀'].forEach(function(e){
+  var b=document.createElement('button');b.type='button';b.textContent=e;b.setAttribute('aria-label','Emoji '+e);
+  b.onclick=function(){$('txt').value+=e;$('txt').focus()};$('emojis').appendChild(b)});
+
+var tabs=[['t-chat','p-chat'],['t-rank','p-rank'],['t-des','p-des']];
+function aba(id){tabs.forEach(function(t){var on=t[0]===id;$(t[0]).setAttribute('aria-selected',on);$(t[1]).hidden=!on})}
+tabs.forEach(function(t){$(t[0]).onclick=function(){aba(t[0])}});
+
+function compartilhar(titulo,texto){
+  var url=location.href.split('#')[0];
+  if(navigator.share){navigator.share({title:titulo,text:texto,url:url}).catch(function(){})}
+  else if(navigator.clipboard){navigator.clipboard.writeText(texto+' '+url).then(function(){toast('Link copiado! Cole no grupo.')})}
+  else toast('Copie o endereço da página e envie.')}
+$('b-convidar').onclick=function(){compartilhar('GT2 Racers','Bora correr Gran Turismo 2 no navegador comigo!')};
+$('b-desafio').onclick=function(){compartilhar('Desafio da semana','Desafio: Trial Mountain, FF até 250 HP. Meta de ouro: 1:24.500. Topa?')};
+$('b-chat').onclick=function(){aba('t-chat');$('side').scrollIntoView({behavior:'smooth',block:'nearest'});$('txt').focus()};
+
+function fim(){var f=new Date();f.setHours(0,0,0,0);f.setDate(f.getDate()+((8-f.getDay())%7||7));return f}
+function tick(){
+  var s=Math.max(0,Math.floor((fim()-Date.now())/1000)),dd=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),ss=s%60;
+  function z(n){return String(n).padStart(2,'0')}
+  $('count').textContent=dd+'d '+z(h)+':'+z(m)+':'+z(ss)}
+tick();setInterval(tick,1000);
+
+var txt='<span>🏁 Desafio da semana: Trial Mountain</span><span>Categoria FF até 250 HP</span><span>Meta de ouro: 1:24.500</span><span>Chame a galera e bata o recorde</span>';
+$('ticker').innerHTML=txt+txt+txt+txt;
+})();
+</script>
+</body>
+</html>
